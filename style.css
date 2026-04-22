@@ -1,0 +1,41 @@
+/* Estilos Generales */
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f4f4f4; }
+.container { max-width: 1100px; margin: auto; padding: 0 20px; }
+
+/* Colores PNP */
+:root {
+    --verde-pnp: #004d3d;
+    --naranja-pnp: #f39c12;
+}
+
+/* Header y Navs */
+.top-bar { background: #e0e0e0; padding: 10px 0; font-size: 0.8rem; }
+.main-header { background: white; padding: 20px 0; }
+.header-flex { display: flex; align-items: center; justify-content: space-between; }
+.logo { height: 80px; }
+
+.nav-orange { background: var(--naranja-pnp); }
+.nav-green { background: var(--verde-pnp); }
+nav ul { list-style: none; display: flex; padding: 0; margin: 0; flex-wrap: wrap; }
+nav ul li a { color: white; text-decoration: none; padding: 15px 20px; display: block; font-weight: bold; font-size: 0.9rem; }
+nav ul li a:hover { background: rgba(0,0,0,0.1); }
+
+/* Banner */
+.hero { height: 400px; background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://via.placeholder.com/1200x400'); background-size: cover; color: white; display: flex; align-items: center; justify-content: center; text-align: center; }
+
+/* Cuadros (Cards) Modernos */
+.grid-updates { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+.card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; border-top: 5px solid var(--verde-pnp); }
+.btn-main { background: var(--verde-pnp); color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px; }
+
+/* Emergencias */
+.emergency-section { background: var(--verde-pnp); padding: 40px 0; color: white; margin: 40px 0; }
+.grid-5 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; text-align: center; }
+.e-box { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; }
+.e-box strong { font-size: 1.5rem; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-flex { flex-direction: column; text-align: center; }
+    nav ul { justify-content: center; }
+}
