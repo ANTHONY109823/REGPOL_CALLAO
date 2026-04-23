@@ -102,7 +102,7 @@ body {
     color: white;
     text-align: center;
 }
-
+.hero-overlay h1 { font-size: 50px; text-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
 .hero-overlay h2 { font-size: 35px; text-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
 
 /* --- 6. TARJETAS (CARDS) --- */

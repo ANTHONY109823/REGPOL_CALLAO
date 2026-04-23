@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convenios - REGPOL CALLAO</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Reutilizamos el Header para mantener la identidad -->
+    <header class="main-header">
+        <div class="container header-flex">
+            <img src="img/regpol callao.jpg" alt="Logo" class="logo-pnp">
+            <div class="title-text">
+                <h1>CONVENIOS INSTITUCIONALES</h1>
+                <p>REGIÓN POLICIAL CALLAO</p>
+            </div>
+            <a href="index.html" class="btn-action-top"><i class="fas fa-arrow-left"></i> VOLVER</a>
+        </div>
+    </header>
+
+    <main class="container content-area">
+        
+        <!-- SECCIÓN 1: LISTADO DE CONVENIOS -->
+        <h2 class="section-title">LISTA DE CONVENIOS VIGENTES</h2>
+        <div class="grid-cards">
+            <div class="card">
+                <i class="fas fa-bus card-icon"></i>
+                <h4>CONVENIO ATU</h4>
+                <p>Servicio de apoyo al control del transporte urbano.</p>
+                <span class="status">Vigente</span>
+            </div>
+            <div class="card">
+                <i class="fas fa-warehouse card-icon"></i>
+                <h4>CHACRITA / VIPAS</h4>
+                <p>Servicio de vigilancia y seguridad especializada.</p>
+                <span class="status">Vigente</span>
+            </div>
+        </div>
+
+        <hr style="margin: 50px 0; border: 1px solid #ddd;">
+
+        <!-- SECCIÓN 2: PLAN CELADOR (SISTEMA DINÁMICO) -->
+        <section class="plan-celador">
+            <h2 class="section-title">PLAN CELADOR POR COMISARÍAS</h2>
+            
+            <div class="celador-container">
+                <!-- Lado Izquierdo: Registro -->
+                <div class="celador-form">
+                    <h3><i class="fas fa-edit"></i> REGISTRO DE VACANTES</h3>
+                    <p>Selecciona tu comisaría y regístrate para el servicio.</p>
+                    
+                    <div class="vacantes-info">
+                        <p>Vacantes totales: <strong>50</strong></p>
+                        <p>Disponibles: <span class="counter">Pendiente de Sync</span></p>
+                    </div>
+
+                    <!-- AQUÍ CONECTAREMOS EL GOOGLE FORM -->
+                    <a href="TU_LINK_DE_GOOGLE_FORM" target="_blank" class="btn-orange" style="width: 100%; text-align: center;">
+                        LLENAR FORMULARIO DE INSCRIPCIÓN
+                    </a>
+                    <p style="font-size: 11px; margin-top: 10px; color: #666;">* Los datos se registrarán en la base de datos de la UTIC.</p>
+                </div>
+
+                <!-- Lado Derecho: Resultados (Sorteados) -->
+                <div class="celador-list">
+                    <h3><i class="fas fa-users"></i> SELECCIONADOS - ABRIL 2024</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Grado</th>
+                                    <th>Apellidos y Nombres</th>
+                                    <th>Comisaría</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Estos datos los puedes actualizar manualmente o embeber un Excel -->
+                                <tr><td>S3 PNP</td><td>Pérez García, Juan</td><td>Alipio Ponce</td></tr>
+                                <tr><td>S2 PNP</td><td>Soto Mayor, Luis</td><td>La Perla</td></tr>
+                                <tr><td>S3 PNP</td><td>Ramos Paz, Ana</td><td>Bellavista</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 REGPOL CALLAO - Sistema de Gestión de Convenios</p>
+    </footer>
+
+</body>
+</html>
