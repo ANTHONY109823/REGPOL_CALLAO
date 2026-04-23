@@ -4,141 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Convenios - REGPOL CALLAO</title>
+    <!-- ASEGÚRATE QUE ESTE NOMBRE SEA EXACTO AL DE TU ARCHIVO -->
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="body-convenios"> <!-- Nueva clase para el fondo -->
+<body class="body-convenios">
 
-    <!-- BARRA SUPERIOR INSTITUCIONAL -->
-    <div class="top-bar-convenios">
-        <div class="container flex-between">
-            <span><i class="fas fa-lock"></i> Acceso restringido para personal policial</span>
-            <div class="social-links-top">
-                <a href="#"><i class="fab fa-facebook"></i></a>
-                <a href="#"><i class="fab fa-tiktok"></i></a>
-            </div>
-        </div>
-    </div>
-
-    <!-- CABECERA PRINCIPAL -->
     <header class="header-moderno">
-        <div class="container header-content">
-            <div class="logo-area">
+        <div class="container flex-between">
+            <div style="display: flex; align-items: center; gap: 20px;">
                 <img src="img/regpol callao.jpg" alt="Escudo" class="img-escudo">
                 <div class="text-area">
                     <h1>PORTAL DE CONVENIOS</h1>
                     <p>REGIÓN POLICIAL CALLAO</p>
                 </div>
             </div>
-            <a href="index.html" class="btn-home-modern"><i class="fas fa-arrow-left"></i> VOLVER AL INICIO</a>
+            <a href="index.html" class="btn-home-modern">VOLVER AL INICIO</a>
         </div>
     </header>
 
-    <main class="container py-5">
-        
-        <!-- SECCIÓN 1: CONVENIOS CON MÁS "VIDA" -->
-        <div class="section-heading">
-            <h2 class="title-main">CONVENIOS VIGENTES</h2>
-            <div class="underline"></div>
-            <p class="subtitle">Haz clic en cada tarjeta para conocer los detalles, requisitos y beneficios.</p>
+    <main class="container">
+        <div style="text-align: center; margin: 40px 0;">
+            <h2 style="color: #004d3d;">CONVENIOS VIGENTES</h2>
+            <p style="color: #666;">Haz clic en cada tarjeta para ver detalles.</p>
         </div>
 
         <div class="grid-modern">
-            <!-- PLAN CELADOR -->
-            <a href="celador.html" class="card-modern-link">
+            <a href="celador.html" style="text-decoration: none; color: inherit;">
                 <div class="card-modern">
-                    <div class="icon-wrapper bg-orange">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
+                    <div class="icon-wrapper"><i class="fas fa-shield-alt"></i></div>
                     <h4>PLAN CELADOR</h4>
-                    <p>Seguridad y vigilancia por sectores y comisarías del Callao.</p>
-                    <div class="card-footer-modern">
-                        <span class="status-online">DISPONIBLE <i class="fas fa-external-link-alt"></i></span>
-                    </div>
+                    <p>Seguridad por comisarías.</p>
+                    <span style="color: green; font-weight: bold; font-size: 12px;">DISPONIBLE</span>
                 </div>
             </a>
 
-            <!-- ATU -->
-            <a href="#" class="card-modern-link">
-                <div class="card-modern">
-                    <div class="icon-wrapper bg-blue">
-                        <i class="fas fa-bus"></i>
-                    </div>
-                    <h4>CONVENIO ATU</h4>
-                    <p>Apoyo al control del transporte urbano en la provincia.</p>
-                    <div class="card-footer-modern">
-                        <span class="status-online">DISPONIBLE <i class="fas fa-external-link-alt"></i></span>
-                    </div>
-                </div>
-            </a>
+            <div class="card-modern">
+                <div class="icon-wrapper" style="background: #3498db;"><i class="fas fa-bus"></i></div>
+                <h4>CONVENIO ATU</h4>
+                <p>Control de transporte.</p>
+                <span style="color: green; font-weight: bold; font-size: 12px;">DISPONIBLE</span>
+            </div>
 
-            <!-- VIPAS -->
-            <a href="#" class="card-modern-link">
-                <div class="card-modern">
-                    <div class="icon-wrapper bg-green">
-                        <i class="fas fa-warehouse"></i>
-                    </div>
-                    <h4>VIPAS / CHACRITA</h4>
-                    <p>Vigilancia de terminales terrestres y zonas industriales.</p>
-                    <div class="card-footer-modern">
-                        <span class="status-online">DISPONIBLE <i class="fas fa-external-link-alt"></i></span>
-                    </div>
-                </div>
-            </a>
-
-            <!-- MUNICIPAL -->
-            <a href="#" class="card-modern-link">
-                <div class="card-modern opacity-6">
-                    <div class="icon-wrapper bg-gray">
-                        <i class="fas fa-landmark"></i>
-                    </div>
-                    <h4>CONVENIO MUNICIPAL</h4>
-                    <p>Patrullaje integrado y apoyo a serenazgo local.</p>
-                    <div class="card-footer-modern">
-                        <span class="status-soon">PRÓXIMAMENTE</span>
-                    </div>
-                </div>
-            </a>
+            <div class="card-modern">
+                <div class="icon-wrapper" style="background: #27ae60;"><i class="fas fa-warehouse"></i></div>
+                <h4>VIPAS / CHACRITA</h4>
+                <p>Vigilancia de terminales.</p>
+                <span style="color: green; font-weight: bold; font-size: 12px;">DISPONIBLE</span>
+            </div>
         </div>
 
-        <!-- SECCIÓN 2: RELACIÓN DE SELECCIONADOS (PDF) -->
-        <div class="section-heading mt-100">
-            <h2 class="title-main">RELACIÓN DE SELECCIONADOS</h2>
-            <div class="underline"></div>
-            <p class="subtitle">Listados oficiales del personal apto para el servicio este mes.</p>
-        </div>
+        <h2 style="color: #004d3d; text-align: center; margin: 40px 0;">RELACIÓN DE SELECCIONADOS</h2>
 
         <div class="grid-pdf-modern">
             <div class="pdf-item">
-                <div class="pdf-icon"><i class="fas fa-file-pdf"></i></div>
-                <div class="pdf-body">
-                    <h5>Plan Celador - ABRIL 2024</h5>
-                    <a href="documentos/seleccionados_celador.pdf" target="_blank" class="btn-download">DESCARGAR RESULTADOS <i class="fas fa-download"></i></a>
-                </div>
-            </div>
-
-            <div class="pdf-item">
-                <div class="pdf-icon"><i class="fas fa-file-pdf"></i></div>
-                <div class="pdf-body">
-                    <h5>Convenio ATU - ABRIL 2024</h5>
-                    <a href="documentos/seleccionados_atu.pdf" target="_blank" class="btn-download">DESCARGAR RESULTADOS <i class="fas fa-download"></i></a>
-                </div>
-            </div>
-
-            <div class="pdf-item">
-                <div class="pdf-icon"><i class="fas fa-file-pdf"></i></div>
-                <div class="pdf-body">
-                    <h5>Vipas / Chacrita - ABRIL 2024</h5>
-                    <a href="documentos/seleccionados_vipas.pdf" target="_blank" class="btn-download">DESCARGAR RESULTADOS <i class="fas fa-download"></i></a>
+                <i class="fas fa-file-pdf" style="font-size: 30px; color: #e74c3c;"></i>
+                <div>
+                    <h5 style="margin-bottom: 5px;">Plan Celador - ABRIL 2024</h5>
+                    <a href="#" class="btn-download">DESCARGAR PDF</a>
                 </div>
             </div>
         </div>
-
     </main>
 
-    <footer class="footer-modern">
-        <p>&copy; 2024 REGPOL CALLAO - Unidad de Tecnologías de la Información</p>
+    <footer style="background: #004d3d; color: white; text-align: center; padding: 20px 0; margin-top: 50px;">
+        <p>&copy; 2024 REGPOL CALLAO</p>
     </footer>
-
 </body>
 </html>
