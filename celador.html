@@ -3,85 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plan Celador - REGPOL CALLAO</title>
-    <!-- Vinculamos el mismo CSS para mantener el estilo -->
+    <title>Convenios - REGPOL CALLAO</title>
+    <!-- ASEGÚRATE QUE ESTE NOMBRE SEA EXACTO AL DE TU ARCHIVO -->
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="body-convenios">
 
-    <!-- CABECERA (Igual a Convenios para consistencia) -->
     <header class="header-moderno">
         <div class="container flex-between">
             <div style="display: flex; align-items: center; gap: 20px;">
                 <img src="img/regpol callao.jpg" alt="Escudo" class="img-escudo">
                 <div class="text-area">
-                    <h1>PLAN CELADOR</h1>
-                    <p>DETALLES DEL CONVENIO</p>
+                    <h1>PORTAL DE CONVENIOS</h1>
+                    <p>REGIÓN POLICIAL CALLAO</p>
                 </div>
             </div>
-            <a href="convenios.html" class="btn-home-modern"><i class="fas fa-chevron-left"></i> VOLVER</a>
+            <a href="index.html" class="btn-home-modern">VOLVER AL INICIO</a>
         </div>
     </header>
 
-    <main class="container py-5">
-        
-        <!-- SECCIÓN DE DETALLES EN TARJETAS -->
-        <div class="grid-detalles">
-            
-            <!-- Cuadro: Requisitos -->
-            <div class="card-detalle">
-                <div class="icon-circle"><i class="fas fa-list-ul"></i></div>
-                <h3>REQUISITOS</h3>
-                <ul>
-                    <li><i class="fas fa-check-circle"></i> Pertenecer a la REGPOL Callao.</li>
-                    <li><i class="fas fa-check-circle"></i> Encontrarse en situación de Actividad.</li>
-                    <li><i class="fas fa-check-circle"></i> No tener sanciones vigentes.</li>
-                    <li><i class="fas fa-check-circle"></i> Contar con uniforme de faena completo.</li>
-                </ul>
+    <main class="container">
+        <div style="text-align: center; margin: 40px 0;">
+            <h2 style="color: #004d3d;">CONVENIOS VIGENTES</h2>
+            <p style="color: #666;">Haz clic en cada tarjeta para ver detalles.</p>
+        </div>
+
+        <div class="grid-modern">
+            <a href="celador.html" style="text-decoration: none; color: inherit;">
+                <div class="card-modern">
+                    <div class="icon-wrapper"><i class="fas fa-shield-alt"></i></div>
+                    <h4>PLAN CELADOR</h4>
+                    <p>Seguridad por comisarías.</p>
+                    <span style="color: green; font-weight: bold; font-size: 12px;">DISPONIBLE</span>
+                </div>
+            </a>
+
+            <div class="card-modern">
+                <div class="icon-wrapper" style="background: #3498db;"><i class="fas fa-bus"></i></div>
+                <h4>CONVENIO ATU</h4>
+                <p>Control de transporte.</p>
+                <span style="color: green; font-weight: bold; font-size: 12px;">DISPONIBLE</span>
             </div>
 
-            <!-- Cuadro: Logística -->
-            <div class="card-detalle">
-                <div class="icon-circle"><i class="fas fa-clock"></i></div>
-                <h3>HORARIOS Y VACANTES</h3>
-                <div class="info-item">
-                    <span>HORARIO:</span>
-                    <p>08:00 hrs a 20:00 hrs (12 horas)</p>
-                </div>
-                <div class="info-item">
-                    <span>VACANTES:</span>
-                    <p>120 efectivos por grupo mensual</p>
-                </div>
-            </div>
-
-            <!-- Cuadro: Beneficio Económico -->
-            <div class="card-detalle highlight-card">
-                <div class="icon-circle gold"><i class="fas fa-money-bill-wave"></i></div>
-                <h3>BENEFICIO ECONÓMICO</h3>
-                <p class="price">S/ 75.00</p>
-                <p>Por día efectivamente laborado.</p>
-                <small>* Abono mediante Planilla de Convenios.</small>
+            <div class="card-modern">
+                <div class="icon-wrapper" style="background: #27ae60;"><i class="fas fa-warehouse"></i></div>
+                <h4>VIPAS / CHACRITA</h4>
+                <p>Vigilancia de terminales.</p>
+                <span style="color: green; font-weight: bold; font-size: 12px;">DISPONIBLE</span>
             </div>
         </div>
 
-        <!-- SECCIÓN DE ACCIÓN (REGISTRO) -->
-        <div class="registro-section">
-            <div class="registro-box">
-                <h2>¿Deseas postular a este convenio?</h2>
-                <p>Las inscripciones se habilitan del 20 al 25 de cada mes.</p>
-                <!-- Aquí va tu link de Google Form -->
-                <a href="https://forms.google.com/..." target="_blank" class="btn-registro-grande">
-                    <i class="fas fa-edit"></i> REGISTRAR MI INSCRIPCIÓN
-                </a>
+        <h2 style="color: #004d3d; text-align: center; margin: 40px 0;">RELACIÓN DE SELECCIONADOS</h2>
+
+        <div class="grid-pdf-modern">
+            <div class="pdf-item">
+                <i class="fas fa-file-pdf" style="font-size: 30px; color: #e74c3c;"></i>
+                <div>
+                    <h5 style="margin-bottom: 5px;">Plan Celador - ABRIL 2024</h5>
+                    <a href="#" class="btn-download">DESCARGAR PDF</a>
+                </div>
             </div>
         </div>
-
     </main>
 
-    <footer class="footer-simple">
-        <p>&copy; 2024 REGPOL CALLAO - Unidad de Tecnologías de la Información</p>
+    <footer style="background: #004d3d; color: white; text-align: center; padding: 20px 0; margin-top: 50px;">
+        <p>&copy; 2024 REGPOL CALLAO</p>
     </footer>
-
 </body>
 </html>
