@@ -261,11 +261,30 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background-color: white; colo
 }
 
 .card-modern {
-    background: white; border-radius: 15px; padding: 30px; text-align: center;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.05); border-top: 5px solid var(--verde-pnp);
-    transition: 0.3s;
+    background: white; 
+    border-radius: 15px; 
+    padding: 30px; 
+    text-align: center;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05); 
+    border-top: 5px solid var(--verde-pnp);
+    transition: all 0.3s ease; /* Suaviza todos los movimientos */
+    cursor: pointer;           /* Pone la manito de clic */
+    user-select: none;         /* Evita que se seleccione el texto al hacer clic */
 }
-.card-modern:hover { transform: translateY(-10px); }
+
+/* EFECTO AL PASAR EL MOUSE: Se eleva y cambia el color del borde */
+.card-modern:hover {
+    transform: translateY(-8px); /* Se eleva un poco */
+    box-shadow: 0 15px 30px rgba(0,0,0,0.12); /* Sombra más profunda */
+    border-top-color: var(--naranja-pnp);    /* El borde cambia a naranja para dar "vida" */
+}
+
+/* EFECTO AL HACER CLIC: Se hunde como un botón real */
+.card-modern:active {
+    transform: scale(0.95); /* Se encoge un 5% al presionar */
+    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+    transition: 0.1s; /* El clic es más rápido que el hover */
+}
 
 .icon-wrapper { 
     width: 60px; height: 60px; background: var(--naranja-pnp); 
