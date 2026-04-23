@@ -211,6 +211,34 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background-color: white; colo
     display: block;
 }
 
+/* --- RESET TOTAL PARA EVITAR ERRORES --- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --verde-pnp: #004d3d;
+    --naranja-pnp: #f39c12;
+    --fondo-suave: #f0f7f4;
+}
+
+body { font-family: 'Segoe UI', Arial, sans-serif; background-color: white; color: #333; }
+
+/* --- CONTENEDOR MAESTRO (Esto centra todo) --- */
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+    width: 100%;
+}
+
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+/* --- REGLA DE ORO PARA EL ESCUDO (EVITA QUE SEA GIGANTE) --- */
+.img-escudo, .logo-pnp, .logo-main {
+    height: 100px !important; /* Forzamos el tamaño */
+    width: auto !important;
+    display: block;
+}
+
 /* --- ESTILOS DE LA PÁGINA CONVENIOS --- */
 .body-convenios { background: linear-gradient(135deg, var(--fondo-suave) 0%, #ffffff 100%); }
 
@@ -256,6 +284,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background-color: white; colo
     background: #e74c3c; color: white; text-decoration: none;
     padding: 8px 15px; border-radius: 5px; font-size: 11px;
 }
+
 
 /* --- ESTILOS ESPECÍFICOS PARA CELADOR.HTML --- */
 
