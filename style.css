@@ -416,3 +416,70 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background-color: white; colo
     .registro-box { padding: 30px; }
     .btn-registro-grande { font-size: 14px; width: 100%; }
 }
+
+
+
+/* --- ESTILOS DE LA PÁGINA CURSOS --- */
+.body-cursos { background: linear-gradient(135deg, var(--fondo-suave) 0%, #ffffff 100%); }
+
+.header-moderno { background: white; padding: 20px 0; border-bottom: 4px solid var(--verde-pnp); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+
+.text-area h1 { color: var(--verde-pnp); font-size: 24px; margin: 0; }
+.text-area p { color: var(--naranja-pnp); font-size: 14px; font-weight: bold; }
+
+.btn-home-modern {
+    background: var(--verde-pnp); color: white; text-decoration: none;
+    padding: 10px 20px; border-radius: 50px; font-weight: bold; font-size: 12px;
+}
+
+/* Grilla de tarjetas */
+.grid-modern {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 30px;
+    padding: 40px 0;
+}
+
+.card-modern {
+    background: white; 
+    border-radius: 15px; 
+    padding: 30px; 
+    text-align: center;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05); 
+    border-top: 5px solid var(--verde-pnp);
+    transition: all 0.3s ease; /* Suaviza todos los movimientos */
+    cursor: pointer;           /* Pone la manito de clic */
+    user-select: none;         /* Evita que se seleccione el texto al hacer clic */
+}
+
+/* EFECTO AL PASAR EL MOUSE: Se eleva y cambia el color del borde */
+.card-modern:hover {
+    transform: translateY(-8px); /* Se eleva un poco */
+    box-shadow: 0 15px 30px rgba(0,0,0,0.12); /* Sombra más profunda */
+    border-top-color: var(--naranja-pnp);    /* El borde cambia a naranja para dar "vida" */
+}
+
+/* EFECTO AL HACER CLIC: Se hunde como un botón real */
+.card-modern:active {
+    transform: scale(0.95); /* Se encoge un 5% al presionar */
+    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+    transition: 0.1s; /* El clic es más rápido que el hover */
+}
+
+.icon-wrapper { 
+    width: 60px; height: 60px; background: var(--naranja-pnp); 
+    border-radius: 50%; margin: 0 auto 15px; display: flex; 
+    align-items: center; justify-content: center; color: white; font-size: 25px;
+}
+
+/* PDFs */
+.grid-pdf-modern { display: grid; gap: 15px; padding-bottom: 50px; }
+.pdf-item {
+    background: white; padding: 20px; border-radius: 10px;
+    display: flex; align-items: center; gap: 20px;
+    border-left: 8px solid #e74c3c; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.btn-download {
+    background: #e74c3c; color: white; text-decoration: none;
+    padding: 8px 15px; border-radius: 5px; font-size: 11px;
+}
