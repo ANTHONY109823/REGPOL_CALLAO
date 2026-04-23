@@ -3,65 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detalle Plan Celador - REGPOL CALLAO</title>
+    <title>Convenios - REGPOL CALLAO</title>
+    <!-- ASEGÚRATE QUE ESTE NOMBRE SEA EXACTO AL DE TU ARCHIVO -->
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="bg-light">
+<body class="body-convenios">
 
-    <header class="main-header">
+    <header class="header-moderno">
         <div class="container flex-between">
-            <img src="img/regpol callao.jpg" alt="Logo" class="logo-pnp">
-            <div class="title-text">
-                <h1>DETALLE: PLAN CELADOR</h1>
-                <p>CONVENIO POR COMISARÍAS - REGPOL CALLAO</p>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <img src="img/regpol callao.jpg" alt="Escudo" class="img-escudo">
+                <div class="text-area">
+                    <h1>PORTAL DE CONVENIOS</h1>
+                    <p>REGIÓN POLICIAL CALLAO</p>
+                </div>
             </div>
-            <a href="convenios.html" class="btn-action-top"><i class="fas fa-chevron-left"></i> VOLVER</a>
+            <a href="index.html" class="btn-home-modern">VOLVER AL INICIO</a>
         </div>
     </header>
 
-    <main class="container content-area">
-        <div class="info-layout">
-            <!-- Columna de Información -->
-            <div class="info-details">
-                <div class="info-box">
-                    <h3><i class="fas fa-list-check"></i> REQUISITOS</h3>
-                    <ul>
-                        <li>Pertenecer a la Región Policial Callao.</li>
-                        <li>No registrar antecedentes disciplinarios.</li>
-                        <li>Encontrarse en situación de actividad.</li>
-                        <li>Contar con uniforme en buen estado.</li>
-                    </ul>
-                </div>
+    <main class="container">
+        <div style="text-align: center; margin: 40px 0;">
+            <h2 style="color: #004d3d;">CONVENIOS VIGENTES</h2>
+            <p style="color: #666;">Haz clic en cada tarjeta para ver detalles.</p>
+        </div>
 
-                <div class="info-box">
-                    <h3><i class="fas fa-clock"></i> HORARIOS Y VACANTES</h3>
-                    <p><strong>Horario:</strong> 08:00 hrs a 20:00 hrs (Turnos rotativos)</p>
-                    <p><strong>Vacantes Disponibles:</strong> 120 efectivos por mes</p>
+        <div class="grid-modern">
+            <a href="celador.html" style="text-decoration: none; color: inherit;">
+                <div class="card-modern">
+                    <div class="icon-wrapper"><i class="fas fa-shield-alt"></i></div>
+                    <h4>PLAN CELADOR</h4>
+                    <p>Seguridad por comisarías.</p>
+                    <span style="color: green; font-weight: bold; font-size: 12px;">DISPONIBLE</span>
                 </div>
+            </a>
 
-                <div class="info-box highlight-price">
-                    <h3><i class="fas fa-money-bill-wave"></i> BENEFICIO ECONÓMICO</h3>
-                    <p><strong>Monto:</strong> S/ 75.00 por día laborado</p>
-                    <p class="small">* Pago mediante planilla única de convenios.</p>
-                </div>
+            <div class="card-modern">
+                <div class="icon-wrapper" style="background: #3498db;"><i class="fas fa-bus"></i></div>
+                <h4>CONVENIO ATU</h4>
+                <p>Control de transporte.</p>
+                <span style="color: green; font-weight: bold; font-size: 12px;">DISPONIBLE</span>
             </div>
 
-            <!-- Columna de Acción (Registro) -->
-            <div class="info-action">
-                <div class="registration-card">
-                    <i class="fas fa-user-edit"></i>
-                    <h3>¿Deseas participar?</h3>
-                    <p>Las inscripciones cierran el día 25 de cada mes.</p>
-                    <a href="TU_LINK_DE_DRIVE_O_FORMULARIO" target="_blank" class="btn-orange">REGISTRARME AHORA</a>
+            <div class="card-modern">
+                <div class="icon-wrapper" style="background: #27ae60;"><i class="fas fa-warehouse"></i></div>
+                <h4>VIPAS / CHACRITA</h4>
+                <p>Vigilancia de terminales.</p>
+                <span style="color: green; font-weight: bold; font-size: 12px;">DISPONIBLE</span>
+            </div>
+        </div>
+
+        <h2 style="color: #004d3d; text-align: center; margin: 40px 0;">RELACIÓN DE SELECCIONADOS</h2>
+
+        <div class="grid-pdf-modern">
+            <div class="pdf-item">
+                <i class="fas fa-file-pdf" style="font-size: 30px; color: #e74c3c;"></i>
+                <div>
+                    <h5 style="margin-bottom: 5px;">Plan Celador - ABRIL 2024</h5>
+                    <a href="#" class="btn-download">DESCARGAR PDF</a>
                 </div>
             </div>
         </div>
     </main>
 
-    <footer>
-        <p>&copy; 2024 REGPOL CALLAO - Área de Convenios</p>
+    <footer style="background: #004d3d; color: white; text-align: center; padding: 20px 0; margin-top: 50px;">
+        <p>&copy; 2024 REGPOL CALLAO</p>
     </footer>
-
 </body>
 </html>

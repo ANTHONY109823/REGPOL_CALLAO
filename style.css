@@ -183,79 +183,79 @@ footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; 
 
 /* --- NUEVA ESTÉTICA PARA CONVENIOS --- */
 
-.body-convenios {
-    /* Fondo con un degradado sutil de verde a blanco */
-    background: linear-gradient(135deg, #e8f5e9 0%, #ffffff 100%);
-    min-height: 100vh;
-    font-family: 'Segoe UI', sans-serif;
+/* --- RESET TOTAL PARA EVITAR ERRORES --- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --verde-pnp: #004d3d;
+    --naranja-pnp: #f39c12;
+    --fondo-suave: #f0f7f4;
 }
 
-/* Barra superior */
-.top-bar-convenios { background: #002d24; color: #a1cfc5; padding: 10px 0; font-size: 12px; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background-color: white; color: #333; }
 
-/* Header Moderno */
-.header-moderno { background: white; padding: 25px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 50px; }
-.header-content { display: flex; justify-content: space-between; align-items: center; }
-.logo-area { display: flex; align-items: center; gap: 20px; }
-.img-escudo { height: 80px; }
-.text-area h1 { color: #004d3d; font-size: 24px; font-weight: 800; margin: 0; }
-.text-area p { color: #f39c12; font-weight: bold; margin: 0; font-size: 14px; }
+/* --- CONTENEDOR MAESTRO (Esto centra todo) --- */
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+    width: 100%;
+}
+
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+/* --- REGLA DE ORO PARA EL ESCUDO (EVITA QUE SEA GIGANTE) --- */
+.img-escudo, .logo-pnp, .logo-main {
+    height: 100px !important; /* Forzamos el tamaño */
+    width: auto !important;
+    display: block;
+}
+
+/* --- ESTILOS DE LA PÁGINA CONVENIOS --- */
+.body-convenios { background: linear-gradient(135deg, var(--fondo-suave) 0%, #ffffff 100%); }
+
+.header-moderno { background: white; padding: 20px 0; border-bottom: 4px solid var(--verde-pnp); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+
+.text-area h1 { color: var(--verde-pnp); font-size: 24px; margin: 0; }
+.text-area p { color: var(--naranja-pnp); font-size: 14px; font-weight: bold; }
 
 .btn-home-modern {
-    background: #004d3d; color: white; text-decoration: none; padding: 12px 25px;
-    border-radius: 50px; font-weight: bold; font-size: 13px; transition: 0.3s;
+    background: var(--verde-pnp); color: white; text-decoration: none;
+    padding: 10px 20px; border-radius: 50px; font-weight: bold; font-size: 12px;
 }
-.btn-home-modern:hover { background: #f39c12; transform: translateX(-5px); }
 
-/* Títulos con Línea Decorativa */
-.section-heading { text-align: center; margin-bottom: 50px; }
-.title-main { color: #004d3d; font-size: 28px; font-weight: 800; }
-.underline { width: 60px; height: 5px; background: #f39c12; margin: 15px auto; border-radius: 10px; }
-.subtitle { color: #777; font-size: 15px; }
+/* Grilla de tarjetas */
+.grid-modern {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 30px;
+    padding: 40px 0;
+}
 
-/* Grilla de Tarjetas con efectos de profundidad */
-.grid-modern { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 30px; }
-.card-modern-link { text-decoration: none; color: inherit; }
 .card-modern {
-    background: white; border-radius: 20px; padding: 40px 25px; text-align: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.05); transition: 0.4s ease; border: 1px solid #eee;
+    background: white; border-radius: 15px; padding: 30px; text-align: center;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05); border-top: 5px solid var(--verde-pnp);
+    transition: 0.3s;
 }
-.card-modern:hover {
-    transform: translateY(-15px);
-    box-shadow: 0 20px 40px rgba(0, 77, 61, 0.15);
-    border-color: #004d3d;
+.card-modern:hover { transform: translateY(-10px); }
+
+.icon-wrapper { 
+    width: 60px; height: 60px; background: var(--naranja-pnp); 
+    border-radius: 50%; margin: 0 auto 15px; display: flex; 
+    align-items: center; justify-content: center; color: white; font-size: 25px;
 }
 
-/* Círculos de iconos */
-.icon-wrapper {
-    width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px;
-    display: flex; align-items: center; justify-content: center; font-size: 30px; color: white;
-}
-.bg-orange { background: #f39c12; box-shadow: 0 10px 20px rgba(243, 156, 18, 0.3); }
-.bg-blue { background: #3498db; box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3); }
-.bg-green { background: #27ae60; box-shadow: 0 10px 20px rgba(39, 174, 96, 0.3); }
-.bg-gray { background: #bdc3c7; }
-
-.status-online { color: #27ae60; font-weight: bold; font-size: 12px; }
-.status-soon { color: #999; font-weight: bold; font-size: 12px; }
-
-/* Sección PDF horizontal y amigable */
-.grid-pdf-modern { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+/* PDFs */
+.grid-pdf-modern { display: grid; gap: 15px; padding-bottom: 50px; }
 .pdf-item {
-    background: white; border-radius: 15px; padding: 25px; display: flex; align-items: center;
-    gap: 20px; border-left: 8px solid #e74c3c; box-shadow: 0 5px 15px rgba(0,0,0,0.03);
+    background: white; padding: 20px; border-radius: 10px;
+    display: flex; align-items: center; gap: 20px;
+    border-left: 8px solid #e74c3c; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
-.pdf-icon { font-size: 40px; color: #e74c3c; }
-.pdf-body h5 { margin: 0 0 10px; color: #333; font-size: 16px; }
-
 .btn-download {
-    background: #e74c3c; color: white; text-decoration: none; padding: 8px 15px;
-    border-radius: 5px; font-size: 11px; font-weight: bold; display: inline-block;
+    background: #e74c3c; color: white; text-decoration: none;
+    padding: 8px 15px; border-radius: 5px; font-size: 11px;
 }
-.btn-download:hover { background: #c0392b; }
-
-.mt-100 { margin-top: 100px; }
-.footer-modern { background: #004d3d; color: white; padding: 40px 0; text-align: center; margin-top: 80px; font-size: 14px; }
 
 /* Diseño de Hoja Detalle (Celador) */
 .info-layout { display: flex; gap: 40px; margin-top: 30px; }
