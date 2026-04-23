@@ -179,3 +179,91 @@ footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; 
     .logo-pnp { height: 100px; margin-bottom: 10px; }
     .hero-overlay h2 { font-size: 24px; }
 }
+/* --- ESTILOS DE CONVENIOS Y DETALLES --- */
+.bg-soft-green {
+    background-color: #f0f7f4; /* Verde muy suave */
+}
+
+.divider {
+    height: 1px;
+    background: #ccc;
+    margin: 50px 0;
+}
+
+/* Tarjetas de Convenio Mejoradas */
+.card-link { text-decoration: none; color: inherit; }
+.convenio-card {
+    border-top: 5px solid var(--verde-pnp);
+    cursor: pointer;
+    transition: 0.4s;
+}
+.convenio-card:hover {
+    background-color: var(--verde-pnp);
+    color: white;
+}
+.convenio-card:hover .card-icon, .convenio-card:hover p { color: white; }
+
+.badge {
+    background: #d4edda;
+    color: #155724;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 11px;
+    font-weight: bold;
+    display: inline-block;
+    margin-top: 15px;
+}
+
+/* Tarjetas de PDF */
+.grid-cards-small {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+.pdf-card {
+    padding: 20px;
+    background: white;
+    border-left: 5px solid #e74c3c; /* Rojo PDF */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.pdf-card i { font-size: 30px; color: #e74c3c; margin-bottom: 10px; }
+.btn-pdf {
+    font-size: 12px;
+    background: #e74c3c;
+    color: white;
+    padding: 8px 15px;
+    text-decoration: none;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+/* Diseño de Hoja Detalle (Celador) */
+.info-layout { display: flex; gap: 40px; margin-top: 30px; }
+.info-details { flex: 2; }
+.info-action { flex: 1; }
+
+.info-box { background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+.info-box h3 { color: var(--verde-pnp); margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+.info-box ul { padding-left: 20px; }
+.info-box li { margin-bottom: 10px; }
+
+.highlight-price { background: #fffcf0; border: 2px solid var(--naranja-pnp); }
+.highlight-price p strong { font-size: 24px; color: var(--verde-pnp); }
+
+.registration-card {
+    background: var(--verde-pnp);
+    color: white;
+    padding: 40px;
+    border-radius: 15px;
+    text-align: center;
+    position: sticky;
+    top: 100px;
+}
+.registration-card i { font-size: 50px; margin-bottom: 20px; }
+.registration-card h3 { margin-bottom: 15px; }
+
+@media (max-width: 768px) {
+    .info-layout { flex-direction: column; }
+}
