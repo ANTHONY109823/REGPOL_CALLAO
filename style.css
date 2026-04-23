@@ -181,74 +181,81 @@ footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; 
 }
 
 
-/* --- ESTILOS DE LA PÁGINA CONVENIOS --- */
+/* --- NUEVA ESTÉTICA PARA CONVENIOS --- */
 
-.bg-convenios {
-    background: linear-gradient(135deg, #f0f7f4 0%, #ffffff 100%); /* Fondo verde suave */
+.body-convenios {
+    /* Fondo con un degradado sutil de verde a blanco */
+    background: linear-gradient(135deg, #e8f5e9 0%, #ffffff 100%);
     min-height: 100vh;
+    font-family: 'Segoe UI', sans-serif;
 }
 
-.section-header { text-align: center; margin-bottom: 40px; }
-.section-title { color: var(--verde-pnp); font-size: 28px; font-weight: 800; margin-bottom: 5px; }
-.section-subtitle { color: #666; font-size: 15px; }
+/* Barra superior */
+.top-bar-convenios { background: #002d24; color: #a1cfc5; padding: 10px 0; font-size: 12px; }
 
-.divider-section { height: 2px; background: #e0e0e0; margin: 60px 0; border-radius: 2px; }
+/* Header Moderno */
+.header-moderno { background: white; padding: 25px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 50px; }
+.header-content { display: flex; justify-content: space-between; align-items: center; }
+.logo-area { display: flex; align-items: center; gap: 20px; }
+.img-escudo { height: 80px; }
+.text-area h1 { color: #004d3d; font-size: 24px; font-weight: 800; margin: 0; }
+.text-area p { color: #f39c12; font-weight: bold; margin: 0; font-size: 14px; }
 
-/* Tarjetas de Convenio Interactivas */
-.card-link { text-decoration: none; color: inherit; display: block; }
-.convenio-card {
-    background: white;
-    border: none;
-    border-radius: 15px;
-    padding: 40px 25px;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-    border-top: 6px solid var(--verde-pnp);
-    transition: all 0.4s ease;
+.btn-home-modern {
+    background: #004d3d; color: white; text-decoration: none; padding: 12px 25px;
+    border-radius: 50px; font-weight: bold; font-size: 13px; transition: 0.3s;
+}
+.btn-home-modern:hover { background: #f39c12; transform: translateX(-5px); }
+
+/* Títulos con Línea Decorativa */
+.section-heading { text-align: center; margin-bottom: 50px; }
+.title-main { color: #004d3d; font-size: 28px; font-weight: 800; }
+.underline { width: 60px; height: 5px; background: #f39c12; margin: 15px auto; border-radius: 10px; }
+.subtitle { color: #777; font-size: 15px; }
+
+/* Grilla de Tarjetas con efectos de profundidad */
+.grid-modern { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 30px; }
+.card-modern-link { text-decoration: none; color: inherit; }
+.card-modern {
+    background: white; border-radius: 20px; padding: 40px 25px; text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05); transition: 0.4s ease; border: 1px solid #eee;
+}
+.card-modern:hover {
+    transform: translateY(-15px);
+    box-shadow: 0 20px 40px rgba(0, 77, 61, 0.15);
+    border-color: #004d3d;
 }
 
-.convenio-card:hover {
-    transform: translateY(-12px);
-    box-shadow: 0 15px 30px rgba(0, 77, 61, 0.15);
-    border-top-color: var(--naranja-pnp);
+/* Círculos de iconos */
+.icon-wrapper {
+    width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px;
+    display: flex; align-items: center; justify-content: center; font-size: 30px; color: white;
 }
+.bg-orange { background: #f39c12; box-shadow: 0 10px 20px rgba(243, 156, 18, 0.3); }
+.bg-blue { background: #3498db; box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3); }
+.bg-green { background: #27ae60; box-shadow: 0 10px 20px rgba(39, 174, 96, 0.3); }
+.bg-gray { background: #bdc3c7; }
 
-.convenio-card i { font-size: 45px; color: var(--naranja-pnp); margin-bottom: 20px; }
-.convenio-card h4 { color: var(--verde-pnp); margin-bottom: 10px; font-size: 18px; }
+.status-online { color: #27ae60; font-weight: bold; font-size: 12px; }
+.status-soon { color: #999; font-weight: bold; font-size: 12px; }
 
-.badge { padding: 5px 15px; border-radius: 20px; font-size: 11px; font-weight: bold; display: inline-block; margin-top: 15px; }
-.available { background: #e8f5e9; color: #2e7d32; }
-.soon { background: #f5f5f5; color: #999; }
-
-/* Tarjetas de PDF horizontales */
-.pdf-card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-    border-left: 6px solid #e74c3c;
-    transition: 0.3s;
+/* Sección PDF horizontal y amigable */
+.grid-pdf-modern { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+.pdf-item {
+    background: white; border-radius: 15px; padding: 25px; display: flex; align-items: center;
+    gap: 20px; border-left: 8px solid #e74c3c; box-shadow: 0 5px 15px rgba(0,0,0,0.03);
 }
-.pdf-card:hover { transform: scale(1.02); }
-.pdf-icon i { font-size: 35px; color: #e74c3c; }
-.pdf-info h5 { font-size: 15px; margin-bottom: 2px; color: #333; }
-.pdf-info p { font-size: 12px; color: #888; margin-bottom: 10px; }
+.pdf-icon { font-size: 40px; color: #e74c3c; }
+.pdf-body h5 { margin: 0 0 10px; color: #333; font-size: 16px; }
 
-.btn-pdf {
-    color: #e74c3c;
-    text-decoration: none;
-    font-size: 12px;
-    font-weight: bold;
-    border: 1.5px solid #e74c3c;
-    padding: 4px 12px;
-    border-radius: 4px;
-    transition: 0.3s;
+.btn-download {
+    background: #e74c3c; color: white; text-decoration: none; padding: 8px 15px;
+    border-radius: 5px; font-size: 11px; font-weight: bold; display: inline-block;
 }
-.btn-pdf:hover { background: #e74c3c; color: white; }
+.btn-download:hover { background: #c0392b; }
 
-
+.mt-100 { margin-top: 100px; }
+.footer-modern { background: #004d3d; color: white; padding: 40px 0; text-align: center; margin-top: 80px; font-size: 14px; }
 
 /* Diseño de Hoja Detalle (Celador) */
 .info-layout { display: flex; gap: 40px; margin-top: 30px; }
