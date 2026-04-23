@@ -4,111 +4,114 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REGPOL CALLAO - PNP</title>
+    <!-- Estilos -->
     <link rel="stylesheet" href="style.css">
-    <!-- Iconos profesionales (FontAwesome) -->
+    <!-- Iconos Gratuitos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 
-    <!-- Barra Superior -->
-    <header class="top-bar">
+    <!-- 1. BARRA SUPERIOR NEGRA -->
+    <div class="top-bar">
         <div class="container flex-between">
-            <span class="top-info"><i class="fas fa-map-marker-alt"></i> Av. Sáenz Peña 170 - Callao</span>
+            <div class="top-info">
+                <span><i class="fas fa-map-marker-alt"></i> Av. Sáenz Peña 170 - Callao</span>
+            </div>
             <div class="social-icons">
                 <a href="#"><i class="fab fa-facebook"></i> FACEBOOK</a>
                 <a href="#"><i class="fab fa-tiktok"></i> TIKTOK</a>
             </div>
         </div>
-    </header>
+    </div>
 
-    <!-- Logo y Título -->
-    <section class="main-header">
+    <!-- 2. HEADER PRINCIPAL (LOGO Y TÍTULO) -->
+    <header class="main-header">
         <div class="container header-flex">
-            <div class="logo-box">
-                <!-- Asegúrate que el nombre del archivo en la carpeta img coincida exactamente -->
-                <img src="img/regpol callao.jpg" alt="Logo REGPOL Callao" class="logo-main">
+            <div class="logo-container">
+                <img src="img/regpol callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp">
             </div>
             <div class="title-text">
                 <h1>REGIÓN POLICIAL CALLAO</h1>
-                <p class="subtitle">UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p>
+                <p>UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p>
             </div>
-            <div class="quick-buttons">
-                <a href="https://correo.policia.gob.pe/" target="_blank" class="btn-small"><i class="fas fa-envelope"></i> CORREO PNP</a>
-                <a href="#" class="btn-small"><i class="fas fa-download"></i> DESCARGAS</a>
+            <div class="header-actions">
+                <a href="https://correo.policia.gob.pe/" target="_blank" class="btn-action-top"><i class="fas fa-envelope"></i> CORREO PNP</a>
             </div>
         </div>
-    </section>
+    </header>
 
-    <!-- Navegación Verde -->
-    <nav class="nav-green">
-        <ul class="container">
-            <li><a href="#">RESEÑA HISTÓRICA</a></li>
-            <li><a href="#">NUESTRA LABOR</a></li>
-            <li><a href="#">CONVENIOS</a></li>
-            <li><a href="#">CURSOS REGIONALES</a></li>
-            <li><a href="#">NOVEDADES</a></li>
-        </ul>
+    <!-- 3. MENÚ DE NAVEGACIÓN VERDE -->
+    <nav class="nav-main">
+        <div class="container">
+            <ul>
+                <li><a href="#">RESEÑA HISTÓRICA</a></li>
+                <li><a href="#">NUESTRA LABOR</a></li>
+                <li><a href="#">CONVENIOS</a></li>
+                <li><a href="#">CURSOS REGIONALES</a></li>
+                <li><a href="#">NOVEDADES</a></li>
+            </ul>
+        </div>
     </nav>
 
-    <!-- Hero / Banner -->
-    <section class="hero">
-        <!-- Imagen de fondo controlada por CSS -->
+    <!-- 4. BANNER PRINCIPAL (HERO) -->
+    <section class="hero-banner">
         <div class="hero-overlay">
-            <div class="container hero-content">
-                <h2>REGIÓN POLICIAL CALLAO</h2>
-                <p>AL SERVICIO DE LA COMUNIDAD</p>
+            <div class="container">
+                <h2>AL SERVICIO DE LA CIUDADANÍA</h2>
+                <p>Provincia Constitucional del Callao</p>
             </div>
         </div>
     </section>
 
-    <!-- Sección de Actualizaciones -->
-    <section class="container updates">
-        <h3 class="section-title">COMUNICADOS IMPORTANTES <br><span>(ÚLTIMA ACTUALIZACIÓN: 25 ABRIL 2024)</span></h3>
-        
-        <div class="grid-updates">
-            <!-- Cuadro 1 -->
+    <!-- 5. SECCIÓN DE COMUNICADOS (TARJETAS) -->
+    <main class="container content-area">
+        <div class="section-header">
+            <h3>COMUNICADOS IMPORTANTES</h3>
+            <span>ÚLTIMA ACTUALIZACIÓN: 25 DE ABRIL 2024</span>
+        </div>
+
+        <div class="grid-cards">
+            <!-- Cuadro Convenios -->
             <div class="card">
-                <div class="card-icon"><i class="fas fa-file-signature"></i></div>
-                <h4>CONVENIOS DE TRABAJO PARTICULAR</h4>
-                <p>Consulta las últimas convocatorias y beneficios vigentes para el personal.</p>
-                <a href="#" class="btn-main">VER MÁS</a>
+                <div class="card-icon"><i class="fas fa-file-contract"></i></div>
+                <h4>CONVENIOS DE TRABAJO</h4>
+                <p>Consulta las últimas convocatorias y beneficios vigentes para el personal policial.</p>
+                <a href="#" class="btn-card">VER DETALLES</a>
             </div>
 
-            <!-- Cuadro 2 -->
+            <!-- Cuadro Cursos -->
             <div class="card">
-                <div class="card-icon"><i class="fas fa-user-graduate"></i></div>
+                <div class="card-icon"><i class="fas fa-graduation-cap"></i></div>
                 <h4>CURSOS POLICIALES</h4>
-                <p>Nuevas vacantes y capacitaciones especializadas para el personal policial del Callao.</p>
-                <a href="#" class="btn-main">VER MÁS</a>
+                <p>Nuevas vacantes y capacitaciones especializadas programadas para este mes.</p>
+                <a href="#" class="btn-card">VER VACANTES</a>
             </div>
         </div>
-    </section>
+    </main>
 
-    <!-- Números de Emergencia -->
-    <section class="emergency-section">
-        <div class="container grid-5">
-            <div class="e-box"><i class="fas fa-shield-alt"></i><strong>105</strong><p>PNP</p></div>
-            <div class="e-box"><i class="fas fa-fire-extinguisher"></i><strong>116</strong><p>BOMBEROS</p></div>
-            <div class="e-box"><i class="fas fa-road"></i><strong>110</strong><p>CARRETERAS</p></div>
-            <div class="e-box"><i class="fas fa-ambulance"></i><strong>115</strong><p>DEFENSA CIVIL</p></div>
-            <div class="e-box"><i class="fas fa-hands-helping"></i><strong>100</strong><p>MUJER</p></div>
+    <!-- 6. NÚMEROS DE EMERGENCIA -->
+    <section class="emergency-bar">
+        <div class="container emergency-grid">
+            <div class="e-item"><strong>105</strong><p>PNP</p></div>
+            <div class="e-item"><strong>116</strong><p>BOMBEROS</p></div>
+            <div class="e-item"><strong>110</strong><p>CARRETERAS</p></div>
+            <div class="e-item"><strong>115</strong><p>DEFENSA CIVIL</p></div>
+            <div class="e-item"><strong>100</strong><p>MUJER</p></div>
         </div>
     </section>
 
-    <!-- Mesa de Partes Digital -->
+    <!-- 7. MESA DE PARTES -->
     <section class="container mesa-partes">
-        <div class="mesa-flex">
-            <div class="mesa-img">
-                <img src="https://www.policia.gob.pe/contenido/noticias/imagenes/638202353147171445.jpg" alt="PNP Callao">
-            </div>
+        <div class="mesa-container">
             <div class="mesa-text">
                 <h3>MESA DE PARTES DIGITAL</h3>
-                <p>Presenta tus documentos de forma virtual las 24 horas del día sin necesidad de presencia física.</p>
-                <a href="https://mpd.policia.gob.pe/" target="_blank" class="btn-orange">INGRESAR AHORA <i class="fas fa-external-link-alt"></i></a>
+                <p>Realiza tus trámites de forma virtual las 24 horas del día.</p>
+                <a href="https://mpd.policia.gob.pe/" target="_blank" class="btn-orange">INGRESAR AHORA</a>
             </div>
         </div>
     </section>
 
+    <!-- 8. FOOTER -->
     <footer>
         <div class="container">
             <p>&copy; 2024 Región Policial Callao - UTIC | Todos los derechos reservados</p>
