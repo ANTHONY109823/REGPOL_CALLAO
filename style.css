@@ -64,38 +64,7 @@ body {
     font-size: 13px;
     font-weight: bold;
 }
-/* --- BOTÓN DE WHATSAPP EN EL HEADER --- */
-.btn-whatsapp-top {
-    background-color: #25D366; /* Verde oficial de WhatsApp */
-    color: white;
-    text-decoration: none;
-    padding: 12px 25px;
-    border-radius: 50px; /* Lo hace redondeado y moderno */
-    font-size: 14px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    gap: 10px; /* Espacio entre el icono y el texto */
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
-}
 
-.btn-whatsapp-top i {
-    font-size: 20px; /* Icono un poco más grande */
-}
-
-/* Efecto al pasar el mouse */
-.btn-whatsapp-top:hover {
-    background-color: #128C7E; /* Verde más oscuro */
-    transform: scale(1.05) translateY(-2px);
-    box-shadow: 0 6px 20px rgba(18, 140, 126, 0.4);
-    color: white;
-}
-
-/* Efecto al presionar */
-.btn-whatsapp-top:active {
-    transform: scale(0.95);
-}
 
 /* --- 4. NAVEGACIÓN --- */
 .nav-main { background: var(--verde-pnp); position: sticky; top: 0; z-index: 1000; }
@@ -212,6 +181,27 @@ footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; 
     .hero-overlay h2 { font-size: 24px; }
 }
 
+/* BOTÓN DE WHATSAPP REGPOL */
+.btn-whatsapp-top {
+    background-color: #25D366 !important; /* Verde WhatsApp */
+    color: white !important;              /* Texto Blanco */
+    text-decoration: none !important;     /* QUITA EL SUBRAYADO AZUL */
+    padding: 12px 25px !important;
+    border-radius: 50px !important;
+    font-weight: bold !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
+    transition: 0.3s ease !important;
+    font-family: sans-serif !important;
+}
+
+.btn-whatsapp-top:hover {
+    background-color: #128C7E !important; /* Verde oscuro al pasar el mouse */
+    transform: translateY(-3px) !important;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.3) !important;
+}
 
 /* --- NUEVA ESTÉTICA PARA CONVENIOS --- */
 
