@@ -3,230 +3,296 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Panel de Control Operador — UNITIC | REGPOL Callao</title>
+  <title>Panel Admin — UNITIC | REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="panel-admin.css?v=5" />
+  <link rel="stylesheet" href="panel-admin.css?v=6" />
 </head>
 <body class="panel-admin-page">
 
-<div class="pa-topbar">
-  <span><i class="fas fa-shield-alt"></i> Panel de Control — REGPOL Callao</span>
-  <span>
-    <a href="dashboard.html" target="_blank" rel="noopener noreferrer"><i class="fas fa-chart-bar"></i> Dashboard</a>
-    <a href="evaluacion.html"><i class="fas fa-heart"></i> Bienestar</a>
-    <a href="index.html"><i class="fas fa-home"></i> Portal</a>
-  </span>
-</div>
-
-<header class="pa-header">
-  <img src="img/regpol callao.jpg" alt="Escudo REGPOL Callao" onerror="this.style.display='none'" />
-  <div>
-    <h1>REGIÓN POLICIAL CALLAO</h1>
-    <p>UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p>
+<!-- LOGIN -->
+<section id="login-admin" class="panel-admin-login-wrap" aria-label="Acceso restringido">
+  <div class="panel-admin-card">
+    <div class="admin-header-bar">
+      <i class="fas fa-shield-alt"></i>
+      <h3>Panel de Control — UNITIC</h3>
+      <span class="badge-restringido">ACCESO RESTRINGIDO</span>
+    </div>
+    <div class="admin-body login-admin">
+      <p><i class="fas fa-lock" style="color:#004d3d;margin-right:6px;"></i>Ingrese la contraseña de administrador.</p>
+      <div class="campo" style="margin-bottom:12px;">
+        <input type="password" id="input-password" placeholder="Contraseña de administrador"
+               autocomplete="current-password"
+               onkeydown="if(event.key==='Enter') verificarPassword()" />
+      </div>
+      <button class="btn-eval btn-verde" onclick="verificarPassword()" style="width:100%;">
+        <i class="fas fa-unlock"></i> Acceder al Panel
+      </button>
+      <div class="alerta alerta-error" id="alerta-login" style="margin-top:14px;" role="alert">
+        <i class="fas fa-exclamation-circle"></i> Contraseña incorrecta.
+      </div>
+    </div>
   </div>
-</header>
+</section>
 
-<main class="panel-admin-main">
+<!-- PANEL CON SIDEBAR -->
+<section id="admin-contenido" class="admin-layout" aria-label="Panel administrativo">
 
-  <!-- PASO 1: LOGIN (visible al abrir la pestaña) -->
-  <section id="login-admin" class="panel-admin-login-wrap" aria-label="Acceso restringido">
-    <div class="panel-admin-card">
-      <div class="admin-header-bar">
-        <i class="fas fa-shield-alt"></i>
-        <h3>Panel de Control Operador — UNITIC</h3>
-        <span class="badge-restringido">ACCESO RESTRINGIDO</span>
+  <aside class="admin-sidebar">
+    <div class="sidebar-brand">
+      <img src="img/regpol%20callao.jpg" alt="REGPOL" onerror="this.style.display='none'" />
+      <div>
+        <strong>REGPOL CALLAO</strong>
+        <span>Panel UNITIC</span>
       </div>
-      <div class="admin-body login-admin">
-        <p><i class="fas fa-lock" style="color:#004d3d;margin-right:6px;"></i>Ingrese la contraseña de administrador.</p>
-        <div class="campo" style="margin-bottom:12px;">
-          <input type="password" id="input-password" placeholder="Contraseña de administrador"
-                 autocomplete="current-password"
-                 onkeydown="if(event.key==='Enter') verificarPassword()" />
+    </div>
+
+    <nav class="sidebar-nav">
+      <button type="button" class="sidebar-item activo" data-vista="dashboard" onclick="cambiarVistaAdmin('dashboard')">
+        <i class="fas fa-chart-pie"></i> Dashboard
+      </button>
+      <button type="button" class="sidebar-item" data-vista="bienestar" onclick="cambiarVistaAdmin('bienestar')">
+        <i class="fas fa-heart"></i> Bienestar
+      </button>
+      <button type="button" class="sidebar-item" data-vista="convenios" onclick="cambiarVistaAdmin('convenios')">
+        <i class="fas fa-file-contract"></i> Convenios
+      </button>
+      <button type="button" class="sidebar-item" data-vista="cursos" onclick="cambiarVistaAdmin('cursos')">
+        <i class="fas fa-graduation-cap"></i> Cursos
+      </button>
+      <button type="button" class="sidebar-item" data-vista="novedades" onclick="cambiarVistaAdmin('novedades')">
+        <i class="fas fa-newspaper"></i> Novedades
+      </button>
+      <button type="button" class="sidebar-item" data-vista="contenido" onclick="cambiarVistaAdmin('contenido')">
+        <i class="fas fa-book"></i> Reseña y Labor
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="index.html" target="_blank" rel="noopener" class="sidebar-link"><i class="fas fa-external-link-alt"></i> Ver portal</a>
+      <a href="dashboard.html" target="_blank" rel="noopener" class="sidebar-link"><i class="fas fa-chart-bar"></i> Dashboard gráficos</a>
+      <button type="button" class="sidebar-link sidebar-logout" onclick="cerrarSesionAdmin()">
+        <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+      </button>
+    </div>
+  </aside>
+
+  <div class="admin-main">
+
+    <!-- DASHBOARD (vista por defecto) -->
+    <div id="vista-dashboard" class="admin-vista activa">
+      <header class="vista-header">
+        <h2><i class="fas fa-chart-pie"></i> Dashboard</h2>
+        <p>Resumen general del portal y evaluaciones MMPI-2</p>
+      </header>
+
+      <div class="kpi-grid-admin">
+        <div class="kpi-admin kpi-verde">
+          <i class="fas fa-check-circle"></i>
+          <div><span id="dash-kpi-total">--</span><small>Evaluaciones completas</small></div>
         </div>
-        <button class="btn-eval btn-verde" onclick="verificarPassword()" style="width:100%;">
-          <i class="fas fa-unlock"></i> Acceder al Panel
+        <div class="kpi-admin kpi-naranja">
+          <i class="fas fa-spinner"></i>
+          <div><span id="dash-kpi-progreso">--</span><small>En progreso</small></div>
+        </div>
+        <div class="kpi-admin kpi-azul">
+          <i class="fas fa-building"></i>
+          <div><span id="dash-kpi-comisarias">--</span><small>Comisarías activas</small></div>
+        </div>
+        <div class="kpi-admin kpi-morado">
+          <i class="fas fa-heart"></i>
+          <div><span id="dash-kpi-comisaria-activa">--</span><small>Comisaría en Bienestar</small></div>
+        </div>
+      </div>
+
+      <div class="dash-acciones-grid">
+        <a href="#" onclick="cambiarVistaAdmin('bienestar');return false;" class="dash-accion-card">
+          <i class="fas fa-heart"></i><span>Gestionar Bienestar</span>
+        </a>
+        <a href="#" onclick="cambiarVistaAdmin('convenios');return false;" class="dash-accion-card">
+          <i class="fas fa-file-contract"></i><span>Editar Convenios</span>
+        </a>
+        <a href="#" onclick="cambiarVistaAdmin('cursos');return false;" class="dash-accion-card">
+          <i class="fas fa-graduation-cap"></i><span>Editar Cursos</span>
+        </a>
+        <a href="#" onclick="cambiarVistaAdmin('novedades');return false;" class="dash-accion-card">
+          <i class="fas fa-newspaper"></i><span>Publicar Novedades</span>
+        </a>
+      </div>
+
+      <div class="admin-seccion">
+        <h4>Últimas evaluaciones registradas</h4>
+        <div class="tabla-wrap">
+          <table class="tabla-admin" id="tabla-ultimas-eval">
+            <thead><tr><th>Fecha</th><th>Comisaría</th><th>Nombres</th></tr></thead>
+            <tbody><tr><td colspan="3">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+        <p class="dash-ultima-act" id="dash-ultima-act"></p>
+      </div>
+    </div>
+
+    <!-- BIENESTAR -->
+    <div id="vista-bienestar" class="admin-vista">
+      <header class="vista-header">
+        <h2><i class="fas fa-heart"></i> Bienestar — MMPI-2</h2>
+        <p>Comisaría activa y descarga de respuestas</p>
+      </header>
+
+      <div class="admin-seccion admin-seccion-full">
+        <h4><i class="fas fa-building"></i> Comisaría activa en evaluación</h4>
+        <p class="admin-seccion-desc">La comisaría que verán los efectivos al ingresar al módulo de Bienestar.</p>
+        <div class="campo" style="margin-bottom:14px;">
+          <label for="admin-comisaria">Nombre de la comisaría</label>
+          <select id="admin-comisaria" class="select-comisaria-admin">
+            <option value="">-- Seleccionar comisaría --</option>
+          </select>
+        </div>
+        <button class="btn-eval btn-verde" onclick="guardarComisaria()">
+          <i class="fas fa-save"></i> Guardar y Publicar
         </button>
-        <div class="alerta alerta-error" id="alerta-login" style="margin-top:14px;" role="alert">
-          <i class="fas fa-exclamation-circle"></i> Contraseña incorrecta.
+        <div class="alerta alerta-exito" id="alerta-guardado" style="margin-top:12px;" role="status">
+          <i class="fas fa-check-circle"></i> Comisaría actualizada correctamente.
+        </div>
+      </div>
+
+      <div class="panel-respuestas">
+        <div class="panel-resp-titulo">
+          <i class="fas fa-file-download"></i>
+          <span>Respuestas MMPI-2 — Descarga y consulta</span>
+        </div>
+        <p class="panel-resp-desc">Las evaluaciones llegan a Google Forms y la hoja vinculada en Drive.</p>
+        <div class="panel-resp-botones panel-resp-principal">
+          <a href="https://docs.google.com/forms/d/19HWfPow6zMYuphsHbLir7Ro_xysD6hya528bfXl_YN0/edit#responses"
+             target="_blank" rel="noopener noreferrer" class="btn-resp btn-resp-form btn-resp-destacado">
+            <i class="fab fa-wpforms"></i> Ver respuestas en Google Forms
+          </a>
+          <a href="https://docs.google.com/spreadsheets/d/15tI_B63yXyn17yKFY5jC4vF0AmAIAt_iRkRhFUQBUYo/edit"
+             target="_blank" rel="noopener noreferrer" class="btn-resp btn-resp-form">
+            <i class="fas fa-table"></i> Abrir hoja Google Sheets
+          </a>
+          <a href="evaluacion.html" target="_blank" rel="noopener" class="btn-resp btn-resp-form">
+            <i class="fas fa-heart"></i> Ir a módulo Bienestar
+          </a>
+        </div>
+        <div class="descarga-filtro">
+          <div class="descarga-campo">
+            <label for="filtro-comisaria"><i class="fas fa-building"></i> Descargar CSV por comisaría</label>
+            <div class="descarga-input-wrap">
+              <select id="filtro-comisaria" class="select-comisaria">
+                <option value="">-- Seleccionar comisaría --</option>
+              </select>
+              <button class="btn-refresh" onclick="cargarComisariasDesdeSheet()" title="Actualizar">
+                <i class="fas fa-sync-alt" id="ico-refresh-comisarias"></i>
+              </button>
+            </div>
+          </div>
+          <div class="descarga-acciones">
+            <button class="btn-resp btn-resp-excel" onclick="descargarPorComisaria()">
+              <i class="fas fa-file-csv"></i> Descargar CSV
+            </button>
+            <button class="btn-resp btn-resp-todas" onclick="descargarTodas()">
+              <i class="fas fa-database"></i> Descargar TODAS
+            </button>
+          </div>
+          <div id="msg-descarga" class="msg-descarga" style="display:none;"></div>
+        </div>
+        <div class="panel-resp-info">
+          <div class="resp-stat"><i class="fas fa-building"></i>
+            <span>Comisaría activa: <strong id="stat-nombre-comisaria">--</strong></span>
+          </div>
+          <div class="resp-stat" id="stat-total-resp" style="display:none;">
+            <i class="fas fa-poll"></i><span id="txt-total-resp">--</span>
+          </div>
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- PASO 2: PANEL COMPLETO (tras autenticación) -->
-  <section id="admin-contenido" class="panel-admin-contenido" aria-label="Panel administrativo">
-
-    <div id="panel-operador-cuerpo" class="panel-operador-cuerpo">
-      <div class="admin-header-bar">
-        <i class="fas fa-shield-alt"></i>
-        <h3>Panel de Control Operador — UNITIC</h3>
-        <span class="badge-restringido">ACCESO RESTRINGIDO</span>
-      </div>
-      <div class="admin-body">
-
-        <!-- COMISARÍA ACTIVA (visible para el personal en evaluación) -->
-        <div class="admin-seccion admin-seccion-full">
-          <h4><i class="fas fa-building"></i>&nbsp;Comisaría Activa en Evaluación</h4>
-          <p class="admin-seccion-desc">Seleccione la comisaría que verán los efectivos al ingresar a la evaluación MMPI-2.</p>
-          <div class="campo" style="margin-bottom:14px;">
-            <label for="admin-comisaria">Nombre de la comisaría</label>
-            <select id="admin-comisaria" class="select-comisaria-admin">
-              <option value="">-- Seleccionar comisaría --</option>
-            </select>
-          </div>
-          <button class="btn-eval btn-verde" onclick="guardarComisaria()" style="width:100%;max-width:360px;">
-            <i class="fas fa-save"></i> Guardar y Publicar en Encabezado
-          </button>
-          <div class="alerta alerta-exito" id="alerta-guardado" style="margin-top:12px;" role="status">
-            <i class="fas fa-check-circle"></i> Comisaría actualizada correctamente.
-          </div>
+    <!-- CONVENIOS -->
+    <div id="vista-convenios" class="admin-vista">
+      <header class="vista-header">
+        <h2><i class="fas fa-file-contract"></i> Gestión de Convenios</h2>
+        <p>Agregar, editar o eliminar convenios del portal</p>
+      </header>
+      <div class="admin-seccion">
+        <div class="cms-toolbar">
+          <button type="button" class="btn-eval btn-verde" onclick="agregarConvenioCMS()"><i class="fas fa-plus"></i> Agregar convenio</button>
         </div>
-
-        <!-- DESCARGA DE RESPUESTAS DESDE GOOGLE SHEETS / FORMS -->
-        <div class="panel-respuestas">
-          <div class="panel-resp-titulo">
-            <i class="fas fa-file-download"></i>
-            <span>Respuestas MMPI-2 — Descarga y consulta</span>
-          </div>
-          <p class="panel-resp-desc">Las evaluaciones enviadas por el personal llegan automáticamente a Google Forms y la hoja vinculada. Desde aquí puede descargarlas o abrir las respuestas en Drive.</p>
-
-          <div class="panel-resp-botones panel-resp-principal">
-            <a href="https://docs.google.com/forms/d/19HWfPow6zMYuphsHbLir7Ro_xysD6hya528bfXl_YN0/edit#responses"
-               target="_blank" rel="noopener noreferrer" class="btn-resp btn-resp-form btn-resp-destacado">
-              <i class="fab fa-wpforms"></i> Ver respuestas en Google Forms
-            </a>
-            <a id="link-hoja-sheets"
-               href="https://docs.google.com/spreadsheets/d/15tI_B63yXyn17yKFY5jC4vF0AmAIAt_iRkRhFUQBUYo/edit"
-               target="_blank" rel="noopener noreferrer" class="btn-resp btn-resp-form">
-              <i class="fas fa-table"></i> Abrir hoja Google Sheets
-            </a>
-          </div>
-
-          <div class="descarga-filtro">
-            <div class="descarga-campo">
-              <label for="filtro-comisaria"><i class="fas fa-building"></i> Descargar CSV por comisaría</label>
-              <div class="descarga-input-wrap">
-                <select id="filtro-comisaria" class="select-comisaria">
-                  <option value="">-- Seleccionar comisaría --</option>
-                </select>
-                <button class="btn-refresh" onclick="cargarComisariasDesdeSheet()" title="Actualizar lista">
-                  <i class="fas fa-sync-alt" id="ico-refresh-comisarias"></i>
-                </button>
-              </div>
-            </div>
-            <div class="descarga-acciones">
-              <button class="btn-resp btn-resp-excel" onclick="descargarPorComisaria()">
-                <i class="fas fa-file-csv"></i> Descargar CSV de Comisaría
-              </button>
-              <button class="btn-resp btn-resp-todas" onclick="descargarTodas()">
-                <i class="fas fa-database"></i> Descargar TODAS las Respuestas
-              </button>
-            </div>
-            <div id="msg-descarga" class="msg-descarga" style="display:none;"></div>
-          </div>
-
-          <div class="panel-resp-info">
-            <div class="resp-stat" id="stat-comisaria">
-              <i class="fas fa-building"></i>
-              <span>Comisaría activa: <strong id="stat-nombre-comisaria">--</strong></span>
-            </div>
-            <div class="resp-stat" id="stat-total-resp" style="display:none;">
-              <i class="fas fa-poll"></i>
-              <span id="txt-total-resp">--</span>
-            </div>
-          </div>
+        <div id="cms-lista-convenios" class="cms-lista"></div>
+        <div class="cms-acciones">
+          <button type="button" class="btn-eval btn-verde" onclick="guardarSitioWeb()"><i class="fas fa-cloud-upload-alt"></i> Publicar cambios</button>
         </div>
-
-        <!-- ADMINISTRACIÓN DEL PORTAL WEB -->
-        <div class="admin-seccion admin-seccion-full cms-seccion">
-          <h4><i class="fas fa-globe"></i>&nbsp;Administración del Portal Web</h4>
-          <p class="admin-seccion-desc">Edite textos, novedades, convenios y cursos. Los cambios se publican para todo el personal al guardar.</p>
-
-          <div class="cms-tabs">
-            <button type="button" class="cms-tab activo" onclick="mostrarTabCMS('contenido')">Contenido</button>
-            <button type="button" class="cms-tab" onclick="mostrarTabCMS('convenios')">Convenios</button>
-            <button type="button" class="cms-tab" onclick="mostrarTabCMS('cursos')">Cursos</button>
-            <button type="button" class="cms-tab" onclick="mostrarTabCMS('novedades')">Novedades</button>
-          </div>
-
-          <div id="cms-tab-contenido" class="cms-panel activo">
-            <div class="campo"><label for="cms-actualizacion">Fecha de actualización del portal</label>
-              <input type="text" id="cms-actualizacion" placeholder="20 DE JUNIO 2026" /></div>
-            <div class="campo"><label for="cms-resena-intro">Reseña Histórica — introducción</label>
-              <textarea id="cms-resena-intro" rows="3"></textarea></div>
-            <div class="campo"><label for="cms-resena-parrafos">Reseña Histórica — párrafos (separados por línea en blanco)</label>
-              <textarea id="cms-resena-parrafos" rows="6"></textarea></div>
-            <div class="campo"><label for="cms-labor-intro">Nuestra Labor — introducción</label>
-              <textarea id="cms-labor-intro" rows="3"></textarea></div>
-          </div>
-
-          <div id="cms-tab-convenios" class="cms-panel">
-            <div class="cms-toolbar">
-              <button type="button" class="btn-eval btn-verde" onclick="agregarConvenioCMS()"><i class="fas fa-plus"></i> Agregar convenio</button>
-            </div>
-            <div id="cms-lista-convenios" class="cms-lista"></div>
-          </div>
-
-          <div id="cms-tab-cursos" class="cms-panel">
-            <div class="cms-toolbar">
-              <button type="button" class="btn-eval btn-verde" onclick="agregarCursoCMS()"><i class="fas fa-plus"></i> Agregar curso</button>
-            </div>
-            <div id="cms-lista-cursos" class="cms-lista"></div>
-          </div>
-
-          <div id="cms-tab-novedades" class="cms-panel">
-            <div class="cms-toolbar">
-              <button type="button" class="btn-eval btn-verde" onclick="agregarNovedadCMS()"><i class="fas fa-plus"></i> Agregar novedad</button>
-            </div>
-            <div id="cms-lista-novedades" class="cms-lista"></div>
-          </div>
-
-          <div class="cms-acciones">
-            <button type="button" class="btn-eval btn-verde" onclick="guardarSitioWeb()"><i class="fas fa-cloud-upload-alt"></i> Publicar cambios del portal</button>
-            <button type="button" class="btn-eval btn-borde" onclick="exportarSiteJSON()"><i class="fas fa-download"></i> Exportar JSON</button>
-            <label class="btn-eval btn-borde cms-import-label"><i class="fas fa-upload"></i> Importar JSON
-              <input type="file" accept="application/json" hidden onchange="importarSiteJSON(this)" /></label>
-            <button type="button" class="btn-eval btn-borde" onclick="restaurarSiteDefault()"><i class="fas fa-undo"></i> Restaurar base</button>
-          </div>
-          <div class="alerta alerta-exito" id="alerta-cms" role="status"></div>
-        </div>
-
-        <div class="panel-admin-acciones">
-          <a href="dashboard.html" target="_blank" rel="noopener noreferrer" class="btn-eval btn-verde">
-            <i class="fas fa-chart-bar"></i> Abrir Dashboard Completo
-          </a>
-          <a href="evaluacion.html" target="_blank" rel="noopener noreferrer" class="btn-eval btn-borde">
-            <i class="fas fa-heart"></i> Ir a Bienestar
-          </a>
-          <button class="btn-eval btn-borde" onclick="cerrarSesionAdmin()">
-            <i class="fas fa-sign-out-alt"></i> Cerrar sesión
-          </button>
-        </div>
-
+        <div class="alerta alerta-exito" id="alerta-cms-convenios" role="status"></div>
       </div>
     </div>
 
-  </section>
+    <!-- CURSOS -->
+    <div id="vista-cursos" class="admin-vista">
+      <header class="vista-header">
+        <h2><i class="fas fa-graduation-cap"></i> Gestión de Cursos</h2>
+        <p>Agregar, editar o eliminar cursos regionales</p>
+      </header>
+      <div class="admin-seccion">
+        <div class="cms-toolbar">
+          <button type="button" class="btn-eval btn-verde" onclick="agregarCursoCMS()"><i class="fas fa-plus"></i> Agregar curso</button>
+        </div>
+        <div id="cms-lista-cursos" class="cms-lista"></div>
+        <div class="cms-acciones">
+          <button type="button" class="btn-eval btn-verde" onclick="guardarSitioWeb()"><i class="fas fa-cloud-upload-alt"></i> Publicar cambios</button>
+        </div>
+        <div class="alerta alerta-exito" id="alerta-cms-cursos" role="status"></div>
+      </div>
+    </div>
 
-</main>
+    <!-- NOVEDADES -->
+    <div id="vista-novedades" class="admin-vista">
+      <header class="vista-header">
+        <h2><i class="fas fa-newspaper"></i> Novedades del Callao</h2>
+        <p>Noticias y operativos recientes del portal</p>
+      </header>
+      <div class="admin-seccion">
+        <div class="cms-toolbar">
+          <button type="button" class="btn-eval btn-verde" onclick="agregarNovedadCMS()"><i class="fas fa-plus"></i> Agregar novedad</button>
+        </div>
+        <div id="cms-lista-novedades" class="cms-lista"></div>
+        <div class="cms-acciones">
+          <button type="button" class="btn-eval btn-verde" onclick="guardarSitioWeb()"><i class="fas fa-cloud-upload-alt"></i> Publicar cambios</button>
+        </div>
+        <div class="alerta alerta-exito" id="alerta-cms-novedades" role="status"></div>
+      </div>
+    </div>
 
-<footer class="footer-simple">
-  <p>&copy; 2026 — REGPOL Callao — Policía Nacional del Perú &nbsp;|&nbsp; Desarrollado por <strong>Ing. Anthony Ccayo — UNITIC</strong></p>
-</footer>
+    <!-- RESEÑA Y LABOR -->
+    <div id="vista-contenido" class="admin-vista">
+      <header class="vista-header">
+        <h2><i class="fas fa-book"></i> Reseña Histórica y Nuestra Labor</h2>
+        <p>Textos institucionales del portal</p>
+      </header>
+      <div class="admin-seccion">
+        <div class="campo"><label for="cms-actualizacion">Fecha de actualización del portal</label>
+          <input type="text" id="cms-actualizacion" placeholder="20 DE JUNIO 2026" /></div>
+        <div class="campo"><label for="cms-resena-intro">Reseña Histórica — introducción</label>
+          <textarea id="cms-resena-intro" rows="3"></textarea></div>
+        <div class="campo"><label for="cms-resena-parrafos">Reseña Histórica — párrafos (separados por línea en blanco)</label>
+          <textarea id="cms-resena-parrafos" rows="6"></textarea></div>
+        <div class="campo"><label for="cms-labor-intro">Nuestra Labor — introducción</label>
+          <textarea id="cms-labor-intro" rows="3"></textarea></div>
+        <div class="cms-acciones">
+          <button type="button" class="btn-eval btn-verde" onclick="guardarSitioWeb()"><i class="fas fa-cloud-upload-alt"></i> Publicar cambios</button>
+          <button type="button" class="btn-eval btn-borde" onclick="exportarSiteJSON()"><i class="fas fa-download"></i> Exportar JSON</button>
+          <label class="btn-eval btn-borde cms-import-label"><i class="fas fa-upload"></i> Importar JSON
+            <input type="file" accept="application/json" hidden onchange="importarSiteJSON(this)" /></label>
+          <button type="button" class="btn-eval btn-borde" onclick="restaurarSiteDefault()"><i class="fas fa-undo"></i> Restaurar base</button>
+        </div>
+        <div class="alerta alerta-exito" id="alerta-cms" role="status"></div>
+      </div>
+    </div>
+
+  </div>
+</section>
 
 <script src="portal.js?v=1"></script>
 <script src="comisarias.js?v=2"></script>
-<script src="panel-cms.js?v=1"></script>
-<script src="panel-admin.js?v=5"></script>
-<script>
-function mostrarTabCMS(tab) {
-  document.querySelectorAll('.cms-tab').forEach(function(b) { b.classList.remove('activo'); });
-  document.querySelectorAll('.cms-panel').forEach(function(p) { p.classList.remove('activo'); });
-  var btn = document.querySelector('.cms-tab[onclick*="' + tab + '"]');
-  if (btn) btn.classList.add('activo');
-  var panel = document.getElementById('cms-tab-' + tab);
-  if (panel) panel.classList.add('activo');
-}
-</script>
+<script src="panel-cms.js?v=2"></script>
+<script src="panel-admin.js?v=6"></script>
 </body>
 </html>

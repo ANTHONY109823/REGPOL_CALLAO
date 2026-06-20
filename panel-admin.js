@@ -5,6 +5,69 @@
 
 var WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzHHCUjXQVNtgVTERGx3RuiGPfSHuhCgTVddHL8ByDJUE-lLQessVsdFCFabayhCC5u/exec';
 var ADMIN_PASS  = 'AdminUNITIC2026';
+var vistaAdminActual = 'dashboard';
+
+function cambiarVistaAdmin(vista) {
+  vistaAdminActual = vista;
+  sessionStorage.setItem('panelAdminVista', vista);
+
+  document.querySelectorAll('.admin-vista').forEach(function(el) {
+    el.classList.remove('activa');
+  });
+  document.querySelectorAll('.sidebar-item').forEach(function(btn) {
+    btn.classList.toggle('activo', btn.getAttribute('data-vista') === vista);
+  });
+
+  var panel = document.getElementById('vista-' + vista);
+  if (panel) panel.classList.add('activa');
+
+  if (vista === 'dashboard') cargarDashboardAdmin();
+}
+
+function cargarDashboardAdmin() {
+  var comisActiva = localStorage.getItem('comisariaActiva') || 'No configurada';
+  var elComis = document.getElementById('dash-kpi-comisaria-activa');
+  if (elComis) elComis.textContent = comisActiva;
+
+  var url = WEB_APP_URL || localStorage.getItem('webAppUrl');
+  if (!url) return;
+
+  fetch(url + '?action=stats')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.ok) return;
+      setText('dash-kpi-total', data.totalCompletas || 0);
+      setText('dash-kpi-progreso', data.progresosActivos || 0);
+      setText('dash-kpi-comisarias', (data.porComisaria || []).length);
+
+      var tbody = document.querySelector('#tabla-ultimas-eval tbody');
+      if (tbody) {
+        var rows = data.ultimasEvaluaciones || [];
+        if (!rows.length) {
+          tbody.innerHTML = '<tr><td colspan="3">Sin evaluaciones registradas aún.</td></tr>';
+        } else {
+          tbody.innerHTML = rows.map(function(r) {
+            return '<tr><td>' + escDash(r.fecha) + '</td><td>' + escDash(r.comisaria) + '</td><td>' + escDash(r.nombres) + '</td></tr>';
+          }).join('');
+        }
+      }
+      var act = document.getElementById('dash-ultima-act');
+      if (act) act.textContent = 'Actualizado: ' + new Date().toLocaleString('es-PE');
+    })
+    .catch(function() {
+      var tbody = document.querySelector('#tabla-ultimas-eval tbody');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="3">No se pudo conectar con la Web App.</td></tr>';
+    });
+}
+
+function setText(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function escDash(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
 function mostrarPanelAutenticado() {
   document.body.classList.add('autenticado');
@@ -14,6 +77,9 @@ function mostrarPanelAutenticado() {
   if (statNombre) {
     statNombre.textContent = localStorage.getItem('comisariaActiva') || 'No configurada';
   }
+
+  var vista = sessionStorage.getItem('panelAdminVista') || 'dashboard';
+  cambiarVistaAdmin(vista);
 
   setTimeout(cargarComisariasDesdeSheet, 300);
   if (typeof initCMS === 'function') setTimeout(initCMS, 400);
@@ -49,6 +115,8 @@ function guardarComisaria() {
 
   var statNombre = document.getElementById('stat-nombre-comisaria');
   if (statNombre) statNombre.textContent = nombre;
+  var dashComis = document.getElementById('dash-kpi-comisaria-activa');
+  if (dashComis) dashComis.textContent = nombre;
 
   alerta.classList.add('visible');
   setTimeout(function() { alerta.classList.remove('visible'); }, 3000);
@@ -56,6 +124,7 @@ function guardarComisaria() {
 
 function cerrarSesionAdmin() {
   sessionStorage.removeItem('panelAdminAuth');
+  sessionStorage.removeItem('panelAdminVista');
   document.body.classList.remove('autenticado');
   document.getElementById('input-password').value = '';
   document.getElementById('alerta-login').classList.remove('visible');
