@@ -5,10 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panel de Control Operador — UNITIC | REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="evaluacion.css" />
-  <link rel="stylesheet" href="panel-admin.css" />
+  <link rel="stylesheet" href="panel-admin.css?v=3" />
 </head>
 <body class="panel-admin-page">
+
+<div class="pa-topbar">
+  <span><i class="fas fa-shield-alt"></i> Panel de Control — REGPOL Callao</span>
+  <span>
+    <a href="dashboard.html" target="_blank" rel="noopener noreferrer"><i class="fas fa-chart-bar"></i> Dashboard</a>
+    <a href="evaluacion.html"><i class="fas fa-clipboard-check"></i> Evaluación</a>
+    <a href="index.html"><i class="fas fa-home"></i> Portal</a>
+  </span>
+</div>
+
+<header class="pa-header">
+  <img src="img/regpol callao.jpg" alt="Escudo REGPOL Callao" onerror="this.style.display='none'" />
+  <div>
+    <h1>REGIÓN POLICIAL CALLAO</h1>
+    <p>UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p>
+  </div>
+</header>
 
 <main class="panel-admin-main">
 
@@ -38,9 +54,9 @@
   </section>
 
   <!-- PASO 2: PANEL COMPLETO (tras autenticación) -->
-  <section id="admin-contenido" class="panel-admin-contenido" style="display:none;" aria-label="Panel administrativo">
+  <section id="admin-contenido" class="panel-admin-contenido" aria-label="Panel administrativo">
 
-    <div id="panel-admin" class="panel-admin-visible">
+    <div id="panel-operador-cuerpo" class="panel-operador-cuerpo">
       <div class="admin-header-bar">
         <i class="fas fa-shield-alt"></i>
         <h3>Panel de Control Operador — UNITIC</h3>
@@ -162,6 +178,6 @@
   <p>&copy; 2026 — REGPOL Callao — Policía Nacional del Perú &nbsp;|&nbsp; Desarrollado por <strong>Ing. Anthony Ccayo — UNITIC</strong></p>
 </footer>
 
-<script src="panel-admin.js"></script>
+<script src="panel-admin.js?v=3"></script>
 </body>
 </html>

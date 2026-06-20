@@ -16,6 +16,7 @@ function verificarDash() {
   if (pass === ADMIN_PASS) {
     document.getElementById('dash-login').style.display    = 'none';
     document.getElementById('dash-contenido').style.display = 'block';
+    document.body.classList.add('dash-autenticado');
     sessionStorage.setItem('dashAuth', '1');
     cargarDatos();
   } else {
@@ -256,6 +257,7 @@ function generarColores(n) {
 // ── INIT ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function() {
   if (sessionStorage.getItem('dashAuth') === '1') {
+    document.body.classList.add('dash-autenticado');
     document.getElementById('dash-login').style.display    = 'none';
     document.getElementById('dash-contenido').style.display = 'block';
     cargarDatos();

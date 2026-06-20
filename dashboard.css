@@ -14,6 +14,25 @@
 
 body { background: var(--gris-fondo); margin: 0; font-family: 'Segoe UI', sans-serif; }
 
+/* TOP BAR + HEADER DASHBOARD */
+.top-bar { background: var(--verde-dark); color: rgba(255,255,255,.75); font-size: 12px; padding: 8px 20px; }
+.top-bar-inner { max-width: 1280px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+.main-header {
+  background: linear-gradient(135deg, var(--verde-dark) 0%, var(--verde-pnp) 100%);
+  padding: 18px 20px;
+  color: #fff;
+}
+.header-flex { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.header-logo { display: flex; align-items: center; gap: 16px; }
+.header-logo img { height: 64px; width: auto; border-radius: 6px; }
+.header-title { font-size: 20px; font-weight: 800; line-height: 1.2; }
+.header-sub { font-size: 12px; opacity: .8; margin-top: 3px; }
+
+body.dash-autenticado #dash-login { display: none !important; }
+body.dash-autenticado #dash-contenido { display: block !important; }
+body:not(.dash-autenticado) #dash-contenido { display: none !important; }
+
 /* LOGIN */
 .dash-login-wrap { display:flex; align-items:center; justify-content:center; min-height:70vh; }
 .dash-login-card { background:#fff; border-radius:16px; padding:40px 36px; box-shadow:var(--sombra); width:340px; text-align:center; }
