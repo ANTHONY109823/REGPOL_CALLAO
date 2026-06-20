@@ -65,12 +65,25 @@ body {
 .btn-pnp-social.fb { background-color: #1877F2 !important; } /* Facebook */
 .btn-pnp-social.tk { background-color: #000000 !important; } /* TikTok */
 .btn-pnp-social.wa { background-color: #25D366 !important; } /* WhatsApp */
+.btn-pnp-social.ingresar {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
+    border: 2px solid rgba(255,255,255,.9) !important;
+    letter-spacing: 0.6px;
+    font-size: 13px !important;
+    padding: 8px 20px !important;
+    box-shadow: 0 4px 12px rgba(243,156,18,.35) !important;
+}
+.btn-pnp-social.ingresar i { font-size: 14px !important; }
 
 /* Efecto al pasar el mouse (Hover) */
 .btn-pnp-social:hover {
     transform: translateY(-3px) !important; /* Se eleva un poquito */
     box-shadow: 0 6px 12px rgba(0,0,0,0.3) !important;
     filter: brightness(1.1); /* Brilla un poco */
+}
+.btn-pnp-social.ingresar:hover {
+    filter: brightness(1.06);
+    box-shadow: 0 6px 18px rgba(243,156,18,.5) !important;
 }
 
 /* Efecto al presionar (Active) */
