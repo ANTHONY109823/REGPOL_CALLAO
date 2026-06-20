@@ -32,6 +32,8 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .logo-pnp { height: 100px; width: auto; }
 .title-text h1 { color: var(--verde-pnp); font-size: 22px; font-weight: 900; line-height: 1.2; }
 .title-text p { color: #666; font-size: 13px; margin-top: 4px; }
+.btn-ingresar-top { background: var(--verde-pnp); color: var(--blanco); padding: 10px 22px; border-radius: 50px; text-decoration: none; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 7px; transition: background .2s, transform .2s; border: 2px solid var(--naranja-pnp); white-space: nowrap; }
+.btn-ingresar-top:hover { background: var(--verde-dark); transform: translateY(-2px); text-decoration: none; color: var(--blanco); }
 .btn-whatsapp-top { background: #25D366; color: var(--blanco); padding: 10px 20px; border-radius: 50px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px; transition: background .2s, transform .2s; }
 .btn-whatsapp-top:hover { background: #128C7E; transform: translateY(-2px); }
 
