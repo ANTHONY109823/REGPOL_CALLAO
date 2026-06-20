@@ -67,14 +67,15 @@ function cargarComisariasDesdeSheet() {
   var msg    = document.getElementById('msg-descarga');
   var ico    = document.getElementById('ico-refresh-comisarias');
 
+  poblarSelectComisarias(select);
+
   if (!url) {
-    mostrarMsgDescarga('Falta configurar la URL de la Web App.', 'error');
+    mostrarMsgDescarga('Lista cargada. Configure la Web App para ver totales de la hoja.', 'error');
     mostrarInputWebApp();
     return;
   }
 
   if (ico) ico.classList.add('fa-spin');
-  select.innerHTML = '<option value="">-- Cargando... --</option>';
   select.disabled = true;
   msg.style.display = 'none';
 
@@ -84,31 +85,21 @@ function cargarComisariasDesdeSheet() {
       if (ico) ico.classList.remove('fa-spin');
       select.disabled = false;
 
-      if (!data.ok || !data.comisarias.length) {
-        select.innerHTML = '<option value="">-- Sin respuestas aún --</option>';
-        return;
+      if (data.ok && data.comisarias && data.comisarias.length) {
+        agregarComisariasExtra(select, data.comisarias);
       }
-
-      select.innerHTML = '<option value="">-- Seleccionar comisaría --</option>';
-      data.comisarias.forEach(function(c) {
-        var op = document.createElement('option');
-        op.value = c;
-        op.textContent = c;
-        select.appendChild(op);
-      });
 
       var statTotal = document.getElementById('stat-total-resp');
       var txtTotal  = document.getElementById('txt-total-resp');
-      if (statTotal && txtTotal) {
+      if (statTotal && txtTotal && data.ok) {
         statTotal.style.display = 'flex';
-        txtTotal.textContent = 'Total de evaluaciones en la hoja: ' + data.total;
+        txtTotal.textContent = 'Total de evaluaciones en la hoja: ' + (data.total || 0);
       }
     })
     .catch(function() {
       if (ico) ico.classList.remove('fa-spin');
       select.disabled = false;
-      select.innerHTML = '<option value="">-- Error de conexión --</option>';
-      mostrarMsgDescarga('No se pudo conectar con la Web App. Verifica que esté desplegada.', 'error');
+      mostrarMsgDescarga('Lista de comisarías cargada. No se pudo conectar con la Web App.', 'error');
     });
 }
 
@@ -184,9 +175,11 @@ function guardarWebAppUrl() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  poblarSelectComisarias('filtro-comisaria');
+  poblarSelectComisarias('admin-comisaria');
+
   var guardado = localStorage.getItem('comisariaActiva') || '';
-  var adminInput = document.getElementById('admin-comisaria');
-  if (adminInput && guardado) adminInput.value = guardado;
+  if (guardado) seleccionarComisariaEnSelect('admin-comisaria', guardado);
 
   var storedUrl = localStorage.getItem('webAppUrl');
   if (storedUrl) WEB_APP_URL = storedUrl;

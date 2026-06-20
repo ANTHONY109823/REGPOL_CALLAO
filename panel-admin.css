@@ -208,6 +208,18 @@ body.panel-admin-page.autenticado #admin-contenido { display: block !important; 
   font-size: 13px;
   font-weight: 600;
 }
+
+.select-comisaria-admin {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 7px;
+  border: 1.5px solid var(--borde);
+  background: var(--blanco);
+  color: var(--verde-dark);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+}
 .btn-refresh {
   background: rgba(255,255,255,.15);
   border: 1.5px solid rgba(255,255,255,.3);

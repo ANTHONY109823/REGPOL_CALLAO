@@ -76,7 +76,7 @@
               <label for="filtro-comisaria"><i class="fas fa-building"></i> Seleccionar Comisaría</label>
               <div class="descarga-input-wrap">
                 <select id="filtro-comisaria" class="select-comisaria">
-                  <option value="">-- Cargando comisarías... --</option>
+                  <option value="">-- Seleccionar comisaría --</option>
                 </select>
                 <button class="btn-refresh" onclick="cargarComisariasDesdeSheet()" title="Actualizar lista">
                   <i class="fas fa-sync-alt" id="ico-refresh-comisarias"></i>
@@ -127,7 +127,9 @@
             <h4><i class="fas fa-building"></i>&nbsp;Comisaría Activa en Evaluación</h4>
             <div class="campo" style="margin-bottom:14px;">
               <label for="admin-comisaria">Nombre de la comisaría</label>
-              <input type="text" id="admin-comisaria" placeholder="Ej. Comisaría PNP La Perla" />
+              <select id="admin-comisaria" class="select-comisaria-admin">
+                <option value="">-- Seleccionar comisaría --</option>
+              </select>
             </div>
             <button class="btn-eval btn-verde" onclick="guardarComisaria()" style="width:100%;">
               <i class="fas fa-save"></i> Guardar y Publicar en Encabezado
@@ -178,6 +180,7 @@
   <p>&copy; 2026 — REGPOL Callao — Policía Nacional del Perú &nbsp;|&nbsp; Desarrollado por <strong>Ing. Anthony Ccayo — UNITIC</strong></p>
 </footer>
 
+<script src="comisarias.js?v=1"></script>
 <script src="panel-admin.js?v=3"></script>
 </body>
 </html>

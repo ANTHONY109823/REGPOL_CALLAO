@@ -204,12 +204,19 @@ function filtrarTabla() {
 // ── SELECT COMISARIA ─────────────────────────────────────────────────────────
 function poblarSelectComisaria(porComisaria) {
   var sel = document.getElementById('dash-select-comisaria');
-  sel.innerHTML = '<option value="">-- Todas las comisarías --</option>';
+  poblarSelectComisarias(sel, '-- Seleccionar comisaría --');
+
   (porComisaria || []).forEach(function(c) {
-    var op = document.createElement('option');
-    op.value = c.nombre;
-    op.textContent = c.nombre + ' (' + c.total + ')';
-    sel.appendChild(op);
+    var nombre = c.nombre || c;
+    var total  = c.total;
+    for (var i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value.toUpperCase() === String(nombre).toUpperCase()) {
+        if (total !== undefined) sel.options[i].textContent = nombre + ' (' + total + ')';
+        return;
+      }
+    }
+    agregarComisariasExtra(sel, [nombre]);
+    if (total !== undefined) sel.options[sel.options.length - 1].textContent = nombre + ' (' + total + ')';
   });
 }
 
@@ -256,6 +263,8 @@ function generarColores(n) {
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function() {
+  poblarSelectComisarias('dash-select-comisaria');
+
   if (sessionStorage.getItem('dashAuth') === '1') {
     document.body.classList.add('dash-autenticado');
     document.getElementById('dash-login').style.display    = 'none';
