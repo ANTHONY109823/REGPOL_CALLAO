@@ -152,7 +152,8 @@ var CONFIG_FORMS = {
 var ESTADO = {
   paginaActual:  1,
   pregsPorPag:   10,
-  respuestas:    {}
+  respuestas:    {},
+  registroCompleto: false
 };
 
 /* ================================================================
@@ -172,7 +173,9 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('texto-respondidas').textContent  = '0 / ' + TOTAL_PREGUNTAS + ' respondidas';
   document.getElementById('info-pagina').textContent        = 'Pagina 1 de ' + TOTAL_PAGINAS;
 
-  renderizarPagina(1);
+  actualizarControles();
+  actualizarProgreso();
+  ocultarCuestionario();
 
   document.getElementById('f-nacimiento').addEventListener('input', formatearFechaNacimiento);
   document.getElementById('f-nacimiento').addEventListener('blur', calcularEdad);
@@ -307,9 +310,78 @@ function calcularEdad() {
 }
 
 /* ================================================================
+   REGISTRO OBLIGATORIO ANTES DEL CUESTIONARIO
+================================================================ */
+function validarCamposRegistro() {
+  var err = false;
+  var msgErr = '';
+  var campos = [
+    { id: 'f-unidad',     test: function(v) { return v.trim().length > 0; },      msg: 'Seleccione su comisaría.' },
+    { id: 'f-nombres',    test: function(v) { return v.trim().length > 0; },      msg: 'El nombre completo es obligatorio.' },
+    { id: 'f-cip',        test: function(v) { return /^\d{8}$/.test(v.trim()); }, msg: 'El CIP debe tener exactamente 8 digitos.' },
+    { id: 'f-dni',        test: function(v) { return /^\d{8}$/.test(v.trim()); }, msg: 'El DNI debe tener exactamente 8 digitos.' },
+    { id: 'f-nacimiento', test: esFechaNacimientoValida, msg: 'Ingrese una fecha valida en formato dd/mm/aaaa (18 a 80 anios).' }
+  ];
+
+  campos.forEach(function(c) {
+    var el = document.getElementById(c.id);
+    el.classList.remove('invalido', 'valido');
+    if (!c.test(el.value)) {
+      el.classList.add('invalido');
+      if (!err) msgErr = c.msg;
+      err = true;
+    } else {
+      el.classList.add('valido');
+    }
+  });
+
+  var edadEl = document.getElementById('f-edad');
+  if (edadEl && edadEl.value.indexOf('Verifique') !== -1) {
+    err = true;
+    if (!msgErr) msgErr = 'Verifique la fecha de nacimiento y la edad calculada.';
+  }
+
+  return { ok: !err, msg: msgErr };
+}
+
+function ocultarCuestionario() {
+  ESTADO.registroCompleto = false;
+  var card = document.getElementById('card-cuestionario');
+  if (card) card.classList.add('seccion-bloqueada');
+  var reg = document.getElementById('card-registro');
+  if (reg) reg.classList.remove('card-registro-bloqueado');
+  sessionStorage.removeItem('bienestarRegistroOk');
+}
+
+function activarCuestionario(hacerScroll) {
+  ESTADO.registroCompleto = true;
+  sessionStorage.setItem('bienestarRegistroOk', '1');
+  var card = document.getElementById('card-cuestionario');
+  if (card) card.classList.remove('seccion-bloqueada');
+  var reg = document.getElementById('card-registro');
+  if (reg) reg.classList.add('card-registro-bloqueado');
+  renderizarPagina(ESTADO.paginaActual || 1, !!hacerScroll);
+}
+
+function continuarAlCuestionario() {
+  var val = validarCamposRegistro();
+  if (!val.ok) {
+    mostrarAlerta(val.msg, 'error');
+    document.getElementById('card-registro').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  ocultarAlerta();
+  activarCuestionario(true);
+  mostrarAlerta('Registro completado. Responda el cuestionario MMPI-2.', 'exito');
+  setTimeout(ocultarAlerta, 3500);
+}
+
+/* ================================================================
    RENDERIZADO DE PAGINA (paginacion de 10 en 10)
 ================================================================ */
-function renderizarPagina(pagina) {
+function renderizarPagina(pagina, hacerScroll) {
+  if (!ESTADO.registroCompleto) return;
+
   ESTADO.paginaActual = pagina;
   var zona   = document.getElementById('zona-preguntas');
   var inicio = (pagina - 1) * ESTADO.pregsPorPag;
@@ -349,13 +421,16 @@ function renderizarPagina(pagina) {
   zona.innerHTML = html;
   actualizarControles();
   actualizarProgreso();
-  document.getElementById('card-cuestionario').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (hacerScroll !== false) {
+    document.getElementById('card-cuestionario').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 /* ================================================================
    GUARDAR RESPUESTA EN MEMORIA
 ================================================================ */
 function guardarRespuesta(id, val) {
+  if (!ESTADO.registroCompleto) return;
   ESTADO.respuestas[id] = val;
   var fila = document.getElementById('fila-' + id);
   if (fila) fila.classList.remove('sin-marcar');
@@ -390,6 +465,10 @@ function actualizarControles() {
 }
 
 function cambiarPagina(delta) {
+  if (!ESTADO.registroCompleto) {
+    mostrarAlerta('Complete primero su registro en el Paso 1.', 'error');
+    return;
+  }
   var nueva = ESTADO.paginaActual + delta;
   if (nueva < 1 || nueva > TOTAL_PAGINAS) return;
 
@@ -417,31 +496,11 @@ function cambiarPagina(delta) {
    VALIDACION FINAL Y ENVIO A GOOGLE FORMS
 ================================================================ */
 function validarYEnviar() {
-  var err    = false;
-  var msgErr = '';
-  var campos = [
-    { id: 'f-unidad',     test: function(v) { return v.trim().length > 0; },      msg: 'La unidad/dependencia es obligatoria.' },
-    { id: 'f-nombres',    test: function(v) { return v.trim().length > 0; },      msg: 'El nombre completo es obligatorio.' },
-    { id: 'f-cip',        test: function(v) { return /^\d{8}$/.test(v.trim()); }, msg: 'El CIP debe tener exactamente 8 digitos.' },
-    { id: 'f-dni',        test: function(v) { return /^\d{8}$/.test(v.trim()); }, msg: 'El DNI debe tener exactamente 8 digitos.' },
-    { id: 'f-nacimiento', test: esFechaNacimientoValida, msg: 'Ingrese una fecha valida en formato dd/mm/aaaa (18 a 80 anios).' }
-  ];
-
-  campos.forEach(function(c) {
-    var el = document.getElementById(c.id);
-    el.classList.remove('invalido', 'valido');
-    if (!c.test(el.value)) {
-      el.classList.add('invalido');
-      if (!err) msgErr = c.msg;
-      err = true;
-    } else {
-      el.classList.add('valido');
-    }
-  });
-
-  if (err) {
-    mostrarAlerta(msgErr, 'error');
-    document.getElementById('f-unidad').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  var valReg = validarCamposRegistro();
+  if (!valReg.ok) {
+    mostrarAlerta(valReg.msg, 'error');
+    ocultarCuestionario();
+    document.getElementById('card-registro').scrollIntoView({ behavior: 'smooth', block: 'start' });
     return;
   }
 
@@ -511,7 +570,11 @@ function limpiarFormulario() {
     document.getElementById(id).value = '';
   });
   ESTADO.respuestas = {};
-  renderizarPagina(1);
+  ESTADO.paginaActual = 1;
+  ocultarCuestionario();
+  actualizarControles();
+  actualizarProgreso();
+  document.getElementById('zona-preguntas').innerHTML = '';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -644,14 +707,10 @@ function restaurarProgreso() {
   // Ir a la página guardada
   var pagina = parseInt(data.pagina) || 1;
   ESTADO.paginaActual = pagina;
-  renderizarPagina(pagina);
+  activarCuestionario(true);
   actualizarProgreso();
 
   document.getElementById('banner-progreso').style.display = 'none';
-
-  // Scroll suave al cuestionario
-  var quiz = document.getElementById('cuestionario');
-  if (quiz) quiz.scrollIntoView({ behavior: 'smooth' });
 
   mostrarAlerta('Progreso restaurado — continúa desde la página ' + pagina, 'exito');
 }

@@ -223,7 +223,8 @@ img {
     gap: 10px;
 }
 
-.dot { width: 12px; height: 12px; background: rgba(255,255,255,0.5); border-radius: 50%; }
+.dot { width: 12px; height: 12px; background: rgba(255,255,255,0.5); border-radius: 50%; cursor: pointer; transition: background 0.3s; }
+.dot:hover { background: rgba(255,255,255,0.85); }
 .dot.active { background: var(--naranja-pnp); }
 
 /* --- 5. TARJETAS Y OTROS --- */

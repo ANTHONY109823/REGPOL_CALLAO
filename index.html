@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REGPOL CALLAO - PNP</title>
     <!-- Estilos -->
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=10">
     <!-- Iconos Gratuitos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -44,14 +44,14 @@
     <!-- 3. MENÚ DE NAVEGACIÓN VERDE -->
     <nav class="nav-main"><div class="container"><ul></ul></div></nav>
 
-<!-- 4. SECCIÓN DE PRESENTACIÓN (TRANSICIÓN DE IMÁGENES) -->
+<!-- 4. SECCIÓN DE PRESENTACIÓN (CARRUSEL DE IMÁGENES) -->
     <section class="presentation-slider">
         <div class="slides">
-            <div class="slide active" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('img/Imagen1.jpg');"></div>
-            
-            <!-- AQUÍ YA ESTÁ CORREGIDO EL NOMBRE -->
-            <div class="slide" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('img/saludo.jpg');"></div>
-            
+            <div class="slide active" style="background-image: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url('img/baner.jpg');"></div>
+            <div class="slide" style="background-image: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url('img/saludo.jpg');"></div>
+            <div class="slide" style="background-image: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url('img/compartir.jpg');"></div>
+            <div class="slide" style="background-image: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url('img/lunespatriotico.jpg');"></div>
+            <div class="slide" style="background-image: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url('img/sembrando.jpg');"></div>
         </div>
 
         <div class="hero-overlay">
@@ -62,10 +62,12 @@
             </div>
         </div>
 
-        <!-- Asegúrate de tener 5 puntitos (dots) porque ahora tienes 5 fotos -->
         <div class="slider-dots">
-            <span class="dot active"></span>
-            <span class="dot"></span>
+            <span class="dot active" data-slide="0"></span>
+            <span class="dot" data-slide="1"></span>
+            <span class="dot" data-slide="2"></span>
+            <span class="dot" data-slide="3"></span>
+            <span class="dot" data-slide="4"></span>
         </div>
     </section>
 
@@ -128,10 +130,10 @@
     </footer>
 
     <!-- SCRIPT CORREGIDO SIN ERRORES -->
-    <script src="portal.js?v=1"></script>
+    <script src="portal.js?v=2"></script>
     <script>
         initPortalPagina({
-            activeNav: '',
+            activeNav: 'inicio',
             renderNovedades: 'novedades-portal',
             limiteNovedades: 3,
             actualizarFecha: true
@@ -142,8 +144,11 @@
             var slides = document.querySelectorAll('.slide');
             var dots = document.querySelectorAll('.dot');
             var current = 0;
+            var timer;
 
             function changeSlide(index) {
+                if (!slides.length) return;
+                current = index;
                 for (var i = 0; i < slides.length; i++) {
                     slides[i].classList.remove('active');
                     if (dots[i]) dots[i].classList.remove('active');
@@ -153,13 +158,22 @@
             }
 
             function next() {
-                current = (current + 1) % slides.length;
-                changeSlide(current);
+                changeSlide((current + 1) % slides.length);
             }
 
-            if (slides.length > 0) {
-                setInterval(next, 4000);
+            function startAuto() {
+                clearInterval(timer);
+                timer = setInterval(next, 5000);
             }
+
+            dots.forEach(function(dot) {
+                dot.addEventListener('click', function() {
+                    changeSlide(parseInt(dot.getAttribute('data-slide'), 10) || 0);
+                    startAuto();
+                });
+            });
+
+            if (slides.length > 0) startAuto();
         })();
     </script>
 </body>

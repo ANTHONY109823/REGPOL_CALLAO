@@ -113,12 +113,13 @@
   </div>
 
   <!-- PASO 1: DATOS DEL EFECTIVO -->
-  <div class="card-eval">
+  <div class="card-eval" id="card-registro">
     <div class="card-header-eval">
       <i class="fas fa-id-card"></i>
-      <h2>Paso 1 -- Datos de Identificacion del Efectivo Policial</h2>
+      <h2>Paso 1 -- Registro e Identificacion del Efectivo Policial</h2>
     </div>
     <div class="card-body-eval">
+      <p class="registro-intro">Complete sus datos personales. Solo despues podra acceder al cuestionario MMPI-2.</p>
       <div class="form-grid">
         <div class="campo campo-full">
           <label for="f-unidad">Unidad / Dependencia Actual (Comisaría) <span class="req">*</span></label>
@@ -152,11 +153,17 @@
           <input type="text" id="f-edad" class="input-edad" readonly placeholder="Complete su fecha de nacimiento" />
         </div>
       </div>
+      <div class="registro-acciones">
+        <button type="button" class="btn-eval btn-verde btn-registro-continuar" onclick="continuarAlCuestionario()">
+          <i class="fas fa-user-check"></i> Registrar y continuar al cuestionario
+        </button>
+        <p class="registro-aviso">Todos los campos marcados con * son obligatorios.</p>
+      </div>
     </div>
   </div>
 
-  <!-- PASO 2: CUESTIONARIO -->
-  <div class="card-eval" id="card-cuestionario">
+  <!-- PASO 2: CUESTIONARIO (oculto hasta completar registro) -->
+  <div class="card-eval seccion-bloqueada" id="card-cuestionario">
     <div class="card-header-eval">
       <i class="fas fa-tasks"></i>
       <h2>Paso 2 -- Inventario MMPI-2 (566 Preguntas)</h2>
@@ -196,7 +203,7 @@
   <p>&copy; 2026 -- REGPOL Callao -- Policia Nacional del Peru &nbsp;|&nbsp; Desarrollado por <strong>Ing. Anthony Ccayo -- UNITIC</strong> &nbsp;|&nbsp; <a href="index.html">Volver al Portal</a></p>
 </footer>
 
-<script src="portal.js?v=1"></script>
+<script src="portal.js?v=2"></script>
 <script>initPortalPagina({ activeNav: 'bienestar' });</script>
 <script src="preguntas.js"></script>
 <script src="comisarias.js?v=2"></script>

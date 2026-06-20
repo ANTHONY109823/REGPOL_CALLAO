@@ -3,6 +3,7 @@ var REGPOL_WEB_APP = 'https://script.google.com/macros/s/AKfycbzHHCUjXQVNtgVTERG
 var REGPOL_SITE_KEY = 'regpolSiteData_v1';
 
 var REGPOL_NAV = [
+  { id: 'inicio', href: 'index.html', label: 'INICIO', icon: 'fa-home' },
   { id: 'resena', href: 'resena-historica.html', label: 'RESEÑA HISTÓRICA' },
   { id: 'labor', href: 'nuestra-labor.html', label: 'NUESTRA LABOR' },
   { id: 'convenios', href: 'convenios.html', label: 'CONVENIOS' },
