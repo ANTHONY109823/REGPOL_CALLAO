@@ -15,6 +15,9 @@
 var FORM_BASE = 'https://docs.google.com';
 var FORM_PATH = '/forms/d/e/1FAIpQLSeSDjzhDeP8VHPSifAbfMOwaxFJkcOWCX9A6jEH6WD9v2ySlg/formResponse';
 
+// URL de la Web App de Apps Script — pegar aqui despues de desplegar
+var WEB_APP_URL = localStorage.getItem('webAppUrl') || '';
+
 var CONFIG_FORMS = {
   get URL_ENVIO() { return FORM_BASE + FORM_PATH; },
   ENTRY_COMISARIA:        'entry.1740901374',
@@ -470,3 +473,128 @@ function cerrarSesionAdmin() {
   document.getElementById('input-password').value          = '';
   document.getElementById('alerta-login').classList.remove('visible');
 }
+
+/* ================================================================
+   DESCARGA POR COMISARIA (Google Sheets Web App)
+================================================================ */
+function cargarComisariasDesdeSheet() {
+  var url = WEB_APP_URL || localStorage.getItem('webAppUrl');
+  var select = document.getElementById('filtro-comisaria');
+  var msg    = document.getElementById('msg-descarga');
+
+  if (!url) {
+    mostrarMsgDescarga('Falta configurar la URL de la Web App. Pegala en el campo de abajo.', 'error');
+    mostrarInputWebApp();
+    return;
+  }
+
+  select.innerHTML = '<option value="">-- Cargando... --</option>';
+  select.disabled = true;
+  msg.style.display = 'none';
+
+  fetch(url + '?action=listar')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      select.disabled = false;
+      if (!data.ok || !data.comisarias.length) {
+        select.innerHTML = '<option value="">-- Sin respuestas aun --</option>';
+        return;
+      }
+      select.innerHTML = '<option value="">-- Seleccionar comisaria --</option>';
+      data.comisarias.forEach(function(c) {
+        var op = document.createElement('option');
+        op.value = c;
+        op.textContent = c;
+        select.appendChild(op);
+      });
+      var statTotal = document.getElementById('stat-total-resp');
+      var txtTotal  = document.getElementById('txt-total-resp');
+      statTotal.style.display = 'flex';
+      txtTotal.textContent = 'Total de evaluaciones en la hoja: ' + data.total;
+    })
+    .catch(function() {
+      select.disabled = false;
+      select.innerHTML = '<option value="">-- Error de conexion --</option>';
+      mostrarMsgDescarga('No se pudo conectar con la Web App. Verifica que este desplegada.', 'error');
+    });
+}
+
+function descargarPorComisaria() {
+  var url      = WEB_APP_URL || localStorage.getItem('webAppUrl');
+  var select   = document.getElementById('filtro-comisaria');
+  var comisaria = select.value.trim();
+
+  if (!url) { mostrarInputWebApp(); return; }
+  if (!comisaria) {
+    mostrarMsgDescarga('Selecciona una comisaria primero.', 'error');
+    return;
+  }
+
+  var link = document.createElement('a');
+  link.href = url + '?action=descargar&comisaria=' + encodeURIComponent(comisaria);
+  link.download = 'MMPI2_' + comisaria.replace(/\s+/g,'_') + '.csv';
+  link.target = '_blank';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  mostrarMsgDescarga('Descargando evaluaciones de: ' + comisaria, 'ok');
+}
+
+function descargarTodas() {
+  var url = WEB_APP_URL || localStorage.getItem('webAppUrl');
+  if (!url) { mostrarInputWebApp(); return; }
+
+  var link = document.createElement('a');
+  link.href = url + '?action=descargar';
+  link.download = 'MMPI2_TODAS_LAS_COMISARIAS.csv';
+  link.target = '_blank';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  mostrarMsgDescarga('Descargando todas las evaluaciones...', 'ok');
+}
+
+function mostrarMsgDescarga(texto, tipo) {
+  var msg = document.getElementById('msg-descarga');
+  msg.textContent = texto;
+  msg.style.display = 'block';
+  msg.className = 'msg-descarga msg-descarga-' + (tipo === 'error' ? 'error' : 'ok');
+  setTimeout(function() { msg.style.display = 'none'; }, 5000);
+}
+
+function mostrarInputWebApp() {
+  var campo = document.getElementById('campo-webapp-url');
+  if (campo) { campo.style.display = 'block'; return; }
+
+  var panel = document.querySelector('.panel-respuestas');
+  var div = document.createElement('div');
+  div.id = 'campo-webapp-url';
+  div.style.cssText = 'background:rgba(243,156,18,.15);border:1px solid rgba(243,156,18,.4);border-radius:8px;padding:12px 14px;margin-top:12px;';
+  div.innerHTML = '<p style="color:#fff;font-size:12.5px;margin:0 0 8px;"><i class="fas fa-exclamation-triangle" style="color:#f39c12;"></i> <strong>Configura la URL de tu Web App</strong> (Apps Script &rarr; Implementar &rarr; Nueva implementacion):</p>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<input id="input-webapp-url" type="text" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1;padding:8px 10px;border-radius:6px;border:none;font-size:12px;" />'
+    + '<button onclick="guardarWebAppUrl()" style="background:#f39c12;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:12px;">Guardar</button>'
+    + '</div>';
+  panel.appendChild(div);
+}
+
+function guardarWebAppUrl() {
+  var val = document.getElementById('input-webapp-url').value.trim();
+  if (!val || val.indexOf('script.google.com') === -1) {
+    mostrarMsgDescarga('URL invalida. Debe ser una URL de Google Apps Script.', 'error');
+    return;
+  }
+  localStorage.setItem('webAppUrl', val);
+  WEB_APP_URL = val;
+  document.getElementById('campo-webapp-url').style.display = 'none';
+  cargarComisariasDesdeSheet();
+}
+
+// Auto-cargar al abrir el panel admin
+(function() {
+  var orig = window.verificarPassword;
+  window.verificarPassword = function() {
+    orig && orig();
+    if (WEB_APP_URL) setTimeout(cargarComisariasDesdeSheet, 300);
+  };
+})();

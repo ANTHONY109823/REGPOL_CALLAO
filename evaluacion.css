@@ -158,21 +158,34 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .aviso-peligro { background: rgba(192,57,43,.06); border: 1px solid rgba(192,57,43,.2); border-radius: 8px; padding: 13px 16px; font-size: 12.5px; color: #7a1a1a; margin-top: 16px; line-height: 1.5; }
 .aviso-peligro strong { color: var(--error); }
 
-/* PANEL RESPUESTAS DIRECTO */
+/* PANEL RESPUESTAS + DESCARGA */
 .panel-respuestas { background: linear-gradient(135deg, #002d24 0%, #004d3d 100%); border-radius: 12px; padding: 20px 22px; margin-bottom: 22px; }
 .panel-resp-titulo { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 15px; font-weight: 700; letter-spacing: .3px; margin-bottom: 16px; }
 .panel-resp-titulo i { color: var(--naranja-pnp); font-size: 18px; }
-.panel-resp-botones { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-.btn-resp { display: inline-flex; align-items: center; gap: 9px; padding: 12px 20px; border-radius: 8px; font-size: 13.5px; font-weight: 700; text-decoration: none; cursor: pointer; transition: transform .15s, box-shadow .15s; letter-spacing: .2px; }
+.panel-resp-botones { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn-resp { display: inline-flex; align-items: center; gap: 9px; padding: 11px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer; border: none; transition: transform .15s, box-shadow .15s; letter-spacing: .2px; }
 .btn-resp:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.3); text-decoration: none; }
-.btn-resp-form { background: #fff; color: var(--verde-pnp); }
-.btn-resp-form i { color: #4285f4; }
+.btn-resp-form { background: rgba(255,255,255,.92); color: var(--verde-pnp); }
+.btn-resp-form i { color: #1a73e8; }
 .btn-resp-excel { background: #0f9d58; color: #fff; }
-.btn-resp-excel i { color: #fff; }
-.panel-resp-info { background: rgba(255,255,255,.08); border-radius: 8px; padding: 12px 15px; display: flex; flex-direction: column; gap: 8px; }
+.btn-resp-todas { background: #1a73e8; color: #fff; }
+.panel-resp-info { background: rgba(255,255,255,.08); border-radius: 8px; padding: 12px 15px; display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 .resp-stat { display: flex; align-items: flex-start; gap: 9px; color: rgba(255,255,255,.88); font-size: 12.5px; line-height: 1.55; }
 .resp-stat i { color: var(--naranja-pnp); margin-top: 2px; flex-shrink: 0; }
 .resp-stat strong { color: #fff; }
+/* Selector comisaria */
+.descarga-filtro { background: rgba(255,255,255,.08); border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; }
+.descarga-campo label { display: block; color: rgba(255,255,255,.7); font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 7px; }
+.descarga-campo label i { color: var(--naranja-pnp); margin-right: 5px; }
+.descarga-input-wrap { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+.select-comisaria { flex: 1; padding: 10px 12px; border-radius: 7px; border: 1.5px solid rgba(255,255,255,.25); background: rgba(255,255,255,.95); color: var(--verde-dark); font-size: 13px; font-weight: 600; cursor: pointer; outline: none; }
+.select-comisaria:focus { border-color: var(--naranja-pnp); }
+.btn-refresh { background: rgba(255,255,255,.15); border: 1.5px solid rgba(255,255,255,.3); color: #fff; border-radius: 7px; width: 40px; height: 40px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: background .2s; flex-shrink: 0; }
+.btn-refresh:hover { background: rgba(255,255,255,.28); }
+.descarga-acciones { display: flex; gap: 10px; flex-wrap: wrap; }
+.msg-descarga { padding: 9px 14px; border-radius: 7px; font-size: 12.5px; font-weight: 600; margin-top: 10px; }
+.msg-descarga-ok    { background: rgba(15,157,88,.2);  color: #7dffb5; border: 1px solid rgba(15,157,88,.3); }
+.msg-descarga-error { background: rgba(192,57,43,.2);  color: #ffaaaa; border: 1px solid rgba(192,57,43,.3); }
 
 /* FOOTER */
 .footer-simple { background: var(--verde-dark); color: #a1cfc5; text-align: center; padding: 22px 20px; font-size: 12px; margin-top: 40px; border-top: 3px solid var(--naranja-pnp); }
