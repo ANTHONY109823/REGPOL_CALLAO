@@ -13,7 +13,7 @@
    reales que obtendras al ejecutar el script de Apps Script.
 ================================================================ */
 var FORM_BASE = 'https://docs.google.com';
-var FORM_PATH = '/forms/d/e/TU_FORM_ID/formResponse';
+var FORM_PATH = '/forms/d/e/1FAIpQLSeese4MXIjiWOzDynlyH3Q42mrZE2BuRYalhdeR5IJUvpJtvw/formResponse';
 
 var CONFIG_FORMS = {
   get URL_ENVIO() { return FORM_BASE + FORM_PATH; },
