@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel de Control Operador — UNITIC | REGPOL Callao</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="evaluacion.css" />
+  <link rel="stylesheet" href="panel-admin.css" />
+</head>
+<body class="panel-admin-page">
+
+<!-- BARRA SUPERIOR -->
+<div class="top-bar">
+  <span><i class="fas fa-shield-alt"></i> Panel de Control — REGPOL Callao</span>
+  <span class="social">
+    <a href="evaluacion.html"><i class="fas fa-clipboard-check"></i> Evaluación</a>
+    <a href="index.html"><i class="fas fa-home"></i> Portal</a>
+  </span>
+</div>
+
+<!-- HEADER -->
+<header class="main-header panel-admin-header">
+  <div class="header-flex">
+    <img src="img/regpol callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" onerror="this.style.display='none'" />
+    <div class="title-text">
+      <h1>REGIÓN POLICIAL CALLAO</h1>
+      <p>UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p>
+    </div>
+  </div>
+</header>
+
+<main class="panel-admin-main">
+
+  <!-- PASO 1: LOGIN (visible al abrir la pestaña) -->
+  <section id="login-admin" class="panel-admin-login-wrap" aria-label="Acceso restringido">
+    <div class="panel-admin-card">
+      <div class="admin-header-bar">
+        <i class="fas fa-shield-alt"></i>
+        <h3>Panel de Control Operador — UNITIC</h3>
+        <span class="badge-restringido">ACCESO RESTRINGIDO</span>
+      </div>
+      <div class="admin-body login-admin">
+        <p><i class="fas fa-lock" style="color:#004d3d;margin-right:6px;"></i>Ingrese la contraseña de administrador.</p>
+        <div class="campo" style="margin-bottom:12px;">
+          <input type="password" id="input-password" placeholder="Contraseña de administrador"
+                 autocomplete="current-password"
+                 onkeydown="if(event.key==='Enter') verificarPassword()" />
+        </div>
+        <button class="btn-eval btn-verde" onclick="verificarPassword()" style="width:100%;">
+          <i class="fas fa-unlock"></i> Acceder al Panel
+        </button>
+        <div class="alerta alerta-error" id="alerta-login" style="margin-top:14px;" role="alert">
+          <i class="fas fa-exclamation-circle"></i> Contraseña incorrecta.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PASO 2: PANEL COMPLETO (tras autenticación) -->
+  <section id="admin-contenido" class="panel-admin-contenido" style="display:none;" aria-label="Panel administrativo">
+
+    <div id="panel-admin" class="panel-admin-visible">
+      <div class="admin-header-bar">
+        <i class="fas fa-shield-alt"></i>
+        <h3>Panel de Control Operador — UNITIC</h3>
+        <span class="badge-restringido">ACCESO RESTRINGIDO</span>
+      </div>
+      <div class="admin-body">
+
+        <!-- DESCARGA POR COMISARÍA -->
+        <div class="panel-respuestas">
+          <div class="panel-resp-titulo">
+            <i class="fas fa-file-download"></i>
+            <span>Descarga de Respuestas MMPI-2 por Comisaría</span>
+          </div>
+
+          <div class="descarga-filtro">
+            <div class="descarga-campo">
+              <label for="filtro-comisaria"><i class="fas fa-building"></i> Seleccionar Comisaría</label>
+              <div class="descarga-input-wrap">
+                <select id="filtro-comisaria" class="select-comisaria">
+                  <option value="">-- Cargando comisarías... --</option>
+                </select>
+                <button class="btn-refresh" onclick="cargarComisariasDesdeSheet()" title="Actualizar lista">
+                  <i class="fas fa-sync-alt" id="ico-refresh-comisarias"></i>
+                </button>
+              </div>
+            </div>
+            <div class="descarga-acciones">
+              <button class="btn-resp btn-resp-excel" onclick="descargarPorComisaria()">
+                <i class="fas fa-file-csv"></i> Descargar CSV de Comisaría
+              </button>
+              <button class="btn-resp btn-resp-todas" onclick="descargarTodas()">
+                <i class="fas fa-database"></i> Descargar TODAS las Respuestas
+              </button>
+            </div>
+            <div id="msg-descarga" class="msg-descarga" style="display:none;"></div>
+          </div>
+
+          <div class="panel-resp-botones" style="margin-top:14px;">
+            <a id="link-hoja-sheets"
+               href="https://docs.google.com/spreadsheets/d/15tI_B63yXyn17yKFY5jC4vF0AmAIAt_iRkRhFUQBUYo/edit"
+               target="_blank" rel="noopener noreferrer" class="btn-resp btn-resp-form">
+              <i class="fas fa-table"></i> Abrir Hoja Google Sheets
+            </a>
+            <a href="https://docs.google.com/forms/d/19HWfPow6zMYuphsHbLir7Ro_xysD6hya528bfXl_YN0/edit#responses"
+               target="_blank" rel="noopener noreferrer" class="btn-resp btn-resp-form" style="background:rgba(255,255,255,.15);color:#fff;">
+              <i class="fab fa-wpforms"></i> Ver en Google Forms
+            </a>
+          </div>
+
+          <div class="panel-resp-info" style="margin-top:12px;">
+            <div class="resp-stat" id="stat-comisaria">
+              <i class="fas fa-building"></i>
+              <span>Comisaría activa: <strong id="stat-nombre-comisaria">--</strong></span>
+            </div>
+            <div class="resp-stat" id="stat-total-resp" style="display:none;">
+              <i class="fas fa-poll"></i>
+              <span id="txt-total-resp">--</span>
+            </div>
+            <div class="resp-stat" style="font-size:11.5px; color:rgba(255,255,255,.6);">
+              <i class="fas fa-exclamation-circle"></i>
+              <span>Si la lista aparece vacía, primero ejecute <strong>paso1_VincularFormulario()</strong> en Apps Script y despliegue la Web App.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-grid">
+          <div class="admin-seccion">
+            <h4><i class="fas fa-building"></i>&nbsp;Comisaría Activa en Evaluación</h4>
+            <div class="campo" style="margin-bottom:14px;">
+              <label for="admin-comisaria">Nombre de la comisaría</label>
+              <input type="text" id="admin-comisaria" placeholder="Ej. Comisaría PNP La Perla" />
+            </div>
+            <button class="btn-eval btn-verde" onclick="guardarComisaria()" style="width:100%;">
+              <i class="fas fa-save"></i> Guardar y Publicar en Encabezado
+            </button>
+            <div class="alerta alerta-exito" id="alerta-guardado" style="margin-top:12px;" role="status">
+              <i class="fas fa-check-circle"></i> Comisaría actualizada correctamente.
+            </div>
+          </div>
+          <div class="admin-seccion">
+            <h4><i class="fas fa-list-ol"></i>&nbsp;Procedimiento de Rotación de Comisaría</h4>
+            <ol class="lista-pasos">
+              <li>Abra <strong>drive.google.com</strong> con la cuenta institucional UNITIC.</li>
+              <li>Localice el formulario en la carpeta <strong>"EVAL_INST_2026"</strong>.</li>
+              <li>Pestaña <strong>"Respuestas"</strong> → icono hoja de cálculo verde (esquina superior derecha).</li>
+              <li>Descargue el Excel: Archivo → Descargar → Microsoft Excel (.xlsx). Guarde con nombre de comisaría y fecha. <span class="tag-alerta">VERIFICAR ANTES</span></li>
+              <li>En la pestaña "Respuestas", clic en el menú de <strong>tres puntos (⋮)</strong> arriba a la derecha.</li>
+              <li>Seleccione <strong>"Eliminar todas las respuestas"</strong> y confirme. <span class="tag-alerta">IRREVERSIBLE</span></li>
+              <li>En este panel actualice el nombre de la comisaría activa y haga clic en <strong>"Guardar y Publicar"</strong>.</li>
+              <li>Notifique al personal de la nueva comisaría para que inicien su evaluación.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="aviso-peligro">
+          <strong>Advertencia:</strong> Eliminar las respuestas en Google Forms es <strong>irreversible</strong>. Descargue el Excel antes de proceder. En caso de error contacte al <strong>Ing. Anthony Ccayo — UNITIC</strong>.
+        </div>
+
+        <div class="panel-admin-acciones">
+          <a href="dashboard.html" target="_blank" rel="noopener noreferrer" class="btn-eval btn-verde">
+            <i class="fas fa-chart-bar"></i> Abrir Dashboard Completo
+          </a>
+          <a href="evaluacion.html" class="btn-eval btn-borde">
+            <i class="fas fa-clipboard-check"></i> Ir a Evaluación
+          </a>
+          <button class="btn-eval btn-borde" onclick="cerrarSesionAdmin()">
+            <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<footer class="footer-simple">
+  <p>&copy; 2026 — REGPOL Callao — Policía Nacional del Perú &nbsp;|&nbsp; Desarrollado por <strong>Ing. Anthony Ccayo — UNITIC</strong></p>
+</footer>
+
+<script src="panel-admin.js"></script>
+</body>
+</html>

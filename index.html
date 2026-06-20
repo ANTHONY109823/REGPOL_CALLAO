@@ -11,37 +11,33 @@
 </head>
 <body>
 
-    <!-- 1. BARRA SUPERIOR NEGRA -->
-    <div class="top-bar">
-        <div class="container flex-between">
-            <div class="top-info">
-                <span><i class="fas fa-map-marker-alt"></i> Jr. Apurimac 647 - Callao</span>
-            </div>
-            <div class="social-icons">
-                <a href="https://www.facebook.com/region.policial.callao.2025" target="_blank"><i class="fab fa-facebook"></i> FACEBOOK</a>
-                <a href="https://www.tiktok.com/@regionpolicialcallao" target="_blank"><i class="fab fa-tiktok"></i> TIKTOK</a>
-            </div>
+<!-- 1. BARRA SUPERIOR VERDE CON REDES -->
+<div class="header-social-portal">
+    <!-- El container hará que el contenido no se pegue a los bordes de la pantalla -->
+    <div class="container portal-flex">
+            <div class="social-buttons-group">
+            <a href="https://www.facebook.com/region.policial.callao.2025" target="_blank" class="btn-pnp-social fb"><i class="fab fa-facebook"></i> Facebook</a>
+            <a href="https://www.tiktok.com/@regionpolicialcallao" target="_blank" class="btn-pnp-social tk"><i class="fab fa-tiktok"></i> TikTok</a>
+            <a href="https://wa.me/51927577686" target="_blank" class="btn-pnp-social wa"><i class="fab fa-whatsapp"></i> WhatsApp</a>
         </div>
     </div>
+</div>
 
-    <!-- 2. HEADER PRINCIPAL (LOGO Y TÍTULO) -->
-    <header class="main-header">
-        <div class="container header-flex">
-            <div class="logo-container">
-                <img src="img/regpol callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp">
-            </div>
-            <div class="title-text">
-                <h1>REGIÓN POLICIAL CALLAO</h1>
-                <p>UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p>
-            </div>
-            <div class="header-actions">
-                 <!-- Reemplaza el número 51XXXXXXXXX por el número real de la REGPOL CALLAO -->
-                <a href="https://wa.me/51927577686" target="_blank" class="btn-whatsapp-top">
-                <i class="fab fa-whatsapp"></i> WhatsApp
-                </a>
-            </div>
+   <!-- 2. HEADER PRINCIPAL (LOGO, TÍTULO Y REDES SOCIALES) -->
+<header class="main-header">
+    <div class="container header-flex">
+        <!-- 1. Logo -->
+        <div class="logo-container">
+            <img src="img/regpol callao.jpg" alt="Escudo" class="logo-pnp">
         </div>
-    </header>
+
+        <!-- 2. Título -->
+        <div class="title-text">
+            <h1>REGIÓN POLICIAL CALLAO</h1>
+            <p>UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p>
+        </div>
+     </div>
+</header>
 
     <!-- 3. MENÚ DE NAVEGACIÓN VERDE -->
     <nav class="nav-main">
@@ -57,18 +53,32 @@
         </div>
     </nav>
 
-    <!-- 4. BANNER PRINCIPAL (HERO) -->
-    <section class="hero-banner">
+<!-- 4. SECCIÓN DE PRESENTACIÓN (TRANSICIÓN DE IMÁGENES) -->
+    <section class="presentation-slider">
+        <div class="slides">
+            <div class="slide active" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('img/Imagen1.jpg');"></div>
+            
+            <!-- AQUÍ YA ESTÁ CORREGIDO EL NOMBRE -->
+            <div class="slide" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('img/saludo.jpg');"></div>
+            
+        </div>
+
         <div class="hero-overlay">
             <div class="container">
-                <h1>REGIÓN POLICIAL CALLAO</h1>
-                <h2>AL SERVICIO DE LA CIUDADANÍA</h2>
-                <p>Por un Callao seguro para todos</p>
+                <h1 class="animate-text">REGIÓN POLICIAL CALLAO</h1>
+                <h2 class="animate-text">AL SERVICIO DE LA CIUDADANÍA</h2>
+                <p class="animate-text">Compromiso, Honor y Servicio en la Provincia Constitucional</p>
             </div>
+        </div>
+
+        <!-- Asegúrate de tener 5 puntitos (dots) porque ahora tienes 5 fotos -->
+        <div class="slider-dots">
+            <span class="dot active"></span>
+            <span class="dot"></span>
         </div>
     </section>
 
-    <!-- 5. SECCIÓN DE COMUNICADOS (TARJETAS) -->
+    <!-- 5. SECCIÓN DE COMUNICADOS -->
     <main class="container content-area">
         <div class="section-header">
             <h3>COMUNICADOS IMPORTANTES</h3>
@@ -76,15 +86,12 @@
         </div>
 
         <div class="grid-cards">
-            <!-- Cuadro Convenios -->
             <div class="card">
                 <div class="card-icon"><i class="fas fa-file-contract"></i></div>
                 <h4>CONVENIOS DE TRABAJO</h4>
                 <p>Consulta las últimas convocatorias vigentes para el personal policial</p>
                 <a href="convenios.html" class="btn-card">VER DETALLES</a>
             </div>
-
-            <!-- Cuadro Cursos -->
             <div class="card">
                 <div class="card-icon"><i class="fas fa-graduation-cap"></i></div>
                 <h4>CURSOS POLICIALES</h4>
@@ -123,5 +130,31 @@
         </div>
     </footer>
 
+    <!-- SCRIPT CORREGIDO SIN ERRORES -->
+    <script>
+        (function() {
+            var slides = document.querySelectorAll('.slide');
+            var dots = document.querySelectorAll('.dot');
+            var current = 0;
+
+            function changeSlide(index) {
+                for (var i = 0; i < slides.length; i++) {
+                    slides[i].classList.remove('active');
+                    if (dots[i]) dots[i].classList.remove('active');
+                }
+                slides[index].classList.add('active');
+                if (dots[index]) dots[index].classList.add('active');
+            }
+
+            function next() {
+                current = (current + 1) % slides.length;
+                changeSlide(current);
+            }
+
+            if (slides.length > 0) {
+                setInterval(next, 4000);
+            }
+        })();
+    </script>
 </body>
 </html>

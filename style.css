@@ -9,11 +9,10 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: var(--gris-fondo);
+    background-color: white;
     line-height: 1.6;
 }
 
-/* Contenedor central que alinea todo */
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -21,487 +20,183 @@ body {
     width: 100%;
 }
 
-.flex-between {
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+
+/* --- BARRA SUPERIOR VERDE CON REDES --- */
+
+.header-social-portal {
+    background-color: #004d3d; /* Verde institucional PNP */
+    color: white; 
+    padding: 10px 0; 
+    width: 100%; /* Fondo verde a todo lo ancho de la pantalla */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Este bloque es el que controla que el contenido NO se pegue a los bordes */
+.portal-flex {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-end; /* Alinea a la derecha del contenedor central (1200px) */
+    gap: 8px;
 }
 
-/* --- 2. BARRA SUPERIOR --- */
-.top-bar { background: #1a1a1a; color: white; padding: 10px 0; font-size: 13px; }
-.social-icons a { color: white; text-decoration: none; margin-left: 15px; font-weight: bold; }
-
-/* --- 3. HEADER (CENTRAR LOGO Y TÍTULO) --- */
-.main-header {
-    background: white;
-    padding: 20px 0;
-    border-bottom: 4px solid var(--verde-pnp);
-}
-
-.header-flex {
+.social-buttons-group {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 30px;
+    gap: 12px; /* Espacio entre botones */ 
 }
+
+/* --- ESTILO DE LOS BOTONES (Basado en tu diseño de WhatsApp) --- */
+.btn-pnp-social {
+    text-decoration: none !important; /* Quita el subrayado azul */
+    color: white !important;          /* Texto siempre blanco */
+    padding: 8px 18px !important;     /* Ajuste de tamaño amigable */
+    border-radius: 50px !important;   /* Bordes redondeados */
+    font-size: 13px !important;
+    font-weight: bold !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
+    transition: all 0.3s ease !important;
+}
+
+/* Colores de fondo por cada red social */
+.btn-pnp-social.fb { background-color: #1877F2 !important; } /* Facebook */
+.btn-pnp-social.tk { background-color: #000000 !important; } /* TikTok */
+.btn-pnp-social.wa { background-color: #25D366 !important; } /* WhatsApp */
+
+/* Efecto al pasar el mouse (Hover) */
+.btn-pnp-social:hover {
+    transform: translateY(-3px) !important; /* Se eleva un poquito */
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3) !important;
+    filter: brightness(1.1); /* Brilla un poco */
+}
+
+/* Efecto al presionar (Active) */
+.btn-pnp-social:active {
+    transform: scale(0.95) !important; /* Se hunde al hacer clic */
+}
+
+/* --- RESPONSIVO PARA CELULARES --- */
+@media (max-width: 768px) {
+    .portal-flex {
+        align-items: center; /* En celulares centramos todo */
+        text-align: center;
+    }
+    .social-buttons-group {
+        flex-wrap: wrap; /* Si no caben, se ponen uno debajo de otro */
+        justify-content: center;
+    }
+    .btn-pnp-social {
+        width: 100%; /* Botones anchos en móvil para que sea fácil tocar */
+        justify-content: center;
+    }
+}
+
+/* --- 2. HEADER --- */
 
 .logo-pnp {
-    height: 120px; /* Tamaño controlado del escudo */
-    width: auto;
+    height: 110px !important; /* Ajusta este número si lo quieres más grande o pequeño */
+    width: auto !important;   /* Mantiene la proporción */
     display: block;
+    max-width: 100%;
 }
 
-.title-text { flex-grow: 1; }
-.title-text h1 { color: var(--verde-pnp); font-size: 26px; font-weight: 900; }
-.title-text p { color: #666; font-size: 14px; font-weight: bold; }
+/* --- ORDEN DEL ENCABEZADO (header-flex) --- */
+.header-flex {
+    display: flex;
+    justify-content: space-between; /* Logo a la izq, Título al centro, Redes a la der */
+    align-items: center;
+    gap: 30px;
+    padding: 15px 0;
+}
 
-.btn-action-top {
-    background: var(--verde-pnp);
-    color: white;
-    text-decoration: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    font-size: 13px;
-    font-weight: bold;
+.logo-container {
+    flex-shrink: 0; /* Evita que el logo se aplaste */
+}
+
+.title-text {
+    flex-grow: 1; /* Hace que el título ocupe el espacio central */
+    text-align: left; /* Alineado a la izquierda junto al logo */
 }
 
 
-/* --- 4. NAVEGACIÓN --- */
+
+/* --- 3. NAVEGACIÓN --- */
 .nav-main { background: var(--verde-pnp); position: sticky; top: 0; z-index: 1000; }
-.nav-main ul { 
-    list-style: none; 
-    display: flex; 
-    justify-content: center; /* Centra el menú */
-    flex-wrap: wrap; 
-}
-.nav-main ul li a {
-    color: white;
-    text-decoration: none;
-    padding: 15px 20px;
-    display: block;
-    font-weight: bold;
-    font-size: 14px;
-}
+.nav-main ul { list-style: none; display: flex; justify-content: center; flex-wrap: wrap; }
+.nav-main ul li a { color: white; text-decoration: none; padding: 15px 20px; display: block; font-weight: bold; font-size: 14px; }
 .nav-main ul li a:hover { background: rgba(0,0,0,0.2); color: var(--naranja-pnp); }
 
-/* --- 5. BANNER (HERO) --- */
-.hero-banner {
-    height: 350px;
-    background-image: url('img/Imagen1.jpg'); /* Tu imagen de fondo */
+/* --- 4. SECCIÓN SLIDER (CORREGIDA) --- */
+.presentation-slider {
+    position: relative;
+    width: 100%;
+    height: 600px; /* Altura del banner */
+    background-color: #222;
+    overflow: hidden;
+}
+
+.slides { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+.slide {
+    position: absolute;
+    width: 100%; height: 100%;
     background-size: cover;
     background-position: center;
-    position: relative;
+    opacity: 0;
+    transition: opacity 1.5s ease-in-out;
 }
+
+.slide.active { opacity: 1 !important; z-index: 1; }
 
 .hero-overlay {
-    background: rgba(0, 77, 61, 0.7); /* Capa verde PNP */
-    height: 100%;
-    width: 100%;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
     text-align: center;
 }
-.hero-overlay h1 { font-size: 50px; text-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
-.hero-overlay h2 { font-size: 35px; text-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
 
-/* --- 6. TARJETAS (CARDS) --- */
-.content-area { padding: 50px 0; }
-.section-header { text-align: center; margin-bottom: 40px; }
-.section-header h3 { color: var(--verde-pnp); font-size: 24px; }
-.section-header span { font-size: 13px; color: #888; font-weight: bold; }
+.hero-overlay h1 { font-size: 3rem; font-weight: 900; margin-bottom: 10px; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); }
+.hero-overlay h2 { color: var(--naranja-pnp); font-size: 1.5rem; text-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
 
-.grid-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 30px;
-}
-
-.card {
-    background: white;
-    padding: 40px;
-    border-radius: 10px;
-    text-align: center;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-    border-top: 5px solid var(--verde-pnp);
-    transition: 0.3s;
-}
-
-.card:hover { transform: translateY(-5px); }
-.card-icon { font-size: 40px; color: var(--naranja-pnp); margin-bottom: 20px; }
-.btn-card {
-    background: var(--verde-pnp);
-    color: white;
-    text-decoration: none;
-    padding: 10px 25px;
-    border-radius: 20px;
-    display: inline-block;
-    margin-top: 20px;
-    font-weight: bold;
-}
-
-/* --- 7. EMERGENCIAS --- */
-.emergency-bar { background: var(--verde-pnp); padding: 40px 0; color: white; }
-.emergency-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    text-align: center;
-    gap: 20px;
-}
-.e-item strong { font-size: 30px; color: var(--naranja-pnp); }
-
-/* --- 8. MESA DE PARTES --- */
-.mesa-partes { padding: 50px 0; }
-.mesa-container {
-    background: white;
-    padding: 40px;
-    border-radius: 10px;
-    text-align: center;
-    border: 2px dashed #ccc;
-}
-.btn-orange {
-    background: var(--naranja-pnp);
-    color: white;
-    text-decoration: none;
-    padding: 15px 40px;
-    display: inline-block;
-    margin-top: 20px;
-    font-weight: bold;
-    border-radius: 5px;
-}
-
-/* --- 9. FOOTER --- */
-footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; font-size: 13px; }
-
-/* --- RESPONSIVE (CELULARES) --- */
-@media (max-width: 768px) {
-    .header-flex { flex-direction: column; text-align: center; }
-    .logo-pnp { height: 100px; margin-bottom: 10px; }
-    .hero-overlay h2 { font-size: 24px; }
-}
-
-/* BOTÓN DE WHATSAPP REGPOL */
-.btn-whatsapp-top {
-    background-color: #25D366 !important; /* Verde WhatsApp */
-    color: white !important;              /* Texto Blanco */
-    text-decoration: none !important;     /* QUITA EL SUBRAYADO AZUL */
-    padding: 12px 25px !important;
-    border-radius: 50px !important;
-    font-weight: bold !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 10px !important;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
-    transition: 0.3s ease !important;
-    font-family: sans-serif !important;
-}
-
-.btn-whatsapp-top:hover {
-    background-color: #128C7E !important; /* Verde oscuro al pasar el mouse */
-    transform: translateY(-3px) !important;
-    box-shadow: 0 6px 15px rgba(0,0,0,0.3) !important;
-}
-
-/* --- NUEVA ESTÉTICA PARA CONVENIOS --- */
-
-/* --- RESET TOTAL PARA EVITAR ERRORES --- */
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-:root {
-    --verde-pnp: #004d3d;
-    --naranja-pnp: #f39c12;
-    --fondo-suave: #f0f7f4;
-}
-
-body { font-family: 'Segoe UI', Arial, sans-serif; background-color: white; color: #333; }
-
-/* --- CONTENEDOR MAESTRO (Esto centra todo) --- */
-.container {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 20px;
-    width: 100%;
-}
-
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
-
-/* --- REGLA DE ORO PARA EL ESCUDO (EVITA QUE SEA GIGANTE) --- */
-.img-escudo, .logo-pnp, .logo-main {
-    height: 100px !important; /* Forzamos el tamaño */
-    width: auto !important;
-    display: block;
-}
-
-/* --- RESET TOTAL PARA EVITAR ERRORES --- */
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-:root {
-    --verde-pnp: #004d3d;
-    --naranja-pnp: #f39c12;
-    --fondo-suave: #f0f7f4;
-}
-
-body { font-family: 'Segoe UI', Arial, sans-serif; background-color: white; color: #333; }
-
-/* --- CONTENEDOR MAESTRO (Esto centra todo) --- */
-.container {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 20px;
-    width: 100%;
-}
-
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
-
-/* --- REGLA DE ORO PARA EL ESCUDO (EVITA QUE SEA GIGANTE) --- */
-.img-escudo, .logo-pnp, .logo-main {
-    height: 100px !important; /* Forzamos el tamaño */
-    width: auto !important;
-    display: block;
-}
-
-/* --- ESTILOS DE LA PÁGINA CONVENIOS --- */
-.body-convenios { background: linear-gradient(135deg, var(--fondo-suave) 0%, #ffffff 100%); }
-
-.header-moderno { background: white; padding: 20px 0; border-bottom: 4px solid var(--verde-pnp); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-
-.text-area h1 { color: var(--verde-pnp); font-size: 24px; margin: 0; }
-.text-area p { color: var(--naranja-pnp); font-size: 14px; font-weight: bold; }
-
-.btn-home-modern {
-    background: var(--verde-pnp); color: white; text-decoration: none;
-    padding: 10px 20px; border-radius: 50px; font-weight: bold; font-size: 12px;
-}
-
-/* Grilla de tarjetas */
-.grid-modern {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 30px;
-    padding: 40px 0;
-}
-
-.card-modern {
-    background: white; 
-    border-radius: 15px; 
-    padding: 30px; 
-    text-align: center;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.05); 
-    border-top: 5px solid var(--verde-pnp);
-    transition: all 0.3s ease; /* Suaviza todos los movimientos */
-    cursor: pointer;           /* Pone la manito de clic */
-    user-select: none;         /* Evita que se seleccione el texto al hacer clic */
-}
-
-/* EFECTO AL PASAR EL MOUSE: Se eleva y cambia el color del borde */
-.card-modern:hover {
-    transform: translateY(-8px); /* Se eleva un poco */
-    box-shadow: 0 15px 30px rgba(0,0,0,0.12); /* Sombra más profunda */
-    border-top-color: var(--naranja-pnp);    /* El borde cambia a naranja para dar "vida" */
-}
-
-/* EFECTO AL HACER CLIC: Se hunde como un botón real */
-.card-modern:active {
-    transform: scale(0.95); /* Se encoge un 5% al presionar */
-    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
-    transition: 0.1s; /* El clic es más rápido que el hover */
-}
-
-.icon-wrapper { 
-    width: 60px; height: 60px; background: var(--naranja-pnp); 
-    border-radius: 50%; margin: 0 auto 15px; display: flex; 
-    align-items: center; justify-content: center; color: white; font-size: 25px;
-}
-
-/* PDFs */
-.grid-pdf-modern { display: grid; gap: 15px; padding-bottom: 50px; }
-.pdf-item {
-    background: white; padding: 20px; border-radius: 10px;
-    display: flex; align-items: center; gap: 20px;
-    border-left: 8px solid #e74c3c; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-.btn-download {
-    background: #e74c3c; color: white; text-decoration: none;
-    padding: 8px 15px; border-radius: 5px; font-size: 11px;
-}
-
-
-/* --- ESTILOS ESPECÍFICOS PARA CELADOR.HTML --- */
-
-/* Contenedor de detalles */
-.grid-detalles {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 25px;
-    margin-top: 30px;
-}
-
-.card-detalle {
-    background: white;
-    padding: 35px;
-    border-radius: 20px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-    text-align: center;
-    border-bottom: 5px solid #004d3d;
-}
-
-.icon-circle {
-    width: 70px;
-    height: 70px;
-    background: #e8f5e9;
-    color: #004d3d;
-    border-radius: 50%;
-    margin: 0 auto 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-}
-
-.icon-circle.gold { background: #fef9e7; color: #f39c12; }
-
-.card-detalle h3 {
-    margin-bottom: 20px;
-    color: #004d3d;
-    font-size: 1.3rem;
-}
-
-.card-detalle ul {
-    list-style: none;
-    text-align: left;
-}
-
-.card-detalle ul li {
-    margin-bottom: 12px;
-    font-size: 14px;
+.slider-dots {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
     display: flex;
     gap: 10px;
-    color: #555;
 }
 
-.card-detalle ul li i { color: #27ae60; }
+.dot { width: 12px; height: 12px; background: rgba(255,255,255,0.5); border-radius: 50%; }
+.dot.active { background: var(--naranja-pnp); }
 
-.info-item { margin-bottom: 15px; }
-.info-item span { font-weight: bold; font-size: 12px; color: #999; display: block; }
-.info-item p { font-weight: bold; color: #333; }
+/* --- 5. TARJETAS Y OTROS --- */
+.content-area { padding: 50px 0; }
+.section-header { text-align: center; margin-bottom: 40px; }
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+.card { background: white; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.05); border-top: 5px solid var(--verde-pnp); }
+.card-icon { font-size: 40px; color: var(--naranja-pnp); margin-bottom: 20px; }
+.btn-card { background: var(--verde-pnp); color: white; text-decoration: none; padding: 10px 25px; border-radius: 20px; display: inline-block; margin-top: 20px; font-weight: bold; }
 
-/* Tarjeta Destacada Sueldo */
-.highlight-card {
-    background: #004d3d;
-    color: white;
-    border-bottom-color: #f39c12;
-}
-.highlight-card h3 { color: white; }
-.price { font-size: 40px; font-weight: 800; color: #f39c12; margin: 10px 0; }
+.emergency-bar { background: var(--verde-pnp); padding: 40px 0; color: white; }
+.emergency-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); text-align: center; gap: 20px; }
+.e-item strong { font-size: 30px; color: var(--naranja-pnp); }
 
-/* Sección de Registro */
-.registro-section { margin: 60px 0; text-align: center; }
-.registro-box {
-    background: white;
-    padding: 50px;
-    border-radius: 25px;
-    border: 3px dashed #004d3d;
-}
+.mesa-container { background: white; padding: 40px; border-radius: 10px; text-align: center; border: 2px dashed #ccc; margin-top: 20px; }
+.btn-orange { background: var(--naranja-pnp); color: white; text-decoration: none; padding: 15px 40px; display: inline-block; margin-top: 20px; font-weight: bold; border-radius: 5px; }
 
-.btn-registro-grande {
-    background: #f39c12;
-    color: white;
-    text-decoration: none;
-    padding: 18px 40px;
-    border-radius: 50px;
-    font-weight: 800;
-    display: inline-block;
-    margin-top: 25px;
-    font-size: 18px;
-    box-shadow: 0 10px 20px rgba(243, 156, 18, 0.3);
-    transition: 0.3s;
-}
+footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; font-size: 13px; }
 
-.btn-registro-grande:hover {
-    transform: scale(1.05);
-    background: #004d3d;
-}
-
-/* Footer Simple */
-.footer-simple {
-    background: #002d24;
-    color: #a1cfc5;
-    text-align: center;
-    padding: 30px 0;
-    font-size: 14px;
-}
-
-/* RESPONSIVE */
 @media (max-width: 768px) {
-    .grid-detalles { grid-template-columns: 1fr; }
-    .registro-box { padding: 30px; }
-    .btn-registro-grande { font-size: 14px; width: 100%; }
-}
-
-
-
-/* --- ESTILOS DE LA PÁGINA CURSOS --- */
-.body-cursos { background: linear-gradient(135deg, var(--fondo-suave) 0%, #ffffff 100%); }
-
-.header-moderno { background: white; padding: 20px 0; border-bottom: 4px solid var(--verde-pnp); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-
-.text-area h1 { color: var(--verde-pnp); font-size: 24px; margin: 0; }
-.text-area p { color: var(--naranja-pnp); font-size: 14px; font-weight: bold; }
-
-.btn-home-modern {
-    background: var(--verde-pnp); color: white; text-decoration: none;
-    padding: 10px 20px; border-radius: 50px; font-weight: bold; font-size: 12px;
-}
-
-/* Grilla de tarjetas */
-.grid-modern {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 30px;
-    padding: 40px 0;
-}
-
-.card-modern {
-    background: white; 
-    border-radius: 15px; 
-    padding: 30px; 
-    text-align: center;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.05); 
-    border-top: 5px solid var(--verde-pnp);
-    transition: all 0.3s ease; /* Suaviza todos los movimientos */
-    cursor: pointer;           /* Pone la manito de clic */
-    user-select: none;         /* Evita que se seleccione el texto al hacer clic */
-}
-
-/* EFECTO AL PASAR EL MOUSE: Se eleva y cambia el color del borde */
-.card-modern:hover {
-    transform: translateY(-8px); /* Se eleva un poco */
-    box-shadow: 0 15px 30px rgba(0,0,0,0.12); /* Sombra más profunda */
-    border-top-color: var(--naranja-pnp);    /* El borde cambia a naranja para dar "vida" */
-}
-
-/* EFECTO AL HACER CLIC: Se hunde como un botón real */
-.card-modern:active {
-    transform: scale(0.95); /* Se encoge un 5% al presionar */
-    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
-    transition: 0.1s; /* El clic es más rápido que el hover */
-}
-
-.icon-wrapper { 
-    width: 60px; height: 60px; background: var(--naranja-pnp); 
-    border-radius: 50%; margin: 0 auto 15px; display: flex; 
-    align-items: center; justify-content: center; color: white; font-size: 25px;
-}
-
-/* PDFs */
-.grid-pdf-modern { display: grid; gap: 15px; padding-bottom: 50px; }
-.pdf-item {
-    background: white; padding: 20px; border-radius: 10px;
-    display: flex; align-items: center; gap: 20px;
-    border-left: 8px solid #e74c3c; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-.btn-download {
-    background: #e74c3c; color: white; text-decoration: none;
-    padding: 8px 15px; border-radius: 5px; font-size: 11px;
+    .header-flex { flex-direction: column; text-align: center; }
+    .hero-overlay h1 { font-size: 1.8rem; }
 }
