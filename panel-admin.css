@@ -291,11 +291,6 @@ body.panel-admin-page.autenticado #admin-contenido { display: flex !important; }
 .cms-import-label { cursor: pointer; margin: 0; }
 .cms-vacio { color: #888; font-size: 13px; padding: 12px 0; }
 
-/* Visibilidad login — reglas arriba en body */
-
-.panel-admin-login-wrap {
-  /* definido arriba */
-}
 
 .panel-admin-card {
   width: 100%;
