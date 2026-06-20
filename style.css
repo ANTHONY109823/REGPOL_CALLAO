@@ -38,17 +38,20 @@ img {
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-/* Este bloque es el que controla que el contenido NO se pegue a los bordes */
+/* Este bloque: INGRESAR a la izquierda, redes a la derecha */
 .portal-flex {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end; /* Alinea a la derecha del contenedor central (1200px) */
-    gap: 8px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
 }
 
 .social-buttons-group {
     display: flex;
-    gap: 12px; /* Espacio entre botones */ 
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 /* --- ESTILO DE LOS BOTONES (Basado en tu diseño de WhatsApp) --- */
@@ -99,15 +102,18 @@ img {
 /* --- RESPONSIVO PARA CELULARES --- */
 @media (max-width: 768px) {
     .portal-flex {
-        align-items: center; /* En celulares centramos todo */
-        text-align: center;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    .portal-flex > .ingresar {
+        align-self: flex-start;
     }
     .social-buttons-group {
-        flex-wrap: wrap; /* Si no caben, se ponen uno debajo de otro */
         justify-content: center;
     }
     .btn-pnp-social {
-        width: 100%; /* Botones anchos en móvil para que sea fácil tocar */
+        width: auto;
         justify-content: center;
     }
 }
@@ -262,6 +268,20 @@ footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; 
 .page-intro p {
     color: #666;
 }
+
+.btn-volver {
+    display: inline-block;
+    margin-top: 12px;
+    background: var(--verde-pnp);
+    color: white;
+    padding: 8px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.btn-volver:hover { background: #003329; }
 
 .grid-modern a {
     text-decoration: none;

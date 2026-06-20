@@ -5,29 +5,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CURSO ESCENA DEL CRIMEN- REGPOL CALLAO</title>
     <!-- Vinculamos el mismo CSS para mantener el estilo -->
-    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="style.css?v=8">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>.logo-pnp,.img-escudo{height:90px!important;width:auto!important;object-fit:contain;}</style>
 </head>
-<body class="body-convenios">
+<body class="body-cursos">
 
-    <!-- CABECERA (Igual a Convenios para consistencia) -->
-    <header class="header-moderno">
-        <div class="container flex-between">
-            <div style="display: flex; align-items: center; gap: 20px;">
-                <img src="img/regpol%20callao.jpg" alt="Escudo" class="logo-pnp" width="90" height="90">
-                <div class="text-area">
-                    <h1>XI CURSO DE INVESTIGACIÓN EN ESCENA DEL CRIMEN</h1>
-                    <p>DETALLES DEL CURSO</p>
-                </div>
-            </div>
-            <a href="cursos.html" class="btn-home-modern"><i class="fas fa-chevron-left"></i> VOLVER</a>
+<div class="header-social-portal">
+    <div class="container portal-flex">
+        <a href="panel-admin.html" target="_blank" rel="noopener noreferrer" class="btn-pnp-social ingresar" onclick="window.open('panel-admin.html','regpol_panel_unitic','noopener,noreferrer'); return false;">
+            <i class="fas fa-sign-in-alt"></i> INGRESAR
+        </a>
+        <div class="social-buttons-group">
+            <a href="https://www.facebook.com/region.policial.callao.2025" target="_blank" class="btn-pnp-social fb"><i class="fab fa-facebook"></i> Facebook</a>
+            <a href="https://www.tiktok.com/@regionpolicialcallao" target="_blank" class="btn-pnp-social tk"><i class="fab fa-tiktok"></i> TikTok</a>
+            <a href="https://wa.me/51927577686" target="_blank" class="btn-pnp-social wa"><i class="fab fa-whatsapp"></i> WhatsApp</a>
         </div>
-    </header>
+    </div>
+</div>
 
-    <main class="container py-5">
-        
-                <!-- SECCIÓN DE DETALLES EN TARJETAS -->
+<header class="main-header">
+    <div class="container header-flex">
+        <div class="logo-container">
+            <img src="img/regpol%20callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90">
+        </div>
+        <div class="title-text">
+            <h1>REGIÓN POLICIAL CALLAO</h1>
+            <p>UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p>
+        </div>
+    </div>
+</header>
+
+<nav class="nav-main">
+    <div class="container">
+        <ul>
+            <li><a href="index.html">RESEÑA HISTÓRICA</a></li>
+            <li><a href="index.html">NUESTRA LABOR</a></li>
+            <li><a href="convenios.html">CONVENIOS</a></li>
+            <li><a href="cursos.html" class="activo">CURSOS REGIONALES</a></li>
+            <li><a href="index.html">NOVEDADES</a></li>
+            <li><a href="evaluacion.html"><i class="fas fa-clipboard-check"></i> EVALUACIÓN INSTITUCIONAL</a></li>
+        </ul>
+    </div>
+</nav>
+
+<main class="container content-area">
+    <div class="page-intro">
+        <h2>XI CURSO DE INVESTIGACIÓN EN ESCENA DEL CRIMEN</h2>
+        <p>DETALLES DEL CURSO</p>
+        <a href="cursos.html" class="btn-volver"><i class="fas fa-chevron-left"></i> VOLVER A CURSOS</a>
+    </div>
+
+        <!-- SECCIÓN DE DETALLES EN TARJETAS -->
         <div class="grid-detalles">
             
             <!-- Cuadro: Requisitos -->
@@ -80,8 +109,8 @@
 
     </main>
 
-    <footer class="footer-simple">
-        <p>&copy; 2026 REGPOL CALLAO - Unidad de Tecnologías de la Información Y Comunicaciones</p>
+    <footer class="portal-footer">
+        <p>&copy; 2026 Región Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
     </footer>
 
 </body>
