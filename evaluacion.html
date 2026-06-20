@@ -155,8 +155,8 @@
         </div>
         <div class="campo">
           <label for="f-nacimiento">Fecha de Nacimiento <span class="req">*</span></label>
-          <input type="date" id="f-nacimiento" />
-          <span class="msg-error">Ingrese su fecha de nacimiento.</span>
+          <input type="text" id="f-nacimiento" placeholder="dd/mm/aaaa" maxlength="10" inputmode="numeric" autocomplete="bday" />
+          <span class="msg-error" id="msg-nacimiento">Use formato dd/mm/aaaa (ej: 15/03/1990).</span>
         </div>
         <div class="campo">
           <label for="f-edad">Edad (calculada automaticamente)</label>

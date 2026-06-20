@@ -174,7 +174,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   renderizarPagina(1);
 
-  document.getElementById('f-nacimiento').addEventListener('change', calcularEdad);
+  document.getElementById('f-nacimiento').addEventListener('input', formatearFechaNacimiento);
+  document.getElementById('f-nacimiento').addEventListener('blur', calcularEdad);
   ['f-cip', 'f-dni'].forEach(function(id) {
     document.getElementById(id).addEventListener('input', function(e) {
       e.target.value = e.target.value.replace(/\D/g, '');
@@ -190,25 +191,119 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /* ================================================================
+   FECHA DE NACIMIENTO — ESCRITURA MANUAL dd/mm/aaaa
+================================================================ */
+function formatearFechaNacimiento(e) {
+  var el = e.target;
+  var digits = el.value.replace(/\D/g, '').slice(0, 8);
+  var formatted = '';
+
+  if (digits.length <= 2) {
+    formatted = digits;
+  } else if (digits.length <= 4) {
+    formatted = digits.slice(0, 2) + '/' + digits.slice(2);
+  } else {
+    formatted = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+  }
+
+  el.value = formatted;
+  if (formatted.length === 10) calcularEdad();
+  else if (formatted.length === 0) {
+    el.classList.remove('invalido', 'valido');
+    document.getElementById('f-edad').value = '';
+  }
+}
+
+function parsearFechaDMY(str) {
+  var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((str || '').trim());
+  if (!m) return null;
+
+  var dia   = parseInt(m[1], 10);
+  var mes   = parseInt(m[2], 10) - 1;
+  var anio  = parseInt(m[3], 10);
+  var hoy   = new Date();
+  var limite = hoy.getFullYear();
+
+  if (mes < 0 || mes > 11 || dia < 1 || dia > 31 || anio < 1920 || anio > limite) return null;
+
+  var fecha = new Date(anio, mes, dia);
+  if (fecha.getFullYear() !== anio || fecha.getMonth() !== mes || fecha.getDate() !== dia) return null;
+  if (fecha > hoy) return null;
+
+  return fecha;
+}
+
+function obtenerEdadDesdeFecha(nac) {
+  var hoy  = new Date();
+  var edad = hoy.getFullYear() - nac.getFullYear();
+  var mes  = hoy.getMonth() - nac.getMonth();
+  if (mes < 0 || (mes === 0 && hoy.getDate() < nac.getDate())) edad--;
+  return edad;
+}
+
+function esFechaNacimientoValida(valor) {
+  var nac = parsearFechaDMY(valor);
+  if (!nac) return false;
+  var edad = obtenerEdadDesdeFecha(nac);
+  return edad >= 18 && edad <= 80;
+}
+
+function fechaNacimientoParaEnvio() {
+  var nac = parsearFechaDMY(document.getElementById('f-nacimiento').value);
+  if (!nac) return '';
+  var mm = String(nac.getMonth() + 1).padStart(2, '0');
+  var dd = String(nac.getDate()).padStart(2, '0');
+  return nac.getFullYear() + '-' + mm + '-' + dd;
+}
+
+function marcarErrorFecha(mensaje) {
+  var input = document.getElementById('f-nacimiento');
+  var msg   = document.getElementById('msg-nacimiento');
+  input.classList.add('invalido');
+  input.classList.remove('valido');
+  if (msg) msg.textContent = mensaje;
+}
+
+/* ================================================================
    CALCULO AUTOMATICO DE EDAD
 ================================================================ */
 function calcularEdad() {
   var input = document.getElementById('f-nacimiento');
   var out   = document.getElementById('f-edad');
-  if (!input.value) { out.value = ''; return; }
-  var hoy  = new Date();
-  var nac  = new Date(input.value);
-  var edad = hoy.getFullYear() - nac.getFullYear();
-  var mes  = hoy.getMonth() - nac.getMonth();
-  if (mes < 0 || (mes === 0 && hoy.getDate() < nac.getDate())) edad--;
+  var msg   = document.getElementById('msg-nacimiento');
+  var valor = input.value.trim();
+
+  if (!valor) {
+    out.value = '';
+    input.classList.remove('invalido', 'valido');
+    if (msg) msg.textContent = 'Use formato dd/mm/aaaa (ej: 15/03/1990).';
+    return;
+  }
+
+  if (valor.length < 10) {
+    out.value = '';
+    marcarErrorFecha('Complete la fecha en formato dd/mm/aaaa.');
+    return;
+  }
+
+  var nac = parsearFechaDMY(valor);
+  if (!nac) {
+    out.value = '';
+    marcarErrorFecha('Fecha invalida. Verifique dia, mes y anio.');
+    return;
+  }
+
+  var edad = obtenerEdadDesdeFecha(nac);
   if (edad < 18 || edad > 80) {
     out.value = 'Verifique la fecha ingresada';
-    input.classList.add('invalido');
-  } else {
-    out.value = edad + ' anios';
-    input.classList.remove('invalido');
-    input.classList.add('valido');
+    marcarErrorFecha('La edad debe estar entre 18 y 80 anios.');
+    return;
   }
+
+  out.value = edad + ' anios';
+  input.classList.remove('invalido');
+  input.classList.add('valido');
+  if (msg) msg.textContent = 'Use formato dd/mm/aaaa (ej: 15/03/1990).';
 }
 
 /* ================================================================
@@ -329,7 +424,7 @@ function validarYEnviar() {
     { id: 'f-nombres',    test: function(v) { return v.trim().length > 0; },      msg: 'El nombre completo es obligatorio.' },
     { id: 'f-cip',        test: function(v) { return /^\d{6}$/.test(v.trim()); }, msg: 'El CIP debe tener exactamente 6 digitos.' },
     { id: 'f-dni',        test: function(v) { return /^\d{8}$/.test(v.trim()); }, msg: 'El DNI debe tener exactamente 8 digitos.' },
-    { id: 'f-nacimiento', test: function(v) { return v.length > 0; },             msg: 'La fecha de nacimiento es obligatoria.' }
+    { id: 'f-nacimiento', test: esFechaNacimientoValida, msg: 'Ingrese una fecha valida en formato dd/mm/aaaa (18 a 80 anios).' }
   ];
 
   campos.forEach(function(c) {
@@ -380,7 +475,7 @@ function enviarAGoogleForms() {
   datos.append(CONFIG_FORMS.ENTRY_NOMBRES,          document.getElementById('f-nombres').value.trim());
   datos.append(CONFIG_FORMS.ENTRY_CIP,              document.getElementById('f-cip').value.trim());
   datos.append(CONFIG_FORMS.ENTRY_DNI,              document.getElementById('f-dni').value.trim());
-  datos.append(CONFIG_FORMS.ENTRY_FECHA_NACIMIENTO, document.getElementById('f-nacimiento').value);
+  datos.append(CONFIG_FORMS.ENTRY_FECHA_NACIMIENTO, fechaNacimientoParaEnvio());
   datos.append(CONFIG_FORMS.ENTRY_EDAD,             document.getElementById('f-edad').value);
 
   PREGUNTAS.forEach(function(p) {
