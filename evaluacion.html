@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evaluacion Institucional - REGPOL Callao</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <link rel="stylesheet" href="evaluacion.css" />
+</head>
+<body>
+
+<!-- BARRA SUPERIOR -->
+<div class="top-bar">
+  <span><i class="fas fa-map-marker-alt"></i> Jr. Apurimac 647 - Callao</span>
+  <span class="social">
+    <a href="https://www.facebook.com/region.policial.callao.2025" target="_blank"><i class="fab fa-facebook"></i> FACEBOOK</a>
+    <a href="https://www.tiktok.com/@regionpolicialcallao" target="_blank"><i class="fab fa-tiktok"></i> TIKTOK</a>
+  </span>
+</div>
+
+<!-- HEADER -->
+<header class="main-header">
+  <div class="header-flex">
+    <img src="img/regpol callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" onerror="this.style.display='none'" />
+    <div class="title-text">
+      <h1>REGION POLICIAL CALLAO</h1>
+      <p>UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES</p>
+    </div>
+  </div>
+  <a href="https://wa.me/51927577686" target="_blank" class="btn-whatsapp-top">
+    <i class="fab fa-whatsapp"></i> WhatsApp
+  </a>
+</header>
+
+<!-- NAV -->
+<nav class="nav-main">
+  <div class="container">
+    <ul>
+      <li><a href="index.html">RESENA HISTORICA</a></li>
+      <li><a href="index.html">NUESTRA LABOR</a></li>
+      <li><a href="convenios.html">CONVENIOS</a></li>
+      <li><a href="cursos.html">CURSOS REGIONALES</a></li>
+      <li><a href="index.html">NOVEDADES</a></li>
+      <li><a href="evaluacion.html" class="activo"><i class="fas fa-clipboard-check"></i> EVALUACION INSTITUCIONAL</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO DINAMICO -->
+<section class="hero-evaluacion">
+  <p class="hero-subtitulo">Sistema de Evaluacion por Bloques -- 2026</p>
+  <h1>Modulo de Evaluacion Institucional -- REGPOL Callao</h1>
+  <div class="badge-comisaria" aria-live="polite">
+    <div class="etiqueta">Dependencia evaluada actualmente</div>
+    <div class="nombre" id="nombre-comisaria">CARGANDO...</div>
+  </div>
+</section>
+
+<!-- CONTENIDO PRINCIPAL -->
+<main class="contenedor">
+
+  <div class="alerta alerta-error" id="alerta-global" role="alert">
+    <i class="fas fa-exclamation-circle"></i>
+    <span id="texto-alerta-global">Complete todos los campos obligatorios.</span>
+  </div>
+
+  <!-- PASO 1: DATOS DEL EFECTIVO -->
+  <div class="card-eval">
+    <div class="card-header-eval">
+      <i class="fas fa-id-card"></i>
+      <h2>Paso 1 -- Datos de Identificacion del Efectivo Policial</h2>
+    </div>
+    <div class="card-body-eval">
+      <div class="form-grid">
+        <div class="campo campo-full">
+          <label for="f-unidad">Unidad / Dependencia Actual <span class="req">*</span></label>
+          <input type="text" id="f-unidad" placeholder="Ej. Comisaria PNP Bellavista" autocomplete="organization" />
+          <span class="msg-error">Este campo es obligatorio.</span>
+        </div>
+        <div class="campo campo-full">
+          <label for="f-nombres">Apellidos y Nombres Completos <span class="req">*</span></label>
+          <input type="text" id="f-nombres" placeholder="Ej. GARCIA LOPEZ, JUAN CARLOS" autocomplete="name" />
+          <span class="msg-error">Este campo es obligatorio.</span>
+        </div>
+        <div class="campo">
+          <label for="f-cip">CIP (6 digitos) <span class="req">*</span></label>
+          <input type="text" id="f-cip" placeholder="123456" maxlength="6" inputmode="numeric" />
+          <span class="msg-error">El CIP debe tener exactamente 6 digitos.</span>
+        </div>
+        <div class="campo">
+          <label for="f-dni">DNI (8 digitos) <span class="req">*</span></label>
+          <input type="text" id="f-dni" placeholder="12345678" maxlength="8" inputmode="numeric" />
+          <span class="msg-error">El DNI debe tener exactamente 8 digitos.</span>
+        </div>
+        <div class="campo">
+          <label for="f-nacimiento">Fecha de Nacimiento <span class="req">*</span></label>
+          <input type="date" id="f-nacimiento" />
+          <span class="msg-error">Ingrese su fecha de nacimiento.</span>
+        </div>
+        <div class="campo">
+          <label for="f-edad">Edad (calculada automaticamente)</label>
+          <input type="text" id="f-edad" class="input-edad" readonly placeholder="Complete su fecha de nacimiento" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASO 2: CUESTIONARIO -->
+  <div class="card-eval" id="card-cuestionario">
+    <div class="card-header-eval">
+      <i class="fas fa-tasks"></i>
+      <h2>Paso 2 -- Cuestionario Institucional (500 Preguntas)</h2>
+    </div>
+    <div class="card-body-eval">
+      <div class="progreso-wrap">
+        <div class="progreso-info">
+          <span class="pag-label" id="texto-pagina">Pagina 1 de 50</span>
+          <span class="resp-label" id="texto-respondidas">0 / 500 respondidas</span>
+        </div>
+        <div class="barra-ext" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="aria-progreso">
+          <div class="barra-int" id="barra-progreso" style="width:0%"></div>
+        </div>
+      </div>
+      <div id="zona-preguntas"></div>
+      <div class="paginacion">
+        <button class="btn-eval btn-borde" id="btn-atras" onclick="cambiarPagina(-1)"><i class="fas fa-arrow-left"></i> Atras</button>
+        <span class="info-pagina" id="info-pagina">Pagina 1 de 50</span>
+        <button class="btn-eval btn-verde" id="btn-siguiente" onclick="cambiarPagina(1)">Siguiente <i class="fas fa-arrow-right"></i></button>
+        <button class="btn-eval btn-finalizar" id="btn-finalizar" onclick="validarYEnviar()"><i class="fas fa-paper-plane"></i> Finalizar y Enviar Evaluacion</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOGGLE PANEL ADMIN -->
+  <div class="admin-toggle-wrap">
+    <button class="btn-admin-toggle" onclick="togglePanelAdmin()" id="btn-toggle-admin">
+      <i class="fas fa-lock"></i> Acceso Panel de Administracion -- UNITIC
+    </button>
+  </div>
+
+  <!-- PANEL ADMIN -->
+  <div id="panel-admin">
+    <div class="admin-header-bar">
+      <i class="fas fa-shield-alt"></i>
+      <h3>Panel de Control Operador -- UNITIC</h3>
+      <span class="badge-restringido">ACCESO RESTRINGIDO</span>
+    </div>
+    <div class="admin-body">
+      <div class="login-admin" id="login-admin">
+        <p><i class="fas fa-lock" style="color:#004d3d;margin-right:6px;"></i>Ingrese la contrasena de administrador.</p>
+        <div class="campo" style="margin-bottom:12px;">
+          <input type="password" id="input-password" placeholder="Contrasena de administrador" onkeydown="if(event.key==='Enter') verificarPassword()" />
+        </div>
+        <button class="btn-eval btn-verde" onclick="verificarPassword()" style="width:100%;"><i class="fas fa-unlock"></i> Acceder al Panel</button>
+        <div class="alerta alerta-error" id="alerta-login" style="margin-top:14px;" role="alert">
+          <i class="fas fa-exclamation-circle"></i> Contrasena incorrecta.
+        </div>
+      </div>
+      <div id="admin-contenido" style="display:none;">
+        <div class="admin-grid">
+          <div class="admin-seccion">
+            <h4><i class="fas fa-building"></i>&nbsp;Comisaria Activa en Evaluacion</h4>
+            <div class="campo" style="margin-bottom:14px;">
+              <label for="admin-comisaria">Nombre de la comisaria</label>
+              <input type="text" id="admin-comisaria" placeholder="Ej. Comisaria PNP La Perla" />
+            </div>
+            <button class="btn-eval btn-verde" onclick="guardarComisaria()" style="width:100%;"><i class="fas fa-save"></i> Guardar y Publicar en Encabezado</button>
+            <div class="alerta alerta-exito" id="alerta-guardado" style="margin-top:12px;" role="status">
+              <i class="fas fa-check-circle"></i> Comisaria actualizada correctamente.
+            </div>
+          </div>
+          <div class="admin-seccion">
+            <h4><i class="fas fa-list-ol"></i>&nbsp;Procedimiento de Rotacion de Comisaria</h4>
+            <ol class="lista-pasos">
+              <li>Abra <strong>drive.google.com</strong> con la cuenta institucional UNITIC.</li>
+              <li>Localice el formulario en la carpeta <strong>"EVAL_INST_2026"</strong>.</li>
+              <li>Pestana <strong>"Respuestas"</strong> &rarr; icono hoja de calculo verde (esquina superior derecha).</li>
+              <li>Descargue el Excel: Archivo &rarr; Descargar &rarr; Microsoft Excel (.xlsx). Guarde con nombre de comisaria y fecha. <span class="tag-alerta">VERIFICAR ANTES</span></li>
+              <li>En la pestana "Respuestas", clic en el menu de <strong>tres puntos (&#8942;)</strong> arriba a la derecha.</li>
+              <li>Seleccione <strong>"Eliminar todas las respuestas"</strong> y confirme. <span class="tag-alerta">IRREVERSIBLE</span></li>
+              <li>En este panel actualice el nombre de la comisaria activa y haga clic en <strong>"Guardar y Publicar"</strong>.</li>
+              <li>Notifique al personal de la nueva comisaria para que inicien su evaluacion.</li>
+            </ol>
+          </div>
+        </div>
+        <div class="aviso-peligro">
+          <strong>Advertencia:</strong> Eliminar las respuestas en Google Forms es <strong>irreversible</strong>. Descargue el Excel antes de proceder. En caso de error contacte al <strong>Ing. Anthony Ccayo -- UNITIC</strong>.
+        </div>
+        <div style="margin-top:14px; text-align:right;">
+          <button class="btn-eval btn-borde" onclick="cerrarSesionAdmin()" style="font-size:12px; padding:7px 16px;"><i class="fas fa-sign-out-alt"></i> Cerrar sesion</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- OVERLAY ENVIO -->
+<div id="overlay-envio" role="status">
+  <div class="spinner" id="spinner-overlay"></div>
+  <i class="fas fa-check-circle check-ok" id="check-ok-icon"></i>
+  <p id="texto-overlay">Enviando su evaluacion...</p>
+  <small id="subtexto-overlay">Por favor no cierre ni recargue esta pagina.</small>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer-simple">
+  <p>&copy; 2026 -- REGPOL Callao -- Policia Nacional del Peru &nbsp;|&nbsp; Desarrollado por <strong>Ing. Anthony Ccayo -- UNITIC</strong> &nbsp;|&nbsp; <a href="index.html">Volver al Portal</a></p>
+</footer>
+
+<script src="evaluacion.js"></script>
+</body>
+</html>
