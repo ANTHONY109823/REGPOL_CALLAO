@@ -8,7 +8,8 @@ var ADMIN_PASS  = 'AdminUNITIC2026';
 
 function mostrarPanelAutenticado() {
   document.getElementById('login-admin').style.display     = 'none';
-  document.getElementById('admin-contenido').style.display   = 'block';
+  document.getElementById('admin-contenido').style.display = 'block';
+  document.body.classList.add('autenticado');
   sessionStorage.setItem('panelAdminAuth', '1');
 
   var statNombre = document.getElementById('stat-nombre-comisaria');
@@ -56,6 +57,7 @@ function guardarComisaria() {
 
 function cerrarSesionAdmin() {
   sessionStorage.removeItem('panelAdminAuth');
+  document.body.classList.remove('autenticado');
   document.getElementById('login-admin').style.display     = 'flex';
   document.getElementById('admin-contenido').style.display = 'none';
   document.getElementById('input-password').value          = '';

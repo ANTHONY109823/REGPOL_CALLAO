@@ -426,6 +426,12 @@ function ocultarAlerta() {
   document.getElementById('alerta-global').classList.remove('visible');
 }
 
+function abrirPanelAdmin(e) {
+  if (e) e.preventDefault();
+  window.open('panel-admin.html', 'regpol_panel_unitic', 'noopener,noreferrer');
+  return false;
+}
+
 /* ================================================================
    GOOGLE SIGN-IN + GUARDADO DE PROGRESO
 ================================================================ */

@@ -135,11 +135,14 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 #overlay-envio small { color: rgba(255,255,255,.6); font-size: 12px; }
 .check-ok { font-size: 60px; color: var(--naranja-pnp); display: none; }
 
-/* PANEL ADMIN */
-.admin-toggle-wrap { text-align: center; padding: 28px 0 0; }
-.btn-admin-toggle { background: none; border: 1.5px dashed #b0c4be; color: #7a9e97; font-size: 12px; padding: 9px 22px; border-radius: 7px; cursor: pointer; font-family: inherit; transition: all .2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
-.btn-admin-toggle:hover { border-color: var(--verde-pnp); color: var(--verde-pnp); text-decoration: none; }
-#panel-admin { display: none; background: #f8fdf9; border: 2px solid var(--verde-pnp); border-radius: 12px; margin-top: 20px; overflow: hidden; }
+/* PANEL ADMIN — estilos usados en panel-admin.html (segunda pestaña) */
+.nav-panel-unitic a {
+  border: 1px dashed rgba(255, 255, 255, .45);
+  border-radius: 4px;
+  margin-left: 4px;
+}
+.nav-panel-unitic a:hover { border-color: var(--naranja-pnp); }
+
 .admin-header-bar { background: var(--verde-dark); padding: 14px 22px; display: flex; align-items: center; gap: 12px; }
 .admin-header-bar i { color: var(--naranja-pnp); }
 .admin-header-bar h3 { color: var(--blanco); font-size: 15px; font-weight: 700; flex: 1; }

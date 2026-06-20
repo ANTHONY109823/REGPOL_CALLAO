@@ -1,19 +1,16 @@
-/* panel-admin.css — Página dedicada del panel operador UNITIC */
+/* panel-admin.css — Página dedicada del panel operador UNITIC (segunda pestaña) */
 .panel-admin-page {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.panel-admin-header {
-  border-bottom: 4px solid var(--verde-pnp);
+  background: var(--gris-fondo, #f4f4f4);
 }
 
 .panel-admin-main {
   flex: 1;
-  max-width: 1100px;
+  max-width: 980px;
   margin: 0 auto;
-  padding: 32px 20px 48px;
+  padding: 28px 20px 40px;
   width: 100%;
 }
 
@@ -22,7 +19,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 55vh;
+  min-height: calc(100vh - 80px);
 }
 
 .panel-admin-card {
@@ -44,7 +41,7 @@
   padding: 8px 4px 4px;
 }
 
-/* Panel visible tras login */
+/* Panel completo tras login */
 .panel-admin-contenido {
   animation: panelFadeIn .35s ease;
 }
@@ -56,6 +53,11 @@
   border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--sombra);
+}
+
+.panel-admin-page.autenticado .panel-admin-main {
+  max-width: 1100px;
+  padding-top: 24px;
 }
 
 .panel-admin-acciones {
@@ -73,15 +75,15 @@
   text-decoration: none;
 }
 
-.top-bar .social a {
-  color: #ccc;
-  margin-left: 14px;
-  font-size: 12px;
-  text-decoration: none;
+/* Enlace panel en menú de evaluación */
+.nav-panel-unitic a {
+  border: 1px dashed rgba(255, 255, 255, .45);
+  border-radius: 4px;
+  margin-left: 4px;
 }
 
-.top-bar .social a:hover {
-  color: var(--naranja-pnp);
+.nav-panel-unitic a:hover {
+  border-color: var(--naranja-pnp);
 }
 
 @keyframes panelFadeIn {
@@ -90,7 +92,7 @@
 }
 
 @media (max-width: 768px) {
-  .panel-admin-main { padding: 20px 14px 36px; }
+  .panel-admin-main { padding: 16px 14px 32px; }
   .panel-admin-acciones { flex-direction: column; align-items: stretch; }
   .panel-admin-acciones .btn-eval { justify-content: center; }
 }
