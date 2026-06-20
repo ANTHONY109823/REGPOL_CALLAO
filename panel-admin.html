@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panel Admin — UNITIC | REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="panel-admin.css?v=6" />
+  <link rel="stylesheet" href="panel-admin.css?v=7" />
 </head>
 <body class="panel-admin-page">
 
@@ -265,18 +265,65 @@
     <div id="vista-contenido" class="admin-vista">
       <header class="vista-header">
         <h2><i class="fas fa-book"></i> Reseña Histórica y Nuestra Labor</h2>
-        <p>Textos institucionales del portal</p>
+        <p>Edite los textos institucionales del portal con el editor visual</p>
       </header>
-      <div class="admin-seccion">
-        <div class="campo"><label for="cms-actualizacion">Fecha de actualización del portal</label>
-          <input type="text" id="cms-actualizacion" placeholder="20 DE JUNIO 2026" /></div>
-        <div class="campo"><label for="cms-resena-intro">Reseña Histórica — introducción</label>
-          <textarea id="cms-resena-intro" rows="3"></textarea></div>
-        <div class="campo"><label for="cms-resena-parrafos">Reseña Histórica — párrafos (separados por línea en blanco)</label>
-          <textarea id="cms-resena-parrafos" rows="6"></textarea></div>
-        <div class="campo"><label for="cms-labor-intro">Nuestra Labor — introducción</label>
-          <textarea id="cms-labor-intro" rows="3"></textarea></div>
-        <div class="cms-acciones">
+      <div class="admin-seccion cms-editor-wrap">
+        <div class="cms-tabs" role="tablist">
+          <button type="button" class="cms-tab activo" data-cms-tab="resena" onclick="cambiarTabCMS('resena')"><i class="fas fa-landmark"></i> Reseña Histórica</button>
+          <button type="button" class="cms-tab" data-cms-tab="labor" onclick="cambiarTabCMS('labor')"><i class="fas fa-hands-helping"></i> Nuestra Labor</button>
+          <button type="button" class="cms-tab" data-cms-tab="general" onclick="cambiarTabCMS('general')"><i class="fas fa-cog"></i> General</button>
+        </div>
+
+        <div id="cms-panel-resena" class="cms-panel activo">
+          <div class="cms-editor-card">
+            <div class="cms-editor-card-header"><i class="fas fa-align-left"></i> Introducción</div>
+            <div class="cms-editor-card-body">
+              <label class="cms-label" for="cms-resena-intro">Texto de apertura que aparece bajo el título</label>
+              <textarea id="cms-resena-intro" class="cms-textarea" rows="4" placeholder="Breve introducción de la Región Policial Callao..."></textarea>
+            </div>
+          </div>
+          <div class="cms-editor-card">
+            <div class="cms-editor-card-header">
+              <span><i class="fas fa-paragraph"></i> Párrafos del contenido</span>
+              <button type="button" class="btn-mini-text" onclick="agregarParrafoResena()"><i class="fas fa-plus"></i> Agregar párrafo</button>
+            </div>
+            <div class="cms-editor-card-body">
+              <p class="cms-ayuda">Cada cuadro es un párrafo en la página pública. Puede agregar, editar o quitar bloques.</p>
+              <div id="cms-lista-parrafos" class="cms-parrafos-lista"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="cms-panel-labor" class="cms-panel">
+          <div class="cms-editor-card">
+            <div class="cms-editor-card-header"><i class="fas fa-align-left"></i> Introducción</div>
+            <div class="cms-editor-card-body">
+              <label class="cms-label" for="cms-labor-intro">Texto que describe la misión institucional</label>
+              <textarea id="cms-labor-intro" class="cms-textarea" rows="4" placeholder="La labor de la REGPOL Callao..."></textarea>
+            </div>
+          </div>
+          <div class="cms-editor-card">
+            <div class="cms-editor-card-header">
+              <span><i class="fas fa-th-large"></i> Pilares de nuestra labor</span>
+              <button type="button" class="btn-mini-text" onclick="agregarPilarCMS()"><i class="fas fa-plus"></i> Agregar pilar</button>
+            </div>
+            <div class="cms-editor-card-body">
+              <p class="cms-ayuda">Tarjetas con icono, título y descripción que se muestran en la página Nuestra Labor.</p>
+              <div id="cms-lista-pilares" class="cms-pilares-lista"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="cms-panel-general" class="cms-panel">
+          <div class="cms-editor-card">
+            <div class="cms-editor-card-body">
+              <label class="cms-label" for="cms-actualizacion">Fecha de actualización del portal</label>
+              <input type="text" id="cms-actualizacion" class="cms-input" placeholder="20 DE JUNIO 2026" />
+            </div>
+          </div>
+        </div>
+
+        <div class="cms-acciones cms-acciones-sticky">
           <button type="button" class="btn-eval btn-verde" onclick="guardarSitioWeb()"><i class="fas fa-cloud-upload-alt"></i> Publicar cambios</button>
           <button type="button" class="btn-eval btn-borde" onclick="exportarSiteJSON()"><i class="fas fa-download"></i> Exportar JSON</button>
           <label class="btn-eval btn-borde cms-import-label"><i class="fas fa-upload"></i> Importar JSON
@@ -290,9 +337,25 @@
   </div>
 </section>
 
+<!-- MODAL EDITOR CMS -->
+<div id="cms-modal" class="cms-modal" aria-hidden="true">
+  <div class="cms-modal-backdrop" onclick="cerrarCmsModal()"></div>
+  <div class="cms-modal-dialog" role="dialog" aria-labelledby="cms-modal-titulo">
+    <header class="cms-modal-header">
+      <h3 id="cms-modal-titulo"><i class="fas fa-edit"></i> Editar</h3>
+      <button type="button" class="cms-modal-cerrar" onclick="cerrarCmsModal()" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+    </header>
+    <div class="cms-modal-body" id="cms-modal-body"></div>
+    <footer class="cms-modal-footer">
+      <button type="button" class="btn-eval btn-borde" onclick="cerrarCmsModal()">Cancelar</button>
+      <button type="button" class="btn-eval btn-verde" id="cms-modal-guardar"><i class="fas fa-check"></i> Guardar</button>
+    </footer>
+  </div>
+</div>
+
 <script src="portal.js?v=4"></script>
 <script src="comisarias.js?v=2"></script>
-<script src="panel-cms.js?v=2"></script>
+<script src="panel-cms.js?v=3"></script>
 <script src="panel-admin.js?v=6"></script>
 </body>
 </html>

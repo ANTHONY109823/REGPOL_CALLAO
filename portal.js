@@ -135,12 +135,20 @@ function renderResenaHistorica(data, containerId) {
   var el = document.getElementById(containerId);
   var sec = data.resenaHistorica;
   if (!el || !sec) return;
-  var html = '<div class="page-intro"><h2>' + escHtml(sec.titulo) + '</h2><p>' + escHtml(sec.intro) + '</p></div>';
-  html += '<div class="contenido-texto">';
-  (sec.parrafos || []).forEach(function(p) {
-    html += '<p>' + escHtml(p) + '</p>';
+  var html = '<article class="institucional-page institucional-resena">';
+  html += '<div class="institucional-cabecera">';
+  html += '<div class="institucional-icono"><i class="fas fa-landmark"></i></div>';
+  html += '<div class="institucional-cabecera-texto">';
+  html += '<h2>' + escHtml(sec.titulo || 'Reseña Histórica') + '</h2>';
+  html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
+  html += '</div></div>';
+  html += '<div class="institucional-cuerpo">';
+  (sec.parrafos || []).forEach(function(p, i) {
+    html += '<div class="institucional-bloque">' +
+      '<span class="institucional-num" aria-hidden="true">' + String(i + 1).padStart(2, '0') + '</span>' +
+      '<p>' + escHtml(p) + '</p></div>';
   });
-  html += '</div>';
+  html += '</div></article>';
   el.innerHTML = html;
 }
 
@@ -148,14 +156,21 @@ function renderNuestraLabor(data, containerId) {
   var el = document.getElementById(containerId);
   var sec = data.nuestraLabor;
   if (!el || !sec) return;
-  var html = '<div class="page-intro"><h2>' + escHtml(sec.titulo) + '</h2><p>' + escHtml(sec.intro) + '</p></div>';
-  html += '<div class="grid-pilares">';
+  var html = '<article class="institucional-page institucional-labor">';
+  html += '<div class="institucional-cabecera">';
+  html += '<div class="institucional-icono institucional-icono-naranja"><i class="fas fa-hands-helping"></i></div>';
+  html += '<div class="institucional-cabecera-texto">';
+  html += '<h2>' + escHtml(sec.titulo || 'Nuestra Labor') + '</h2>';
+  html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
+  html += '</div></div>';
+  html += '<div class="pilares-grid-v2">';
   (sec.pilares || []).forEach(function(p) {
-    html += '<div class="card-pilar">' +
-      '<div class="icon-wrapper"><i class="fas ' + escHtml(p.icono) + '"></i></div>' +
-      '<h4>' + escHtml(p.titulo) + '</h4><p>' + escHtml(p.texto) + '</p></div>';
+    html += '<div class="card-pilar-v2">' +
+      '<div class="card-pilar-v2-icono"><i class="fas ' + escHtml(p.icono || 'fa-star') + '"></i></div>' +
+      '<h4>' + escHtml(p.titulo) + '</h4>' +
+      '<p>' + escHtml(p.texto) + '</p></div>';
   });
-  html += '</div>';
+  html += '</div></article>';
   el.innerHTML = html;
 }
 
