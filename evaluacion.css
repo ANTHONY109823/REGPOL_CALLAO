@@ -21,33 +21,16 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--gris-fondo); color: var(--texto); font-size: 14px; line-height: 1.6; }
 
-/* TOP BAR */
-.top-bar { background: #111; color: #ccc; font-size: 12px; padding: 6px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
-.top-bar .social a { color: #ccc; margin-left: 10px; font-size: 14px; text-decoration: none; }
-.top-bar .social a:hover { color: var(--naranja-pnp); }
-
-/* HEADER */
-.main-header { background: var(--blanco); padding: 20px; border-bottom: 4px solid var(--verde-pnp); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
-.header-flex { display: flex; align-items: center; gap: 20px; }
-.logo-pnp { height: 100px; width: auto; }
-.title-text h1 { color: var(--verde-pnp); font-size: 22px; font-weight: 900; line-height: 1.2; }
-.title-text p { color: #666; font-size: 13px; margin-top: 4px; }
-.btn-ingresar-top { background: var(--verde-pnp); color: var(--blanco); padding: 10px 22px; border-radius: 50px; text-decoration: none; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 7px; transition: background .2s, transform .2s; border: 2px solid var(--naranja-pnp); white-space: nowrap; }
-.btn-ingresar-top:hover { background: var(--verde-dark); transform: translateY(-2px); text-decoration: none; color: var(--blanco); }
-.btn-whatsapp-top { background: #25D366; color: var(--blanco); padding: 10px 20px; border-radius: 50px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px; transition: background .2s, transform .2s; }
-.btn-whatsapp-top:hover { background: #128C7E; transform: translateY(-2px); }
-
-/* NAV */
-.nav-main { background: var(--verde-pnp); position: sticky; top: 0; z-index: 1000; border-bottom: 2px solid var(--naranja-pnp); }
-.nav-main .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-.nav-main ul { list-style: none; display: flex; justify-content: center; flex-wrap: wrap; padding: 0; margin: 0; gap: 2px; }
-.nav-main ul li a { color: var(--blanco); text-decoration: none; padding: 14px 16px; display: block; font-size: 13px; font-weight: 500; transition: background .2s, color .2s; }
-.nav-main ul li a:hover,
-.nav-main ul li a.activo { background: rgba(0,0,0,.20); color: var(--naranja-pnp); }
-.nav-main ul li a.activo { border-bottom: 3px solid var(--naranja-pnp); }
-
-/* HERO */
-.hero-evaluacion { background: linear-gradient(135deg, var(--verde-pnp) 0%, var(--verde-dark) 100%); padding: 40px 20px; text-align: center; position: relative; overflow: hidden; }
+/* HERO BIENESTAR — altura fija */
+.hero-evaluacion {
+  background: linear-gradient(135deg, var(--verde-pnp) 0%, var(--verde-dark) 100%);
+  padding: 28px 20px;
+  min-height: 160px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
 .hero-evaluacion::before { content: ''; position: absolute; top: -80px; right: -80px; width: 260px; height: 260px; background: rgba(243,156,18,.07); border-radius: 50%; }
 .hero-subtitulo { color: rgba(255,255,255,.65); font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 10px; }
 .hero-evaluacion h1 { color: var(--blanco); font-size: 20px; font-weight: 700; margin-bottom: 24px; }

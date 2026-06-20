@@ -182,8 +182,24 @@ function actualizarFechaPortal(data) {
   if (el && data.actualizacion) el.textContent = 'ÚLTIMA ACTUALIZACIÓN: ' + data.actualizacion;
 }
 
+function initPortalPageHero(activeId) {
+  if (!activeId || activeId === 'inicio') return;
+  if (document.querySelector('.portal-page-hero') || document.querySelector('.presentation-slider')) return;
+  var nav = document.querySelector('.nav-main');
+  if (!nav) return;
+  var item = REGPOL_NAV.filter(function(i) { return i.id === activeId; })[0];
+  if (!item) return;
+  var hero = document.createElement('section');
+  hero.className = 'portal-page-hero';
+  hero.setAttribute('aria-label', 'Titulo de seccion');
+  hero.innerHTML = '<div class="container"><h2>' + escHtml(item.label) + '</h2></div>';
+  nav.insertAdjacentElement('afterend', hero);
+}
+
 function initPortalPagina(config) {
+  config = config || {};
   initPortalNav(config.activeNav || '');
+  if (config.showPageHero !== false) initPortalPageHero(config.activeNav || '');
   return cargarSiteData().then(function(data) {
     if (!data) return;
     if (config.renderResena) renderResenaHistorica(data, config.renderResena);

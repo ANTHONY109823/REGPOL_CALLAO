@@ -5,36 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bienestar - REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-  <link rel="stylesheet" href="evaluacion.css" />
-  <!-- Google Identity Services -->
+  <link rel="stylesheet" href="style.css?v=12" />
+  <link rel="stylesheet" href="evaluacion.css?v=3" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
-<body>
+<body class="body-portal body-bienestar">
 
-<!-- BARRA SUPERIOR -->
-<div class="top-bar">
-  <span><i class="fas fa-map-marker-alt"></i> Jr. Apurimac 647 - Callao</span>
-  <span class="social">
-    <a href="https://www.facebook.com/region.policial.callao.2025" target="_blank"><i class="fab fa-facebook"></i> FACEBOOK</a>
-    <a href="https://www.tiktok.com/@regionpolicialcallao" target="_blank"><i class="fab fa-tiktok"></i> TIKTOK</a>
-  </span>
-</div>
-
-<!-- HEADER -->
-<header class="main-header">
-  <div class="header-flex">
-    <img src="img/regpol callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" onerror="this.style.display='none'" />
-    <div class="title-text">
-      <h1>REGION POLICIAL CALLAO</h1>
-      <p>UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES</p>
+<div class="header-social-portal">
+  <div class="container portal-flex">
+    <a href="panel-admin.html" target="_blank" rel="noopener noreferrer" class="btn-pnp-social ingresar" onclick="window.open('panel-admin.html','regpol_panel_unitic','noopener,noreferrer'); return false;">
+      <i class="fas fa-sign-in-alt"></i> INGRESAR
+    </a>
+    <div class="social-buttons-group">
+      <a href="https://www.facebook.com/region.policial.callao.2025" target="_blank" class="btn-pnp-social fb"><i class="fab fa-facebook"></i> Facebook</a>
+      <a href="https://www.tiktok.com/@regionpolicialcallao" target="_blank" class="btn-pnp-social tk"><i class="fab fa-tiktok"></i> TikTok</a>
+      <a href="https://wa.me/51927577686" target="_blank" class="btn-pnp-social wa"><i class="fab fa-whatsapp"></i> WhatsApp</a>
     </div>
   </div>
-  <a href="panel-admin.html" class="btn-ingresar-top" onclick="return abrirPanelAdmin(event)">
-    <i class="fas fa-sign-in-alt"></i> INGRESAR
-  </a>
+</div>
+
+<header class="main-header">
+  <div class="container header-flex">
+    <div class="logo-container">
+      <img src="img/regpol%20callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90" />
+    </div>
+    <div class="title-text">
+      <h1>REGIÓN POLICIAL CALLAO</h1>
+      <p>UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p>
+    </div>
+  </div>
 </header>
 
-<!-- NAV -->
 <nav class="nav-main"><div class="container"><ul></ul></div></nav>
 
 <!-- HERO DINAMICO -->
@@ -203,8 +204,8 @@
   <p>&copy; 2026 -- REGPOL Callao -- Policia Nacional del Peru &nbsp;|&nbsp; Desarrollado por <strong>Ing. Anthony Ccayo -- UNITIC</strong> &nbsp;|&nbsp; <a href="index.html">Volver al Portal</a></p>
 </footer>
 
-<script src="portal.js?v=2"></script>
-<script>initPortalPagina({ activeNav: 'bienestar' });</script>
+<script src="portal.js?v=3"></script>
+<script>initPortalPagina({ activeNav: 'bienestar', showPageHero: false });</script>
 <script src="preguntas.js"></script>
 <script src="comisarias.js?v=2"></script>
 <script src="evaluacion.js"></script>
