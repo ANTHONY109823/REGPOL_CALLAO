@@ -157,6 +157,38 @@
         </div>
       </div>
       <div id="admin-contenido" style="display:none;">
+
+        <!-- ACCESO DIRECTO RESPUESTAS -->
+        <div class="panel-respuestas">
+          <div class="panel-resp-titulo">
+            <i class="fas fa-table"></i>
+            <span>Respuestas MMPI-2 -- Acceso Directo</span>
+          </div>
+          <div class="panel-resp-botones">
+            <a href="https://docs.google.com/forms/d/19HWfPow6zMYuphsHbLir7Ro_xysD6hya528bfXl_YN0/edit#responses"
+               target="_blank" class="btn-resp btn-resp-form">
+              <i class="fab fa-google"></i>
+              Ver Respuestas en Google Forms
+            </a>
+            <a href="https://docs.google.com/forms/d/19HWfPow6zMYuphsHbLir7Ro_xysD6hya528bfXl_YN0/edit#responses"
+               target="_blank" class="btn-resp btn-resp-excel"
+               onclick="setTimeout(function(){ window.open('https://docs.google.com/forms/d/19HWfPow6zMYuphsHbLir7Ro_xysD6hya528bfXl_YN0/edit#responses','_blank'); },200)">
+              <i class="fas fa-file-excel"></i>
+              Descargar Excel de Respuestas
+            </a>
+          </div>
+          <div class="panel-resp-info">
+            <div class="resp-stat" id="stat-comisaria">
+              <i class="fas fa-building"></i>
+              <span>Comisaria activa: <strong id="stat-nombre-comisaria">--</strong></span>
+            </div>
+            <div class="resp-stat">
+              <i class="fas fa-info-circle"></i>
+              <span>En Google Forms: pestana <strong>"Respuestas"</strong> &rarr; icono verde <i class="fas fa-table" style="color:#0f9d58;"></i> para abrir la hoja de calculo con todas las evaluaciones por nombre y unidad.</span>
+            </div>
+          </div>
+        </div>
+
         <div class="admin-grid">
           <div class="admin-seccion">
             <h4><i class="fas fa-building"></i>&nbsp;Comisaria Activa en Evaluacion</h4>

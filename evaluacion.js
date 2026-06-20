@@ -440,6 +440,8 @@ function verificarPassword() {
     document.getElementById('admin-contenido').style.display = 'block';
     alerta.classList.remove('visible');
     input.value = '';
+    var statNombre = document.getElementById('stat-nombre-comisaria');
+    if (statNombre) statNombre.textContent = localStorage.getItem('comisariaActiva') || 'No configurada';
   } else {
     alerta.classList.add('visible');
     input.value = '';
@@ -455,6 +457,8 @@ function guardarComisaria() {
   input.style.borderColor = '';
   localStorage.setItem('comisariaActiva', nombre);
   document.getElementById('nombre-comisaria').textContent = nombre;
+  var statNombre = document.getElementById('stat-nombre-comisaria');
+  if (statNombre) statNombre.textContent = nombre;
   alerta.classList.add('visible');
   setTimeout(function() { alerta.classList.remove('visible'); }, 3000);
 }
