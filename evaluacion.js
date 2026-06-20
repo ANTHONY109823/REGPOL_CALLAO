@@ -15,8 +15,8 @@
 var FORM_BASE = 'https://docs.google.com';
 var FORM_PATH = '/forms/d/e/1FAIpQLSeSDjzhDeP8VHPSifAbfMOwaxFJkcOWCX9A6jEH6WD9v2ySlg/formResponse';
 
-// URL de la Web App de Apps Script — pegar aqui despues de desplegar
-var WEB_APP_URL = localStorage.getItem('webAppUrl') || '';
+// Web App de Apps Script — vinculada a Google Sheets con respuestas MMPI-2
+var WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzHHCUjXQVNtgVTERGx3RuiGPfSHuhCgTVddHL8ByDJUE-lLQessVsdFCFabayhCC5u/exec';
 
 var CONFIG_FORMS = {
   get URL_ENVIO() { return FORM_BASE + FORM_PATH; },
