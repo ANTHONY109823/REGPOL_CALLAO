@@ -70,11 +70,27 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .campo label { font-size: 11px; font-weight: 700; color: var(--texto-muted); text-transform: uppercase; letter-spacing: .7px; }
 .campo label .req { color: var(--error); margin-left: 2px; }
 .campo input { width: 100%; border: 1.5px solid var(--borde); border-radius: 7px; padding: 11px 14px; font-size: 14px; color: var(--texto); background: var(--blanco); font-family: inherit; transition: border-color .2s, box-shadow .2s; }
+.campo select {
+  width: 100%;
+  border: 1.5px solid var(--borde);
+  border-radius: 7px;
+  padding: 11px 14px;
+  font-size: 14px;
+  color: var(--texto);
+  background: var(--blanco);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+}
+.campo select:focus { outline: none; border-color: var(--verde-pnp); box-shadow: 0 0 0 3px rgba(0,77,61,.12); }
+.campo select.invalido { border-color: var(--error); box-shadow: 0 0 0 3px rgba(192,57,43,.10); }
+.campo select.valido { border-color: var(--exito); }
+.campo .msg-error { font-size: 11px; color: var(--error); margin-top: 2px; display: none; }
+.campo input.invalido ~ .msg-error,
+.campo select.invalido ~ .msg-error { display: block; }
 .campo input:focus { outline: none; border-color: var(--verde-pnp); box-shadow: 0 0 0 3px rgba(0,77,61,.12); }
 .campo input.invalido { border-color: var(--error); box-shadow: 0 0 0 3px rgba(192,57,43,.10); }
 .campo input.valido { border-color: var(--exito); }
-.campo .msg-error { font-size: 11px; color: var(--error); margin-top: 2px; display: none; }
-.campo input.invalido ~ .msg-error { display: block; }
 .input-edad { background: var(--fondo-suave) !important; color: var(--verde-pnp) !important; font-weight: 700 !important; cursor: default; }
 
 /* PROGRESO */

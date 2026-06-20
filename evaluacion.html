@@ -133,9 +133,11 @@
     <div class="card-body-eval">
       <div class="form-grid">
         <div class="campo campo-full">
-          <label for="f-unidad">Unidad / Dependencia Actual <span class="req">*</span></label>
-          <input type="text" id="f-unidad" placeholder="Ej. Comisaria PNP Bellavista" autocomplete="organization" />
-          <span class="msg-error">Este campo es obligatorio.</span>
+          <label for="f-unidad">Unidad / Dependencia Actual (Comisaría) <span class="req">*</span></label>
+          <select id="f-unidad" class="select-eval">
+            <option value="">-- Seleccionar comisaría --</option>
+          </select>
+          <span class="msg-error">Seleccione su comisaría.</span>
         </div>
         <div class="campo campo-full">
           <label for="f-nombres">Apellidos y Nombres Completos <span class="req">*</span></label>
@@ -207,6 +209,7 @@
 </footer>
 
 <script src="preguntas.js"></script>
+<script src="comisarias.js?v=2"></script>
 <script src="evaluacion.js"></script>
 </body>
 </html>

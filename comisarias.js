@@ -1,4 +1,4 @@
-/* comisarias.js — Comisarías REGPOL Callao 2026 */
+/* comisarias.js — 20 Comisarías REGPOL Callao 2026 (orden oficial) */
 var COMISARIAS_CALLAO = [
   'CIA CALLAO',
   'CIA BELLAVISTA',
@@ -19,9 +19,7 @@ var COMISARIAS_CALLAO = [
   'CIA PACHACUTEC',
   'CIA VILLA LOS REYES',
   'CIA MARQUEZ',
-  'CIA OQUENDO',
-  'UNIEME CALLAO',
-  'UNIPIRV CALLAO'
+  'CIA OQUENDO'
 ];
 
 function poblarSelectComisarias(selectEl, placeholder) {

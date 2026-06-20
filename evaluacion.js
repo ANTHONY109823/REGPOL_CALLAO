@@ -159,8 +159,14 @@ var ESTADO = {
    INICIO
 ================================================================ */
 document.addEventListener('DOMContentLoaded', function() {
+  poblarSelectComisarias('f-unidad', '-- Seleccionar comisaría --');
+
   var guardado = localStorage.getItem('comisariaActiva') || 'NO CONFIGURADA';
   document.getElementById('nombre-comisaria').textContent = guardado;
+
+  if (guardado && guardado !== 'NO CONFIGURADA') {
+    seleccionarComisariaEnSelect('f-unidad', guardado);
+  }
 
   document.getElementById('texto-pagina').textContent      = 'Pagina 1 de ' + TOTAL_PAGINAS;
   document.getElementById('texto-respondidas').textContent  = '0 / ' + TOTAL_PREGUNTAS + ' respondidas';
@@ -531,7 +537,7 @@ function restaurarProgreso() {
   // Rellenar campos personales
   if (data.cip)       document.getElementById('f-cip').value       = data.cip;
   if (data.nombres)   document.getElementById('f-nombres').value   = data.nombres;
-  if (data.comisaria) document.getElementById('f-unidad').value    = data.comisaria;
+  if (data.comisaria) seleccionarComisariaEnSelect('f-unidad', data.comisaria);
 
   // Restaurar respuestas
   if (data.respuestas) {
