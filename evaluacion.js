@@ -166,10 +166,9 @@ document.addEventListener('DOMContentLoaded', function() {
   var adminInput = document.getElementById('admin-comisaria');
   if (guardado !== 'NO CONFIGURADA -- VER PANEL ADMIN') adminInput.value = guardado;
 
-  /* Actualizar textos con los valores reales del MMPI-2 */
-  document.getElementById('texto-pagina').textContent     = 'Pagina 1 de ' + TOTAL_PAGINAS;
-  document.getElementById('texto-respondidas').textContent = '0 / ' + TOTAL_PREGUNTAS + ' respondidas';
-  document.getElementById('info-pagina').textContent      = 'Pagina 1 de ' + TOTAL_PAGINAS;
+  document.getElementById('texto-pagina').textContent      = 'Pagina 1 de ' + TOTAL_PAGINAS;
+  document.getElementById('texto-respondidas').textContent  = '0 / ' + TOTAL_PREGUNTAS + ' respondidas';
+  document.getElementById('info-pagina').textContent        = 'Pagina 1 de ' + TOTAL_PAGINAS;
 
   renderizarPagina(1);
 
@@ -179,6 +178,13 @@ document.addEventListener('DOMContentLoaded', function() {
       e.target.value = e.target.value.replace(/\D/g, '');
     });
   });
+
+  // Restaurar sesión Google si estaba logueado
+  var googleUser = JSON.parse(localStorage.getItem('googleUser') || 'null');
+  if (googleUser) {
+    mostrarUsuarioGoogle(googleUser);
+    verificarProgresoGuardado(googleUser.email);
+  }
 });
 
 /* ================================================================
@@ -257,6 +263,7 @@ function guardarRespuesta(id, val) {
   var fila = document.getElementById('fila-' + id);
   if (fila) fila.classList.remove('sin-marcar');
   actualizarProgreso();
+  autoGuardarProgreso();
 }
 
 /* ================================================================
@@ -386,6 +393,7 @@ function enviarAGoogleForms() {
       textoO.textContent      = 'MMPI-2 enviado correctamente!';
       subtextoO.textContent   = document.getElementById('f-nombres').value.trim() +
         ' | DNI: ' + document.getElementById('f-dni').value.trim();
+      limpiarProgresoGuardado();
       setTimeout(function() { overlay.classList.remove('visible'); limpiarFormulario(); }, 5000);
     })
     .catch(function() {
@@ -598,3 +606,206 @@ function guardarWebAppUrl() {
     if (WEB_APP_URL) setTimeout(cargarComisariasDesdeSheet, 300);
   };
 })();
+
+/* ================================================================
+   GOOGLE SIGN-IN + GUARDADO DE PROGRESO
+================================================================ */
+var GOOGLE_USER = null;
+var AUTO_SAVE_COUNTER = 0;
+
+// Callback de Google Identity Services
+function onGoogleSignIn(response) {
+  try {
+    var payload = parseJWT(response.credential);
+    var user = {
+      email:  payload.email,
+      nombre: payload.name,
+      foto:   payload.picture
+    };
+    GOOGLE_USER = user;
+    localStorage.setItem('googleUser', JSON.stringify(user));
+    mostrarUsuarioGoogle(user);
+    document.getElementById('google-signin-banner').classList.add('gsb-logueado');
+    verificarProgresoGuardado(user.email);
+  } catch(e) {
+    console.error('Error Google Sign-In:', e);
+  }
+}
+
+function mostrarUsuarioGoogle(user) {
+  document.getElementById('google-btn-wrap').style.display   = 'none';
+  document.getElementById('google-user-info').style.display  = 'flex';
+  document.getElementById('google-user-nombre').textContent  = user.nombre || user.email;
+  document.getElementById('google-user-email').textContent   = user.email;
+  if (user.foto) document.getElementById('google-user-foto').src = user.foto;
+  var skip = document.querySelector('.btn-gsb-skip');
+  if (skip) skip.style.display = 'none';
+  GOOGLE_USER = user;
+}
+
+function saltarLogin() {
+  var banner = document.getElementById('google-signin-banner');
+  banner.style.display = 'none';
+  // Verificar si hay progreso guardado por CIP/local
+  verificarProgresoLocal();
+}
+
+function cerrarSesionGoogle() {
+  GOOGLE_USER = null;
+  localStorage.removeItem('googleUser');
+  document.getElementById('google-btn-wrap').style.display  = 'flex';
+  document.getElementById('google-user-info').style.display = 'none';
+  var skip = document.querySelector('.btn-gsb-skip');
+  if (skip) skip.style.display = '';
+  document.getElementById('google-signin-banner').classList.remove('gsb-logueado');
+  document.getElementById('banner-progreso').style.display = 'none';
+}
+
+// Verificar progreso guardado en el servidor (Google Sheets)
+function verificarProgresoGuardado(email) {
+  if (!WEB_APP_URL || !email) { verificarProgresoLocal(); return; }
+
+  fetch(WEB_APP_URL + '?action=cargar_progreso&email=' + encodeURIComponent(email))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok && data.encontrado && data.total > 0) {
+        mostrarBannerProgreso(data);
+      } else {
+        verificarProgresoLocal();
+      }
+    })
+    .catch(function() { verificarProgresoLocal(); });
+}
+
+// Verificar progreso guardado localmente (por CIP)
+function verificarProgresoLocal() {
+  var cip = document.getElementById('f-cip') && document.getElementById('f-cip').value.trim();
+  var clave = 'progreso_' + (GOOGLE_USER ? GOOGLE_USER.email : (cip || 'anonimo'));
+  var saved = localStorage.getItem(clave);
+  if (saved) {
+    try {
+      var data = JSON.parse(saved);
+      if (data.total > 0) mostrarBannerProgreso(data);
+    } catch(e) {}
+  }
+}
+
+function mostrarBannerProgreso(data) {
+  var banner = document.getElementById('banner-progreso');
+  var info   = document.getElementById('banner-progreso-info');
+  info.textContent = 'Página ' + (data.pagina || 1) + ' de ' + TOTAL_PAGINAS +
+    ' — ' + (data.total || 0) + ' de ' + TOTAL_PREGUNTAS + ' preguntas respondidas';
+  banner.style.display = 'flex';
+  banner._data = data;
+}
+
+function restaurarProgreso() {
+  var data = document.getElementById('banner-progreso')._data;
+  if (!data) return;
+
+  // Rellenar campos personales
+  if (data.cip)       document.getElementById('f-cip').value       = data.cip;
+  if (data.nombres)   document.getElementById('f-nombres').value   = data.nombres;
+  if (data.comisaria) document.getElementById('f-unidad').value    = data.comisaria;
+
+  // Restaurar respuestas
+  if (data.respuestas) {
+    ESTADO.respuestas = typeof data.respuestas === 'string'
+      ? JSON.parse(data.respuestas)
+      : data.respuestas;
+  }
+
+  // Ir a la página guardada
+  var pagina = parseInt(data.pagina) || 1;
+  ESTADO.paginaActual = pagina;
+  renderizarPagina(pagina);
+  actualizarProgreso();
+
+  document.getElementById('banner-progreso').style.display = 'none';
+
+  // Scroll suave al cuestionario
+  var quiz = document.getElementById('cuestionario');
+  if (quiz) quiz.scrollIntoView({ behavior: 'smooth' });
+
+  mostrarAlerta('Progreso restaurado — continúa desde la página ' + pagina, 'exito');
+}
+
+function descartarProgreso() {
+  document.getElementById('banner-progreso').style.display = 'none';
+  // Borrar progreso guardado
+  if (GOOGLE_USER) {
+    localStorage.removeItem('progreso_' + GOOGLE_USER.email);
+  }
+  mostrarAlerta('Iniciando evaluación desde el principio.', 'exito');
+}
+
+// Auto-guardar cada 5 respuestas
+function autoGuardarProgreso() {
+  AUTO_SAVE_COUNTER++;
+  if (AUTO_SAVE_COUNTER % 5 !== 0) return;
+
+  var cip       = (document.getElementById('f-cip')      || {}).value || '';
+  var nombres   = (document.getElementById('f-nombres')  || {}).value || '';
+  var comisaria = (document.getElementById('f-unidad')   || {}).value || '';
+  var total     = Object.keys(ESTADO.respuestas).length;
+  var email     = GOOGLE_USER ? GOOGLE_USER.email : '';
+  var clave     = 'progreso_' + (email || cip || 'anonimo');
+
+  var payload = {
+    email:     email,
+    cip:       cip,
+    nombres:   nombres,
+    comisaria: comisaria,
+    pagina:    ESTADO.paginaActual,
+    total:     total,
+    respuestas: ESTADO.respuestas
+  };
+
+  // Guardar siempre en localStorage (instantáneo)
+  localStorage.setItem(clave, JSON.stringify(payload));
+
+  // Guardar en Google Sheets si hay email y Web App
+  if (email && WEB_APP_URL) {
+    fetch(WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ action: 'guardar_progreso' }, payload)),
+      mode: 'no-cors'
+    }).catch(function() {});
+  }
+
+  // Indicador visual sutil
+  mostrarIndicadorGuardado();
+}
+
+function mostrarIndicadorGuardado() {
+  var ind = document.getElementById('indicador-guardado');
+  if (!ind) {
+    ind = document.createElement('div');
+    ind.id = 'indicador-guardado';
+    ind.style.cssText = 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);' +
+      'background:rgba(0,77,61,.92);color:#fff;padding:7px 16px;border-radius:20px;' +
+      'font-size:12px;font-weight:600;z-index:9999;pointer-events:none;transition:opacity .3s;';
+    ind.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Progreso guardado';
+    document.body.appendChild(ind);
+  }
+  ind.style.opacity = '1';
+  clearTimeout(ind._timer);
+  ind._timer = setTimeout(function() { ind.style.opacity = '0'; }, 2000);
+}
+
+// Limpiar progreso al enviar exitosamente
+function limpiarProgresoGuardado() {
+  var email = GOOGLE_USER ? GOOGLE_USER.email : '';
+  var cip   = (document.getElementById('f-cip') || {}).value || '';
+  var clave = 'progreso_' + (email || cip || 'anonimo');
+  localStorage.removeItem(clave);
+}
+
+// Decodificar JWT de Google
+function parseJWT(token) {
+  var base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+  return JSON.parse(decodeURIComponent(atob(base64).split('').map(function(c) {
+    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+  }).join('')));
+}

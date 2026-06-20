@@ -6,6 +6,8 @@
   <title>Evaluacion Institucional - REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <link rel="stylesheet" href="evaluacion.css" />
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -58,6 +60,63 @@
 
 <!-- CONTENIDO PRINCIPAL -->
 <main class="contenedor">
+
+  <!-- GOOGLE SIGN-IN BANNER -->
+  <div id="google-signin-banner" class="google-signin-banner">
+    <div class="gsb-info">
+      <i class="fab fa-google gsb-ico"></i>
+      <div>
+        <strong>Vincula tu cuenta Google</strong>
+        <span>Guarda tu progreso y retoma donde te quedaste, incluso desde otro equipo.</span>
+      </div>
+    </div>
+    <div class="gsb-acciones">
+      <div id="google-btn-wrap">
+        <div id="g_id_onload"
+             data-client_id="GOOGLE_CLIENT_ID_PLACEHOLDER"
+             data-callback="onGoogleSignIn"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-shape="pill"
+             data-theme="outline"
+             data-text="signin_with"
+             data-size="medium"
+             data-logo_alignment="left">
+        </div>
+      </div>
+      <button class="btn-gsb-skip" onclick="saltarLogin()">Continuar sin vincular</button>
+    </div>
+    <!-- Usuario logueado -->
+    <div id="google-user-info" class="google-user-info" style="display:none;">
+      <img id="google-user-foto" src="" alt="" />
+      <div>
+        <strong id="google-user-nombre">--</strong>
+        <span id="google-user-email">--</span>
+      </div>
+      <button class="btn-gsb-logout" onclick="cerrarSesionGoogle()" title="Cerrar sesión Google">
+        <i class="fas fa-sign-out-alt"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- BANNER PROGRESO GUARDADO -->
+  <div id="banner-progreso" class="banner-progreso" style="display:none;">
+    <i class="fas fa-bookmark"></i>
+    <div>
+      <strong>Tienes un progreso guardado</strong>
+      <span id="banner-progreso-info">Página -- — -- preguntas respondidas</span>
+    </div>
+    <div class="banner-prog-btns">
+      <button class="btn-prog-continuar" onclick="restaurarProgreso()">
+        <i class="fas fa-play"></i> Continuar donde quedé
+      </button>
+      <button class="btn-prog-nuevo" onclick="descartarProgreso()">
+        <i class="fas fa-trash-alt"></i> Empezar de nuevo
+      </button>
+    </div>
+  </div>
 
   <div class="alerta alerta-error" id="alerta-global" role="alert">
     <i class="fas fa-exclamation-circle"></i>
@@ -245,7 +304,10 @@
         <div class="aviso-peligro">
           <strong>Advertencia:</strong> Eliminar las respuestas en Google Forms es <strong>irreversible</strong>. Descargue el Excel antes de proceder. En caso de error contacte al <strong>Ing. Anthony Ccayo -- UNITIC</strong>.
         </div>
-        <div style="margin-top:14px; text-align:right;">
+        <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <a href="dashboard.html" target="_blank" class="btn-eval btn-verde" style="font-size:13px; padding:10px 20px; text-decoration:none;">
+            <i class="fas fa-chart-bar"></i> Abrir Dashboard Completo
+          </a>
           <button class="btn-eval btn-borde" onclick="cerrarSesionAdmin()" style="font-size:12px; padding:7px 16px;"><i class="fas fa-sign-out-alt"></i> Cerrar sesion</button>
         </div>
       </div>
