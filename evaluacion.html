@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Evaluacion Institucional - REGPOL Callao</title>
+  <title>Bienestar - REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <link rel="stylesheet" href="evaluacion.css" />
   <!-- Google Identity Services -->
@@ -35,23 +35,12 @@
 </header>
 
 <!-- NAV -->
-<nav class="nav-main">
-  <div class="container">
-    <ul>
-      <li><a href="index.html">RESEÑA HISTÓRICA</a></li>
-      <li><a href="index.html">NUESTRA LABOR</a></li>
-      <li><a href="convenios.html">CONVENIOS</a></li>
-      <li><a href="cursos.html">CURSOS REGIONALES</a></li>
-      <li><a href="index.html">NOVEDADES</a></li>
-      <li><a href="evaluacion.html" class="activo"><i class="fas fa-clipboard-check"></i> EVALUACIÓN INSTITUCIONAL</a></li>
-    </ul>
-  </div>
-</nav>
+<nav class="nav-main"><div class="container"><ul></ul></div></nav>
 
 <!-- HERO DINAMICO -->
 <section class="hero-evaluacion">
-  <p class="hero-subtitulo">Sistema de Evaluacion por Bloques -- 2026</p>
-  <h1>Modulo de Evaluacion Institucional -- REGPOL Callao</h1>
+  <p class="hero-subtitulo">Modulo de Bienestar Policial — 2026</p>
+  <h1>BIENESTAR — REGPOL Callao</h1>
   <div class="badge-comisaria" aria-live="polite">
     <div class="etiqueta">Dependencia evaluada actualmente</div>
     <div class="nombre" id="nombre-comisaria">CARGANDO...</div>
@@ -187,7 +176,7 @@
         <button class="btn-eval btn-borde" id="btn-atras" onclick="cambiarPagina(-1)"><i class="fas fa-arrow-left"></i> Atras</button>
         <span class="info-pagina" id="info-pagina">Pagina 1 de 57</span>
         <button class="btn-eval btn-verde" id="btn-siguiente" onclick="cambiarPagina(1)">Siguiente <i class="fas fa-arrow-right"></i></button>
-        <button class="btn-eval btn-finalizar" id="btn-finalizar" onclick="validarYEnviar()"><i class="fas fa-paper-plane"></i> Finalizar y Enviar Evaluacion</button>
+        <button class="btn-eval btn-finalizar" id="btn-finalizar" onclick="validarYEnviar()"><i class="fas fa-paper-plane"></i> Finalizar y Enviar</button>
       </div>
     </div>
   </div>
@@ -207,6 +196,8 @@
   <p>&copy; 2026 -- REGPOL Callao -- Policia Nacional del Peru &nbsp;|&nbsp; Desarrollado por <strong>Ing. Anthony Ccayo -- UNITIC</strong> &nbsp;|&nbsp; <a href="index.html">Volver al Portal</a></p>
 </footer>
 
+<script src="portal.js?v=1"></script>
+<script>initPortalPagina({ activeNav: 'bienestar' });</script>
 <script src="preguntas.js"></script>
 <script src="comisarias.js?v=2"></script>
 <script src="evaluacion.js"></script>

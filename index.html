@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REGPOL CALLAO - PNP</title>
     <!-- Estilos -->
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css?v=9">
     <!-- Iconos Gratuitos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -42,18 +42,7 @@
 </header>
 
     <!-- 3. MENÚ DE NAVEGACIÓN VERDE -->
-    <nav class="nav-main">
-        <div class="container">
-            <ul>
-                <li><a href="index.html">RESEÑA HISTÓRICA</a></li>
-                <li><a href="index.html">NUESTRA LABOR</a></li>
-                <li><a href="convenios.html">CONVENIOS</a></li>
-                <li><a href="cursos.html">CURSOS REGIONALES</a></li>
-                <li><a href="index.html">NOVEDADES</a></li>
-                <li><a href="evaluacion.html"><i class="fas fa-clipboard-check"></i> EVALUACIÓN INSTITUCIONAL</a></li>
-            </ul>
-        </div>
-    </nav>
+    <nav class="nav-main"><div class="container"><ul></ul></div></nav>
 
 <!-- 4. SECCIÓN DE PRESENTACIÓN (TRANSICIÓN DE IMÁGENES) -->
     <section class="presentation-slider">
@@ -83,8 +72,14 @@
     <!-- 5. SECCIÓN DE COMUNICADOS -->
     <main class="container content-area">
         <div class="section-header">
-            <h3>COMUNICADOS IMPORTANTES</h3>
-            <span>ÚLTIMA ACTUALIZACIÓN: 25 DE MARZO 2026</span>
+            <h3>NOVEDADES RECIENTES DEL CALLAO</h3>
+            <span id="fecha-actualizacion-portal">ÚLTIMA ACTUALIZACIÓN: 20 DE JUNIO 2026</span>
+        </div>
+
+        <div id="novedades-portal" class="lista-novedades lista-novedades-home"></div>
+
+        <div class="section-header" style="margin-top:40px;">
+            <h3>ACCESOS RÁPIDOS</h3>
         </div>
 
         <div class="grid-cards">
@@ -133,6 +128,15 @@
     </footer>
 
     <!-- SCRIPT CORREGIDO SIN ERRORES -->
+    <script src="portal.js?v=1"></script>
+    <script>
+        initPortalPagina({
+            activeNav: '',
+            renderNovedades: 'novedades-portal',
+            limiteNovedades: 3,
+            actualizarFecha: true
+        });
+    </script>
     <script>
         (function() {
             var slides = document.querySelectorAll('.slide');

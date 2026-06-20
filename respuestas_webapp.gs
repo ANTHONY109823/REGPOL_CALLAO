@@ -30,6 +30,7 @@ function doGet(e) {
 
   if (action === 'stats')            return doStats();
   if (action === 'listar')           return doListar(comisaria);
+  if (action === 'get_site')         return doGetSite();
   if (action === 'cargar_progreso')  return doCargarProgreso(email);
   return doDescargar(comisaria);
 }
@@ -40,6 +41,7 @@ function doPost(e) {
     var body = JSON.parse(e.postData.contents);
     var action = (body.action || '').toLowerCase();
     if (action === 'guardar_progreso') return doGuardarProgreso(body);
+    if (action === 'save_site')      return doSaveSite(body);
     return json({ok: false, error: 'Accion desconocida'});
   } catch(err) {
     return json({ok: false, error: err.message});
@@ -209,6 +211,26 @@ function doCargarProgreso(email) {
     }
   }
   return json({ok:true, encontrado:false});
+}
+
+// ── CMS PORTAL WEB ────────────────────────────────────────────────────────────
+function doGetSite() {
+  var raw = PropertiesService.getScriptProperties().getProperty('SITE_DATA_JSON');
+  if (!raw) return json({ok:true, data:null});
+  try {
+    return json({ok:true, data: JSON.parse(raw)});
+  } catch(e) {
+    return json({ok:false, error:'JSON de sitio invalido'});
+  }
+}
+
+function doSaveSite(body) {
+  if ((body.token || '') !== 'AdminUNITIC2026') {
+    return json({ok:false, error:'No autorizado'});
+  }
+  if (!body.data) return json({ok:false, error:'Sin datos'});
+  PropertiesService.getScriptProperties().setProperty('SITE_DATA_JSON', JSON.stringify(body.data));
+  return json({ok:true, guardado:true});
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────

@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Convenios - REGPOL CALLAO</title>
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css?v=9">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        .logo-pnp, .img-escudo { height: 90px !important; width: auto !important; object-fit: contain; }
-    </style>
 </head>
 <body class="body-convenios">
 
@@ -37,111 +34,29 @@
     </div>
 </header>
 
-<nav class="nav-main">
-    <div class="container">
-        <ul>
-            <li><a href="index.html">RESEÑA HISTÓRICA</a></li>
-            <li><a href="index.html">NUESTRA LABOR</a></li>
-            <li><a href="convenios.html" class="activo">CONVENIOS</a></li>
-            <li><a href="cursos.html">CURSOS REGIONALES</a></li>
-            <li><a href="index.html">NOVEDADES</a></li>
-            <li><a href="evaluacion.html"><i class="fas fa-clipboard-check"></i> EVALUACIÓN INSTITUCIONAL</a></li>
-        </ul>
-    </div>
-</nav>
+<nav class="nav-main"><div class="container"><ul></ul></div></nav>
 
 <main class="container content-area">
     <div class="page-intro">
         <h2>CONVENIOS VIGENTES</h2>
         <p>Haz clic en cada tarjeta para ver detalles.</p>
     </div>
-
-    <div class="grid-modern">
-        <a href="celador.html">
-            <div class="card-modern">
-                <div class="icon-wrapper"><i class="fas fa-shield-alt"></i></div>
-                <h4>PLAN CELADOR</h4>
-                <p>Apoyo a las comisarías</p>
-                <span style="color: green; font-weight: bold; font-size: 12px;">DISPONIBLE</span>
-            </div>
-        </a>
-
-        <a href="atu.html">
-            <div class="card-modern">
-                <div class="icon-wrapper" style="background: #3498db;"><i class="fas fa-bus"></i></div>
-                <h4>ATU</h4>
-                <p>Control de transporte</p>
-                <span style="color: green; font-weight: bold; font-size: 12px;">DISPONIBLE</span>
-            </div>
-        </a>
-
-        <a href="amp.html">
-            <div class="card-modern">
-                <div class="icon-wrapper" style="background: #27ae60;"><i class="fas fa-warehouse"></i></div>
-                <h4>AMP TERMINALS</h4>
-                <p>Seguridad del terminal portuario</p>
-                <span style="color: green; font-weight: bold; font-size: 12px;">DISPONIBLE</span>
-            </div>
-        </a>
-
-        <a href="patrullaje.html">
-            <div class="card-modern">
-                <div class="icon-wrapper" style="background: #27ae60;"><i class="fas fa-car"></i></div>
-                <h4>PATRULLAJE INTEGRADO</h4>
-                <p>Servicio policial en móvil de serenazgo</p>
-                <span style="color: green; font-weight: bold; font-size: 12px;">DISPONIBLE</span>
-            </div>
-        </a>
-    </div>
-
-    <div class="page-intro">
-        <h2>RELACIÓN DE SELECCIONADOS</h2>
-    </div>
-
-    <div class="grid-pdf-modern">
-        <div class="pdf-item">
-            <i class="fas fa-file-pdf" style="font-size: 30px; color: #e74c3c;"></i>
-            <div>
-                <h5>Plan Celador - ABRIL 2024</h5>
-                <a href="#" class="btn-download">DESCARGAR PDF</a>
-            </div>
-        </div>
-    </div>
-
-    <div class="grid-pdf-modern">
-        <div class="pdf-item">
-            <i class="fas fa-file-pdf" style="font-size: 30px; color: #e74c3c;"></i>
-            <div>
-                <h5>ATU - ABRIL 2024</h5>
-                <a href="#" class="btn-download">DESCARGAR PDF</a>
-            </div>
-        </div>
-    </div>
-
-    <div class="grid-pdf-modern">
-        <div class="pdf-item">
-            <i class="fas fa-file-pdf" style="font-size: 30px; color: #e74c3c;"></i>
-            <div>
-                <h5>APM - ABRIL 2024</h5>
-                <a href="#" class="btn-download">DESCARGAR PDF</a>
-            </div>
-        </div>
-    </div>
-
-    <div class="grid-pdf-modern">
-        <div class="pdf-item">
-            <i class="fas fa-file-pdf" style="font-size: 30px; color: #e74c3c;"></i>
-            <div>
-                <h5>PATRULLAJE INTEGRADO - ABRIL 2024</h5>
-                <a href="#" class="btn-download">DESCARGAR PDF</a>
-            </div>
-        </div>
-    </div>
+    <div class="grid-modern" id="grid-convenios"></div>
+    <div class="page-intro"><h2>RELACIÓN DE SELECCIONADOS</h2></div>
+    <div id="lista-pdf-convenios"></div>
 </main>
 
 <footer class="portal-footer">
     <p>&copy; 2026 Región Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
 </footer>
 
+<script src="portal.js?v=1"></script>
+<script>
+initPortalPagina({
+  activeNav: 'convenios',
+  renderConvenios: 'grid-convenios',
+  renderConveniosPdf: 'lista-pdf-convenios'
+});
+</script>
 </body>
 </html>

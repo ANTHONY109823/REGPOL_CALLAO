@@ -16,6 +16,7 @@ function mostrarPanelAutenticado() {
   }
 
   setTimeout(cargarComisariasDesdeSheet, 300);
+  if (typeof initCMS === 'function') setTimeout(initCMS, 400);
 }
 
 function verificarPassword() {

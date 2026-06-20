@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Panel de Control Operador — UNITIC | REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link rel="stylesheet" href="panel-admin.css?v=4" />
+  <link rel="stylesheet" href="panel-admin.css?v=5" />
 </head>
 <body class="panel-admin-page">
 
@@ -13,7 +13,7 @@
   <span><i class="fas fa-shield-alt"></i> Panel de Control — REGPOL Callao</span>
   <span>
     <a href="dashboard.html" target="_blank" rel="noopener noreferrer"><i class="fas fa-chart-bar"></i> Dashboard</a>
-    <a href="evaluacion.html"><i class="fas fa-clipboard-check"></i> Evaluación</a>
+    <a href="evaluacion.html"><i class="fas fa-heart"></i> Bienestar</a>
     <a href="index.html"><i class="fas fa-home"></i> Portal</a>
   </span>
 </div>
@@ -137,12 +137,66 @@
           </div>
         </div>
 
+        <!-- ADMINISTRACIÓN DEL PORTAL WEB -->
+        <div class="admin-seccion admin-seccion-full cms-seccion">
+          <h4><i class="fas fa-globe"></i>&nbsp;Administración del Portal Web</h4>
+          <p class="admin-seccion-desc">Edite textos, novedades, convenios y cursos. Los cambios se publican para todo el personal al guardar.</p>
+
+          <div class="cms-tabs">
+            <button type="button" class="cms-tab activo" onclick="mostrarTabCMS('contenido')">Contenido</button>
+            <button type="button" class="cms-tab" onclick="mostrarTabCMS('convenios')">Convenios</button>
+            <button type="button" class="cms-tab" onclick="mostrarTabCMS('cursos')">Cursos</button>
+            <button type="button" class="cms-tab" onclick="mostrarTabCMS('novedades')">Novedades</button>
+          </div>
+
+          <div id="cms-tab-contenido" class="cms-panel activo">
+            <div class="campo"><label for="cms-actualizacion">Fecha de actualización del portal</label>
+              <input type="text" id="cms-actualizacion" placeholder="20 DE JUNIO 2026" /></div>
+            <div class="campo"><label for="cms-resena-intro">Reseña Histórica — introducción</label>
+              <textarea id="cms-resena-intro" rows="3"></textarea></div>
+            <div class="campo"><label for="cms-resena-parrafos">Reseña Histórica — párrafos (separados por línea en blanco)</label>
+              <textarea id="cms-resena-parrafos" rows="6"></textarea></div>
+            <div class="campo"><label for="cms-labor-intro">Nuestra Labor — introducción</label>
+              <textarea id="cms-labor-intro" rows="3"></textarea></div>
+          </div>
+
+          <div id="cms-tab-convenios" class="cms-panel">
+            <div class="cms-toolbar">
+              <button type="button" class="btn-eval btn-verde" onclick="agregarConvenioCMS()"><i class="fas fa-plus"></i> Agregar convenio</button>
+            </div>
+            <div id="cms-lista-convenios" class="cms-lista"></div>
+          </div>
+
+          <div id="cms-tab-cursos" class="cms-panel">
+            <div class="cms-toolbar">
+              <button type="button" class="btn-eval btn-verde" onclick="agregarCursoCMS()"><i class="fas fa-plus"></i> Agregar curso</button>
+            </div>
+            <div id="cms-lista-cursos" class="cms-lista"></div>
+          </div>
+
+          <div id="cms-tab-novedades" class="cms-panel">
+            <div class="cms-toolbar">
+              <button type="button" class="btn-eval btn-verde" onclick="agregarNovedadCMS()"><i class="fas fa-plus"></i> Agregar novedad</button>
+            </div>
+            <div id="cms-lista-novedades" class="cms-lista"></div>
+          </div>
+
+          <div class="cms-acciones">
+            <button type="button" class="btn-eval btn-verde" onclick="guardarSitioWeb()"><i class="fas fa-cloud-upload-alt"></i> Publicar cambios del portal</button>
+            <button type="button" class="btn-eval btn-borde" onclick="exportarSiteJSON()"><i class="fas fa-download"></i> Exportar JSON</button>
+            <label class="btn-eval btn-borde cms-import-label"><i class="fas fa-upload"></i> Importar JSON
+              <input type="file" accept="application/json" hidden onchange="importarSiteJSON(this)" /></label>
+            <button type="button" class="btn-eval btn-borde" onclick="restaurarSiteDefault()"><i class="fas fa-undo"></i> Restaurar base</button>
+          </div>
+          <div class="alerta alerta-exito" id="alerta-cms" role="status"></div>
+        </div>
+
         <div class="panel-admin-acciones">
           <a href="dashboard.html" target="_blank" rel="noopener noreferrer" class="btn-eval btn-verde">
             <i class="fas fa-chart-bar"></i> Abrir Dashboard Completo
           </a>
           <a href="evaluacion.html" target="_blank" rel="noopener noreferrer" class="btn-eval btn-borde">
-            <i class="fas fa-clipboard-check"></i> Ir a Evaluación
+            <i class="fas fa-heart"></i> Ir a Bienestar
           </a>
           <button class="btn-eval btn-borde" onclick="cerrarSesionAdmin()">
             <i class="fas fa-sign-out-alt"></i> Cerrar sesión
@@ -160,7 +214,19 @@
   <p>&copy; 2026 — REGPOL Callao — Policía Nacional del Perú &nbsp;|&nbsp; Desarrollado por <strong>Ing. Anthony Ccayo — UNITIC</strong></p>
 </footer>
 
+<script src="portal.js?v=1"></script>
 <script src="comisarias.js?v=2"></script>
-<script src="panel-admin.js?v=4"></script>
+<script src="panel-cms.js?v=1"></script>
+<script src="panel-admin.js?v=5"></script>
+<script>
+function mostrarTabCMS(tab) {
+  document.querySelectorAll('.cms-tab').forEach(function(b) { b.classList.remove('activo'); });
+  document.querySelectorAll('.cms-panel').forEach(function(p) { p.classList.remove('activo'); });
+  var btn = document.querySelector('.cms-tab[onclick*="' + tab + '"]');
+  if (btn) btn.classList.add('activo');
+  var panel = document.getElementById('cms-tab-' + tab);
+  if (panel) panel.classList.add('activo');
+}
+</script>
 </body>
 </html>

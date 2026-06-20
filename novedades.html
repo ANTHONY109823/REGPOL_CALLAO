@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cursos Institucionales - REGPOL CALLAO</title>
+    <title>Novedades - REGPOL CALLAO</title>
     <link rel="stylesheet" href="style.css?v=9">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="body-cursos">
+<body class="body-portal">
 
 <div class="header-social-portal">
     <div class="container portal-flex">
@@ -38,12 +38,10 @@
 
 <main class="container content-area">
     <div class="page-intro">
-        <h2>CURSOS VIGENTES</h2>
-        <p>Haz clic en cada tarjeta para ver detalles.</p>
+        <h2>NOVEDADES DEL CALLAO</h2>
+        <p>Noticias y operativos recientes de la Región Policial Callao.</p>
     </div>
-    <div class="grid-modern" id="grid-cursos"></div>
-    <div class="page-intro"><h2>RELACIÓN DE SELECCIONADOS</h2></div>
-    <div id="lista-pdf-cursos"></div>
+    <div id="lista-novedades" class="lista-novedades"></div>
 </main>
 
 <footer class="portal-footer">
@@ -52,11 +50,7 @@
 
 <script src="portal.js?v=1"></script>
 <script>
-initPortalPagina({
-  activeNav: 'cursos',
-  renderCursos: 'grid-cursos',
-  renderCursosPdf: 'lista-pdf-cursos'
-});
+initPortalPagina({ activeNav: 'novedades', renderNovedades: 'lista-novedades' });
 </script>
 </body>
 </html>
