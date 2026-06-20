@@ -422,7 +422,7 @@ function validarYEnviar() {
   var campos = [
     { id: 'f-unidad',     test: function(v) { return v.trim().length > 0; },      msg: 'La unidad/dependencia es obligatoria.' },
     { id: 'f-nombres',    test: function(v) { return v.trim().length > 0; },      msg: 'El nombre completo es obligatorio.' },
-    { id: 'f-cip',        test: function(v) { return /^\d{6}$/.test(v.trim()); }, msg: 'El CIP debe tener exactamente 6 digitos.' },
+    { id: 'f-cip',        test: function(v) { return /^\d{8}$/.test(v.trim()); }, msg: 'El CIP debe tener exactamente 8 digitos.' },
     { id: 'f-dni',        test: function(v) { return /^\d{8}$/.test(v.trim()); }, msg: 'El DNI debe tener exactamente 8 digitos.' },
     { id: 'f-nacimiento', test: esFechaNacimientoValida, msg: 'Ingrese una fecha valida en formato dd/mm/aaaa (18 a 80 anios).' }
   ];
