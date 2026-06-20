@@ -13,6 +13,11 @@ body {
     line-height: 1.6;
 }
 
+img {
+    max-width: 100%;
+    height: auto;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -109,11 +114,33 @@ body {
 
 /* --- 2. HEADER --- */
 
-.logo-pnp {
-    height: 110px !important; /* Ajusta este número si lo quieres más grande o pequeño */
-    width: auto !important;   /* Mantiene la proporción */
+.logo-pnp,
+.img-escudo {
+    height: 90px !important;
+    width: auto !important;
+    max-width: none !important;
     display: block;
-    max-width: 100%;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.main-header {
+    background: white;
+    border-bottom: 3px solid var(--verde-pnp);
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+
+.title-text h1 {
+    color: var(--verde-pnp);
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.title-text p {
+    color: #666;
+    font-size: 13px;
+    margin-top: 4px;
 }
 
 /* --- ORDEN DEL ENCABEZADO (header-flex) --- */
@@ -141,6 +168,7 @@ body {
 .nav-main ul { list-style: none; display: flex; justify-content: center; flex-wrap: wrap; }
 .nav-main ul li a { color: white; text-decoration: none; padding: 15px 20px; display: block; font-weight: bold; font-size: 14px; }
 .nav-main ul li a:hover { background: rgba(0,0,0,0.2); color: var(--naranja-pnp); }
+.nav-main ul li a.activo { background: rgba(0,0,0,0.25); color: var(--naranja-pnp); }
 
 /* --- 4. SECCIÓN SLIDER (CORREGIDA) --- */
 .presentation-slider {
@@ -220,12 +248,25 @@ footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; 
     box-shadow: 0 2px 8px rgba(0,0,0,.06);
 }
 
-.img-escudo {
-    height: 90px;
-    width: auto;
-    max-width: 100%;
+.page-intro {
+    text-align: center;
+    margin: 40px 0 30px;
+}
+
+.page-intro h2 {
+    color: var(--verde-pnp);
+    font-size: 22px;
+    margin-bottom: 8px;
+}
+
+.page-intro p {
+    color: #666;
+}
+
+.grid-modern a {
+    text-decoration: none;
+    color: inherit;
     display: block;
-    object-fit: contain;
 }
 
 .text-area h1 {
@@ -328,10 +369,135 @@ footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; 
 
 .btn-download:hover { text-decoration: underline; }
 
+/* --- DETALLE CONVENIOS / CURSOS --- */
+.py-5 { padding: 40px 0; }
+
+.grid-detalles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+.card-detalle {
+    background: white;
+    border-radius: 12px;
+    padding: 28px 24px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.08);
+    border-top: 4px solid var(--verde-pnp);
+}
+
+.card-detalle h3 {
+    color: var(--verde-pnp);
+    font-size: 16px;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.card-detalle ul {
+    list-style: none;
+    padding: 0;
+}
+
+.card-detalle ul li {
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #444;
+}
+
+.card-detalle ul li i {
+    color: var(--verde-pnp);
+    margin-right: 8px;
+}
+
+.icon-circle {
+    width: 56px;
+    height: 56px;
+    background: var(--verde-pnp);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    color: white;
+    font-size: 22px;
+}
+
+.icon-circle.gold { background: var(--naranja-pnp); }
+
+.highlight-card {
+    border-top-color: var(--naranja-pnp);
+    text-align: center;
+}
+
+.info-item {
+    margin-bottom: 12px;
+}
+
+.info-item span {
+    display: block;
+    font-weight: 700;
+    color: var(--verde-pnp);
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.info-item p {
+    color: #444;
+    font-size: 14px;
+}
+
+.price {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--naranja-pnp);
+    margin: 8px 0;
+}
+
+.registro-section { margin: 40px 0; }
+
+.registro-box {
+    background: white;
+    border-radius: 12px;
+    padding: 36px;
+    text-align: center;
+    box-shadow: 0 4px 18px rgba(0,0,0,.08);
+    border: 2px dashed var(--verde-pnp);
+}
+
+.registro-box h2 {
+    color: var(--verde-pnp);
+    margin-bottom: 10px;
+}
+
+.btn-registro-grande {
+    display: inline-block;
+    margin-top: 20px;
+    background: var(--naranja-pnp);
+    color: white;
+    padding: 14px 28px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: background .2s;
+}
+
+.btn-registro-grande:hover { background: #e67e22; }
+
+.footer-simple,
+footer.portal-footer {
+    background: #1a1a1a;
+    color: #888;
+    text-align: center;
+    padding: 20px 0;
+    font-size: 13px;
+    margin-top: 50px;
+}
+
 @media (max-width: 768px) {
     .header-moderno .flex-between { flex-direction: column; gap: 16px; text-align: center; }
     .header-moderno .flex-between > div { flex-direction: column; }
-    .img-escudo { height: 72px; margin: 0 auto; }
+    .logo-pnp, .img-escudo { height: 72px !important; margin: 0 auto; }
     .header-flex { flex-direction: column; text-align: center; }
     .hero-overlay h1 { font-size: 1.8rem; }
 }
