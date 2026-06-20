@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REGPOL CALLAO - PNP</title>
     <!-- Estilos -->
-    <link rel="stylesheet" href="style.css?v=12">
+    <link rel="stylesheet" href="style.css?v=13">
     <!-- Iconos Gratuitos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -47,9 +47,15 @@
 <!-- 4. SECCIÓN DE PRESENTACIÓN (CARRUSEL DE IMÁGENES) -->
     <section class="presentation-slider">
         <div class="slides">
-            <div class="slide slide-imagen1 active" style="background-image: url('img/Imagen1.jpg');"></div>
-            <div class="slide slide-lunes" style="background-image: url('img/lunespatriotico.jpg');"></div>
-            <div class="slide slide-saludo" style="background-image: url('img/saludo.jpg');"></div>
+            <div class="slide active">
+                <img src="img/Imagen1.jpg" alt="" class="slide-img slide-img-imagen1" width="1920" height="1080" decoding="async" fetchpriority="high">
+            </div>
+            <div class="slide">
+                <img src="img/lunespatriotico.jpg" alt="" class="slide-img slide-img-lunes" width="1920" height="1080" loading="lazy" decoding="async">
+            </div>
+            <div class="slide">
+                <img src="img/saludo.jpg" alt="" class="slide-img slide-img-saludo" width="1920" height="1080" loading="lazy" decoding="async">
+            </div>
         </div>
 
         <div class="hero-overlay">
@@ -126,7 +132,7 @@
     </footer>
 
     <!-- SCRIPT CORREGIDO SIN ERRORES -->
-    <script src="portal.js?v=3"></script>
+    <script src="portal.js?v=4"></script>
     <script>
         initPortalPagina({
             activeNav: 'inicio',

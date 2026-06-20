@@ -1,9 +1,9 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard MMPI-2 ‚Äî REGPOL Callao</title>
+  <title>Dashboard MMPI-2 ó REGPOL Callao</title>
   <link rel="stylesheet" href="dashboard.css?v=3" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -13,7 +13,7 @@
   <!-- TOP BAR -->
   <div class="top-bar">
     <div class="top-bar-inner">
-      <span><i class="fas fa-shield-alt"></i> POLIC√çA NACIONAL DEL PER√ö ‚Äî REGI√ìN POLICIAL CALLAO</span>
+      <span><i class="fas fa-shield-alt"></i> POLICÕA NACIONAL DEL PER⁄ ó REGI”N POLICIAL CALLAO</span>
       <span id="dash-comisaria-top"></span>
     </div>
   </div>
@@ -25,7 +25,7 @@
         <img src="img/regpol callao.jpg" alt="REGPOL Callao" onerror="this.style.display='none'" />
         <div>
           <div class="header-title">Dashboard MMPI-2</div>
-          <div class="header-sub">Panel de Control ‚Äî Evaluaci√≥n Institucional 2026</div>
+          <div class="header-sub">Panel de Control ó EvaluaciÛn Institucional 2026</div>
         </div>
       </div>
       <div class="header-acciones">
@@ -46,15 +46,15 @@
       <h2>Dashboard Administrativo</h2>
       <p>Acceso restringido al personal UNITIC</p>
       <div class="campo">
-        <label>Contrase√±a</label>
-        <input type="password" id="dash-pass" placeholder="Contrase√±a admin"
+        <label>ContraseÒa</label>
+        <input type="password" id="dash-pass" placeholder="ContraseÒa admin"
                onkeydown="if(event.key==='Enter') verificarDash()" />
       </div>
       <button class="btn-dash btn-ingresar" onclick="verificarDash()">
         <i class="fas fa-sign-in-alt"></i> Ingresar
       </button>
       <div id="dash-error" class="dash-error" style="display:none">
-        <i class="fas fa-exclamation-circle"></i> Contrase√±a incorrecta
+        <i class="fas fa-exclamation-circle"></i> ContraseÒa incorrecta
       </div>
     </div>
   </div>
@@ -78,22 +78,22 @@
         <div class="kpi-card kpi-azul">
           <div class="kpi-ico"><i class="fas fa-building"></i></div>
           <div class="kpi-valor" id="kpi-comisarias">--</div>
-          <div class="kpi-label">Comisar√≠as con Respuestas</div>
+          <div class="kpi-label">ComisarÌas con Respuestas</div>
         </div>
         <div class="kpi-card kpi-morado">
           <div class="kpi-ico"><i class="fas fa-users"></i></div>
           <div class="kpi-valor" id="kpi-hoy">--</div>
-          <div class="kpi-label">√öltimas 24 h</div>
+          <div class="kpi-label">⁄ltimas 24 h</div>
         </div>
       </div>
 
-      <!-- GR√ÅFICOS -->
+      <!-- GR¡FICOS -->
       <div class="charts-grid">
 
-        <!-- Barra por comisar√≠a -->
+        <!-- Barra por comisarÌa -->
         <div class="chart-card chart-wide">
           <div class="chart-header">
-            <span><i class="fas fa-chart-bar"></i> Evaluaciones Completadas por Comisar√≠a</span>
+            <span><i class="fas fa-chart-bar"></i> Evaluaciones Completadas por ComisarÌa</span>
             <button class="btn-mini" onclick="descargarTodas()"><i class="fas fa-file-csv"></i> Descargar todo</button>
           </div>
           <div class="chart-body">
@@ -113,12 +113,12 @@
 
       </div>
 
-      <!-- TABLA √öLTIMAS EVALUACIONES -->
+      <!-- TABLA ⁄LTIMAS EVALUACIONES -->
       <div class="tabla-card">
         <div class="tabla-header">
-          <span><i class="fas fa-clock"></i> √öltimas Evaluaciones Completadas</span>
+          <span><i class="fas fa-clock"></i> ⁄ltimas Evaluaciones Completadas</span>
           <div class="tabla-filtro">
-            <input type="text" id="filtro-tabla" placeholder="Filtrar por comisar√≠a o nombre..."
+            <input type="text" id="filtro-tabla" placeholder="Filtrar por comisarÌa o nombre..."
                    oninput="filtrarTabla()" />
           </div>
         </div>
@@ -128,8 +128,8 @@
               <tr>
                 <th>Fecha</th>
                 <th>Nombres</th>
-                <th>Comisar√≠a / Unidad</th>
-                <th>Acci√≥n</th>
+                <th>ComisarÌa / Unidad</th>
+                <th>AcciÛn</th>
               </tr>
             </thead>
             <tbody id="tbody-ultimas">
@@ -139,14 +139,14 @@
         </div>
       </div>
 
-      <!-- DESCARGA POR COMISAR√çA -->
+      <!-- DESCARGA POR COMISARÕA -->
       <div class="descarga-card">
         <div class="descarga-card-header">
-          <i class="fas fa-download"></i> Descarga de Respuestas por Comisar√≠a
+          <i class="fas fa-download"></i> Descarga de Respuestas por ComisarÌa
         </div>
         <div class="descarga-card-body">
           <select id="dash-select-comisaria" class="dash-select">
-            <option value="">-- Seleccionar comisar√≠a --</option>
+            <option value="">-- Seleccionar comisarÌa --</option>
           </select>
           <button class="btn-dash btn-csv" onclick="descargarComisaria()">
             <i class="fas fa-file-csv"></i> Descargar CSV
@@ -163,7 +163,7 @@
       </div>
 
       <div class="dash-footer">
-        <span>REGPOL Callao ‚Äî UNITIC ‚Äî Ing. Anthony Ccayo</span>
+        <span>REGPOL Callao ó UNITIC ó Ing. Anthony Ccayo</span>
         <span id="dash-ultima-act"></span>
       </div>
 

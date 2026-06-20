@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bienestar - REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-  <link rel="stylesheet" href="style.css?v=12" />
-  <link rel="stylesheet" href="evaluacion.css?v=3" />
+  <link rel="stylesheet" href="style.css?v=13" />
+  <link rel="stylesheet" href="evaluacion.css?v=4" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="body-portal body-bienestar">
@@ -38,18 +38,13 @@
 
 <nav class="nav-main"><div class="container"><ul></ul></div></nav>
 
-<!-- HERO DINAMICO -->
-<section class="hero-evaluacion">
-  <p class="hero-subtitulo">Modulo de Bienestar Policial — 2026</p>
-  <h1>BIENESTAR — REGPOL Callao</h1>
-  <div class="badge-comisaria" aria-live="polite">
-    <div class="etiqueta">Dependencia evaluada actualmente</div>
-    <div class="nombre" id="nombre-comisaria">CARGANDO...</div>
-  </div>
-</section>
-
 <!-- CONTENIDO PRINCIPAL -->
 <main class="contenedor">
+
+  <div class="bienestar-comisaria-bar" aria-live="polite">
+    <span class="bienestar-comisaria-label">Dependencia evaluada actualmente</span>
+    <strong class="bienestar-comisaria-nombre" id="nombre-comisaria">CARGANDO...</strong>
+  </div>
 
   <!-- GOOGLE SIGN-IN BANNER -->
   <div id="google-signin-banner" class="google-signin-banner">
@@ -204,8 +199,8 @@
   <p>&copy; 2026 -- REGPOL Callao -- Policia Nacional del Peru &nbsp;|&nbsp; Desarrollado por <strong>Ing. Anthony Ccayo -- UNITIC</strong> &nbsp;|&nbsp; <a href="index.html">Volver al Portal</a></p>
 </footer>
 
-<script src="portal.js?v=3"></script>
-<script>initPortalPagina({ activeNav: 'bienestar', showPageHero: false });</script>
+<script src="portal.js?v=4"></script>
+<script>initPortalPagina({ activeNav: 'bienestar' });</script>
 <script src="preguntas.js"></script>
 <script src="comisarias.js?v=2"></script>
 <script src="evaluacion.js"></script>

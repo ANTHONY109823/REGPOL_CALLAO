@@ -18,28 +18,42 @@
   --exito:       #0a7c4a;
   --sombra:      0 4px 18px rgba(0,77,61,.10);
 }
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--gris-fondo); color: var(--texto); font-size: 14px; line-height: 1.6; }
 
-/* HERO BIENESTAR — altura fija */
-.hero-evaluacion {
-  background: linear-gradient(135deg, var(--verde-pnp) 0%, var(--verde-dark) 100%);
-  padding: 28px 20px;
-  min-height: 160px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  flex-shrink: 0;
+/* Solo estilos del módulo — NO resetear el header/nav del portal */
+.body-bienestar .contenedor {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
 }
-.hero-evaluacion::before { content: ''; position: absolute; top: -80px; right: -80px; width: 260px; height: 260px; background: rgba(243,156,18,.07); border-radius: 50%; }
-.hero-subtitulo { color: rgba(255,255,255,.65); font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 10px; }
-.hero-evaluacion h1 { color: var(--blanco); font-size: 20px; font-weight: 700; margin-bottom: 24px; }
-.badge-comisaria { display: inline-block; background: rgba(243,156,18,.12); border: 2px solid rgba(243,156,18,.45); border-radius: 10px; padding: 14px 32px; }
-.badge-comisaria .etiqueta { color: rgba(255,255,255,.65); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
-.badge-comisaria .nombre { color: var(--naranja-pnp); font-size: 24px; font-weight: 900; }
 
-/* CONTENEDOR */
-.contenedor { max-width: 960px; margin: 0 auto; padding: 30px 20px 60px; }
+.bienestar-comisaria-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 14px;
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-left: 4px solid var(--naranja-pnp);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  box-shadow: var(--sombra);
+  text-align: center;
+}
+
+.bienestar-comisaria-label {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+}
+
+.bienestar-comisaria-nombre {
+  color: var(--verde-pnp);
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  font-weight: 900;
+}
 
 /* CARDS */
 .card-eval { background: var(--blanco); border-radius: 12px; border-top: 5px solid var(--verde-pnp); box-shadow: var(--sombra); margin-bottom: 24px; overflow: hidden; }
@@ -257,24 +271,17 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .footer-simple { background: var(--verde-dark); color: #a1cfc5; text-align: center; padding: 22px 20px; font-size: 12px; margin-top: 40px; border-top: 3px solid var(--naranja-pnp); }
 .footer-simple a { color: var(--naranja-pnp); text-decoration: none; }
 
-/* RESPONSIVE */
+/* RESPONSIVE — solo contenido del módulo */
 @media (max-width: 768px) {
-  .main-header { flex-direction: column; text-align: center; }
-  .header-flex { flex-direction: column; }
-  .title-text h1 { font-size: 18px; }
-  .logo-pnp { height: 80px; }
-  .nav-main ul { justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; }
-  .nav-main ul li a { font-size: 12px; padding: 12px 13px; white-space: nowrap; }
-  .hero-evaluacion h1 { font-size: 16px; }
-  .badge-comisaria .nombre { font-size: 18px; }
+  .body-bienestar .contenedor { padding: 18px 14px 48px; }
   .paginacion { flex-direction: column; align-items: stretch; }
   .btn-eval { justify-content: center; }
   .info-pagina { order: -1; }
   .admin-grid { grid-template-columns: 1fr; }
+  .banner-prog-btns { margin-left: 0; width: 100%; }
 }
 @media (max-width: 480px) {
   .tabla-preguntas { font-size: 12px; }
   .opciones-si-no label { padding: 5px 9px; font-size: 12px; }
-  .badge-comisaria .nombre { font-size: 15px; }
-  .badge-comisaria { padding: 10px 18px; }
+  .bienestar-comisaria-nombre { font-size: 1rem; }
 }
