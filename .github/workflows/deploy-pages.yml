@@ -12,23 +12,40 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Subir sitio (carpeta public)
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Preparar sitio estático
+        run: |
+          mkdir -p site
+          cp -r public/. site/
+          touch site/.nojekyll
+          cp site/index.html site/404.html
+          echo "=== Archivos en la raíz del sitio ==="
+          ls -la site/
+          test -f site/index.html
+
+      - name: Subir artefacto
         uses: actions/upload-pages-artifact@v3
         with:
-          path: public
+          path: site
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Publicar en GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
