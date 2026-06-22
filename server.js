@@ -57,6 +57,7 @@ async function initDB() {
       completada BOOLEAN DEFAULT FALSE,
       bloque_max SMALLINT DEFAULT 0
     );
+    ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS bloque_max SMALLINT DEFAULT 0;
     CREATE INDEX IF NOT EXISTS idx_eval_comisaria ON evaluaciones(comisaria);
     CREATE INDEX IF NOT EXISTS idx_eval_unidad    ON evaluaciones(unidad);
 
