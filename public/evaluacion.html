@@ -6,7 +6,7 @@
   <title>Bienestar - REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css?v=13" />
-  <link rel="stylesheet" href="evaluacion.css?v=5" />
+  <link rel="stylesheet" href="evaluacion.css?v=6" />
 </head>
 <body class="body-portal body-bienestar">
 
@@ -99,8 +99,28 @@
           <span class="msg-error" id="msg-nacimiento">Use formato dd/mm/aaaa (ej: 15/03/1990).</span>
         </div>
         <div class="campo">
-          <label for="f-edad">Edad (calculada automaticamente)</label>
-          <input type="text" id="f-edad" class="input-edad" readonly placeholder="Complete su fecha de nacimiento" />
+          <label for="f-cargo">Cargo <span class="req">*</span></label>
+          <select id="f-cargo" class="select-eval">
+            <option value="">-- Seleccionar cargo --</option>
+            <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
+            <option value="PATRULLAJE">PATRULLAJE</option>
+            <option value="INVESTIGACION">INVESTIGACION</option>
+            <option value="JEFE DE UNIDAD">JEFE DE UNIDAD</option>
+          </select>
+          <span class="msg-error">Seleccione su cargo.</span>
+        </div>
+        <div class="campo campo-full campo-foto">
+          <label for="f-foto">Fotografía del efectivo <span class="req">*</span></label>
+          <div class="foto-carga-wrap">
+            <input type="file" id="f-foto" accept="image/jpeg,image/png,image/webp" />
+            <div id="foto-preview" class="foto-preview" style="display:none;">
+              <img id="foto-preview-img" alt="Vista previa de la fotografía" />
+              <button type="button" class="btn-quitar-foto" onclick="quitarFoto()" title="Quitar foto">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+          <span class="msg-error" id="msg-foto">Suba una foto (JPG, PNG o WEBP, máx. 2 MB).</span>
         </div>
       </div>
       <div class="registro-acciones">
@@ -178,7 +198,7 @@
 <script src="api-config.js?v=1"></script>
 <script src="comisarias.js?v=2"></script>
 <script src="divisiones-ui.js?v=1"></script>
-<script src="evaluacion.js?v=5"></script>
+<script src="evaluacion.js?v=6"></script>
 </body>
 </html>
 

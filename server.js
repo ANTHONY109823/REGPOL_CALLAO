@@ -21,6 +21,17 @@ const pool = new Pool({
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const sha256 = s => crypto.createHash('sha256').update(s).digest('hex');
 
+function calcularEdadDesdeISO(fecha_nac) {
+  if (!fecha_nac) return 0;
+  const nac = new Date(fecha_nac);
+  if (isNaN(nac.getTime())) return 0;
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - nac.getFullYear();
+  const m = hoy.getMonth() - nac.getMonth();
+  if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
+  return edad;
+}
+
 // ── Inicializar tablas + seed ──────────────────────────────────────────────────
 async function initDB() {
   await pool.query(`
@@ -58,6 +69,8 @@ async function initDB() {
       bloque_max SMALLINT DEFAULT 0
     );
     ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS bloque_max SMALLINT DEFAULT 0;
+    ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS cargo VARCHAR(80);
+    ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS foto TEXT;
     CREATE INDEX IF NOT EXISTS idx_eval_comisaria ON evaluaciones(comisaria);
     CREATE INDEX IF NOT EXISTS idx_eval_unidad    ON evaluaciones(unidad);
 
@@ -381,8 +394,9 @@ app.delete('/admin/preguntas/:id', requireAuth, async (req, res) => {
 // ── POST /guardar ─────────────────────────────────────────────────────────────
 app.post('/guardar', async (req, res) => {
   try {
-    const { comisaria, unidad, nombres, cip, dni, fecha_nac, edad, respuestas, completada } = req.body;
+    const { comisaria, unidad, nombres, cip, dni, fecha_nac, edad, cargo, foto, respuestas, completada } = req.body;
     if (!nombres || !cip) return res.json({ ok: false, error: 'Faltan datos obligatorios' });
+    const edadFinal = parseInt(edad) || calcularEdadDesdeISO(fecha_nac) || 0;
     const totalResp = Object.keys(respuestas || {}).filter(function(k) {
       const v = respuestas[k];
       return v === 'V' || v === 'F';
@@ -396,16 +410,16 @@ app.post('/guardar', async (req, res) => {
     if (exist.rows.length) {
       await pool.query(
         `UPDATE evaluaciones SET comisaria=$1, unidad=$2, nombres=$3, dni=$4, fecha_nac=$5, edad=$6,
-         respuestas=$7, completada=$8, bloque_max=$9, fecha=NOW() WHERE id=$10`,
+         cargo=$7, foto=COALESCE(NULLIF($8,''), foto), respuestas=$9, completada=$10, bloque_max=$11, fecha=NOW() WHERE id=$12`,
         [comisaria || '', unidad || '', nombres || '', dni || '', fecha_nac || null,
-         parseInt(edad) || 0, respuestas || {}, !!completada, totalResp, exist.rows[0].id]
+         edadFinal, cargo || '', foto || '', respuestas || {}, !!completada, totalResp, exist.rows[0].id]
       );
     } else {
       await pool.query(
-        `INSERT INTO evaluaciones (comisaria,unidad,nombres,cip,dni,fecha_nac,edad,respuestas,completada,bloque_max)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        `INSERT INTO evaluaciones (comisaria,unidad,nombres,cip,dni,fecha_nac,edad,cargo,foto,respuestas,completada,bloque_max)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
         [comisaria || '', unidad || '', nombres || '', cip || '', dni || '',
-         fecha_nac || null, parseInt(edad) || 0, respuestas || {}, !!completada, totalResp]
+         fecha_nac || null, edadFinal, cargo || '', foto || '', respuestas || {}, !!completada, totalResp]
       );
     }
 

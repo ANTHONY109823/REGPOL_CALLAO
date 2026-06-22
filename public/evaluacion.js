@@ -19,6 +19,7 @@ var ESTADO = {
   registroCompleto: false
 };
 var ALERTA_FINAL_MOSTRADA = false;
+var FOTO_BASE64 = '';
 
 /* ================================================================
    INICIO — cargar preguntas desde API
@@ -27,7 +28,9 @@ document.addEventListener('DOMContentLoaded', function() {
   cargarConfigUnidad();
 
   document.getElementById('f-nacimiento').addEventListener('input', formatearFechaNacimiento);
-  document.getElementById('f-nacimiento').addEventListener('blur',  calcularEdad);
+  document.getElementById('f-nacimiento').addEventListener('blur',  validarFechaNacimiento);
+  var fotoInput = document.getElementById('f-foto');
+  if (fotoInput) fotoInput.addEventListener('change', manejarFotoSeleccionada);
   ['f-cip','f-dni'].forEach(function(id) {
     document.getElementById(id).addEventListener('input', function(e) {
       e.target.value = e.target.value.replace(/\D/g,'');
@@ -116,7 +119,63 @@ function formatearFechaNacimiento(e) {
   else if (digits.length <= 4) f = digits.slice(0,2)+'/'+digits.slice(2);
   else                          f = digits.slice(0,2)+'/'+digits.slice(2,4)+'/'+digits.slice(4);
   el.value = f;
-  if (f.length === 10) calcularEdad();
+  if (f.length === 10) validarFechaNacimiento();
+}
+
+function validarFechaNacimiento() {
+  var input = document.getElementById('f-nacimiento');
+  var msg   = document.getElementById('msg-nacimiento');
+  var v     = input.value.trim();
+  if (!v) { input.className = ''; if (msg) msg.textContent = 'Use formato dd/mm/aaaa (ej: 15/03/1990).'; return; }
+  var nac = parsearFechaDMY(v);
+  if (!nac) { input.classList.add('invalido'); if (msg) msg.textContent = 'Fecha inválida.'; return; }
+  var e = obtenerEdad(nac);
+  if (e < 18 || e > 80) { input.classList.add('invalido'); if (msg) msg.textContent = 'Edad debe ser 18-80 años.'; return; }
+  input.classList.remove('invalido'); input.classList.add('valido');
+  if (msg) msg.textContent = '';
+}
+
+function obtenerEdadParaEnvio() {
+  var nac = parsearFechaDMY(document.getElementById('f-nacimiento').value);
+  return nac ? obtenerEdad(nac) : 0;
+}
+
+function manejarFotoSeleccionada(e) {
+  var file = e.target.files && e.target.files[0];
+  if (!file) { FOTO_BASE64 = ''; actualizarPreviewFoto(''); return; }
+  if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
+    mostrarAlerta('Use una imagen JPG, PNG o WEBP.', 'error');
+    e.target.value = '';
+    return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    mostrarAlerta('La foto no debe superar 2 MB.', 'error');
+    e.target.value = '';
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    FOTO_BASE64 = ev.target.result;
+    actualizarPreviewFoto(FOTO_BASE64);
+    var campo = document.getElementById('f-foto').closest('.campo');
+    if (campo) campo.classList.remove('invalido');
+  };
+  reader.readAsDataURL(file);
+}
+
+function actualizarPreviewFoto(src) {
+  var preview = document.getElementById('foto-preview');
+  var img = document.getElementById('foto-preview-img');
+  if (!preview || !img) return;
+  if (src) { img.src = src; preview.style.display = 'flex'; }
+  else { img.src = ''; preview.style.display = 'none'; }
+}
+
+function quitarFoto() {
+  FOTO_BASE64 = '';
+  var inp = document.getElementById('f-foto');
+  if (inp) inp.value = '';
+  actualizarPreviewFoto('');
 }
 
 function parsearFechaDMY(str) {
@@ -137,21 +196,6 @@ function obtenerEdad(nac) {
 
 function esFechaValida(v) { var n=parsearFechaDMY(v); if(!n) return false; var e=obtenerEdad(n); return e>=18&&e<=80; }
 
-function calcularEdad() {
-  var input = document.getElementById('f-nacimiento');
-  var out   = document.getElementById('f-edad');
-  var msg   = document.getElementById('msg-nacimiento');
-  var v     = input.value.trim();
-  if (!v) { out.value=''; input.className=''; if(msg) msg.textContent='Formato dd/mm/aaaa'; return; }
-  var nac = parsearFechaDMY(v);
-  if (!nac) { out.value=''; input.classList.add('invalido'); if(msg) msg.textContent='Fecha inválida.'; return; }
-  var e = obtenerEdad(nac);
-  if (e<18||e>80) { out.value='Verifique'; input.classList.add('invalido'); if(msg) msg.textContent='Edad debe ser 18-80.'; return; }
-  out.value = e+' años';
-  input.classList.remove('invalido'); input.classList.add('valido');
-  if (msg) msg.textContent='';
-}
-
 function fechaNacParaEnvio() {
   var nac = parsearFechaDMY(document.getElementById('f-nacimiento').value);
   if (!nac) return '';
@@ -167,7 +211,8 @@ function validarRegistro() {
     {id:'f-nombres', test:function(v){return v.trim().length>2;},      msg:'Ingrese su nombre completo.'},
     {id:'f-cip',     test:function(v){return /^\d{8}$/.test(v.trim());}, msg:'CIP: 8 dígitos.'},
     {id:'f-dni',     test:function(v){return /^\d{8}$/.test(v.trim());}, msg:'DNI: 8 dígitos.'},
-    {id:'f-nacimiento',test:esFechaValida, msg:'Fecha de nacimiento inválida (18-80 años).'}
+    {id:'f-nacimiento',test:esFechaValida, msg:'Fecha de nacimiento inválida (18-80 años).'},
+    {id:'f-cargo',   test:function(v){return v.trim().length>0;},     msg:'Seleccione su cargo.'}
   ];
   campos.forEach(function(c){
     var el=document.getElementById(c.id);
@@ -175,7 +220,29 @@ function validarRegistro() {
     if (!c.test(el.value)){el.classList.add('invalido'); if(!err) err=c.msg;}
     else el.classList.add('valido');
   });
+  var campoFoto = document.querySelector('.campo-foto');
+  if (campoFoto) campoFoto.classList.remove('invalido');
+  if (!FOTO_BASE64) {
+    if (campoFoto) campoFoto.classList.add('invalido');
+    if (!err) err = 'Suba su fotografía.';
+  }
   return err;
+}
+
+function construirPayloadGuardar(completada) {
+  return {
+    comisaria: obtenerComisariaEvaluacion(),
+    unidad:    document.getElementById('f-unidad').value.trim(),
+    nombres:   document.getElementById('f-nombres').value.trim(),
+    cip:       document.getElementById('f-cip').value.trim(),
+    dni:       document.getElementById('f-dni').value.trim(),
+    fecha_nac: fechaNacParaEnvio(),
+    edad:      obtenerEdadParaEnvio(),
+    cargo:     document.getElementById('f-cargo').value.trim(),
+    foto:      FOTO_BASE64 || '',
+    respuestas: ESTADO.respuestas,
+    completada: !!completada
+  };
 }
 
 function ocultarCuestionario() {
@@ -207,6 +274,11 @@ function continuarAlCuestionario() {
     if (data && data.total > 0) {
       mostrarBannerProgreso(data);
     } else {
+      fetch(LOCAL_API + '/guardar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(construirPayloadGuardar(false))
+      }).catch(function() {});
       activarCuestionario(true);
       mostrarAlerta('Cuestionario iniciado. Puede guardar y continuar en otra sesión.','exito');
       setTimeout(ocultarAlerta, 3500);
@@ -336,6 +408,8 @@ function guardarBloqueEnServidor(callback) {
 
   var payload = {
     cip:cip, nombres:nombres, comisaria:comisaria, unidad:unidad,
+    cargo: (document.getElementById('f-cargo')||{}).value||'',
+    foto: FOTO_BASE64 || '',
     bloque:ESTADO.bloqueActual, total:total, respuestas:ESTADO.respuestas
   };
 
@@ -377,6 +451,8 @@ function continuarConCIP() {
     }
     document.getElementById('f-cip').value = data.cip || cip;
     if (data.nombres) document.getElementById('f-nombres').value = data.nombres;
+    if (data.cargo) document.getElementById('f-cargo').value = data.cargo;
+    if (data.foto) { FOTO_BASE64 = data.foto; actualizarPreviewFoto(data.foto); }
     seleccionarComisariaEnSelect('f-unidad', data.unidad || data.comisaria || '');
     aplicarProgresoRestaurado(data);
   });
@@ -394,6 +470,8 @@ function autoGuardarProgreso() {
     nombres:   (document.getElementById('f-nombres')||{}).value||'',
     comisaria: obtenerComisariaEvaluacion(),
     unidad:    (document.getElementById('f-unidad')||{}).value||'',
+    cargo:     (document.getElementById('f-cargo')||{}).value||'',
+    foto:      FOTO_BASE64 || '',
     bloque:ESTADO.bloqueActual, total:Object.keys(ESTADO.respuestas).length,
     respuestas:ESTADO.respuestas
   };
@@ -453,6 +531,8 @@ function restaurarProgreso() {
   if(!data) return;
   if(data.cip)     document.getElementById('f-cip').value    =data.cip;
   if(data.nombres) document.getElementById('f-nombres').value=data.nombres;
+  if(data.cargo) document.getElementById('f-cargo').value=data.cargo;
+  if(data.foto) { FOTO_BASE64 = data.foto; actualizarPreviewFoto(data.foto); }
   seleccionarComisariaEnSelect('f-unidad', data.unidad || data.comisaria || '');
   aplicarProgresoRestaurado(data);
 }
@@ -495,18 +575,8 @@ function enviarEvaluacion() {
 
   var respObj={};
   PREGUNTAS.forEach(function(p){ respObj[p.id]=ESTADO.respuestas[p.id]||''; });
-
-  var payload={
-    comisaria: obtenerComisariaEvaluacion(),
-    unidad:    document.getElementById('f-unidad').value.trim(),
-    nombres:   document.getElementById('f-nombres').value.trim(),
-    cip:       document.getElementById('f-cip').value.trim(),
-    dni:       document.getElementById('f-dni').value.trim(),
-    fecha_nac: fechaNacParaEnvio(),
-    edad:      parseInt(document.getElementById('f-edad').value)||0,
-    respuestas:respObj,
-    completada:true
-  };
+  var payload = construirPayloadGuardar(true);
+  payload.respuestas = respObj;
 
   fetch(LOCAL_API+'/guardar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
     .then(function(r){return r.json();})
@@ -529,7 +599,9 @@ function enviarEvaluacion() {
 }
 
 function limpiarFormulario() {
-  ['f-unidad','f-nombres','f-cip','f-dni','f-nacimiento','f-edad'].forEach(function(id){document.getElementById(id).value='';});
+  ['f-unidad','f-nombres','f-cip','f-dni','f-nacimiento','f-cargo'].forEach(function(id){document.getElementById(id).value='';});
+  FOTO_BASE64 = '';
+  quitarFoto();
   ESTADO.respuestas={}; ESTADO.bloqueActual=1; ALERTA_FINAL_MOSTRADA=false;
   ocultarCuestionario(); actualizarControles(); actualizarInfoBloque();
   document.getElementById('zona-preguntas').innerHTML='';

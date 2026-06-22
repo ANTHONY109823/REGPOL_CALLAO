@@ -97,24 +97,53 @@ function formatearFechaPDF(valor) {
   return s.length > 16 ? s.substring(0, 16) : s;
 }
 
-// ── Encabezado del efectivo (barra nombre + datos) ────────────────────────────
+// ── Encabezado del efectivo (barra nombre + datos + foto) ─────────────────────
 function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
+  const tieneFoto = ev.foto && String(ev.foto).length > 80;
+  const fotoW = 50;
+  const fotoH = 62;
+  const filaDatosH = tieneFoto ? fotoH + 6 : 17;
+
   doc.rect(x0, y, W, 22).fill(COLOR_VERDE);
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(11)
      .text(String(ev.nombres || '—').toUpperCase(), x0 + 8, y + 6, { width: W - 16, lineBreak: false, ellipsis: true });
   y += 22;
 
-  doc.rect(x0, y, W, 17).fill('#ececec');
-  doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(7.5)
-     .text('CIP: ' + (ev.cip || '—') + '   DNI: ' + (ev.dni || '—') + '   Edad: ' + (ev.edad ? ev.edad + ' años' : '—'),
-           x0 + 6, y + 5, { width: W * 0.52, lineBreak: false });
+  doc.rect(x0, y, W, filaDatosH).fill('#ececec');
+
+  const textoX = x0 + 6;
+  const textoW = tieneFoto ? W - fotoW - 18 : W - 12;
+  const edadTxt = ev.edad ? ev.edad + ' años' : '—';
+  const cargoTxt = ev.cargo || '—';
+
+  if (tieneFoto) {
+    doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(7.5)
+       .text('CIP: ' + (ev.cip || '—') + '   DNI: ' + (ev.dni || '—') + '   Edad: ' + edadTxt,
+             textoX, y + 5, { width: textoW, lineBreak: false });
+    doc.text('Cargo: ' + cargoTxt, textoX, y + 20, { width: textoW, lineBreak: false });
+  } else {
+    doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(7.5)
+       .text('CIP: ' + (ev.cip || '—') + '   DNI: ' + (ev.dni || '—') + '   Edad: ' + edadTxt + '   Cargo: ' + cargoTxt,
+             textoX, y + 5, { width: textoW * 0.72, lineBreak: false, ellipsis: true });
+  }
+
+  if (tieneFoto) {
+    try {
+      const fotoX = x0 + W - fotoW - 4;
+      const fotoY = y + 2;
+      doc.image(ev.foto, fotoX, fotoY, { fit: [fotoW, fotoH], align: 'center', valign: 'center' });
+      doc.rect(fotoX, fotoY, fotoW, fotoH).stroke('#bbbbbb');
+    } catch (e) {}
+  }
+
+  const statsY = y + 4;
   doc.fillColor('#1a7a3a').font('Helvetica-Bold').fontSize(8)
-     .text('V: ' + totalV, x0 + W * 0.54, y + 4, { lineBreak: false });
+     .text('V: ' + totalV, x0 + W * 0.54, statsY, { lineBreak: false });
   doc.fillColor('#7a1a1a')
-     .text('F: ' + totalF, x0 + W * 0.62, y + 4, { lineBreak: false });
+     .text('F: ' + totalF, x0 + W * 0.62, statsY, { lineBreak: false });
   doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
-     .text('Fecha: ' + (ev.fecha || '—'), x0 + W * 0.72, y + 5, { width: W * 0.26, align: 'right', lineBreak: false });
-  return y + 17;
+     .text('Fecha: ' + (ev.fecha || '—'), x0 + W * 0.72, statsY + 1, { width: W * 0.26, align: 'right', lineBreak: false });
+  return y + filaDatosH;
 }
 
 // ── Matriz compacta N° + respuesta (10 columnas) ──────────────────────────────
