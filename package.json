@@ -2,9 +2,13 @@
   "name": "regpol_callao",
   "version": "1.0.0",
   "description": "",
-  "main": "comisarias.js",
+  "main": "server.js",
   "scripts": {
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "repository": {
     "type": "git",
@@ -19,11 +23,9 @@
   },
   "homepage": "https://github.com/ANTHONY109823/REGPOL_CALLAO#readme",
   "dependencies": {
-    "better-sqlite3": "^12.11.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "msnodesqlv8": "^5.2.0",
-    "mssql": "^12.5.5",
-    "pdfkit": "^0.19.1"
+    "pdfkit": "^0.19.1",
+    "pg": "^8.22.0"
   }
 }

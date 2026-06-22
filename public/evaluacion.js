@@ -1,4 +1,4 @@
-/* ================================================================
+﻿/* ================================================================
    evaluacion.js -- Logica del modulo MMPI-2 REGPOL Callao
    Ing. Anthony Ccayo -- UNITIC -- 2026
    Las preguntas estan en preguntas.js (566 items, V/F)
@@ -12,8 +12,8 @@
    Sustituye TU_FORM_ID y cada entry.10000000XX con los valores
    reales que obtendras al ejecutar el script de Apps Script.
 ================================================================ */
-// Backend local Node.js → SQL Server Express
-var LOCAL_API = 'http://localhost:3000';
+// Backend local Node.js â†’ SQL Server Express
+var LOCAL_API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '';
 
 var CONFIG_FORMS = {
   get URL_ENVIO() { return FORM_BASE + FORM_PATH; },
@@ -157,7 +157,7 @@ var ESTADO = {
    INICIO
 ================================================================ */
 document.addEventListener('DOMContentLoaded', function() {
-  poblarSelectComisarias('f-unidad', '-- Seleccionar comisaría --');
+  poblarSelectComisarias('f-unidad', '-- Seleccionar comisarÃ­a --');
 
   var guardado = localStorage.getItem('comisariaActiva') || 'NO CONFIGURADA';
   document.getElementById('nombre-comisaria').textContent = guardado;
@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Restaurar sesión Google si estaba logueado
+  // Restaurar sesiÃ³n Google si estaba logueado
   var googleUser = JSON.parse(localStorage.getItem('googleUser') || 'null');
   if (googleUser) {
     mostrarUsuarioGoogle(googleUser);
@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /* ================================================================
-   FECHA DE NACIMIENTO — ESCRITURA MANUAL dd/mm/aaaa
+   FECHA DE NACIMIENTO â€” ESCRITURA MANUAL dd/mm/aaaa
 ================================================================ */
 function formatearFechaNacimiento(e) {
   var el = e.target;
@@ -313,7 +313,7 @@ function validarCamposRegistro() {
   var err = false;
   var msgErr = '';
   var campos = [
-    { id: 'f-unidad',     test: function(v) { return v.trim().length > 0; },      msg: 'Seleccione su comisaría.' },
+    { id: 'f-unidad',     test: function(v) { return v.trim().length > 0; },      msg: 'Seleccione su comisarÃ­a.' },
     { id: 'f-nombres',    test: function(v) { return v.trim().length > 0; },      msg: 'El nombre completo es obligatorio.' },
     { id: 'f-cip',        test: function(v) { return /^\d{8}$/.test(v.trim()); }, msg: 'El CIP debe tener exactamente 8 digitos.' },
     { id: 'f-dni',        test: function(v) { return /^\d{8}$/.test(v.trim()); }, msg: 'El DNI debe tener exactamente 8 digitos.' },
@@ -684,8 +684,8 @@ function verificarProgresoLocal() {
 function mostrarBannerProgreso(data) {
   var banner = document.getElementById('banner-progreso');
   var info   = document.getElementById('banner-progreso-info');
-  info.textContent = 'Página ' + (data.pagina || 1) + ' de ' + TOTAL_PAGINAS +
-    ' — ' + (data.total || 0) + ' de ' + TOTAL_PREGUNTAS + ' preguntas respondidas';
+  info.textContent = 'PÃ¡gina ' + (data.pagina || 1) + ' de ' + TOTAL_PAGINAS +
+    ' â€” ' + (data.total || 0) + ' de ' + TOTAL_PREGUNTAS + ' preguntas respondidas';
   banner.style.display = 'flex';
   banner._data = data;
 }
@@ -706,7 +706,7 @@ function restaurarProgreso() {
       : data.respuestas;
   }
 
-  // Ir a la página guardada
+  // Ir a la pÃ¡gina guardada
   var pagina = parseInt(data.pagina) || 1;
   ESTADO.paginaActual = pagina;
   activarCuestionario(true);
@@ -714,7 +714,7 @@ function restaurarProgreso() {
 
   document.getElementById('banner-progreso').style.display = 'none';
 
-  mostrarAlerta('Progreso restaurado — continúa desde la página ' + pagina, 'exito');
+  mostrarAlerta('Progreso restaurado â€” continÃºa desde la pÃ¡gina ' + pagina, 'exito');
 }
 
 function descartarProgreso() {
@@ -723,7 +723,7 @@ function descartarProgreso() {
   if (GOOGLE_USER) {
     localStorage.removeItem('progreso_' + GOOGLE_USER.email);
   }
-  mostrarAlerta('Iniciando evaluación desde el principio.', 'exito');
+  mostrarAlerta('Iniciando evaluaciÃ³n desde el principio.', 'exito');
 }
 
 // Auto-guardar cada 5 respuestas
@@ -748,7 +748,7 @@ function autoGuardarProgreso() {
     respuestas: ESTADO.respuestas
   };
 
-  // Guardar siempre en localStorage (instantáneo)
+  // Guardar siempre en localStorage (instantÃ¡neo)
   localStorage.setItem(clave, JSON.stringify(payload));
 
   // Guardar progreso en SQL Server si hay email
@@ -795,3 +795,4 @@ function parseJWT(token) {
     return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
   }).join('')));
 }
+
