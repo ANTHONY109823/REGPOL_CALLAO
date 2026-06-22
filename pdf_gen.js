@@ -1,10 +1,10 @@
 /*
-  pdf_gen.js — Generador de PDFs para REGPOL Callao MMPI-2
-  Ing. Anthony Ccayo - UNITIC - 2026
+  pdf_gen.js — Generador de PDFs para REGPOL Callao
+  Cuestionario Psicológico — UNITIC — 2026
 */
 
 const PDFDocument = require('pdfkit');
-const PREGUNTAS   = require('./preguntas_data.json');
+const PREGUNTAS_DEFAULT = require('./preguntas_data.json');
 
 // Colores institucionales
 const COLOR_VERDE  = '#004d3d';
@@ -59,7 +59,8 @@ function cajaInfo(doc, x, y, w, label, valor) {
 // ─────────────────────────────────────────────────────────────────────────────
 // PDF INDIVIDUAL — un efectivo
 // ─────────────────────────────────────────────────────────────────────────────
-function generarPDFIndividual(evaluacion) {
+function generarPDFIndividual(evaluacion, preguntas) {
+  var PREGUNTAS = preguntas || PREGUNTAS_DEFAULT;
   return new Promise(function(resolve) {
     const doc    = new PDFDocument({ size: 'A4', margins: { top: 85, bottom: 45, left: 40, right: 40 }, autoFirstPage: false });
     const chunks = [];
@@ -79,10 +80,10 @@ function generarPDFIndividual(evaluacion) {
     // Título sección
     doc.y = 90;
     doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(12)
-       .text('FICHA DE EVALUACIÓN PSICOLÓGICA — MMPI-2', { align: 'center' });
+       .text('FICHA DE EVALUACIÓN — CUESTIONARIO PSICOLÓGICO', { align: 'center' });
     doc.moveDown(0.3);
     doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(8)
-       .text('Inventario Multifásico de Personalidad de Minnesota — 2 (Versión Argentina)', { align: 'center' });
+       .text('Evaluación Psicológica del Personal Policial — REGPOL Callao', { align: 'center' });
     doc.moveDown(0.8);
 
     // Datos personales en cajas
@@ -126,7 +127,7 @@ function generarPDFIndividual(evaluacion) {
 
     // Título tabla de respuestas
     doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(11)
-       .text('RESPUESTAS A LAS 566 PREGUNTAS DEL MMPI-2', { align: 'center' });
+       .text('RESPUESTAS AL CUESTIONARIO PSICOLÓGICO — ' + PREGUNTAS.length + ' ÍTEMS', { align: 'center' });
     doc.moveDown(0.3);
     doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
        .text('V = Verdadero     F = Falso     — = Sin respuesta', { align: 'center' });
@@ -204,7 +205,8 @@ function generarPDFIndividual(evaluacion) {
 // ─────────────────────────────────────────────────────────────────────────────
 // PDF POR COMISARÍA — resumen de todos los efectivos
 // ─────────────────────────────────────────────────────────────────────────────
-function generarPDFComisaria(comisaria, evaluaciones) {
+function generarPDFComisaria(comisaria, evaluaciones, preguntas) {
+  var PREGUNTAS = preguntas || PREGUNTAS_DEFAULT;
   return new Promise(function(resolve) {
     const doc    = new PDFDocument({ size: 'A4', margins: { top: 85, bottom: 45, left: 40, right: 40 }, autoFirstPage: false });
     const chunks = [];
@@ -225,7 +227,7 @@ function generarPDFComisaria(comisaria, evaluaciones) {
 
     doc.y = 100;
     doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(15)
-       .text('INFORME DE EVALUACIONES MMPI-2', { align: 'center' });
+       .text('INFORME DE CUESTIONARIO PSICOLÓGICO', { align: 'center' });
     doc.moveDown(0.3);
     doc.fillColor(COLOR_ORO).font('Helvetica-Bold').fontSize(13)
        .text(comisaria.toUpperCase(), { align: 'center' });

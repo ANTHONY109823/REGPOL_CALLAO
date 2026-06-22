@@ -114,7 +114,7 @@
       <h2>Paso 1 -- Registro e Identificacion del Efectivo Policial</h2>
     </div>
     <div class="card-body-eval">
-      <p class="registro-intro">Complete sus datos personales. Solo despues podra acceder al cuestionario MMPI-2.</p>
+      <p class="registro-intro">Complete sus datos personales. Luego podrá acceder al cuestionario. <strong>Puede guardar su progreso y continuar en otra sesión.</strong></p>
       <div class="form-grid">
         <div class="campo campo-full">
           <label for="f-unidad">Unidad / Dependencia Actual (Comisaría) <span class="req">*</span></label>
@@ -161,12 +161,12 @@
   <div class="card-eval seccion-bloqueada" id="card-cuestionario">
     <div class="card-header-eval">
       <i class="fas fa-tasks"></i>
-      <h2>Paso 2 -- Inventario MMPI-2 (566 Preguntas)</h2>
+      <h2>Paso 2 — Cuestionario Psicológico</h2>
     </div>
     <div class="card-body-eval">
       <div class="progreso-wrap">
         <div class="progreso-info">
-          <span class="pag-label" id="texto-pagina">Pagina 1 de 57</span>
+          <span class="pag-label" id="texto-pagina">Bloque 1 de 12</span>
           <span class="resp-label" id="texto-respondidas">0 / 566 respondidas</span>
         </div>
         <div class="barra-ext" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="aria-progreso">
@@ -175,10 +175,11 @@
       </div>
       <div id="zona-preguntas"></div>
       <div class="paginacion">
-        <button class="btn-eval btn-borde" id="btn-atras" onclick="cambiarPagina(-1)"><i class="fas fa-arrow-left"></i> Atras</button>
-        <span class="info-pagina" id="info-pagina">Pagina 1 de 57</span>
-        <button class="btn-eval btn-verde" id="btn-siguiente" onclick="cambiarPagina(1)">Siguiente <i class="fas fa-arrow-right"></i></button>
-        <button class="btn-eval btn-finalizar" id="btn-finalizar" onclick="validarYEnviar()"><i class="fas fa-paper-plane"></i> Finalizar y Enviar</button>
+        <button class="btn-eval btn-borde" id="btn-atras" onclick="cambiarBloque(-1)"><i class="fas fa-arrow-left"></i> Anterior</button>
+        <span class="info-pagina" id="info-pagina">Bloque 1 de 12</span>
+        <button class="btn-eval btn-guardar" id="btn-guardar-bloque" onclick="guardarYSalir()" style="background:#c8a94a;color:#fff;border:none;"><i class="fas fa-save"></i> Guardar y salir</button>
+        <button class="btn-eval btn-verde" id="btn-siguiente" onclick="cambiarBloque(1)">Siguiente bloque <i class="fas fa-arrow-right"></i></button>
+        <button class="btn-eval btn-finalizar" id="btn-finalizar" onclick="validarYEnviar()" style="display:none;"><i class="fas fa-paper-plane"></i> Finalizar y Enviar</button>
       </div>
     </div>
   </div>
@@ -200,7 +201,7 @@
 
 <script src="portal.js?v=4"></script>
 <script>initPortalPagina({ activeNav: 'bienestar' });</script>
-<script src="preguntas.js"></script>
+<!-- preguntas se cargan desde /preguntas (PostgreSQL) -->
 <script src="comisarias.js?v=2"></script>
 <script src="evaluacion.js"></script>
 </body>
