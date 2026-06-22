@@ -47,6 +47,19 @@ function dibujarPie(doc, pagina, totalPaginas) {
            doc.page.width - 100, y + 4, { align: 'right', width: 60 });
 }
 
+// ── Formato de fechas ─────────────────────────────────────────────────────────
+function formatearFechaPDF(valor) {
+  if (!valor) return '—';
+  if (valor instanceof Date && !isNaN(valor.getTime())) {
+    return valor.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+  const s = String(valor);
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return iso[3] + '/' + iso[2] + '/' + iso[1];
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  return s.length > 16 ? s.substring(0, 10) : s;
+}
+
 // ── Caja de dato personal ─────────────────────────────────────────────────────
 function cajaInfo(doc, x, y, w, label, valor) {
   doc.rect(x, y, w, 28).fill('#f9f9f9').stroke(COLOR_LINEA);
@@ -72,6 +85,7 @@ function generarPDFIndividual(evaluacion, preguntas) {
 
     const totalV = Object.values(resp).filter(function(v){ return v==='V'; }).length;
     const totalF = Object.values(resp).filter(function(v){ return v==='F'; }).length;
+    const totalPaginasBase = 1 + Math.ceil(PREGUNTAS.length / 50);
 
     // ── PÁGINA 1: Ficha personal ──────────────────────────────────────────────
     doc.addPage();
@@ -86,34 +100,34 @@ function generarPDFIndividual(evaluacion, preguntas) {
        .text('Evaluación Psicológica del Personal Policial — REGPOL Callao', { align: 'center' });
     doc.moveDown(0.8);
 
-    // Datos personales en cajas
+    // Datos personales — primero los más cortos, luego los extensos
     const m   = doc.page.margins;
     const W   = doc.page.width - m.left - m.right;
     const x0  = m.left;
     let   cy  = doc.y;
 
-    // Fila 1: Nombres (completo)
-    cajaInfo(doc, x0, cy, W, 'APELLIDOS Y NOMBRES COMPLETOS', evaluacion.nombres);
+    const w4 = (W - 12) / 4;
+    cajaInfo(doc, x0,          cy, w4, 'CIP',              evaluacion.cip || '—');
+    cajaInfo(doc, x0+w4+4,     cy, w4, 'DNI',              evaluacion.dni || '—');
+    cajaInfo(doc, x0+(w4+4)*2, cy, w4, 'EDAD',             evaluacion.edad ? evaluacion.edad + ' años' : '—');
+    cajaInfo(doc, x0+(w4+4)*3, cy, w4, 'FECHA EVALUACIÓN', evaluacion.fecha || '—');
     cy += 32;
 
-    // Fila 2: Comisaría | Unidad
+    const w3 = (W - 8) / 3;
+    cajaInfo(doc, x0,       cy, w3, 'RESPUESTAS V (VERDADERO)', totalV + ' / 566');
+    cajaInfo(doc, x0+w3+4,  cy, w3, 'RESPUESTAS F (FALSO)',     totalF + ' / 566');
+    cajaInfo(doc, x0+w3*2+8,cy, w3, 'TOTAL RESPONDIDAS',        (totalV + totalF) + ' / 566');
+    cy += 32;
+
     cajaInfo(doc, x0,          cy, W*0.5-4, 'COMISARÍA / DEPENDENCIA', evaluacion.comisaria);
     cajaInfo(doc, x0+W*0.5+4, cy, W*0.5-4, 'UNIDAD ACTUAL',           evaluacion.unidad);
     cy += 32;
 
-    // Fila 3: CIP | DNI | Fecha nac | Edad
-    const w4 = (W - 12) / 4;
-    cajaInfo(doc, x0,          cy, w4, 'CIP',             evaluacion.cip);
-    cajaInfo(doc, x0+w4+4,     cy, w4, 'DNI',             evaluacion.dni);
-    cajaInfo(doc, x0+(w4+4)*2, cy, w4, 'FECHA NACIMIENTO',evaluacion.fecha_nac || '—');
-    cajaInfo(doc, x0+(w4+4)*3, cy, w4, 'EDAD',            evaluacion.edad ? evaluacion.edad + ' años' : '—');
+    cajaInfo(doc, x0, cy, W, 'APELLIDOS Y NOMBRES COMPLETOS', evaluacion.nombres);
     cy += 32;
 
-    // Fila 4: Fecha evaluación | Respuestas V | Respuestas F
-    const w3 = (W - 8) / 3;
-    cajaInfo(doc, x0,       cy, w3, 'FECHA DE EVALUACIÓN', evaluacion.fecha || '—');
-    cajaInfo(doc, x0+w3+4,  cy, w3, 'RESPUESTAS VERDADERO (V)', totalV + ' / 566');
-    cajaInfo(doc, x0+w3*2+8,cy, w3, 'RESPUESTAS FALSO (F)',     totalF + ' / 566');
+    cajaInfo(doc, x0, cy, W*0.5-4, 'FECHA DE NACIMIENTO', formatearFechaPDF(evaluacion.fecha_nac));
+    cajaInfo(doc, x0+W*0.5+4, cy, W*0.5-4, 'ESTADO', evaluacion.completada ? 'COMPLETA' : 'PARCIAL');
     cy += 36;
 
     // Aviso confidencialidad
@@ -122,38 +136,36 @@ function generarPDFIndividual(evaluacion, preguntas) {
        .text('⚠  DOCUMENTO CONFIDENCIAL — Solo para uso del personal de psicología autorizado de la REGPOL Callao.', x0+8, cy+7, { width: W-16 });
     cy += 28;
 
-    doc.y = cy;
-    doc.moveDown(0.5);
+    dibujarPie(doc, 1, totalPaginasBase);
 
-    // Título tabla de respuestas
+    let numPag = 1;
+    const POR_PAGINA = 50;
+    const totalPaginas = 1 + Math.ceil(PREGUNTAS.length / POR_PAGINA);
+
+    doc.addPage();
+    numPag = 2;
+    dibujarCabecera(doc);
+    doc.y = 90;
     doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(11)
-       .text('RESPUESTAS AL CUESTIONARIO PSICOLÓGICO — ' + PREGUNTAS.length + ' ÍTEMS', { align: 'center' });
+       .text('RESPUESTAS DETALLADAS AL CUESTIONARIO — ' + PREGUNTAS.length + ' ÍTEMS', { align: 'center' });
     doc.moveDown(0.3);
     doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
        .text('V = Verdadero     F = Falso     — = Sin respuesta', { align: 'center' });
+    doc.moveDown(0.4);
+    doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
+       .text('Efectivo: ' + (evaluacion.nombres || '—') + '   CIP: ' + (evaluacion.cip || '—') + '   Comisaría: ' + (evaluacion.comisaria || '—'), { align: 'center' });
     doc.moveDown(0.5);
 
-    dibujarPie(doc, 1, '?');
-
-    // ── PÁGINAS DE PREGUNTAS ──────────────────────────────────────────────────
-    // Layout: 2 columnas, 25 preguntas por columna = 50 por página
-    const POR_PAGINA = 50;
-    const totalPaginas = 1 + Math.ceil(PREGUNTAS.length / POR_PAGINA);
-    let   numPag = 1;
-
     for (var inicio = 0; inicio < PREGUNTAS.length; inicio += POR_PAGINA) {
-      numPag++;
-      doc.addPage();
-      dibujarCabecera(doc);
-
-      // Mini ficha en cabecera de cada página de preguntas
-      doc.y = 82;
-      doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
-         .text('Efectivo: ', x0, doc.y, { continued: true })
-         .font('Helvetica-Bold').fillColor(COLOR_NEGRO)
-         .text(evaluacion.nombres + '   CIP: ' + evaluacion.cip + '   Comisaría: ' + evaluacion.comisaria,
-               { continued: false });
-      doc.moveDown(0.3);
+      if (inicio > 0) {
+        numPag++;
+        doc.addPage();
+        dibujarCabecera(doc);
+        doc.y = 82;
+        doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
+           .text('Efectivo: ' + (evaluacion.nombres || '—') + '   CIP: ' + (evaluacion.cip || '—') + '   Comisaría: ' + (evaluacion.comisaria || '—'));
+        doc.moveDown(0.3);
+      }
 
       const bloque = PREGUNTAS.slice(inicio, inicio + POR_PAGINA);
       const mitad  = Math.ceil(bloque.length / 2);
@@ -162,7 +174,6 @@ function generarPDFIndividual(evaluacion, preguntas) {
       const colW   = (W - 20) / 2;
       const startY = doc.y + 4;
 
-      // Dibujar columnas
       [col1, col2].forEach(function(col, ci) {
         const cx = x0 + ci * (colW + 20);
         let   ry = startY;
@@ -172,19 +183,15 @@ function generarPDFIndividual(evaluacion, preguntas) {
           const esPar     = i % 2 === 0;
           const altFila   = 18;
 
-          // Fondo alternado
           doc.rect(cx, ry, colW, altFila).fill(esPar ? '#f7faf7' : '#ffffff');
           doc.rect(cx, ry, colW, altFila).stroke('#e0e8e0');
 
-          // Número
           doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(7)
              .text(String(p.id).padStart(3,' '), cx + 3, ry + 5, { width: 20, align: 'right' });
 
-          // Texto pregunta
           doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(6.8)
              .text(p.texto, cx + 26, ry + 3, { width: colW - 52, height: altFila - 4, ellipsis: true });
 
-          // Respuesta con color
           const rColor = respuesta === 'V' ? '#1a7a3a' : (respuesta === 'F' ? '#7a1a1a' : '#999');
           doc.rect(cx + colW - 22, ry + 3, 18, 12).fill(respuesta === 'V' ? '#d4edda' : (respuesta === 'F' ? '#f8d7da' : '#eee'));
           doc.fillColor(rColor).font('Helvetica-Bold').fontSize(8)
@@ -197,7 +204,6 @@ function generarPDFIndividual(evaluacion, preguntas) {
       dibujarPie(doc, numPag, totalPaginas);
     }
 
-    // Actualizar total páginas en pie (pdfkit no permite hacerlo retroactivamente, así que ya es correcto)
     doc.end();
   });
 }

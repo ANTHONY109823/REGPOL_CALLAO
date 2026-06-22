@@ -23,7 +23,6 @@ var ESTADO = {
    INICIO — cargar preguntas desde API
 ================================================================ */
 document.addEventListener('DOMContentLoaded', function() {
-  poblarSelectComisarias('f-unidad', '-- Seleccionar comisaría --');
   cargarConfigUnidad();
 
   document.getElementById('f-nacimiento').addEventListener('input', formatearFechaNacimiento);
@@ -39,28 +38,49 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function cargarConfigUnidad() {
-  var barra = document.getElementById('nombre-comisaria');
-  var sel   = document.getElementById('f-unidad');
-  if (barra) barra.textContent = 'CARGANDO...';
+  var sel = document.getElementById('f-unidad');
+  if (!sel) return;
 
   fetch(LOCAL_API + '/config')
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      var nombre = (data.ok && data.comisariaActiva) ? data.comisariaActiva : '';
-      if (barra) barra.textContent = nombre || 'NO CONFIGURADA';
-      if (nombre && sel) {
-        seleccionarComisariaEnSelect('f-unidad', nombre);
-        sel.disabled = true;
-        sel.title = 'Dependencia activada por el administrador';
-      } else if (sel) {
-        sel.disabled = false;
-        sel.title = '';
+      var activas = [];
+      if (data.ok && data.unidadesActivas && data.unidadesActivas.length) {
+        activas = data.unidadesActivas;
+      } else if (data.ok && data.comisariaActiva) {
+        activas = [data.comisariaActiva];
       }
+
+      sel.innerHTML = '<option value="">-- Seleccionar comisaría --</option>';
+      if (!activas.length) {
+        sel.disabled = true;
+        mostrarAlerta('El cuestionario no está habilitado para su dependencia en este momento. Contacte a la Oficina de Psicología.', 'error');
+        return;
+      }
+
+      activas.forEach(function(nombre) {
+        var opt = document.createElement('option');
+        opt.value = nombre;
+        opt.textContent = nombre;
+        sel.appendChild(opt);
+      });
+
+      if (activas.length === 1) {
+        sel.value = activas[0];
+        sel.disabled = true;
+      } else {
+        sel.disabled = false;
+      }
+      ocultarAlerta();
     })
     .catch(function() {
-      if (barra) barra.textContent = 'NO CONFIGURADA';
-      if (sel) { sel.disabled = false; sel.title = ''; }
+      if (sel) sel.disabled = false;
     });
+}
+
+function obtenerComisariaEvaluacion() {
+  var sel = document.getElementById('f-unidad');
+  return sel ? sel.value.trim() : '';
 }
 
 function cargarPreguntas() {
@@ -308,7 +328,7 @@ function cambiarBloque(delta) {
 function guardarBloqueEnServidor(callback) {
   var cip       = document.getElementById('f-cip').value.trim();
   var nombres   = document.getElementById('f-nombres').value.trim();
-  var comisaria = document.getElementById('nombre-comisaria').textContent;
+  var comisaria = obtenerComisariaEvaluacion();
   var unidad    = document.getElementById('f-unidad').value.trim();
   var total     = Object.keys(ESTADO.respuestas).length;
 
@@ -350,7 +370,7 @@ function autoGuardarProgreso() {
   var payload = {
     cip:cip,
     nombres:   (document.getElementById('f-nombres')||{}).value||'',
-    comisaria: document.getElementById('nombre-comisaria').textContent,
+    comisaria: obtenerComisariaEvaluacion(),
     unidad:    (document.getElementById('f-unidad')||{}).value||'',
     bloque:ESTADO.bloqueActual, total:Object.keys(ESTADO.respuestas).length,
     respuestas:ESTADO.respuestas
@@ -431,7 +451,7 @@ function validarYEnviar() {
 
   var nombres=document.getElementById('f-nombres').value.trim();
   var dni=document.getElementById('f-dni').value.trim();
-  var comis=document.getElementById('nombre-comisaria').textContent;
+  var comis = obtenerComisariaEvaluacion();
   if(!confirm('¿Confirmar envío del cuestionario?\n\n'+nombres+'\nDNI: '+dni+'\nComisaría: '+comis)) return;
   enviarEvaluacion();
 }
@@ -449,7 +469,7 @@ function enviarEvaluacion() {
   PREGUNTAS.forEach(function(p){ respObj[p.id]=ESTADO.respuestas[p.id]||''; });
 
   var payload={
-    comisaria: document.getElementById('nombre-comisaria').textContent,
+    comisaria: obtenerComisariaEvaluacion(),
     unidad:    document.getElementById('f-unidad').value.trim(),
     nombres:   document.getElementById('f-nombres').value.trim(),
     cip:       document.getElementById('f-cip').value.trim(),

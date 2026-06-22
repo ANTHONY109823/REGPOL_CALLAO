@@ -226,10 +226,30 @@ function debeFiltrarPorUnidadAsignada(admin) {
   return !normalizarPermisos(admin.permisos).includes('evaluaciones');
 }
 
+async function leerUnidadesActivas() {
+  let unidades = [];
+  const raw = await getConfig('unidades_activas');
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) unidades = parsed;
+    } catch (e) { /* ignorar */ }
+  }
+  if (!unidades.length) {
+    const legacy = await getConfig('comisaria_activa');
+    if (legacy) unidades = [legacy];
+  }
+  return unidades.map(u => String(u).trim().toUpperCase()).filter(Boolean);
+}
+
 app.get('/config', async (req, res) => {
   try {
-    const comisariaActiva = await getConfig('comisaria_activa');
-    res.json({ ok: true, comisariaActiva });
+    const unidadesActivas = await leerUnidadesActivas();
+    res.json({
+      ok: true,
+      unidadesActivas,
+      comisariaActiva: unidadesActivas[0] || ''
+    });
   } catch (e) {
     res.json({ ok: false, error: e.message });
   }
@@ -240,10 +260,20 @@ app.put('/config', requireAuth, async (req, res) => {
     if (!puedeConfigurarUnidad(req.admin)) {
       return res.status(403).json({ ok: false, error: 'Sin permiso para activar dependencia' });
     }
-    const nombre = String(req.body.comisariaActiva || '').trim().toUpperCase();
-    if (!nombre) return res.json({ ok: false, error: 'Seleccione una dependencia' });
-    await setConfig('comisaria_activa', nombre);
-    res.json({ ok: true, comisariaActiva: nombre });
+    let unidades = req.body.unidadesActivas;
+    if (!Array.isArray(unidades) && req.body.comisariaActiva) {
+      unidades = [req.body.comisariaActiva];
+    }
+    if (!Array.isArray(unidades)) {
+      return res.json({ ok: false, error: 'Seleccione al menos una dependencia' });
+    }
+    unidades = unidades.map(u => String(u).trim().toUpperCase()).filter(Boolean);
+    if (!unidades.length) {
+      return res.json({ ok: false, error: 'Seleccione al menos una dependencia' });
+    }
+    await setConfig('unidades_activas', JSON.stringify(unidades));
+    await setConfig('comisaria_activa', unidades[0]);
+    res.json({ ok: true, unidadesActivas: unidades, comisariaActiva: unidades[0] });
   } catch (e) {
     res.json({ ok: false, error: e.message });
   }

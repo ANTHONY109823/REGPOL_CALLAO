@@ -253,7 +253,10 @@ function cambiarTab(id, btn) {
 
   var sec = SECCIONES.find(function(s){ return s.id===id; });
   if (!sec) return;
-  if (sec.tipo === 'evaluaciones') iniciarEvaluaciones();
+  if (sec.tipo === 'evaluaciones') {
+    cargarActivacionUsuario();
+    iniciarEvaluaciones();
+  }
   else if (sec.tipo === 'descargas') iniciarDescargas();
   else if (sec.tipo === 'cms') { if (!window._cmsIniciado){ window._cmsIniciado=true; initCMS(); } cambiarTabCMS(sec.cmsTab); }
 }
@@ -261,14 +264,15 @@ function cambiarTab(id, btn) {
 // ── EVALUACIONES ───────────────────────────────────────────────────────────────
 function renderTabEvaluaciones() {
   return '<div class="card">'
-    +'<h3><i class="fas fa-building"></i> Activar dependencia para evaluaciones</h3>'
-    +'<p style="font-size:12px;color:#666;margin-bottom:10px;">Seleccione la comisaría que está evaluando hoy. Puede cambiarla cuando pase a la siguiente unidad. Deje vacía la unidad asignada en su usuario para acceso a todas.</p>'
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">'
-    +'<select id="u-cfg-comisaria" style="flex:1;min-width:200px;padding:8px;border-radius:6px;border:1.5px solid #ccc;">'
-    +'<option value="">— Seleccionar comisaría —</option></select>'
-    +'<button class="btn btn-v" onclick="activarDependenciaUsuario()"><i class="fas fa-check-circle"></i> Activar unidad</button>'
+    +'<h3><i class="fas fa-building"></i> Activar dependencias para evaluaciones</h3>'
+    +'<p style="font-size:12px;color:#666;margin-bottom:10px;">Marque una o más comisarías habilitadas. Los efectivos solo verán las unidades activas.</p>'
+    +'<div id="u-cfg-unidades-list" style="max-height:220px;overflow-y:auto;border:1.5px solid #c8e6c9;border-radius:8px;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;background:#fff;margin-bottom:10px;"></div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">'
+    +'<button class="btn btn-v" onclick="guardarActivacionUsuario()"><i class="fas fa-save"></i> Guardar activación</button>'
+    +'<button class="btn" style="background:#888;color:#fff;" onclick="marcarTodasUsuario(true)">Marcar todas</button>'
+    +'<button class="btn" style="background:#aaa;color:#fff;" onclick="marcarTodasUsuario(false)">Desmarcar</button>'
     +'</div>'
-    +'<p style="font-size:12px;color:#004d3d;font-weight:600;">Activa ahora: <span id="u-cfg-activa">—</span></p>'
+    +'<p style="font-size:12px;color:#004d3d;font-weight:600;">Activas: <span id="u-cfg-activa">—</span></p>'
     +'</div>'
     +'<div class="card">'
     +'<h3><i class="fas fa-chart-bar"></i> Resumen de evaluaciones</h3>'
@@ -294,15 +298,58 @@ function renderTabEvaluaciones() {
     +'</div>';
 }
 
-function iniciarEvaluaciones() {
-  fetch(API+'/config').then(function(r){return r.json();}).then(function(d){
-    if(d.ok) set('u-cfg-activa', d.comisariaActiva || 'Ninguna');
+function cargarActivacionUsuario() {
+  fetch(API + '/listar', { headers: hdr() }).then(function(r) { return r.json(); }).then(function(d) {
+    window._comisariasUsuario = (d && d.ok) ? (d.comisarias || []) : [];
+    return fetch(API + '/config').then(function(r) { return r.json(); });
+  }).then(function(d) {
+    var activas = (d && d.ok) ? (d.unidadesActivas || []) : [];
+    set('u-cfg-activa', activas.length ? activas.join(', ') : 'Ninguna');
+    renderCheckboxUsuario(activas);
   });
+}
+
+function renderCheckboxUsuario(activas) {
+  var lista = window._comisariasUsuario || [];
+  var cont = document.getElementById('u-cfg-unidades-list');
+  if (!cont) return;
+  if (!lista.length) {
+    cont.innerHTML = '<p style="color:#888;font-size:12px;">Cargando unidades...</p>';
+    return;
+  }
+  cont.innerHTML = lista.map(function(u) {
+    var chk = activas.indexOf(u) >= 0 ? ' checked' : '';
+    return '<label style="font-size:12px;display:flex;gap:6px;cursor:pointer;"><input type="checkbox" class="u-cfg-chk" value="'+escHtml(u)+'"'+chk+'> '+escHtml(u)+'</label>';
+  }).join('');
+}
+
+function marcarTodasUsuario(estado) {
+  document.querySelectorAll('.u-cfg-chk').forEach(function(c) { c.checked = !!estado; });
+}
+
+function guardarActivacionUsuario() {
+  var unidades = Array.from(document.querySelectorAll('.u-cfg-chk:checked')).map(function(c) { return c.value; });
+  if (!unidades.length) { alert('Seleccione al menos una comisaría.'); return; }
+  fetch(API + '/config', {
+    method: 'PUT',
+    headers: hdr(),
+    body: JSON.stringify({ unidadesActivas: unidades })
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.ok) {
+      set('u-cfg-activa', (d.unidadesActivas || []).join(', '));
+      alert('Activación guardada correctamente.');
+    } else {
+      alert(d.error || 'No se pudo guardar.');
+    }
+  }).catch(function() { alert('Error de conexión.'); });
+}
+
+function iniciarEvaluaciones() {
+  cargarActivacionUsuario();
   fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
     llenarSel('ev-comisaria', d.comisarias||[], 'Todas las comisarías');
     llenarSel('ev-unidad',    d.unidades||[],   'Todas las unidades');
-    llenarSel('u-cfg-comisaria', d.comisarias||[], '— Seleccionar comisaría —');
   });
   if (window._evalIniciado) {
     cargarEval(1);
@@ -315,23 +362,6 @@ function iniciarEvaluaciones() {
     set('e-total',t); set('e-comp',c); set('e-pend',Math.max(0,t-c));
   });
   cargarEval(1);
-}
-
-function activarDependenciaUsuario() {
-  var nombre = val('u-cfg-comisaria');
-  if (!nombre) { alert('Seleccione una comisaría.'); return; }
-  fetch(API + '/config', {
-    method: 'PUT',
-    headers: hdr(),
-    body: JSON.stringify({ comisariaActiva: nombre })
-  }).then(function(r) { return r.json(); }).then(function(d) {
-    if (d.ok) {
-      set('u-cfg-activa', d.comisariaActiva);
-      alert('Dependencia activada: ' + d.comisariaActiva);
-    } else {
-      alert(d.error || 'No se pudo activar la dependencia.');
-    }
-  }).catch(function() { alert('Error de conexión con el servidor.'); });
 }
 
 function cargarEval(pag) {
