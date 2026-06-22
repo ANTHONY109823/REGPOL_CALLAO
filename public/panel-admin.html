@@ -8,8 +8,22 @@
   <link rel="stylesheet" href="panel-admin.css?v=8"/>
   <style>
     body{background:#f0f4f0;font-family:'Segoe UI',sans-serif;margin:0;}
-    .pa-header{background:#004d3d;color:#fff;padding:13px 24px;display:flex;align-items:center;justify-content:space-between;}
+    .pa-header{background:linear-gradient(135deg,#004d3d,#002d24);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.3);}
     .pa-header h1{font-size:15px;margin:0;}
+    .super-badge{background:#c8a94a;color:#002d24;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;letter-spacing:.5px;margin-left:10px;vertical-align:middle;}
+    .breakdown-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;}
+    .breakdown-list{border:1.5px solid #c8e6c9;border-radius:8px;overflow:hidden;}
+    .breakdown-list .bl-header{background:#004d3d;color:#fff;padding:7px 12px;font-size:12px;font-weight:700;}
+    .breakdown-list table{width:100%;border-collapse:collapse;font-size:12px;}
+    .breakdown-list td{padding:5px 12px;border-bottom:1px solid #f0f0f0;}
+    .breakdown-list tr:last-child td{border-bottom:none;}
+    .breakdown-list tr:nth-child(even) td{background:#f7faf7;}
+    .breakdown-list .num{font-weight:700;color:#004d3d;text-align:right;}
+    .ultimas-list{font-size:12px;}
+    .ultimas-list .ul-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;}
+    .ultimas-list .ul-item:last-child{border-bottom:none;}
+    .ul-nombre{font-weight:600;color:#1a1a1a;}
+    .ul-meta{color:#888;font-size:11px;}
     .pa-body{max-width:1200px;margin:20px auto;padding:0 16px;}
     .card{background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,77,61,.08);padding:20px;margin-bottom:18px;}
     .card h3{color:#004d3d;margin:0 0 14px;font-size:14px;border-bottom:2px solid #c8a94a;padding-bottom:6px;}
@@ -72,7 +86,10 @@
 <div id="panel-wrap" style="display:none;">
   <div class="pa-header">
     <div>
-      <h1><i class="fas fa-shield-alt"></i> Panel UNITIC — Cuestionario Psicológico REGPOL Callao</h1>
+      <h1><i class="fas fa-shield-alt"></i> Panel UNITIC — Cuestionario Psicológico REGPOL Callao
+        <span class="super-badge">⭐ SUPER ADMIN</span>
+      </h1>
+      <div style="font-size:11px;opacity:.7;margin-top:2px;">Acceso total — todas las comisarías y unidades</div>
     </div>
     <div style="display:flex;align-items:center;gap:12px;">
       <span id="ph-nombre" style="font-size:12px;"></span>
@@ -93,13 +110,30 @@
     <!-- TAB EVALUACIONES -->
     <div id="tab-evaluaciones" class="tab on">
       <div class="card">
-        <h3><i class="fas fa-chart-bar"></i> Resumen general</h3>
-        <div class="stats-grid" id="stats-grid">
-          <div class="stat"><div class="n" id="s-total">—</div><div class="l">Total</div></div>
-          <div class="stat"><div class="n" id="s-completas">—</div><div class="l">Completas</div></div>
-          <div class="stat"><div class="n" id="s-pendientes">—</div><div class="l">Parciales</div></div>
+        <h3><i class="fas fa-chart-bar"></i> Resumen global — todas las dependencias</h3>
+        <div class="stats-grid">
+          <div class="stat"><div class="n" id="s-total">—</div><div class="l">Total evaluaciones</div></div>
+          <div class="stat" style="border-color:#a5d6a7;"><div class="n" id="s-completas" style="color:#1a7a3a;">—</div><div class="l">Completas (100%)</div></div>
+          <div class="stat" style="border-color:#ffe082;"><div class="n" id="s-pendientes" style="color:#856404;">—</div><div class="l">Parciales / en progreso</div></div>
+          <div class="stat" style="border-color:#b0bec5;"><div class="n" id="s-comisarias">—</div><div class="l">Comisarías activas</div></div>
+          <div class="stat" style="border-color:#b0bec5;"><div class="n" id="s-unidades">—</div><div class="l">Unidades registradas</div></div>
         </div>
-        <div id="por-comisaria" style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+        <div class="breakdown-grid" id="breakdown-grid" style="margin-top:16px;">
+          <div class="breakdown-list">
+            <div class="bl-header"><i class="fas fa-building"></i> Por comisaría</div>
+            <table><tbody id="breakdown-comisaria"><tr><td colspan="2" style="color:#bbb;padding:10px;">Cargando...</td></tr></tbody></table>
+          </div>
+          <div class="breakdown-list">
+            <div class="bl-header"><i class="fas fa-users"></i> Por unidad</div>
+            <table><tbody id="breakdown-unidad"><tr><td colspan="2" style="color:#bbb;padding:10px;">Cargando...</td></tr></tbody></table>
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <div class="breakdown-list">
+            <div class="bl-header"><i class="fas fa-clock"></i> Últimas 10 evaluaciones</div>
+            <div id="ultimas-list" class="ultimas-list" style="padding:0 12px;"></div>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -309,14 +343,48 @@ function iniciarPanel(){
 function cargarStats(){
   fetch(API+'/stats',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
-    document.getElementById('s-total').textContent    =d.totalEvaluaciones||0;
-    document.getElementById('s-completas').textContent=d.totalCompletas||0;
-    document.getElementById('s-pendientes').textContent=Math.max(0,(d.totalEvaluaciones||0)-(d.totalCompletas||0));
-    var pc=document.getElementById('por-comisaria');
-    pc.innerHTML=(d.porComisaria||[]).map(function(c){
-      return '<span style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:4px 10px;font-size:12px;">'
-        +'<strong style="color:#004d3d;">'+c.nombre+'</strong> — '+c.total+'</span>';
-    }).join('');
+    var total=d.totalEvaluaciones||0, comp=d.totalCompletas||0;
+    document.getElementById('s-total').textContent    = total;
+    document.getElementById('s-completas').textContent= comp;
+    document.getElementById('s-pendientes').textContent= Math.max(0,total-comp);
+    document.getElementById('s-comisarias').textContent= (d.porComisaria||[]).length;
+    document.getElementById('s-unidades').textContent  = (d.porUnidad||[]).length;
+
+    // Desglose por comisaría
+    var bc=document.getElementById('breakdown-comisaria');
+    bc.innerHTML=(d.porComisaria||[]).length
+      ? (d.porComisaria||[]).map(function(c){
+          var pct=total>0?Math.round(parseInt(c.total)/total*100):0;
+          return '<tr><td style="padding:5px 12px;">'+c.nombre+'</td>'
+            +'<td class="num">'+c.total+' <span style="color:#bbb;font-weight:400;font-size:10px;">('+pct+'%)</span></td></tr>';
+        }).join('')
+      : '<tr><td colspan="2" style="color:#bbb;padding:10px;">Sin datos</td></tr>';
+
+    // Desglose por unidad
+    var bu=document.getElementById('breakdown-unidad');
+    bu.innerHTML=(d.porUnidad||[]).length
+      ? (d.porUnidad||[]).map(function(u){
+          return '<tr><td style="padding:5px 12px;font-size:11.5px;">'+u.nombre+'</td>'
+            +'<td class="num">'+u.total+'</td></tr>';
+        }).join('')
+      : '<tr><td colspan="2" style="color:#bbb;padding:10px;">Sin datos</td></tr>';
+
+    // Últimas evaluaciones
+    var ul=document.getElementById('ultimas-list');
+    ul.innerHTML=(d.ultimasEvaluaciones||[]).length
+      ? (d.ultimasEvaluaciones||[]).map(function(e){
+          var badge=e.completada
+            ?'<span style="background:#d4edda;color:#1a7a3a;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700;">✓ Completo</span>'
+            :'<span style="background:#fff3cd;color:#856404;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700;">Parcial</span>';
+          return '<div class="ul-item">'
+            +'<div><span class="ul-nombre">'+e.nombres+'</span>'
+            +'<span class="ul-meta"> — '+e.comisaria+' / '+e.unidad+'</span></div>'
+            +'<div style="display:flex;align-items:center;gap:8px;">'
+            +badge
+            +'<span style="color:#bbb;font-size:10.5px;">'+e.fecha+'</span>'
+            +'</div></div>';
+        }).join('')
+      : '<div style="color:#bbb;padding:12px;font-size:12px;">Sin evaluaciones aún.</div>';
   });
 }
 
