@@ -476,7 +476,7 @@ app.get('/descargar', requireAuth, async (req, res) => {
 app.get('/pdf/efectivo', requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.query.id);
-    const r  = await pool.query('SELECT * FROM evaluaciones WHERE id=$1', [id]);
+    const r  = await pool.query(`SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha FROM evaluaciones WHERE id=$1`, [id]);
     if (!r.rows.length) return res.status(404).json({ error: 'No encontrado' });
     const ev  = r.rows[0];
     if (req.admin.rol === 'bienestar' && req.admin.unidad &&
@@ -504,7 +504,8 @@ app.get('/pdf/grupo', requireAuth, async (req, res) => {
     if (!division && !comisaria && !unidad) return res.status(400).json({ error: 'Parámetro requerido' });
 
     const { where, params } = await buildWhere(req.query, 'WHERE 1=1', []);
-    const r = await pool.query(`SELECT * FROM evaluaciones ${where} ORDER BY comisaria,nombres`, params);
+    const r = await pool.query(
+      `SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha FROM evaluaciones ${where} ORDER BY comisaria,nombres`, params);
     if (!r.rows.length) return res.status(404).json({ error: 'Sin evaluaciones para este filtro' });
 
     const pregsR = await pool.query('SELECT numero AS id, texto FROM preguntas WHERE activa=TRUE ORDER BY orden,numero');
