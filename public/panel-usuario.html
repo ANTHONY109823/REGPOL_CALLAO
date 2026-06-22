@@ -225,6 +225,16 @@ function cambiarTab(id, btn) {
 // ── EVALUACIONES ───────────────────────────────────────────────────────────────
 function renderTabEvaluaciones() {
   return '<div class="card">'
+    +'<h3><i class="fas fa-building"></i> Activar dependencia para evaluaciones</h3>'
+    +'<p style="font-size:12px;color:#666;margin-bottom:10px;">La dependencia activa se muestra en el formulario de Bienestar.</p>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">'
+    +'<select id="u-cfg-comisaria" style="flex:1;min-width:200px;padding:8px;border-radius:6px;border:1.5px solid #ccc;">'
+    +'<option value="">— Seleccionar comisaría —</option></select>'
+    +'<button class="btn btn-v" onclick="activarDependenciaUsuario()"><i class="fas fa-check-circle"></i> Activar unidad</button>'
+    +'</div>'
+    +'<p style="font-size:12px;color:#004d3d;font-weight:600;">Activa ahora: <span id="u-cfg-activa">—</span></p>'
+    +'</div>'
+    +'<div class="card">'
     +'<h3><i class="fas fa-chart-bar"></i> Resumen de evaluaciones</h3>'
     +'<div class="stats-row">'
     +'<div class="stat"><div class="n" id="e-total">—</div><div class="l">Total</div></div>'
@@ -250,11 +260,15 @@ function renderTabEvaluaciones() {
 
 function iniciarEvaluaciones() {
   if (document.getElementById('ev-body').innerHTML !== '') return;
+  fetch(API+'/config').then(function(r){return r.json();}).then(function(d){
+    if(d.ok) set('u-cfg-activa', d.comisariaActiva || 'Ninguna');
+  });
   // Cargar filtros
   fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
     llenarSel('ev-comisaria', d.comisarias||[], 'Todas las comisarías');
     llenarSel('ev-unidad',    d.unidades||[],   'Todas las unidades');
+    llenarSel('u-cfg-comisaria', d.comisarias||[], '— Seleccionar comisaría —');
   });
   // Stats
   fetch(API+'/stats',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
@@ -263,6 +277,23 @@ function iniciarEvaluaciones() {
     set('e-total',t); set('e-comp',c); set('e-pend',Math.max(0,t-c));
   });
   cargarEval(1);
+}
+
+function activarDependenciaUsuario() {
+  var nombre = val('u-cfg-comisaria');
+  if (!nombre) { alert('Seleccione una comisaría.'); return; }
+  fetch(API + '/config', {
+    method: 'PUT',
+    headers: hdr(),
+    body: JSON.stringify({ comisariaActiva: nombre })
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.ok) {
+      set('u-cfg-activa', d.comisariaActiva);
+      alert('Dependencia activada: ' + d.comisariaActiva);
+    } else {
+      alert(d.error || 'No se pudo activar la dependencia.');
+    }
+  }).catch(function() { alert('Error de conexión con el servidor.'); });
 }
 
 function cargarEval(pag) {

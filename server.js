@@ -87,6 +87,12 @@ async function initDB() {
       tipo        VARCHAR(30) DEFAULT 'comisaria',
       orden       SMALLINT DEFAULT 0
     );
+
+    CREATE TABLE IF NOT EXISTS configuracion (
+      clave       VARCHAR(60) PRIMARY KEY,
+      valor       TEXT,
+      actualizado TIMESTAMP DEFAULT NOW()
+    );
   `);
 
   // Admins por defecto
@@ -185,6 +191,52 @@ async function requireAuth(req, res, next) {
     res.status(401).json({ ok: false, error: 'Token inválido' });
   }
 }
+
+// ── Configuración global (dependencia activa para evaluaciones) ───────────────
+async function getConfig(clave) {
+  const r = await pool.query('SELECT valor FROM configuracion WHERE clave=$1', [clave]);
+  return r.rows.length ? (r.rows[0].valor || '') : '';
+}
+
+async function setConfig(clave, valor) {
+  await pool.query(
+    `INSERT INTO configuracion (clave, valor, actualizado) VALUES ($1,$2,NOW())
+     ON CONFLICT (clave) DO UPDATE SET valor=$2, actualizado=NOW()`,
+    [clave, valor]
+  );
+}
+
+function puedeConfigurarUnidad(admin) {
+  if (admin.rol === 'unitic') return true;
+  let permisos = admin.permisos || [];
+  if (typeof permisos === 'string') {
+    try { permisos = JSON.parse(permisos); } catch (e) { permisos = []; }
+  }
+  return Array.isArray(permisos) && permisos.includes('evaluaciones');
+}
+
+app.get('/config', async (req, res) => {
+  try {
+    const comisariaActiva = await getConfig('comisaria_activa');
+    res.json({ ok: true, comisariaActiva });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+app.put('/config', requireAuth, async (req, res) => {
+  try {
+    if (!puedeConfigurarUnidad(req.admin)) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso para activar dependencia' });
+    }
+    const nombre = String(req.body.comisariaActiva || '').trim().toUpperCase();
+    if (!nombre) return res.json({ ok: false, error: 'Seleccione una dependencia' });
+    await setConfig('comisaria_activa', nombre);
+    res.json({ ok: true, comisariaActiva: nombre });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
 
 // ── POST /admin/login ──────────────────────────────────────────────────────────
 app.post('/admin/login', async (req, res) => {

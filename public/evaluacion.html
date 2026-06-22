@@ -45,46 +45,6 @@
     <strong class="bienestar-comisaria-nombre" id="nombre-comisaria">CARGANDO...</strong>
   </div>
 
-  <!-- GOOGLE SIGN-IN BANNER -->
-  <div id="google-signin-banner" class="google-signin-banner">
-    <div class="gsb-info">
-      <i class="fab fa-google gsb-ico"></i>
-      <div>
-        <strong>Vincula tu cuenta Google</strong>
-        <span>Guarda tu progreso y retoma donde te quedaste, incluso desde otro equipo.</span>
-      </div>
-    </div>
-    <div class="gsb-acciones">
-      <div id="google-btn-wrap">
-        <div id="g_id_onload"
-             data-client_id="GOOGLE_CLIENT_ID_PLACEHOLDER"
-             data-callback="onGoogleSignIn"
-             data-auto_prompt="false">
-        </div>
-        <div class="g_id_signin"
-             data-type="standard"
-             data-shape="pill"
-             data-theme="outline"
-             data-text="signin_with"
-             data-size="medium"
-             data-logo_alignment="left">
-        </div>
-      </div>
-      <button class="btn-gsb-skip" onclick="saltarLogin()">Continuar sin vincular</button>
-    </div>
-    <!-- Usuario logueado -->
-    <div id="google-user-info" class="google-user-info" style="display:none;">
-      <img id="google-user-foto" src="" alt="" />
-      <div>
-        <strong id="google-user-nombre">--</strong>
-        <span id="google-user-email">--</span>
-      </div>
-      <button class="btn-gsb-logout" onclick="cerrarSesionGoogle()" title="Cerrar sesión Google">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
-    </div>
-  </div>
-
   <!-- BANNER PROGRESO GUARDADO -->
   <div id="banner-progreso" class="banner-progreso" style="display:none;">
     <i class="fas fa-bookmark"></i>
@@ -203,7 +163,7 @@
 <script>initPortalPagina({ activeNav: 'bienestar' });</script>
 <!-- preguntas se cargan desde /preguntas (PostgreSQL) -->
 <script src="comisarias.js?v=2"></script>
-<script src="evaluacion.js"></script>
+<script src="evaluacion.js?v=2"></script>
 </body>
 </html>
 

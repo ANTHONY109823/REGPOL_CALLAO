@@ -326,6 +326,17 @@
     <div id="page-evaluaciones" class="page">
       <div class="card">
         <h3><i class="fas fa-clipboard-list"></i> Evaluaciones — todas las dependencias</h3>
+        <div class="descarga-box" style="margin-bottom:16px;background:#f8fcf8;">
+          <strong><i class="fas fa-building"></i> Activar dependencia para evaluaciones</strong>
+          <p style="font-size:12px;color:#666;margin:8px 0;">La dependencia activa se muestra en Bienestar. Los efectivos no podrán cambiarla.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <select id="cfg-comisaria" style="flex:1;min-width:220px;padding:8px;border-radius:6px;border:1.5px solid #ccc;font-size:12.5px;">
+              <option value="">— Seleccionar comisaría —</option>
+            </select>
+            <button class="btn btn-v" onclick="activarDependencia()"><i class="fas fa-check-circle"></i> Activar unidad</button>
+          </div>
+          <p style="font-size:12px;margin-top:10px;color:#004d3d;font-weight:600;">Activa ahora: <span id="cfg-activa">—</span></p>
+        </div>
         <div class="filtros">
           <select id="f-com" onchange="cargarTabla(1)"><option value="">Todas las comisarías</option></select>
           <select id="f-uni" onchange="cargarTabla(1)"><option value="">Todas las unidades</option></select>
@@ -700,7 +711,7 @@ function ir(page, el){
   document.querySelectorAll('.sb-item').forEach(function(i){i.classList.remove('on');});
   if(el) el.classList.add('on');
   // Acciones al entrar
-  if(page==='evaluaciones') cargarTabla(1);
+  if(page==='evaluaciones'){ cargarConfigEvaluacion(); cargarTabla(1); }
   if(page==='preguntas')    cargarPreguntas();
   if(page==='usuarios')     cargarUsuarios();
   if(page==='descargas')    cargarFiltrosDescarga();
@@ -764,6 +775,33 @@ function cargarStats(){
 }
 
 // ── EVALUACIONES ──────────────────────────────────────────────────────────────
+function cargarConfigEvaluacion() {
+  fetch(API + '/config').then(function(r) { return r.json(); }).then(function(d) {
+    if (d.ok) set('cfg-activa', d.comisariaActiva || 'Ninguna');
+  });
+  fetch(API + '/listar', { headers: hdr() }).then(function(r) { return r.json(); }).then(function(d) {
+    if (!d.ok) return;
+    llenarSel('cfg-comisaria', d.comisarias || [], '— Seleccionar comisaría —');
+  });
+}
+
+function activarDependencia() {
+  var nombre = val('cfg-comisaria');
+  if (!nombre) { alert('Seleccione una comisaría.'); return; }
+  fetch(API + '/config', {
+    method: 'PUT',
+    headers: hdr(),
+    body: JSON.stringify({ comisariaActiva: nombre })
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.ok) {
+      set('cfg-activa', d.comisariaActiva);
+      alert('Dependencia activada: ' + d.comisariaActiva);
+    } else {
+      alert(d.error || 'No se pudo activar la dependencia.');
+    }
+  }).catch(function() { alert('Error de conexión con el servidor.'); });
+}
+
 function cargarFiltrosTabla(){
   fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;

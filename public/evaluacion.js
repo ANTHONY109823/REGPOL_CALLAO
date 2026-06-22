@@ -24,12 +24,7 @@ var ESTADO = {
 ================================================================ */
 document.addEventListener('DOMContentLoaded', function() {
   poblarSelectComisarias('f-unidad', '-- Seleccionar comisaría --');
-
-  var guardado = localStorage.getItem('comisariaActiva') || 'NO CONFIGURADA';
-  document.getElementById('nombre-comisaria').textContent = guardado;
-  if (guardado && guardado !== 'NO CONFIGURADA') {
-    seleccionarComisariaEnSelect('f-unidad', guardado);
-  }
+  cargarConfigUnidad();
 
   document.getElementById('f-nacimiento').addEventListener('input', formatearFechaNacimiento);
   document.getElementById('f-nacimiento').addEventListener('blur',  calcularEdad);
@@ -42,6 +37,31 @@ document.addEventListener('DOMContentLoaded', function() {
   ocultarCuestionario();
   cargarPreguntas();
 });
+
+function cargarConfigUnidad() {
+  var barra = document.getElementById('nombre-comisaria');
+  var sel   = document.getElementById('f-unidad');
+  if (barra) barra.textContent = 'CARGANDO...';
+
+  fetch(LOCAL_API + '/config')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var nombre = (data.ok && data.comisariaActiva) ? data.comisariaActiva : '';
+      if (barra) barra.textContent = nombre || 'NO CONFIGURADA';
+      if (nombre && sel) {
+        seleccionarComisariaEnSelect('f-unidad', nombre);
+        sel.disabled = true;
+        sel.title = 'Dependencia activada por el administrador';
+      } else if (sel) {
+        sel.disabled = false;
+        sel.title = '';
+      }
+    })
+    .catch(function() {
+      if (barra) barra.textContent = 'NO CONFIGURADA';
+      if (sel) { sel.disabled = false; sel.title = ''; }
+    });
+}
 
 function cargarPreguntas() {
   mostrarAlerta('Cargando cuestionario...', 'info');
@@ -500,6 +520,3 @@ function abrirPanelAdmin(e) {
   return false;
 }
 
-// Compatibilidad (legacy)
-function saltarLogin() {}
-function cerrarSesionGoogle() {}
