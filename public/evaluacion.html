@@ -40,24 +40,6 @@
 <!-- CONTENIDO PRINCIPAL -->
 <main class="contenedor">
 
-  <!-- CONTINUAR SOLO CON CIP -->
-  <div class="card-eval card-continuar-cip" id="card-continuar-cip">
-    <div class="card-header-eval card-header-continuar">
-      <i class="fas fa-play-circle"></i>
-      <h2>¿Ya comenzó el cuestionario? Continúe con su CIP</h2>
-    </div>
-    <div class="card-body-eval">
-      <p class="registro-intro">Si guardó un bloque y salió, ingrese solo su <strong>CIP</strong> para retomar donde lo dejó. No necesita volver a llenar el registro.</p>
-      <div class="continuar-cip-fila">
-        <input type="text" id="f-cip-continuar" placeholder="Ingrese su CIP" maxlength="20" autocomplete="off"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();continuarConCIP();}" />
-        <button type="button" class="btn-eval btn-verde" onclick="continuarConCIP()">
-          <i class="fas fa-play"></i> Continuar evaluación
-        </button>
-      </div>
-    </div>
-  </div>
-
   <!-- BANNER PROGRESO GUARDADO -->
   <div id="banner-progreso" class="banner-progreso" style="display:none;">
     <i class="fas fa-bookmark"></i>
@@ -130,6 +112,24 @@
     </div>
   </div>
 
+  <!-- CONTINUAR SOLO CON CIP (debajo del registro) -->
+  <div class="card-eval card-continuar-cip" id="card-continuar-cip">
+    <div class="card-header-eval card-header-continuar">
+      <i class="fas fa-play-circle"></i>
+      <h2>¿Ya comenzó el cuestionario? Continúe con su CIP</h2>
+    </div>
+    <div class="card-body-eval">
+      <p class="registro-intro">Si guardó un bloque y salió, ingrese solo su <strong>CIP</strong> para retomar donde lo dejó. No necesita volver a llenar el registro.</p>
+      <div class="continuar-cip-fila">
+        <input type="text" id="f-cip-continuar" placeholder="Ingrese su CIP" maxlength="20" autocomplete="off"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();continuarConCIP();}" />
+        <button type="button" class="btn-eval btn-verde" onclick="continuarConCIP()">
+          <i class="fas fa-play"></i> Continuar evaluación
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- PASO 2: CUESTIONARIO (oculto hasta completar registro) -->
   <div class="card-eval seccion-bloqueada" id="card-cuestionario">
     <div class="card-header-eval">
@@ -175,6 +175,7 @@
 <script src="portal.js?v=4"></script>
 <script>initPortalPagina({ activeNav: 'bienestar' });</script>
 <!-- preguntas se cargan desde /preguntas (PostgreSQL) -->
+<script src="api-config.js?v=1"></script>
 <script src="comisarias.js?v=2"></script>
 <script src="divisiones-ui.js?v=1"></script>
 <script src="evaluacion.js?v=5"></script>

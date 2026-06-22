@@ -4,8 +4,8 @@
    Preguntas se cargan desde la API (PostgreSQL)
 ================================================================ */
 
-var LOCAL_API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-  ? 'http://localhost:3000' : '';
+var LOCAL_API = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
+  : ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '');
 
 var PREGUNTAS       = [];   // se llena desde /preguntas
 var TOTAL_PREGUNTAS = 0;

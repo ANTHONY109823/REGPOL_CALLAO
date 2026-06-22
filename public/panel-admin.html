@@ -671,11 +671,13 @@
   </div>
 </div>
 
+<script src="api-config.js?v=1"></script>
 <script src="portal.js?v=4"></script>
 <script src="divisiones-ui.js?v=1"></script>
 <script src="panel-cms.js?v=4"></script>
 <script>
-var API = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '';
+var API = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
+  : ((location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '');
 var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[];
 
 var ETIQUETAS_PERM={

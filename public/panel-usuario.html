@@ -80,6 +80,13 @@
     .perm-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
     .perm-chip{background:rgba(200,169,74,.3);border:1px solid #c8a94a;color:#fff;
       font-size:11px;padding:3px 10px;border-radius:10px;font-weight:600;}
+    .dash-box{border:1.5px solid #c8e6c9;border-radius:8px;overflow:hidden;}
+    .dash-head{background:#004d3d;color:#fff;padding:8px 12px;font-size:12px;font-weight:700;}
+    .dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:12px;}
+    .ult-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:12px;}
+    .ult-item:last-child{border-bottom:none;}
+    .ult-nom{font-weight:600;color:#004d3d;}
+    .ult-meta{color:#888;font-size:11px;}
   </style>
 </head>
 <body>
@@ -105,11 +112,13 @@
   </div>
 </div>
 
+<script src="api-config.js?v=1"></script>
 <script src="portal.js?v=4"></script>
 <script src="divisiones-ui.js?v=1"></script>
 <script src="panel-cms.js?v=4"></script>
 <script>
-var API = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '';
+var API = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
+  : ((location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '');
 var SESSION = null;
 var TOKEN   = '';
 
@@ -196,10 +205,21 @@ function logout() {
 
 function hdr() { return { 'Content-Type':'application/json', 'x-admin-token': TOKEN }; }
 
+function seccionesParaUsuario(permisos) {
+  var list = [];
+  if (permisos.indexOf('evaluaciones') !== -1) {
+    list.push({ id:'dashboard', icono:'fa-chart-pie', label:'Dashboard', tipo:'dashboard' });
+  }
+  SECCIONES.forEach(function(s) {
+    if (permisos.indexOf(s.id) !== -1) list.push(s);
+  });
+  return list;
+}
+
 // ── Construir panel dinámico ───────────────────────────────────────────────────
 function construirPanel(permisos) {
   var body     = document.getElementById('panel-body');
-  var activas  = SECCIONES.filter(function(s){ return permisos.indexOf(s.id) !== -1; });
+  var activas  = seccionesParaUsuario(permisos);
 
   // Bienvenida
   var chips = activas.map(function(s){
@@ -225,7 +245,9 @@ function construirPanel(permisos) {
   // Contenido de cada tab
   activas.forEach(function(s, i){
     html += '<div id="tab-'+s.id+'" class="tab'+(i===0?' on':'')+'">';
-    if (s.tipo === 'evaluaciones') {
+    if (s.tipo === 'dashboard') {
+      html += renderTabDashboard();
+    } else if (s.tipo === 'evaluaciones') {
       html += renderTabEvaluaciones();
     } else if (s.tipo === 'descargas') {
       html += renderTabDescargas();
@@ -240,7 +262,8 @@ function construirPanel(permisos) {
   // Inicializar primera sección
   if (activas.length) {
     var primera = activas[0];
-    if (primera.tipo === 'evaluaciones') iniciarEvaluaciones();
+    if (primera.tipo === 'dashboard') cargarDashboardUsuario();
+    else if (primera.tipo === 'evaluaciones') iniciarEvaluaciones();
     else if (primera.tipo === 'descargas') iniciarDescargas();
     else if (primera.tipo === 'cms') { setTimeout(function(){ initCMS(); cambiarTabCMS(primera.cmsTab); }, 100); }
   }
@@ -254,12 +277,83 @@ function cambiarTab(id, btn) {
 
   var sec = SECCIONES.find(function(s){ return s.id===id; });
   if (!sec) return;
-  if (sec.tipo === 'evaluaciones') {
+  if (sec.tipo === 'dashboard') cargarDashboardUsuario();
+  else if (sec.tipo === 'evaluaciones') {
     cargarActivacionUsuario();
     iniciarEvaluaciones();
   }
   else if (sec.tipo === 'descargas') iniciarDescargas();
   else if (sec.tipo === 'cms') { if (!window._cmsIniciado){ window._cmsIniciado=true; initCMS(); } cambiarTabCMS(sec.cmsTab); }
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function renderTabDashboard() {
+  return '<div class="card">'
+    +'<h3><i class="fas fa-chart-pie"></i> Dashboard — métricas de evaluaciones</h3>'
+    +'<p style="font-size:12px;color:#666;margin:-6px 0 14px;">Resumen en tiempo real del cuestionario de Bienestar (Oficina de Psicología).</p>'
+    +'<div class="stats-row">'
+    +'<div class="stat"><div class="n" id="db-total">—</div><div class="l">Total registradas</div></div>'
+    +'<div class="stat"><div class="n" id="db-comp" style="color:#1a7a3a;">—</div><div class="l">Completas (566)</div></div>'
+    +'<div class="stat"><div class="n" id="db-pend" style="color:#856404;">—</div><div class="l">Parciales enviadas</div></div>'
+    +'<div class="stat"><div class="n" id="db-curso" style="color:#c0392b;">—</div><div class="l">En curso sin enviar</div></div>'
+    +'</div>'
+    +'<div class="dash-grid">'
+    +'<div class="dash-box"><div class="dash-head"><i class="fas fa-sitemap"></i> Por división</div>'
+    +'<table class="t" style="margin:0;"><tbody id="db-division"><tr><td colspan="2" style="color:#bbb;padding:10px;text-align:center;">Cargando...</td></tr></tbody></table></div>'
+    +'<div class="dash-box"><div class="dash-head"><i class="fas fa-building"></i> Top dependencias</div>'
+    +'<div style="max-height:280px;overflow-y:auto;"><table class="t" style="margin:0;"><tbody id="db-unidad"><tr><td colspan="2" style="color:#bbb;padding:10px;text-align:center;">Cargando...</td></tr></tbody></table></div></div>'
+    +'</div>'
+    +'<div class="dash-box" style="margin-top:14px;"><div class="dash-head"><i class="fas fa-clock"></i> Últimas 10 evaluaciones</div>'
+    +'<div id="db-ultimas" style="padding:4px 12px 10px;color:#bbb;font-size:12px;text-align:center;">Cargando...</div></div>'
+    +'</div>';
+}
+
+function cargarDashboardUsuario() {
+  fetch(API + '/stats', { headers: hdr() }).then(function(r) { return r.json(); }).then(function(d) {
+    if (!d.ok) return;
+    var t = d.totalEvaluaciones || 0;
+    var c = d.totalCompletas || 0;
+    set('db-total', t);
+    set('db-comp', c);
+    set('db-pend', Math.max(0, t - c));
+    set('db-curso', d.totalEnCurso || 0);
+
+    var bdDiv = document.getElementById('db-division');
+    if (bdDiv) {
+      bdDiv.innerHTML = (d.porDivision || []).length
+        ? d.porDivision.map(function(row) {
+            return '<tr><td style="padding:6px 10px;font-size:12px;">' + escHtml(row.nombre) + '</td>'
+              + '<td style="padding:6px 10px;font-size:12px;font-weight:700;text-align:right;color:#004d3d;">' + row.total + '</td></tr>';
+          }).join('')
+        : '<tr><td colspan="2" style="color:#bbb;padding:10px;text-align:center;">Sin datos</td></tr>';
+    }
+
+    var bdUni = document.getElementById('db-unidad');
+    if (bdUni) {
+      var unis = (d.porUnidad || []).slice().sort(function(a, b) { return (b.total || 0) - (a.total || 0); }).slice(0, 15);
+      bdUni.innerHTML = unis.length
+        ? unis.map(function(u) {
+            return '<tr><td style="padding:5px 10px;font-size:11.5px;">' + escHtml(u.nombre) + '</td>'
+              + '<td style="padding:5px 10px;font-size:12px;font-weight:700;text-align:right;">' + u.total + '</td></tr>';
+          }).join('')
+        : '<tr><td colspan="2" style="color:#bbb;padding:10px;text-align:center;">Sin datos</td></tr>';
+    }
+
+    var ult = document.getElementById('db-ultimas');
+    if (ult) {
+      ult.innerHTML = (d.ultimasEvaluaciones || []).length
+        ? d.ultimasEvaluaciones.map(function(e) {
+            var badge = e.completada
+              ? '<span class="badge ok">Completo</span>'
+              : '<span class="badge pend">Parcial</span>';
+            return '<div class="ult-item"><div><span class="ult-nom">' + escHtml(e.nombres) + '</span>'
+              + '<span class="ult-meta"> — ' + escHtml(e.unidad || e.comisaria || '—') + '</span></div>'
+              + '<div style="display:flex;align-items:center;gap:8px;">' + badge
+              + '<span class="ult-meta">' + escHtml(e.fecha) + '</span></div></div>';
+          }).join('')
+        : '<p style="padding:12px;color:#bbb;text-align:center;">Sin evaluaciones aún.</p>';
+    }
+  });
 }
 
 // ── EVALUACIONES ───────────────────────────────────────────────────────────────
@@ -275,13 +369,6 @@ function renderTabEvaluaciones() {
     +'</div>'
     +'<p style="font-size:12px;color:#004d3d;font-weight:600;">Activas: <span id="u-cfg-activa">—</span></p>'
     +'</div>'
-    +'<div class="card">'
-    +'<h3><i class="fas fa-chart-bar"></i> Resumen de evaluaciones</h3>'
-    +'<div class="stats-row">'
-    +'<div class="stat"><div class="n" id="e-total">—</div><div class="l">Total</div></div>'
-    +'<div class="stat"><div class="n" id="e-comp" style="color:#1a7a3a;">—</div><div class="l">Completas</div></div>'
-    +'<div class="stat"><div class="n" id="e-pend" style="color:#856404;">—</div><div class="l">Parciales</div></div>'
-    +'</div></div>'
     +'<div class="card">'
     +'<h3><i class="fas fa-search"></i> Listado de evaluaciones</h3>'
     +'<div class="filtros">'
@@ -348,11 +435,6 @@ function iniciarEvaluaciones() {
     return;
   }
   window._evalIniciado = true;
-  fetch(API+'/stats',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
-    if(!d.ok) return;
-    var t=d.totalEvaluaciones||0, c=d.totalCompletas||0;
-    set('e-total',t); set('e-comp',c); set('e-pend',Math.max(0,t-c));
-  });
   cargarEval(1);
 }
 

@@ -602,12 +602,40 @@ app.get('/stats', requireAuth, async (req, res) => {
     const ultimas  = await pool.query(
       `SELECT TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha, comisaria, unidad, nombres, completada
        FROM evaluaciones ${whereAdmin} ORDER BY fecha DESC LIMIT 10`, params);
+
+    const porDivision = await pool.query(
+      `SELECT d.nombre, d.orden, COUNT(e.id)::int AS total
+       FROM divisiones d
+       LEFT JOIN unidades_pol u ON u.division_id = d.id
+       LEFT JOIN evaluaciones e ON (
+         UPPER(TRIM(e.unidad)) = UPPER(TRIM(u.nombre))
+         OR UPPER(TRIM(e.comisaria)) = UPPER(TRIM(u.nombre))
+       )
+       GROUP BY d.id, d.nombre, d.orden
+       ORDER BY d.orden`, params.length ? [] : []);
+
+    let progWhere = 'WHERE (SELECT COUNT(*) FROM jsonb_object_keys(p.respuestas)) > 0 '
+      + 'AND NOT EXISTS ('
+      + 'SELECT 1 FROM evaluaciones e '
+      + 'WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(p.cip)) AND e.completada = TRUE'
+      + ')';
+    const progParams = [];
+    if (debeFiltrarPorUnidadAsignada(req.admin)) {
+      progWhere += ' AND (UPPER(p.unidad) LIKE $1 OR UPPER(p.comisaria) LIKE $1)';
+      progParams.push('%' + req.admin.unidad.toUpperCase() + '%');
+    }
+    const enCursoR = await pool.query(
+      `SELECT COUNT(*)::int AS t FROM progresos p ${progWhere}`, progParams
+    );
+
     res.json({
       ok: true,
       totalEvaluaciones: parseInt(total.rows[0].t),
       totalCompletas:    parseInt(completas.rows[0].t),
+      totalEnCurso:      parseInt(enCursoR.rows[0].t),
       porComisaria:      porComis.rows,
       porUnidad:         porUnidad.rows,
+      porDivision:       porDivision.rows,
       ultimasEvaluaciones: ultimas.rows
     });
   } catch (e) {
