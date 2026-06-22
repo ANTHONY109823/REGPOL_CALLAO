@@ -781,3 +781,23 @@ body.panel-admin-page.autenticado #admin-contenido { display: flex !important; }
   .kpi-grid-admin { grid-template-columns: 1fr; }
   .dash-acciones-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ── Tabla de evaluaciones ─────────────────────────── */
+#tabla-datos-body tr { border-bottom: 1px solid #2a3a2a; }
+#tabla-datos-body tr:hover { background: rgba(39,174,96,.10); }
+#tabla-datos-body td { padding: 9px 12px; color: #ddd; vertical-align: middle; }
+#tabla-datos-body td:first-child { color: #7dcc9a; font-weight: 700; }
+
+.btn-pag {
+  padding: 5px 12px;
+  background: #1a3a2a;
+  color: #7dcc9a;
+  border: 1px solid #3a6a4a;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background .15s;
+}
+.btn-pag:hover { background: #27ae60; color: #fff; }
+.btn-pag-activo { background: #27ae60 !important; color: #fff !important; border-color: #27ae60 !important; }

@@ -159,18 +159,16 @@
           <i class="fas fa-file-download"></i>
           <span>Respuestas MMPI-2 — Descarga y consulta</span>
         </div>
-        <p class="panel-resp-desc">Las evaluaciones llegan a Google Forms y la hoja vinculada en Drive.</p>
+        <p class="panel-resp-desc">Las evaluaciones se guardan en la base de datos local (SQLite). Visualiza, filtra y descarga desde aquí.</p>
         <div class="panel-resp-botones panel-resp-principal">
-          <a href="https://docs.google.com/forms/d/19HWfPow6zMYuphsHbLir7Ro_xysD6hya528bfXl_YN0/edit#responses"
-             target="_blank" rel="noopener noreferrer" class="btn-resp btn-resp-form btn-resp-destacado">
-            <i class="fab fa-wpforms"></i> Ver respuestas en Google Forms
-          </a>
-          <a href="https://docs.google.com/spreadsheets/d/15tI_B63yXyn17yKFY5jC4vF0AmAIAt_iRkRhFUQBUYo/edit"
-             target="_blank" rel="noopener noreferrer" class="btn-resp btn-resp-form">
-            <i class="fas fa-table"></i> Abrir hoja Google Sheets
-          </a>
+          <button class="btn-resp btn-resp-form btn-resp-destacado" onclick="verDatos()">
+            <i class="fas fa-table"></i> Ver evaluaciones
+          </button>
           <a href="evaluacion.html" target="_blank" rel="noopener" class="btn-resp btn-resp-form">
             <i class="fas fa-heart"></i> Ir a módulo Bienestar
+          </a>
+          <a href="http://localhost:3000/stats" target="_blank" rel="noopener" class="btn-resp btn-resp-form">
+            <i class="fas fa-chart-bar"></i> Stats JSON
           </a>
         </div>
         <div class="descarga-filtro">
@@ -187,10 +185,16 @@
           </div>
           <div class="descarga-acciones">
             <button class="btn-resp btn-resp-excel" onclick="descargarPorComisaria()">
-              <i class="fas fa-file-csv"></i> Descargar CSV
+              <i class="fas fa-file-csv"></i> CSV comisaría
             </button>
             <button class="btn-resp btn-resp-todas" onclick="descargarTodas()">
-              <i class="fas fa-database"></i> Descargar TODAS
+              <i class="fas fa-database"></i> CSV todas
+            </button>
+            <button class="btn-resp" style="background:#c0392b;" onclick="descargarPDFComisaria()">
+              <i class="fas fa-file-pdf"></i> PDF comisaría
+            </button>
+            <button class="btn-resp" style="background:#8e44ad;" onclick="descargarPDFTodas()">
+              <i class="fas fa-layer-group"></i> PDF todas
             </button>
           </div>
           <div id="msg-descarga" class="msg-descarga" style="display:none;"></div>
@@ -204,6 +208,65 @@
           </div>
         </div>
       </div>
+
+      <!-- TABLA DE EVALUACIONES -->
+      <div id="panel-tabla-datos" style="display:none;margin-top:18px;">
+        <div class="panel-respuestas" style="padding:0;">
+          <div class="panel-resp-titulo" style="border-radius:10px 10px 0 0;">
+            <i class="fas fa-database"></i>
+            <span>Evaluaciones registradas</span>
+          </div>
+          <div style="padding:16px 18px;background:#1a2a1a;">
+            <!-- Filtros -->
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end;">
+              <div style="flex:1;min-width:160px;">
+                <label style="color:#aaa;font-size:11px;display:block;margin-bottom:4px;">COMISARÍA</label>
+                <select id="filtro-tabla-comisaria" onchange="cargarTablaDatos(1)"
+                  style="width:100%;padding:7px 10px;border-radius:6px;border:1px solid #3a4a3a;background:#0d1a0d;color:#fff;font-size:13px;">
+                  <option value="">-- Todas --</option>
+                </select>
+              </div>
+              <div style="flex:2;min-width:200px;">
+                <label style="color:#aaa;font-size:11px;display:block;margin-bottom:4px;">BUSCAR (nombre, CIP, DNI)</label>
+                <input id="filtro-tabla-busqueda" type="text" placeholder="Escribir y presionar Enter..."
+                  onkeydown="if(event.key==='Enter')cargarTablaDatos(1)"
+                  style="width:100%;padding:7px 10px;border-radius:6px;border:1px solid #3a4a3a;background:#0d1a0d;color:#fff;font-size:13px;box-sizing:border-box;" />
+              </div>
+              <button onclick="cargarTablaDatos(1)"
+                style="padding:7px 16px;background:#27ae60;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap;">
+                <i class="fas fa-search"></i> Buscar
+              </button>
+              <button onclick="document.getElementById('panel-tabla-datos').style.display='none'"
+                style="padding:7px 14px;background:#555;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <!-- Info y tabla -->
+            <div id="tabla-datos-info" style="color:#aaa;font-size:12px;margin-bottom:8px;"></div>
+            <div style="overflow-x:auto;border-radius:8px;border:1px solid #2a3a2a;">
+              <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead>
+                  <tr style="background:#0d2a1a;color:#7dcc9a;text-transform:uppercase;font-size:11px;letter-spacing:.5px;">
+                    <th style="padding:10px 12px;text-align:left;white-space:nowrap;">ID</th>
+                    <th style="padding:10px 12px;text-align:left;white-space:nowrap;">Fecha</th>
+                    <th style="padding:10px 12px;text-align:left;white-space:nowrap;">Nombres</th>
+                    <th style="padding:10px 12px;text-align:left;white-space:nowrap;">CIP</th>
+                    <th style="padding:10px 12px;text-align:left;white-space:nowrap;">DNI</th>
+                    <th style="padding:10px 12px;text-align:left;white-space:nowrap;">Comisaría</th>
+                    <th style="padding:10px 12px;text-align:center;white-space:nowrap;">Respuestas</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-datos-body">
+                  <tr><td colspan="7" style="padding:20px;text-align:center;color:#aaa;">Cargando...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="tabla-paginacion" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- CONVENIOS -->

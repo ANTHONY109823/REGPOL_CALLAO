@@ -1,0 +1,11 @@
+node_modules/
+regpol_callao.db
+*.db
+*.log
+cookies.txt
+sentinels.json
+form_payload*.txt
+form_resp*.html
+form_original.html
+test_*.pdf
+extraer_preguntas.js

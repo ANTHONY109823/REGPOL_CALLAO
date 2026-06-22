@@ -3,7 +3,7 @@
    REGPOL Callao — Ing. Anthony Ccayo — 2026
 ================================================================ */
 
-var WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzHHCUjXQVNtgVTERGx3RuiGPfSHuhCgTVddHL8ByDJUE-lLQessVsdFCFabayhCC5u/exec';
+var WEB_APP_URL = 'http://localhost:3000';
 var ADMIN_PASS  = 'AdminUNITIC2026';
 var vistaAdminActual = 'dashboard';
 
@@ -32,7 +32,7 @@ function cargarDashboardAdmin() {
   var url = WEB_APP_URL || localStorage.getItem('webAppUrl');
   if (!url) return;
 
-  fetch(url + '?action=stats')
+  fetch(url + '/stats')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (!data.ok) return;
@@ -149,7 +149,7 @@ function cargarComisariasDesdeSheet() {
   select.disabled = true;
   msg.style.display = 'none';
 
-  fetch(url + '?action=listar')
+  fetch(url + '/listar')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (ico) ico.classList.remove('fa-spin');
@@ -174,28 +174,41 @@ function cargarComisariasDesdeSheet() {
 }
 
 function descargarPorComisaria() {
-  var url       = WEB_APP_URL || localStorage.getItem('webAppUrl');
   var comisaria = document.getElementById('filtro-comisaria').value.trim();
-
-  if (!url) { mostrarInputWebApp(); return; }
   if (!comisaria) {
     mostrarMsgDescarga('Selecciona una comisaría primero.', 'error');
     return;
   }
-
   triggerDescarga(
-    url + '?action=descargar&comisaria=' + encodeURIComponent(comisaria),
+    WEB_APP_URL + '/descargar?comisaria=' + encodeURIComponent(comisaria),
     'MMPI2_' + comisaria.replace(/\s+/g, '_') + '.csv'
   );
   mostrarMsgDescarga('Descargando evaluaciones de: ' + comisaria, 'ok');
 }
 
 function descargarTodas() {
-  var url = WEB_APP_URL || localStorage.getItem('webAppUrl');
-  if (!url) { mostrarInputWebApp(); return; }
-
-  triggerDescarga(url + '?action=descargar', 'MMPI2_TODAS_LAS_COMISARIAS.csv');
+  triggerDescarga(WEB_APP_URL + '/descargar', 'MMPI2_TODAS_LAS_COMISARIAS.csv');
   mostrarMsgDescarga('Descargando todas las evaluaciones...', 'ok');
+}
+
+function descargarPDFComisaria() {
+  var comisaria = document.getElementById('filtro-comisaria').value.trim();
+  if (!comisaria) { mostrarMsgDescarga('Selecciona una comisaría primero.', 'error'); return; }
+  triggerDescarga(WEB_APP_URL + '/pdf/comisaria?comisaria=' + encodeURIComponent(comisaria),
+    'MMPI2_' + comisaria.replace(/\s+/g,'_') + '.pdf');
+  mostrarMsgDescarga('Generando PDF de: ' + comisaria + ' ...', 'ok');
+}
+
+function descargarPDFTodas() {
+  fetch(WEB_APP_URL + '/listar').then(function(r){ return r.json(); }).then(function(data) {
+    (data.comisarias || []).forEach(function(c) {
+      setTimeout(function() {
+        triggerDescarga(WEB_APP_URL + '/pdf/comisaria?comisaria=' + encodeURIComponent(c),
+          'MMPI2_' + c.replace(/\s+/g,'_') + '.pdf');
+      }, 800);
+    });
+    mostrarMsgDescarga('Generando PDFs de ' + (data.comisarias||[]).length + ' comisaría(s)...', 'ok');
+  }).catch(function(){ mostrarMsgDescarga('Error al obtener comisarías.', 'error'); });
 }
 
 function triggerDescarga(url, nombre) {
@@ -217,31 +230,100 @@ function mostrarMsgDescarga(texto, tipo) {
 }
 
 function mostrarInputWebApp() {
-  var campo = document.getElementById('campo-webapp-url');
-  if (campo) { campo.style.display = 'block'; return; }
-
-  var panel = document.querySelector('.panel-respuestas');
-  var div = document.createElement('div');
-  div.id = 'campo-webapp-url';
-  div.style.cssText = 'background:rgba(243,156,18,.15);border:1px solid rgba(243,156,18,.4);border-radius:8px;padding:12px 14px;margin-top:12px;';
-  div.innerHTML = '<p style="color:#fff;font-size:12.5px;margin:0 0 8px;"><i class="fas fa-exclamation-triangle" style="color:#f39c12;"></i> <strong>Configura la URL de tu Web App</strong> (Apps Script → Implementar → Nueva implementación):</p>'
-    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-    + '<input id="input-webapp-url" type="text" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1;min-width:200px;padding:8px 10px;border-radius:6px;border:none;font-size:12px;" />'
-    + '<button onclick="guardarWebAppUrl()" style="background:#f39c12;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:12px;">Guardar</button>'
-    + '</div>';
-  panel.appendChild(div);
+  // Ya no se necesita — usamos servidor local
 }
 
-function guardarWebAppUrl() {
-  var val = document.getElementById('input-webapp-url').value.trim();
-  if (!val || val.indexOf('script.google.com') === -1) {
-    mostrarMsgDescarga('URL inválida. Debe ser una URL de Google Apps Script.', 'error');
+function guardarWebAppUrl() {}
+
+// ── VER EVALUACIONES EN PANTALLA ──────────────────────────────────────────────
+function verDatos() {
+  var panel = document.getElementById('panel-tabla-datos');
+  if (!panel) return;
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Poblar selector de comisarías del filtro
+  fetch(WEB_APP_URL + '/listar')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var sel = document.getElementById('filtro-tabla-comisaria');
+      if (!sel || !data.ok) return;
+      var actual = sel.value;
+      sel.innerHTML = '<option value="">-- Todas las comisarías --</option>';
+      (data.comisarias || []).forEach(function(c) {
+        var opt = document.createElement('option');
+        opt.value = c; opt.textContent = c;
+        if (c === actual) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    })
+    .catch(function() {});
+
+  cargarTablaDatos(1);
+}
+
+function cargarTablaDatos(pagina) {
+  pagina = pagina || 1;
+  var comisaria = (document.getElementById('filtro-tabla-comisaria') || {}).value || '';
+  var busqueda  = ((document.getElementById('filtro-tabla-busqueda') || {}).value || '').trim();
+
+  fetch(WEB_APP_URL + '/evaluaciones?pagina=' + pagina
+    + '&comisaria=' + encodeURIComponent(comisaria)
+    + '&busqueda='  + encodeURIComponent(busqueda))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.ok) { document.getElementById('tabla-datos-body').innerHTML = '<tr><td colspan="7">Error al cargar datos.</td></tr>'; return; }
+      renderTabla(data.rows, data.total, data.pagina, data.paginas);
+    })
+    .catch(function() {
+      document.getElementById('tabla-datos-body').innerHTML =
+        '<tr><td colspan="7" style="color:#f39c12;">Servidor no disponible. Asegúrate que node server.js esté corriendo.</td></tr>';
+    });
+}
+
+function renderTabla(rows, total, pagina, paginas) {
+  var tbody = document.getElementById('tabla-datos-body');
+  var info  = document.getElementById('tabla-datos-info');
+  if (!tbody) return;
+
+  if (!rows || !rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No hay evaluaciones registradas aún.</td></tr>';
+    if (info) info.textContent = 'Sin resultados.';
     return;
   }
-  localStorage.setItem('webAppUrl', val);
-  WEB_APP_URL = val;
-  document.getElementById('campo-webapp-url').style.display = 'none';
-  cargarComisariasDesdeSheet();
+
+  tbody.innerHTML = rows.map(function(r) {
+    var resp = {};
+    try { resp = typeof r.respuestas === 'string' ? JSON.parse(r.respuestas) : (r.respuestas || {}); } catch(e) {}
+    var total_resp = Object.keys(resp).length;
+    return '<tr>'
+      + '<td>' + escDash(r.id) + '</td>'
+      + '<td>' + escDash(r.fecha) + '</td>'
+      + '<td><strong>' + escDash(r.nombres) + '</strong></td>'
+      + '<td>' + escDash(r.cip) + '</td>'
+      + '<td>' + escDash(r.dni) + '</td>'
+      + '<td>' + escDash(r.comisaria) + '</td>'
+      + '<td style="text-align:center;">'
+      + '<span style="background:#27ae60;color:#fff;padding:2px 7px;border-radius:10px;font-size:11px;margin-right:6px;">' + total_resp + '/566</span>'
+      + '<a href="http://localhost:3000/pdf/efectivo?id=' + r.id + '" target="_blank" title="Descargar PDF individual" '
+      + 'style="background:#c0392b;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;text-decoration:none;">PDF</a>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+
+  if (info) info.textContent = 'Mostrando ' + rows.length + ' de ' + total + ' evaluaciones | Página ' + pagina + ' de ' + paginas;
+
+  // Paginación
+  var paginacion = document.getElementById('tabla-paginacion');
+  if (paginacion) {
+    var btns = '';
+    if (pagina > 1) btns += '<button class="btn-pag" onclick="cargarTablaDatos(' + (pagina-1) + ')">← Anterior</button>';
+    for (var p = Math.max(1, pagina-2); p <= Math.min(paginas, pagina+2); p++) {
+      btns += '<button class="btn-pag' + (p===pagina?' btn-pag-activo':'') + '" onclick="cargarTablaDatos(' + p + ')">' + p + '</button>';
+    }
+    if (pagina < paginas) btns += '<button class="btn-pag" onclick="cargarTablaDatos(' + (pagina+1) + ')">Siguiente →</button>';
+    paginacion.innerHTML = btns;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', function() {

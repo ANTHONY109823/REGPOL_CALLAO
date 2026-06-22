@@ -12,11 +12,8 @@
    Sustituye TU_FORM_ID y cada entry.10000000XX con los valores
    reales que obtendras al ejecutar el script de Apps Script.
 ================================================================ */
-var FORM_BASE = 'https://docs.google.com';
-var FORM_PATH = '/forms/d/e/1FAIpQLSeSDjzhDeP8VHPSifAbfMOwaxFJkcOWCX9A6jEH6WD9v2ySlg/formResponse';
-
-// Web App de Apps Script — vinculada a Google Sheets con respuestas MMPI-2
-var WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzHHCUjXQVNtgVTERGx3RuiGPfSHuhCgTVddHL8ByDJUE-lLQessVsdFCFabayhCC5u/exec';
+// Backend local Node.js → SQL Server Express
+var LOCAL_API = 'http://localhost:3000';
 
 var CONFIG_FORMS = {
   get URL_ENVIO() { return FORM_BASE + FORM_PATH; },
@@ -528,40 +525,45 @@ function enviarAGoogleForms() {
 
   overlay.classList.add('visible');
 
-  var datos = new FormData();
-  datos.append(CONFIG_FORMS.ENTRY_COMISARIA,        document.getElementById('nombre-comisaria').textContent);
-  datos.append(CONFIG_FORMS.ENTRY_UNIDAD,           document.getElementById('f-unidad').value.trim());
-  datos.append(CONFIG_FORMS.ENTRY_NOMBRES,          document.getElementById('f-nombres').value.trim());
-  datos.append(CONFIG_FORMS.ENTRY_CIP,              document.getElementById('f-cip').value.trim());
-  datos.append(CONFIG_FORMS.ENTRY_DNI,              document.getElementById('f-dni').value.trim());
-  datos.append(CONFIG_FORMS.ENTRY_FECHA_NACIMIENTO, fechaNacimientoParaEnvio());
-  datos.append(CONFIG_FORMS.ENTRY_EDAD,             document.getElementById('f-edad').value);
+  var respObj = {};
+  PREGUNTAS.forEach(function(p) { respObj[p.id] = ESTADO.respuestas[p.id] || ''; });
 
-  PREGUNTAS.forEach(function(p) {
-    var entryId = CONFIG_FORMS.ENTRADAS_PREGUNTAS['ENTRY_P' + p.id];
-    datos.append(entryId, ESTADO.respuestas[p.id] || '');
-  });
+  var payload = {
+    comisaria:  document.getElementById('nombre-comisaria').textContent,
+    unidad:     document.getElementById('f-unidad').value.trim(),
+    nombres:    document.getElementById('f-nombres').value.trim(),
+    cip:        document.getElementById('f-cip').value.trim(),
+    dni:        document.getElementById('f-dni').value.trim(),
+    fecha_nac:  fechaNacimientoParaEnvio(),
+    edad:       parseInt(document.getElementById('f-edad').value) || 0,
+    respuestas: respObj
+  };
 
-  fetch(CONFIG_FORMS.URL_ENVIO, { method: 'POST', mode: 'no-cors', body: datos })
-    .then(function() {
+  fetch(LOCAL_API + '/guardar', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload)
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.ok) throw new Error(data.error || 'Error del servidor');
       spinner.style.display   = 'none';
       checkIcon.style.display = 'block';
-      textoO.textContent      = 'MMPI-2 enviado correctamente!';
-      subtextoO.textContent   = document.getElementById('f-nombres').value.trim() +
-        ' | DNI: ' + document.getElementById('f-dni').value.trim();
+      textoO.textContent      = 'MMPI-2 guardado correctamente!';
+      subtextoO.textContent   = payload.nombres + ' | DNI: ' + payload.dni;
       limpiarProgresoGuardado();
       setTimeout(function() { overlay.classList.remove('visible'); limpiarFormulario(); }, 5000);
     })
-    .catch(function() {
+    .catch(function(err) {
       spinner.style.display = 'none';
-      textoO.textContent    = 'Error de conexion. Intente nuevamente.';
+      textoO.textContent    = 'Error: ' + (err.message || 'Verifique que el servidor este activo.');
       textoO.style.color    = '#ffaaaa';
       setTimeout(function() {
         overlay.classList.remove('visible');
         spinner.style.display = 'block';
         textoO.textContent    = 'Enviando evaluacion...';
         textoO.style.color    = '';
-      }, 4000);
+      }, 5000);
     });
 }
 
@@ -650,11 +652,11 @@ function cerrarSesionGoogle() {
   document.getElementById('banner-progreso').style.display = 'none';
 }
 
-// Verificar progreso guardado en el servidor (Google Sheets)
+// Verificar progreso guardado en el servidor (SQL Server)
 function verificarProgresoGuardado(email) {
-  if (!WEB_APP_URL || !email) { verificarProgresoLocal(); return; }
+  if (!email) { verificarProgresoLocal(); return; }
 
-  fetch(WEB_APP_URL + '?action=cargar_progreso&email=' + encodeURIComponent(email))
+  fetch(LOCAL_API + '/progreso?email=' + encodeURIComponent(email))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.ok && data.encontrado && data.total > 0) {
@@ -749,13 +751,12 @@ function autoGuardarProgreso() {
   // Guardar siempre en localStorage (instantáneo)
   localStorage.setItem(clave, JSON.stringify(payload));
 
-  // Guardar en Google Sheets si hay email y Web App
-  if (email && WEB_APP_URL) {
-    fetch(WEB_APP_URL, {
-      method: 'POST',
+  // Guardar progreso en SQL Server si hay email
+  if (email) {
+    fetch(LOCAL_API + '/progreso', {
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ action: 'guardar_progreso' }, payload)),
-      mode: 'no-cors'
+      body:    JSON.stringify(payload)
     }).catch(function() {});
   }
 
