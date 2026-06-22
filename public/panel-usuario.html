@@ -125,6 +125,35 @@ var SECCIONES = [
 ];
 
 // ── Verificar sesión ───────────────────────────────────────────────────────────
+function normalizarPermisos(p) {
+  if (Array.isArray(p)) return p;
+  if (typeof p === 'string') {
+    try { return JSON.parse(p); } catch (e) { return []; }
+  }
+  return [];
+}
+
+function permisosDeSesion(saved) {
+  var permisos = normalizarPermisos(saved.permisos);
+  if (permisos.length) return permisos;
+  if (saved.rol === 'bienestar') return ['evaluaciones', 'descargas'];
+  return [];
+}
+
+function iniciarPanelUsuario() {
+  var permisos = permisosDeSesion(SESSION);
+  if (!permisos.length) {
+    document.getElementById('panel-body').innerHTML = `
+      <div class="sin-acceso">
+        <i class="fas fa-lock"></i>
+        <p>Su cuenta no tiene secciones asignadas.</p>
+        <p style="font-size:12px;">Contacte al administrador UNITIC.</p>
+      </div>`;
+    return;
+  }
+  construirPanel(permisos);
+}
+
 window.addEventListener('DOMContentLoaded', function(){
   var saved = JSON.parse(localStorage.getItem('regpol_session') || 'null');
   if (!saved || !saved.token) { window.location.href='login.html'; return; }
@@ -137,18 +166,25 @@ window.addEventListener('DOMContentLoaded', function(){
   document.getElementById('ph-oficina').textContent = saved.nombre  || '';
   document.getElementById('ph-usuario').textContent = saved.usuario || '';
 
-  var permisos = saved.permisos || [];
-  if (!permisos.length) {
-    document.getElementById('panel-body').innerHTML = `
-      <div class="sin-acceso">
-        <i class="fas fa-lock"></i>
-        <p>Su cuenta no tiene secciones asignadas.</p>
-        <p style="font-size:12px;">Contacte al administrador UNITIC.</p>
-      </div>`;
-    return;
-  }
-
-  construirPanel(permisos);
+  fetch(API + '/admin/perfil', { headers: { 'x-admin-token': TOKEN } })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        SESSION.permisos = normalizarPermisos(d.permisos);
+        SESSION.rol      = d.rol || SESSION.rol;
+        SESSION.nombre   = d.nombre || SESSION.nombre;
+        SESSION.unidad   = d.unidad || '';
+        SESSION.usuario  = d.usuario || SESSION.usuario;
+        localStorage.setItem('regpol_session', JSON.stringify(SESSION));
+        document.getElementById('ph-nombre').textContent  = SESSION.nombre || 'Usuario';
+        document.getElementById('ph-oficina').textContent = SESSION.nombre || '';
+        document.getElementById('ph-usuario').textContent = SESSION.usuario || '';
+      }
+      iniciarPanelUsuario();
+    })
+    .catch(function() {
+      iniciarPanelUsuario();
+    });
 });
 
 function logout() {
@@ -226,7 +262,7 @@ function cambiarTab(id, btn) {
 function renderTabEvaluaciones() {
   return '<div class="card">'
     +'<h3><i class="fas fa-building"></i> Activar dependencia para evaluaciones</h3>'
-    +'<p style="font-size:12px;color:#666;margin-bottom:10px;">La dependencia activa se muestra en el formulario de Bienestar.</p>'
+    +'<p style="font-size:12px;color:#666;margin-bottom:10px;">Seleccione la comisaría que está evaluando hoy. Puede cambiarla cuando pase a la siguiente unidad. Deje vacía la unidad asignada en su usuario para acceso a todas.</p>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">'
     +'<select id="u-cfg-comisaria" style="flex:1;min-width:200px;padding:8px;border-radius:6px;border:1.5px solid #ccc;">'
     +'<option value="">— Seleccionar comisaría —</option></select>'
@@ -259,18 +295,20 @@ function renderTabEvaluaciones() {
 }
 
 function iniciarEvaluaciones() {
-  if (document.getElementById('ev-body').innerHTML !== '') return;
   fetch(API+'/config').then(function(r){return r.json();}).then(function(d){
     if(d.ok) set('u-cfg-activa', d.comisariaActiva || 'Ninguna');
   });
-  // Cargar filtros
   fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
     llenarSel('ev-comisaria', d.comisarias||[], 'Todas las comisarías');
     llenarSel('ev-unidad',    d.unidades||[],   'Todas las unidades');
     llenarSel('u-cfg-comisaria', d.comisarias||[], '— Seleccionar comisaría —');
   });
-  // Stats
+  if (window._evalIniciado) {
+    cargarEval(1);
+    return;
+  }
+  window._evalIniciado = true;
   fetch(API+'/stats',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
     var t=d.totalEvaluaciones||0, c=d.totalCompletas||0;

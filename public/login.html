@@ -121,10 +121,11 @@ function ingresar() {
     }
     // Guardar sesión
     localStorage.setItem('regpol_session', JSON.stringify({
-      token:  d.token,
-      rol:    d.rol,
-      nombre: d.nombre,
-      unidad: d.unidad || ''
+      token:    d.token,
+      rol:      d.rol,
+      nombre:   d.nombre,
+      unidad:   d.unidad || '',
+      permisos: d.permisos || []
     }));
     // Compatibilidad con paneles individuales
     if (d.rol === 'unitic')    localStorage.setItem('uniticToken',   d.token);

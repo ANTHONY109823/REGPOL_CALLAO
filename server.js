@@ -207,12 +207,23 @@ async function setConfig(clave, valor) {
 }
 
 function puedeConfigurarUnidad(admin) {
-  if (admin.rol === 'unitic') return true;
-  let permisos = admin.permisos || [];
+  if (admin.rol === 'unitic' || admin.rol === 'bienestar') return true;
+  const permisos = normalizarPermisos(admin.permisos);
+  return permisos.includes('evaluaciones');
+}
+
+function normalizarPermisos(permisos) {
+  if (Array.isArray(permisos)) return permisos;
   if (typeof permisos === 'string') {
-    try { permisos = JSON.parse(permisos); } catch (e) { permisos = []; }
+    try { return JSON.parse(permisos); } catch (e) { return []; }
   }
-  return Array.isArray(permisos) && permisos.includes('evaluaciones');
+  return [];
+}
+
+function debeFiltrarPorUnidadAsignada(admin) {
+  if (!admin.unidad) return false;
+  if (admin.rol === 'unitic' || admin.rol === 'bienestar') return false;
+  return !normalizarPermisos(admin.permisos).includes('evaluaciones');
 }
 
 app.get('/config', async (req, res) => {
@@ -247,10 +258,23 @@ app.post('/admin/login', async (req, res) => {
     if (!r.rows.length) return res.json({ ok: false, error: 'Credenciales incorrectas' });
     const a = r.rows[0];
     const token = Buffer.from(`${usuario}:${password}`).toString('base64');
-    res.json({ ok: true, token, rol: a.rol, nombre: a.nombre, unidad: a.unidad, permisos: a.permisos || [] });
+    res.json({ ok: true, token, rol: a.rol, nombre: a.nombre, unidad: a.unidad, permisos: normalizarPermisos(a.permisos) });
   } catch (e) {
     res.json({ ok: false, error: e.message });
   }
+});
+
+// ── GET /admin/perfil (refrescar sesión del panel) ────────────────────────────
+app.get('/admin/perfil', requireAuth, async (req, res) => {
+  const a = req.admin;
+  res.json({
+    ok: true,
+    usuario: a.usuario,
+    rol: a.rol,
+    nombre: a.nombre,
+    unidad: a.unidad || '',
+    permisos: normalizarPermisos(a.permisos)
+  });
 });
 
 // ── GET /preguntas (público — para el formulario) ─────────────────────────────
@@ -366,7 +390,7 @@ app.get('/stats', requireAuth, async (req, res) => {
   try {
     let whereAdmin = '';
     const params = [];
-    if (req.admin.rol === 'bienestar' && req.admin.unidad) {
+    if (debeFiltrarPorUnidadAsignada(req.admin)) {
       whereAdmin = 'WHERE UPPER(unidad) LIKE $1';
       params.push('%' + req.admin.unidad.toUpperCase() + '%');
     }
@@ -395,8 +419,18 @@ app.get('/stats', requireAuth, async (req, res) => {
 // ── GET /listar ────────────────────────────────────────────────────────────────
 app.get('/listar', requireAuth, async (req, res) => {
   try {
-    const comis  = await pool.query('SELECT DISTINCT comisaria FROM evaluaciones WHERE comisaria!=\'\' ORDER BY comisaria');
-    const unids  = await pool.query('SELECT DISTINCT unidad FROM evaluaciones WHERE unidad!=\'\' ORDER BY unidad');
+    const comisEval = await pool.query('SELECT DISTINCT comisaria FROM evaluaciones WHERE comisaria!=\'\' ORDER BY comisaria');
+    const comisPol  = await pool.query("SELECT nombre FROM unidades_pol WHERE tipo='comisaria' ORDER BY orden,nombre");
+    const comisSet  = new Set([
+      ...comisPol.rows.map(x => x.nombre),
+      ...comisEval.rows.map(x => x.comisaria)
+    ]);
+    const unidsEval = await pool.query('SELECT DISTINCT unidad FROM evaluaciones WHERE unidad!=\'\' ORDER BY unidad');
+    const unidsPol  = await pool.query("SELECT nombre FROM unidades_pol ORDER BY orden,nombre");
+    const unidsSet  = new Set([
+      ...unidsPol.rows.map(x => x.nombre),
+      ...unidsEval.rows.map(x => x.unidad)
+    ]);
     const total  = await pool.query('SELECT COUNT(*) AS t FROM evaluaciones');
     // Divisiones con sus unidades para los filtros
     const divs   = await pool.query('SELECT id,nombre,orden FROM divisiones ORDER BY orden,nombre');
@@ -407,8 +441,8 @@ app.get('/listar', requireAuth, async (req, res) => {
     }));
     res.json({
       ok: true,
-      comisarias: comis.rows.map(x => x.comisaria),
-      unidades:   unids.rows.map(x => x.unidad),
+      comisarias: [...comisSet].sort(),
+      unidades:   [...unidsSet].sort(),
       total:      parseInt(total.rows[0].t),
       divisiones: divsConUnidades
     });
@@ -425,7 +459,7 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
     const offset    = (pagina - 1) * porPagina;
 
     let baseWhere = 'WHERE 1=1', baseParams = [];
-    if (req.admin.rol === 'bienestar' && req.admin.unidad) {
+    if (debeFiltrarPorUnidadAsignada(req.admin)) {
       baseWhere += ' AND UPPER(unidad) LIKE $1';
       baseParams.push('%' + req.admin.unidad.toUpperCase() + '%');
     }
@@ -482,7 +516,7 @@ async function buildWhere(query, baseWhere, baseParams) {
 app.get('/descargar', requireAuth, async (req, res) => {
   try {
     let baseWhere = 'WHERE 1=1', baseParams = [];
-    if (req.admin.rol === 'bienestar' && req.admin.unidad) {
+    if (debeFiltrarPorUnidadAsignada(req.admin)) {
       baseWhere += ' AND UPPER(unidad) LIKE $1';
       baseParams.push('%' + req.admin.unidad.toUpperCase() + '%');
     }
@@ -531,7 +565,7 @@ app.get('/pdf/efectivo', requireAuth, async (req, res) => {
     const r  = await pool.query(`SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha FROM evaluaciones WHERE id=$1`, [id]);
     if (!r.rows.length) return res.status(404).json({ error: 'No encontrado' });
     const ev  = r.rows[0];
-    if (req.admin.rol === 'bienestar' && req.admin.unidad &&
+    if (debeFiltrarPorUnidadAsignada(req.admin) &&
         !ev.unidad.toUpperCase().includes(req.admin.unidad.toUpperCase()))
       return res.status(403).json({ error: 'Sin acceso' });
 

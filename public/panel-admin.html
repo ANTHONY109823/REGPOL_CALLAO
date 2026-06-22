@@ -328,7 +328,7 @@
         <h3><i class="fas fa-clipboard-list"></i> Evaluaciones — todas las dependencias</h3>
         <div class="descarga-box" style="margin-bottom:16px;background:#f8fcf8;">
           <strong><i class="fas fa-building"></i> Activar dependencia para evaluaciones</strong>
-          <p style="font-size:12px;color:#666;margin:8px 0;">La dependencia activa se muestra en Bienestar. Los efectivos no podrán cambiarla.</p>
+          <p style="font-size:12px;color:#666;margin:8px 0;">Seleccione la comisaría en evaluación hoy. Al terminar, active la siguiente unidad.</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <select id="cfg-comisaria" style="flex:1;min-width:220px;padding:8px;border-radius:6px;border:1.5px solid #ccc;font-size:12.5px;">
               <option value="">— Seleccionar comisaría —</option>
@@ -641,8 +641,8 @@
     </div>
     <label>Nombre / Oficina</label>
     <input type="text" id="mu-nombre" placeholder="Ej: Oficina de Psicología"/>
-    <label>Unidad asignada <span style="font-weight:400;color:#999;">(vacío = acceso global)</span></label>
-    <input type="text" id="mu-unidad" placeholder="Ej: COMISARIA BELLAVISTA"/>
+    <label>Unidad asignada <span style="font-weight:400;color:#999;">(vacío = todas las unidades, ideal para Psicología)</span></label>
+    <input type="text" id="mu-unidad" placeholder="Dejar vacío para acceso global"/>
     <label style="margin-bottom:8px;">Secciones que puede gestionar</label>
     <div class="perm-grid">
       <div class="perm-box">
