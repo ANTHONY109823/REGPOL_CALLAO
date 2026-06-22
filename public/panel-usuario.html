@@ -372,8 +372,17 @@ function iniciarDescargas() {
   fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
     DIV_DATA_U = d.divisiones || [];
-    llenarSel('u-d-com', d.comisarias||[], '— Seleccionar —');
-    llenarSel('u-d-uni', d.unidades||[],   '— Seleccionar —');
+    var comisarias = [], unidades = [];
+    DIV_DATA_U.forEach(function(div){
+      (div.unidades||[]).forEach(function(u){
+        if(u.tipo==='especializada') unidades.push(u.nombre);
+        else comisarias.push(u.nombre);
+      });
+    });
+    if(!comisarias.length) comisarias = d.comisarias||[];
+    if(!unidades.length)   unidades   = d.unidades||[];
+    llenarSel('u-d-com', comisarias, '— Seleccionar comisaría —');
+    llenarSel('u-d-uni', unidades,   '— Seleccionar unidad —');
     renderDivCardsU();
   });
 }

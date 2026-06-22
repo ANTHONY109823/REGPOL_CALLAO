@@ -1102,8 +1102,21 @@ function cargarFiltrosDescarga(){
   fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
     if(d.divisiones) DIVISIONES_DATA=d.divisiones;
-    ['d-com-pdf'].forEach(function(id){llenarSel(id,d.comisarias||[],'— Seleccionar —');});
-    ['d-uni-pdf'].forEach(function(id){llenarSel(id,d.unidades||[],'— Seleccionar —');});
+
+    // Construir listas desde unidades_pol (siempre completas, independiente de evaluaciones)
+    var comisarias = [], unidades = [];
+    (DIVISIONES_DATA||[]).forEach(function(div){
+      (div.unidades||[]).forEach(function(u){
+        if(u.tipo==='especializada') unidades.push(u.nombre);
+        else comisarias.push(u.nombre);
+      });
+    });
+    // Si unidades_pol aún no tiene datos, caer en las de evaluaciones
+    if(!comisarias.length) comisarias = d.comisarias||[];
+    if(!unidades.length)   unidades   = d.unidades||[];
+
+    llenarSel('d-com-pdf', comisarias, '— Seleccionar comisaría —');
+    llenarSel('d-uni-pdf', unidades,   '— Seleccionar unidad —');
     renderDivCards();
   });
 }
