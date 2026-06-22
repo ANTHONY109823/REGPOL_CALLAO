@@ -184,6 +184,35 @@
     /* ── INFO TINFO ── */
     .tinfo{font-size:11.5px;color:#666;margin-bottom:8px;}
 
+    /* ── DOWNLOAD TABS ── */
+    .dtab{padding:7px 14px;border:none;background:#e8f0e8;border-radius:6px;
+      cursor:pointer;font-size:12px;font-weight:600;color:#555;transition:all .15s;
+      display:inline-flex;align-items:center;gap:5px;}
+    .dtab:hover{background:#c8e6c9;}
+    .dtab.on{background:#004d3d;color:#fff;}
+
+    /* ── DIVISIONES CARD ── */
+    .div-card{border:1.5px solid #c8e6c9;border-radius:9px;overflow:hidden;margin-bottom:12px;}
+    .div-card-head{background:#004d3d;color:#fff;padding:10px 14px;
+      display:flex;align-items:center;justify-content:space-between;}
+    .div-card-head span{font-size:13px;font-weight:700;letter-spacing:.3px;}
+    .div-card-head .div-btns{display:flex;gap:6px;}
+    .div-card-body{padding:10px 14px;}
+    .uni-row{display:flex;align-items:center;justify-content:space-between;
+      padding:5px 8px;border-radius:5px;font-size:12.5px;}
+    .uni-row:nth-child(odd){background:#f0f7f0;}
+    .uni-num{width:24px;font-weight:700;color:#888;font-size:11px;flex-shrink:0;}
+    .uni-nom{flex:1;}
+    .uni-tipo{font-size:10.5px;background:#e8f5e9;color:#1a7a3a;border-radius:10px;
+      padding:1px 7px;margin:0 6px;font-weight:600;}
+
+    /* ── DESCARGA BOXES ── */
+    .descarga-box{border:1.5px solid #c8e6c9;border-radius:8px;padding:14px;}
+    .descarga-box strong{color:#004d3d;font-size:13px;display:block;margin-bottom:4px;}
+    .descarga-box p{font-size:11.5px;color:#666;margin:0 0 8px;}
+    .descarga-box select{width:100%;padding:7px;margin-bottom:8px;border-radius:5px;
+      border:1.5px solid #ccc;font-size:12.5px;}
+
     /* ── RESPONSIVE ── */
     @media(max-width:700px){.sidebar{display:none;} .breakdown-grid{grid-template-columns:1fr;}}
   </style>
@@ -232,6 +261,9 @@
       </div>
       <div class="sb-item" onclick="ir('usuarios',this)">
         <i class="fas fa-users-cog"></i> Usuarios
+      </div>
+      <div class="sb-item" onclick="ir('divisiones',this)">
+        <i class="fas fa-sitemap"></i> Divisiones / Unidades
       </div>
     </div>
 
@@ -352,37 +384,79 @@
     <div id="page-descargas" class="page">
       <div class="card">
         <h3><i class="fas fa-file-download"></i> Descargar reportes</h3>
-        <div class="descarga-grid">
-          <div class="descarga-box">
-            <strong><i class="fas fa-file-pdf"></i> PDF por comisaría</strong>
-            <p>Reporte completo de una comisaría.</p>
-            <select id="d-com-pdf"><option value="">— Seleccionar —</option></select>
-            <button class="btn btn-r" onclick="descargar('pdf','comisaria','d-com-pdf')" style="width:100%;justify-content:center;"><i class="fas fa-file-pdf"></i> PDF</button>
-          </div>
-          <div class="descarga-box">
-            <strong><i class="fas fa-file-pdf"></i> PDF por unidad</strong>
-            <p>Reporte de una unidad policial.</p>
-            <select id="d-uni-pdf"><option value="">— Seleccionar —</option></select>
-            <button class="btn btn-r" onclick="descargar('pdf','unidad','d-uni-pdf')" style="width:100%;justify-content:center;"><i class="fas fa-file-pdf"></i> PDF</button>
-          </div>
-          <div class="descarga-box">
-            <strong><i class="fas fa-file-csv"></i> CSV por comisaría</strong>
-            <p>Hoja de cálculo por comisaría.</p>
-            <select id="d-com-csv"><option value="">— Todas —</option></select>
-            <button class="btn btn-a" onclick="descargar('csv','comisaria','d-com-csv')" style="width:100%;justify-content:center;"><i class="fas fa-file-csv"></i> CSV</button>
-          </div>
-          <div class="descarga-box">
-            <strong><i class="fas fa-file-csv"></i> CSV por unidad</strong>
-            <p>Hoja de cálculo por unidad.</p>
-            <select id="d-uni-csv"><option value="">— Todas —</option></select>
-            <button class="btn btn-a" onclick="descargar('csv','unidad','d-uni-csv')" style="width:100%;justify-content:center;"><i class="fas fa-file-csv"></i> CSV</button>
-          </div>
-          <div class="descarga-box">
-            <strong><i class="fas fa-database"></i> CSV — TODOS</strong>
-            <p>Todas las evaluaciones completas.</p>
-            <button class="btn btn-p" onclick="descargarTodo()" style="width:100%;justify-content:center;margin-top:26px;"><i class="fas fa-database"></i> Descargar todo</button>
+
+        <!-- Tabs de descarga -->
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid #e0e8e0;padding-bottom:8px;">
+          <button class="dtab on" onclick="descTab('division',this)"><i class="fas fa-sitemap"></i> Por División</button>
+          <button class="dtab" onclick="descTab('comisaria',this)"><i class="fas fa-building"></i> Por Comisaría / Unidad</button>
+          <button class="dtab" onclick="descTab('persona',this)"><i class="fas fa-user-search"></i> Buscar Persona</button>
+          <button class="dtab" onclick="descTab('todo',this)"><i class="fas fa-database"></i> Todos</button>
+        </div>
+
+        <!-- TAB: División -->
+        <div id="dtab-division">
+          <p style="font-size:12px;color:#666;margin-bottom:12px;">Seleccione una división para descargar PDF o CSV de todas sus unidades.</p>
+          <div id="div-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;"></div>
+        </div>
+
+        <!-- TAB: Comisaría / Unidad -->
+        <div id="dtab-comisaria" style="display:none;">
+          <div class="descarga-grid">
+            <div class="descarga-box">
+              <strong><i class="fas fa-file-pdf"></i> PDF por comisaría</strong>
+              <p>Reporte de una comisaría.</p>
+              <select id="d-com-pdf"><option value="">— Seleccionar —</option></select>
+              <button class="btn btn-r" onclick="descargar('pdf','comisaria','d-com-pdf')" style="width:100%;justify-content:center;margin-top:6px;"><i class="fas fa-file-pdf"></i> Descargar PDF</button>
+              <button class="btn btn-a" onclick="descargar('csv','comisaria','d-com-pdf')" style="width:100%;justify-content:center;margin-top:5px;"><i class="fas fa-file-csv"></i> Descargar CSV</button>
+            </div>
+            <div class="descarga-box">
+              <strong><i class="fas fa-file-pdf"></i> PDF por unidad especializada</strong>
+              <p>Reporte de una unidad (DIVUES).</p>
+              <select id="d-uni-pdf"><option value="">— Seleccionar —</option></select>
+              <button class="btn btn-r" onclick="descargar('pdf','unidad','d-uni-pdf')" style="width:100%;justify-content:center;margin-top:6px;"><i class="fas fa-file-pdf"></i> Descargar PDF</button>
+              <button class="btn btn-a" onclick="descargar('csv','unidad','d-uni-pdf')" style="width:100%;justify-content:center;margin-top:5px;"><i class="fas fa-file-csv"></i> Descargar CSV</button>
+            </div>
           </div>
         </div>
+
+        <!-- TAB: Buscar persona -->
+        <div id="dtab-persona" style="display:none;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+            <input id="bus-cip"  type="text" placeholder="CIP..." style="padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;width:150px;"/>
+            <input id="bus-nom"  type="text" placeholder="Nombres..." style="padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;flex:1;min-width:180px;"/>
+            <button class="btn btn-v" onclick="buscarPersona()"><i class="fas fa-search"></i> Buscar</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="t">
+              <thead><tr><th>Nombres</th><th>CIP</th><th>DNI</th><th>Comisaría / Unidad</th><th>Fecha</th><th>Estado</th><th>PDF</th></tr></thead>
+              <tbody id="bus-resultados"><tr><td colspan="7" style="text-align:center;color:#bbb;padding:18px;">Ingrese CIP o nombre para buscar.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB: Todos -->
+        <div id="dtab-todo" style="display:none;">
+          <p style="font-size:12px;color:#666;margin-bottom:14px;">Descarga un archivo con todas las evaluaciones de la región.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-r" style="font-size:13px;" onclick="window.open(API+'/pdf/grupo?division=TODAS&token='+encodeURIComponent(TOKEN),'_blank')">
+              <i class="fas fa-file-pdf"></i> PDF — todas las divisiones
+            </button>
+            <button class="btn btn-a" style="font-size:13px;" onclick="descargarTodo()">
+              <i class="fas fa-file-csv"></i> CSV — todos los registros
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIVISIONES / UNIDADES -->
+    <div id="page-divisiones" class="page">
+      <div class="card">
+        <h3><i class="fas fa-sitemap"></i> Gestión de divisiones y unidades</h3>
+        <button class="btn btn-v" style="margin-bottom:14px;" onclick="abrirModalDivision()">
+          <i class="fas fa-plus"></i> Nueva división
+        </button>
+        <div id="div-lista"></div>
       </div>
     </div>
 
@@ -483,6 +557,44 @@
     </div>
 
   </main>
+</div>
+
+<!-- MODAL: División -->
+<div id="modal-division" class="modal">
+  <div class="modal-box" style="width:420px;">
+    <h3><i class="fas fa-sitemap"></i> <span id="md-titulo">Nueva división</span></h3>
+    <input type="hidden" id="md-id"/>
+    <label>Nombre de la división</label>
+    <input type="text" id="md-nombre" placeholder="Ej: DIVOPUS 4"/>
+    <label>Orden de visualización</label>
+    <input type="number" id="md-orden" value="5" min="1"/>
+    <div class="modal-footer">
+      <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-division')">Cancelar</button>
+      <button class="btn btn-v" onclick="guardarDivision()"><i class="fas fa-save"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Unidad -->
+<div id="modal-unidad" class="modal">
+  <div class="modal-box" style="width:440px;">
+    <h3><i class="fas fa-building"></i> <span id="mu2-titulo">Nueva unidad</span></h3>
+    <input type="hidden" id="mu2-id"/>
+    <input type="hidden" id="mu2-div-id"/>
+    <label>Nombre de la unidad</label>
+    <input type="text" id="mu2-nombre" placeholder="Ej: CIA NUEVA ARENILLA"/>
+    <label>Tipo</label>
+    <select id="mu2-tipo">
+      <option value="comisaria">Comisaría (DIVOPUS)</option>
+      <option value="especializada">Unidad especializada (DIVUES)</option>
+    </select>
+    <label>Orden</label>
+    <input type="number" id="mu2-orden" value="99" min="1"/>
+    <div class="modal-footer">
+      <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-unidad')">Cancelar</button>
+      <button class="btn btn-v" onclick="guardarUnidad()"><i class="fas fa-save"></i> Guardar</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL: Pregunta -->
@@ -593,6 +705,7 @@ function ir(page, el){
   if(page==='usuarios')     cargarUsuarios();
   if(page==='descargas')    cargarFiltrosDescarga();
   if(page==='dashboard')    cargarStats();
+  if(page==='divisiones')   cargarDivisiones();
 }
 
 function irCMS(tab, el){
@@ -823,6 +936,177 @@ function descargarTodo(){window.open(API+'/descargar?token='+encodeURIComponent(
 // ── MODALES ───────────────────────────────────────────────────────────────────
 function cerrarModal(id){document.getElementById(id).classList.remove('open');}
 document.addEventListener('click',function(e){if(e.target.classList.contains('modal'))e.target.classList.remove('open');});
+
+// ── DESCARGAS — TABS ──────────────────────────────────────────────────────────
+var DIVISIONES_DATA = [];
+
+function descTab(tab, el){
+  ['division','comisaria','persona','todo'].forEach(function(t){
+    document.getElementById('dtab-'+t).style.display = t===tab ? '' : 'none';
+  });
+  document.querySelectorAll('.dtab').forEach(function(b){b.classList.remove('on');});
+  if(el) el.classList.add('on');
+  if(tab==='division') renderDivCards();
+}
+
+function renderDivCards(){
+  var cont = document.getElementById('div-cards');
+  if(!DIVISIONES_DATA.length){
+    cont.innerHTML='<p style="color:#bbb;font-size:12px;">Cargando...</p>';
+    fetch(API+'/admin/divisiones',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+      if(d.ok){DIVISIONES_DATA=d.divisiones; renderDivCards();}
+    });
+    return;
+  }
+  cont.innerHTML = DIVISIONES_DATA.map(function(div){
+    return '<div class="descarga-box" style="border-color:#a5d6a7;">'
+      +'<strong><i class="fas fa-sitemap" style="color:#004d3d;"></i> '+escHtml(div.nombre)+'</strong>'
+      +'<p style="color:#888;font-size:11px;">'+div.unidades.length+' unidades</p>'
+      +'<button class="btn btn-r" style="width:100%;justify-content:center;margin-bottom:5px;" '
+        +'onclick="window.open(API+\'/pdf/grupo?division=\'+encodeURIComponent(\''+escJs(div.nombre)+'\')+\'&token=\'+encodeURIComponent(TOKEN),\'_blank\')">'
+        +'<i class="fas fa-file-pdf"></i> PDF</button>'
+      +'<button class="btn btn-a" style="width:100%;justify-content:center;" '
+        +'onclick="window.open(API+\'/descargar?division=\'+encodeURIComponent(\''+escJs(div.nombre)+'\')+\'&token=\'+encodeURIComponent(TOKEN),\'_blank\')">'
+        +'<i class="fas fa-file-csv"></i> CSV</button>'
+    +'</div>';
+  }).join('');
+}
+
+// ── BUSCAR PERSONA ────────────────────────────────────────────────────────────
+function buscarPersona(){
+  var cip = val('bus-cip').trim();
+  var nom = val('bus-nom').trim();
+  if(!cip && !nom){alert('Ingrese CIP o nombre.');return;}
+  var q = cip ? 'busqueda='+encodeURIComponent(cip) : 'busqueda='+encodeURIComponent(nom);
+  fetch(API+'/evaluaciones?'+q+'&pagina=1',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){document.getElementById('bus-resultados').innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error al buscar.</td></tr>';return;}
+    if(!d.rows.length){document.getElementById('bus-resultados').innerHTML='<tr><td colspan="7" style="color:#bbb;padding:12px;text-align:center;">Sin resultados.</td></tr>';return;}
+    document.getElementById('bus-resultados').innerHTML = d.rows.map(function(r){
+      var comp=parseInt(r.total_resp)>=566;
+      return '<tr><td><strong>'+escHtml(r.nombres)+'</strong></td>'
+        +'<td>'+r.cip+'</td><td>'+r.dni+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td>'
+        +'<td style="font-size:11px;">'+r.fecha+'</td>'
+        +'<td>'+(comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+r.total_resp+'/566</span>')+'</td>'
+        +'<td><a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;">PDF</a></td></tr>';
+    }).join('');
+  });
+}
+
+// ── GESTIÓN DIVISIONES ────────────────────────────────────────────────────────
+function cargarDivisiones(){
+  fetch(API+'/admin/divisiones',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok) return;
+    DIVISIONES_DATA = d.divisiones;
+    var cont = document.getElementById('div-lista'); if(!cont) return;
+    cont.innerHTML = d.divisiones.map(function(div){
+      var unis = div.unidades.map(function(u,i){
+        return '<div class="uni-row">'
+          +'<span class="uni-num">'+(i+1)+'</span>'
+          +'<span class="uni-nom">'+escHtml(u.nombre)+'</span>'
+          +'<span class="uni-tipo">'+(u.tipo==='especializada'?'Especializada':'CIA')+'</span>'
+          +'<div style="display:flex;gap:4px;">'
+            +'<button class="btn-mini" onclick="editarUnidad('+u.id+','+div.id+',\''+escJs(u.nombre)+'\',\''+u.tipo+'\','+u.orden+')" title="Editar"><i class="fas fa-edit"></i></button>'
+            +'<button class="btn-mini btn-mini-danger" onclick="eliminarUnidad('+u.id+')" title="Eliminar"><i class="fas fa-trash"></i></button>'
+          +'</div></div>';
+      }).join('');
+      return '<div class="div-card">'
+        +'<div class="div-card-head">'
+          +'<span><i class="fas fa-sitemap"></i> '+escHtml(div.nombre)+'</span>'
+          +'<div class="div-btns">'
+            +'<button class="btn" style="background:rgba(255,255,255,.2);color:#fff;border:none;font-size:11px;padding:4px 9px;border-radius:4px;cursor:pointer;" '
+              +'onclick="abrirModalUnidad('+div.id+')">'
+              +'<i class="fas fa-plus"></i> Agregar unidad</button>'
+            +'<button class="btn" style="background:rgba(200,169,74,.4);color:#fff;border:none;font-size:11px;padding:4px 9px;border-radius:4px;cursor:pointer;" '
+              +'onclick="editarDivision('+div.id+',\''+escJs(div.nombre)+'\','+div.orden+')">'
+              +'<i class="fas fa-edit"></i></button>'
+            +'<button class="btn btn-mini-danger" style="background:rgba(192,57,43,.6);color:#fff;border:none;font-size:11px;padding:4px 9px;border-radius:4px;cursor:pointer;" '
+              +'onclick="eliminarDivision('+div.id+')">'
+              +'<i class="fas fa-trash"></i></button>'
+          +'</div>'
+        +'</div>'
+        +'<div class="div-card-body">'+(unis||'<p style="color:#bbb;font-size:12px;">Sin unidades.</p>')+'</div>'
+      +'</div>';
+    }).join('');
+  });
+}
+
+function abrirModalDivision(){
+  document.getElementById('md-id').value='';
+  document.getElementById('md-nombre').value='';
+  document.getElementById('md-orden').value='5';
+  document.getElementById('md-titulo').textContent='Nueva división';
+  document.getElementById('modal-division').classList.add('open');
+}
+function editarDivision(id,nombre,orden){
+  document.getElementById('md-id').value=id;
+  document.getElementById('md-nombre').value=nombre;
+  document.getElementById('md-orden').value=orden;
+  document.getElementById('md-titulo').textContent='Editar: '+nombre;
+  document.getElementById('modal-division').classList.add('open');
+}
+function guardarDivision(){
+  var id=val('md-id'), nombre=val('md-nombre').trim(), orden=parseInt(val('md-orden'))||0;
+  if(!nombre){alert('Ingrese el nombre.');return;}
+  var url=id?API+'/admin/divisiones/'+id:API+'/admin/divisiones';
+  var method=id?'PUT':'POST';
+  fetch(url,{method:method,headers:hdr(),body:JSON.stringify({nombre:nombre,orden:orden})})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.ok){cerrarModal('modal-division');cargarDivisiones();}
+      else alert('Error: '+(d.error||''));
+    });
+}
+function eliminarDivision(id){
+  if(!confirm('¿Eliminar esta división y todas sus unidades?')) return;
+  fetch(API+'/admin/divisiones/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarDivisiones();});
+}
+
+function abrirModalUnidad(divId){
+  document.getElementById('mu2-id').value='';
+  document.getElementById('mu2-div-id').value=divId;
+  document.getElementById('mu2-nombre').value='';
+  document.getElementById('mu2-tipo').value='comisaria';
+  document.getElementById('mu2-orden').value='99';
+  document.getElementById('mu2-titulo').textContent='Nueva unidad';
+  document.getElementById('modal-unidad').classList.add('open');
+}
+function editarUnidad(id,divId,nombre,tipo,orden){
+  document.getElementById('mu2-id').value=id;
+  document.getElementById('mu2-div-id').value=divId;
+  document.getElementById('mu2-nombre').value=nombre;
+  document.getElementById('mu2-tipo').value=tipo;
+  document.getElementById('mu2-orden').value=orden;
+  document.getElementById('mu2-titulo').textContent='Editar: '+nombre;
+  document.getElementById('modal-unidad').classList.add('open');
+}
+function guardarUnidad(){
+  var id=val('mu2-id'), divId=val('mu2-div-id');
+  var nombre=val('mu2-nombre').trim(), tipo=val('mu2-tipo'), orden=parseInt(val('mu2-orden'))||99;
+  if(!nombre){alert('Ingrese el nombre.');return;}
+  var url=id?API+'/admin/unidades/'+id:API+'/admin/unidades';
+  var method=id?'PUT':'POST';
+  var body={nombre:nombre,division_id:parseInt(divId),tipo:tipo,orden:orden};
+  fetch(url,{method:method,headers:hdr(),body:JSON.stringify(body)})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.ok){cerrarModal('modal-unidad');cargarDivisiones();}
+      else alert('Error: '+(d.error||''));
+    });
+}
+function eliminarUnidad(id){
+  if(!confirm('¿Eliminar esta unidad?')) return;
+  fetch(API+'/admin/unidades/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarDivisiones();});
+}
+
+// ── DESCARGAS — actualizar filtros al entrar ──────────────────────────────────
+function cargarFiltrosDescarga(){
+  fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok) return;
+    if(d.divisiones) DIVISIONES_DATA=d.divisiones;
+    ['d-com-pdf'].forEach(function(id){llenarSel(id,d.comisarias||[],'— Seleccionar —');});
+    ['d-uni-pdf'].forEach(function(id){llenarSel(id,d.unidades||[],'— Seleccionar —');});
+    renderDivCards();
+  });
+}
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────
 function val(id){var el=document.getElementById(id);return el?el.value:'';}

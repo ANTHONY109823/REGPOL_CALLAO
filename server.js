@@ -72,6 +72,20 @@ async function initDB() {
       respuestas  JSONB,
       actualizado TIMESTAMP DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS divisiones (
+      id     SERIAL PRIMARY KEY,
+      nombre VARCHAR(120) UNIQUE NOT NULL,
+      orden  SMALLINT DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS unidades_pol (
+      id          SERIAL PRIMARY KEY,
+      nombre      VARCHAR(150) UNIQUE NOT NULL,
+      division_id INTEGER REFERENCES divisiones(id) ON DELETE SET NULL,
+      tipo        VARCHAR(30) DEFAULT 'comisaria',
+      orden       SMALLINT DEFAULT 0
+    );
   `);
 
   // Admins por defecto
@@ -88,6 +102,47 @@ async function initDB() {
        ON CONFLICT (usuario) DO NOTHING`,
       [u,h,r,n,un,p]
     );
+  }
+
+  // Seed divisiones y unidades
+  const { rows: divRows } = await pool.query('SELECT COUNT(*) AS t FROM divisiones');
+  if (parseInt(divRows[0].t) === 0) {
+    const divData = [
+      { nombre: 'DIVOPUS 1', orden: 1, unidades: [
+        'CIA CALLAO','CIA LA PUNTA','CIA BELLAVISTA','CIA CIUDADELA CHALACA',
+        'CIA CIUDAD DEL PESCADOR','CIA RAMON CASTILLA','CIA LA LEGUA','CIA LA PERLA'
+      ]},
+      { nombre: 'DIVOPUS 2', orden: 2, unidades: [
+        'CIA JUAN INGUNZA','CIA SARITA COLONIA','CIA BOCANEGRA',
+        'CIA MANUEL DULANTO','CIA PLAYA RIMAC','CIA CARMEN DE LA LEGUA'
+      ]},
+      { nombre: 'DIVOPUS 3', orden: 3, unidades: [
+        'CIA VENTANILLA','CIA OQUENDO','CIA MI PERU',
+        'CIA PACHACUTEC','CIA VILLA LOS REYES','CIA MARQUEZ'
+      ]},
+      { nombre: 'DIVUES', orden: 4, unidades: [
+        'ESCVER CALLAO','ESCVER VENTANILLA','UNIEME CALLAO','UNIEME VENTANILLA',
+        'UNIDIR CALLAO','UNIPAPIE','USEG CALLAO','UNISEINT CALLAO',
+        'UNIPIAT CALLAO','USE CALLAO','USE VENTANILLA','UNIPIRV CALLAO',
+        'UTSEVI CALLAO','SECTSV VENTANILLA'
+      ]}
+    ];
+    for (let d = 0; d < divData.length; d++) {
+      const div = divData[d];
+      const tipo = div.nombre === 'DIVUES' ? 'especializada' : 'comisaria';
+      const dr = await pool.query(
+        'INSERT INTO divisiones (nombre,orden) VALUES ($1,$2) RETURNING id',
+        [div.nombre, div.orden]
+      );
+      const divId = dr.rows[0].id;
+      for (let u = 0; u < div.unidades.length; u++) {
+        await pool.query(
+          'INSERT INTO unidades_pol (nombre,division_id,tipo,orden) VALUES ($1,$2,$3,$4) ON CONFLICT (nombre) DO NOTHING',
+          [div.unidades[u], divId, tipo, u + 1]
+        );
+      }
+    }
+    console.log('Seed: divisiones y unidades insertadas.');
   }
 
   // Seed preguntas en lotes de 100 para no superar límite de parámetros
@@ -290,11 +345,19 @@ app.get('/listar', requireAuth, async (req, res) => {
     const comis  = await pool.query('SELECT DISTINCT comisaria FROM evaluaciones WHERE comisaria!=\'\' ORDER BY comisaria');
     const unids  = await pool.query('SELECT DISTINCT unidad FROM evaluaciones WHERE unidad!=\'\' ORDER BY unidad');
     const total  = await pool.query('SELECT COUNT(*) AS t FROM evaluaciones');
+    // Divisiones con sus unidades para los filtros
+    const divs   = await pool.query('SELECT id,nombre,orden FROM divisiones ORDER BY orden,nombre');
+    const upols  = await pool.query('SELECT id,nombre,division_id,tipo,orden FROM unidades_pol ORDER BY division_id,orden,nombre');
+    const divsConUnidades = divs.rows.map(d => ({
+      id: d.id, nombre: d.nombre,
+      unidades: upols.rows.filter(u => u.division_id === d.id).map(u => ({ id: u.id, nombre: u.nombre, tipo: u.tipo }))
+    }));
     res.json({
       ok: true,
       comisarias: comis.rows.map(x => x.comisaria),
       unidades:   unids.rows.map(x => x.unidad),
-      total:      parseInt(total.rows[0].t)
+      total:      parseInt(total.rows[0].t),
+      divisiones: divsConUnidades
     });
   } catch (e) {
     res.json({ ok: false, error: e.message });
@@ -308,26 +371,12 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
     const porPagina = 20;
     const offset    = (pagina - 1) * porPagina;
 
-    const params = [];
-    let pi = 1;
-    let where = 'WHERE 1=1';
-
-    // Bienestar solo ve su unidad
+    let baseWhere = 'WHERE 1=1', baseParams = [];
     if (req.admin.rol === 'bienestar' && req.admin.unidad) {
-      where += ` AND UPPER(unidad) LIKE $${pi++}`;
-      params.push('%' + req.admin.unidad.toUpperCase() + '%');
+      baseWhere += ' AND UPPER(unidad) LIKE $1';
+      baseParams.push('%' + req.admin.unidad.toUpperCase() + '%');
     }
-
-    const comisaria = (req.query.comisaria || '').toUpperCase();
-    const unidad    = (req.query.unidad    || '').toUpperCase();
-    const busqueda  = (req.query.busqueda  || '').toUpperCase();
-
-    if (comisaria) { where += ` AND UPPER(comisaria) LIKE $${pi++}`; params.push('%'+comisaria+'%'); }
-    if (unidad)    { where += ` AND UPPER(unidad) LIKE $${pi++}`;    params.push('%'+unidad+'%'); }
-    if (busqueda)  {
-      where += ` AND (UPPER(nombres) LIKE $${pi} OR cip LIKE $${pi+1} OR dni LIKE $${pi+2})`;
-      params.push('%'+busqueda+'%','%'+busqueda+'%','%'+busqueda+'%'); pi += 3;
-    }
+    const { where, params, pi } = await buildWhere(req.query, baseWhere, baseParams);
 
     const countR  = await pool.query(`SELECT COUNT(*) AS t FROM evaluaciones ${where}`, params);
     const total   = parseInt(countR.rows[0].t);
@@ -347,21 +396,44 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
   }
 });
 
+// ── Helper: construir WHERE por division/comisaria/unidad ─────────────────────
+async function buildWhere(query, baseWhere, baseParams) {
+  let where = baseWhere || 'WHERE 1=1';
+  const params = [...(baseParams || [])];
+  let pi = params.length + 1;
+
+  const division  = (query.division  || '').toUpperCase();
+  const comisaria = (query.comisaria || '').toUpperCase();
+  const unidad    = (query.unidad    || '').toUpperCase();
+  const busqueda  = (query.busqueda  || '').toUpperCase();
+
+  if (division) {
+    const du = await pool.query(
+      `SELECT UPPER(u.nombre) AS nombre FROM unidades_pol u JOIN divisiones d ON d.id=u.division_id WHERE UPPER(d.nombre)=$1`, [division]);
+    if (du.rows.length) {
+      const arr = du.rows.map(r => r.nombre);
+      where += ` AND (UPPER(comisaria) = ANY($${pi}::text[]) OR UPPER(unidad) = ANY($${pi}::text[]))`;
+      params.push(arr); pi++;
+    } else { where += ' AND 1=0'; }
+  }
+  if (comisaria) { where += ` AND UPPER(comisaria) LIKE $${pi++}`; params.push('%'+comisaria+'%'); }
+  if (unidad)    { where += ` AND UPPER(unidad) LIKE $${pi++}`;    params.push('%'+unidad+'%'); }
+  if (busqueda)  {
+    where += ` AND (UPPER(nombres) LIKE $${pi} OR cip LIKE $${pi+1} OR dni LIKE $${pi+2})`;
+    params.push('%'+busqueda+'%','%'+busqueda+'%','%'+busqueda+'%'); pi += 3;
+  }
+  return { where, params, pi };
+}
+
 // ── GET /descargar (CSV) ───────────────────────────────────────────────────────
 app.get('/descargar', requireAuth, async (req, res) => {
   try {
-    const params = [];
-    let pi = 1;
-    let where = 'WHERE 1=1';
-
+    let baseWhere = 'WHERE 1=1', baseParams = [];
     if (req.admin.rol === 'bienestar' && req.admin.unidad) {
-      where += ` AND UPPER(unidad) LIKE $${pi++}`;
-      params.push('%' + req.admin.unidad.toUpperCase() + '%');
+      baseWhere += ' AND UPPER(unidad) LIKE $1';
+      baseParams.push('%' + req.admin.unidad.toUpperCase() + '%');
     }
-    const comisaria = (req.query.comisaria || '').toUpperCase();
-    const unidad    = (req.query.unidad    || '').toUpperCase();
-    if (comisaria) { where += ` AND UPPER(comisaria) LIKE $${pi++}`; params.push('%'+comisaria+'%'); }
-    if (unidad)    { where += ` AND UPPER(unidad) LIKE $${pi++}`;    params.push('%'+unidad+'%'); }
+    const { where, params } = await buildWhere(req.query, baseWhere, baseParams);
 
     const result = await pool.query(
       `SELECT * FROM evaluaciones ${where} ORDER BY comisaria,unidad,nombres`, params);
@@ -383,8 +455,12 @@ app.get('/descargar', requireAuth, async (req, res) => {
     });
 
     const csv = '﻿' + [headers.map(h=>Q+h+Q).join(','), ...csvRows].join('\r\n');
-    const fname = unidad ? `Cuestionario_${unidad.replace(/\s+/g,'_')}.csv`
-                : comisaria ? `Cuestionario_${comisaria.replace(/\s+/g,'_')}.csv`
+    const division  = (req.query.division  || '').replace(/\s+/g,'_');
+    const unidad    = (req.query.unidad    || '').replace(/\s+/g,'_');
+    const comisaria = (req.query.comisaria || '').replace(/\s+/g,'_');
+    const fname = division ? `Cuestionario_${division}.csv`
+                : unidad   ? `Cuestionario_${unidad}.csv`
+                : comisaria? `Cuestionario_${comisaria}.csv`
                 : 'Cuestionario_REGPOL_Callao.csv';
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -418,20 +494,20 @@ app.get('/pdf/efectivo', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /pdf/grupo?comisaria=X ó ?unidad=X ────────────────────────────────────
+// ── GET /pdf/grupo?division=X | ?comisaria=X | ?unidad=X ─────────────────────
 app.get('/pdf/grupo', requireAuth, async (req, res) => {
   try {
+    const division  = (req.query.division  || '').toUpperCase();
     const comisaria = (req.query.comisaria || '').toUpperCase();
     const unidad    = (req.query.unidad    || '').toUpperCase();
-    if (!comisaria && !unidad) return res.status(400).json({ error: 'Parámetro requerido' });
+    if (!division && !comisaria && !unidad) return res.status(400).json({ error: 'Parámetro requerido' });
 
-    let where = comisaria ? 'UPPER(comisaria) LIKE $1' : 'UPPER(unidad) LIKE $1';
-    const val = comisaria ? '%'+comisaria+'%' : '%'+unidad+'%';
-    const r   = await pool.query(`SELECT * FROM evaluaciones WHERE ${where} ORDER BY nombres`, [val]);
-    if (!r.rows.length) return res.status(404).json({ error: 'Sin evaluaciones' });
+    const { where, params } = await buildWhere(req.query, 'WHERE 1=1', []);
+    const r = await pool.query(`SELECT * FROM evaluaciones ${where} ORDER BY comisaria,nombres`, params);
+    if (!r.rows.length) return res.status(404).json({ error: 'Sin evaluaciones para este filtro' });
 
     const pregsR = await pool.query('SELECT numero AS id, texto FROM preguntas WHERE activa=TRUE ORDER BY orden,numero');
-    const label  = comisaria || unidad;
+    const label  = division || comisaria || unidad;
     const buf    = await generarPDFComisaria(label, r.rows, pregsR.rows);
     const nom    = 'Cuestionario_' + label.replace(/\s+/g,'_') + '.pdf';
     res.setHeader('Content-Type', 'application/pdf');
@@ -479,6 +555,66 @@ app.put('/admin/usuarios/:id', requireAuth, async (req, res) => {
 app.delete('/admin/usuarios/:id', requireAuth, async (req, res) => {
   if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
   await pool.query('DELETE FROM admins WHERE id=$1 AND rol!=\'unitic\'', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// ── GET /admin/divisiones ─────────────────────────────────────────────────────
+app.get('/admin/divisiones', requireAuth, async (req, res) => {
+  try {
+    const divs  = await pool.query('SELECT id,nombre,orden FROM divisiones ORDER BY orden,nombre');
+    const upols = await pool.query('SELECT id,nombre,division_id,tipo,orden FROM unidades_pol ORDER BY division_id,orden,nombre');
+    const result = divs.rows.map(d => ({
+      id: d.id, nombre: d.nombre, orden: d.orden,
+      unidades: upols.rows.filter(u => u.division_id === d.id)
+    }));
+    res.json({ ok: true, divisiones: result });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.post('/admin/divisiones', requireAuth, async (req, res) => {
+  if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
+  const { nombre, orden } = req.body;
+  try {
+    const r = await pool.query('INSERT INTO divisiones (nombre,orden) VALUES ($1,$2) RETURNING id', [nombre, orden||0]);
+    res.json({ ok: true, id: r.rows[0].id });
+  } catch (e) { res.json({ ok: false, error: 'Ya existe esa división' }); }
+});
+
+app.put('/admin/divisiones/:id', requireAuth, async (req, res) => {
+  if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
+  const { nombre, orden } = req.body;
+  await pool.query('UPDATE divisiones SET nombre=$1,orden=$2 WHERE id=$3', [nombre, orden||0, req.params.id]);
+  res.json({ ok: true });
+});
+
+app.delete('/admin/divisiones/:id', requireAuth, async (req, res) => {
+  if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
+  await pool.query('DELETE FROM divisiones WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+app.post('/admin/unidades', requireAuth, async (req, res) => {
+  if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
+  const { nombre, division_id, tipo, orden } = req.body;
+  try {
+    const r = await pool.query(
+      'INSERT INTO unidades_pol (nombre,division_id,tipo,orden) VALUES ($1,$2,$3,$4) RETURNING id',
+      [nombre, division_id||null, tipo||'comisaria', orden||0]);
+    res.json({ ok: true, id: r.rows[0].id });
+  } catch (e) { res.json({ ok: false, error: 'Unidad ya existe' }); }
+});
+
+app.put('/admin/unidades/:id', requireAuth, async (req, res) => {
+  if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
+  const { nombre, division_id, tipo, orden } = req.body;
+  await pool.query('UPDATE unidades_pol SET nombre=$1,division_id=$2,tipo=$3,orden=$4 WHERE id=$5',
+    [nombre, division_id||null, tipo||'comisaria', orden||0, req.params.id]);
+  res.json({ ok: true });
+});
+
+app.delete('/admin/unidades/:id', requireAuth, async (req, res) => {
+  if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
+  await pool.query('DELETE FROM unidades_pol WHERE id=$1', [req.params.id]);
   res.json({ ok: true });
 });
 
