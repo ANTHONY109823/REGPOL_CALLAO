@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Panel — REGPOL Callao</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link rel="stylesheet" href="panel-admin.css?v=8"/>
+  <style>
+    *{box-sizing:border-box;}
+    body{background:#f0f4f0;font-family:'Segoe UI',sans-serif;margin:0;}
+    .hdr{background:linear-gradient(135deg,#004d3d,#002d24);color:#fff;padding:13px 24px;
+      display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+    .hdr h1{font-size:15px;margin:0;display:flex;align-items:center;gap:10px;}
+    .hdr .oficina-badge{background:rgba(200,169,74,.25);border:1px solid #c8a94a;color:#c8a94a;
+      font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;letter-spacing:.3px;}
+    .body{max-width:1200px;margin:20px auto;padding:0 16px;}
+    .logout-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);
+      color:#fff;padding:5px 13px;border-radius:5px;cursor:pointer;font-size:12px;}
+    .user-info{font-size:12px;opacity:.8;margin-right:10px;}
+    /* Tabs */
+    .tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:0;}
+    .tab-btn{padding:9px 18px;border:none;background:#e8f0e8;border-radius:6px 6px 0 0;
+      cursor:pointer;font-size:13px;font-weight:600;color:#555;transition:all .2s;}
+    .tab-btn:hover{background:#d0e8d0;}
+    .tab-btn.on{background:#004d3d;color:#fff;}
+    .tab{display:none;} .tab.on{display:block;}
+    /* Cards */
+    .card{background:#fff;border-radius:0 10px 10px 10px;box-shadow:0 2px 12px rgba(0,77,61,.08);
+      padding:22px;margin-bottom:18px;}
+    .card h3{color:#004d3d;margin:0 0 14px;font-size:14px;border-bottom:2px solid #c8a94a;padding-bottom:7px;}
+    /* Stats */
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;}
+    .stat{background:#f0f7f0;border-radius:8px;padding:14px;text-align:center;border:1.5px solid #c8e6c9;}
+    .stat .n{font-size:26px;font-weight:800;color:#004d3d;}
+    .stat .l{font-size:11px;color:#555;margin-top:3px;}
+    /* Tabla */
+    .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+    .filtros input,.filtros select{padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;}
+    table.t{width:100%;border-collapse:collapse;font-size:12px;}
+    table.t th{background:#004d3d;color:#fff;padding:8px 10px;text-align:left;}
+    table.t td{padding:7px 10px;border-bottom:1px solid #eee;}
+    table.t tr:nth-child(even){background:#f7faf7;}
+    .badge{padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700;}
+    .ok{background:#d4edda;color:#1a7a3a;} .pend{background:#fff3cd;color:#856404;}
+    .pag-btn{padding:4px 10px;margin:2px;border:1.5px solid #004d3d;background:#fff;
+      color:#004d3d;border-radius:4px;cursor:pointer;font-size:11px;}
+    .pag-btn.on{background:#004d3d;color:#fff;}
+    /* Botones */
+    .btn{padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12.5px;
+      font-weight:600;display:inline-flex;align-items:center;gap:5px;}
+    .btn-v{background:#004d3d;color:#fff;} .btn-v:hover{background:#006b55;}
+    .btn-r{background:#c0392b;color:#fff;} .btn-r:hover{background:#a93226;}
+    .btn-a{background:#2980b9;color:#fff;} .btn-a:hover{background:#2471a3;}
+    /* CMS embebido */
+    .cms-tab-btn{padding:7px 14px;border:none;background:#e8f0e8;border-radius:5px 5px 0 0;
+      cursor:pointer;font-size:12px;font-weight:600;color:#555;margin-right:3px;}
+    .cms-tab-btn.activo{background:#004d3d;color:#fff;}
+    /* Sin acceso */
+    .sin-acceso{text-align:center;padding:60px 20px;color:#bbb;}
+    .sin-acceso i{font-size:48px;display:block;margin-bottom:16px;}
+    .descarga-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
+    .descarga-box{border:1.5px solid #c8e6c9;border-radius:8px;padding:14px;}
+    .descarga-box strong{color:#004d3d;font-size:13px;}
+    .descarga-box p{font-size:11.5px;color:#666;margin:7px 0 10px;}
+    .descarga-box select{width:100%;padding:7px;margin-bottom:8px;border-radius:5px;
+      border:1.5px solid #ccc;font-size:12.5px;}
+    /* Bienvenida */
+    .bienvenida{background:linear-gradient(135deg,#004d3d,#006b55);color:#fff;border-radius:10px;
+      padding:24px;margin-bottom:18px;display:flex;align-items:center;gap:20px;}
+    .bienvenida i{font-size:40px;opacity:.7;}
+    .bienvenida h2{margin:0 0 4px;font-size:18px;}
+    .bienvenida p{margin:0;font-size:13px;opacity:.85;}
+    .perm-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+    .perm-chip{background:rgba(200,169,74,.3);border:1px solid #c8a94a;color:#fff;
+      font-size:11px;padding:3px 10px;border-radius:10px;font-weight:600;}
+  </style>
+</head>
+<body>
+
+<div class="hdr">
+  <div>
+    <h1>
+      <i class="fas fa-shield-alt"></i>
+      <span id="ph-nombre">Panel</span>
+      <span class="oficina-badge" id="ph-oficina"></span>
+    </h1>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span class="user-info" id="ph-usuario"></span>
+    <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Salir</button>
+  </div>
+</div>
+
+<div class="body" id="panel-body">
+  <div style="text-align:center;padding:60px;color:#bbb;">
+    <i class="fas fa-spinner fa-spin" style="font-size:32px;"></i>
+    <p style="margin-top:12px;">Cargando panel...</p>
+  </div>
+</div>
+
+<script src="portal.js?v=4"></script>
+<script src="panel-cms.js?v=4"></script>
+<script>
+var API = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '';
+var SESSION = null;
+var TOKEN   = '';
+
+// ── Secciones disponibles ──────────────────────────────────────────────────────
+var SECCIONES = [
+  { id:'evaluaciones',   icono:'fa-clipboard-list', label:'Evaluaciones',       tipo:'evaluaciones' },
+  { id:'descargas',      icono:'fa-download',        label:'Descargas',          tipo:'descargas'    },
+  { id:'cms_novedades',  icono:'fa-newspaper',       label:'Novedades',          tipo:'cms', cmsTab:'novedades'  },
+  { id:'cms_convenios',  icono:'fa-file-contract',   label:'Convenios',          tipo:'cms', cmsTab:'convenios'  },
+  { id:'cms_cursos',     icono:'fa-graduation-cap',  label:'Cursos',             tipo:'cms', cmsTab:'cursos'     },
+  { id:'cms_inicio',     icono:'fa-home',            label:'Inicio / Carrusel',  tipo:'cms', cmsTab:'carrusel'   },
+  { id:'cms_resena',     icono:'fa-landmark',        label:'Reseña Histórica',   tipo:'cms', cmsTab:'resena'     },
+  { id:'cms_labor',      icono:'fa-tasks',           label:'Nuestra Labor',      tipo:'cms', cmsTab:'labor'      },
+];
+
+// ── Verificar sesión ───────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function(){
+  var saved = JSON.parse(localStorage.getItem('regpol_session') || 'null');
+  if (!saved || !saved.token) { window.location.href='login.html'; return; }
+  if (saved.rol === 'unitic') { window.location.href='panel-admin.html'; return; }
+
+  SESSION = saved;
+  TOKEN   = saved.token;
+
+  document.getElementById('ph-nombre').textContent  = saved.nombre  || 'Usuario';
+  document.getElementById('ph-oficina').textContent = saved.nombre  || '';
+  document.getElementById('ph-usuario').textContent = saved.usuario || '';
+
+  var permisos = saved.permisos || [];
+  if (!permisos.length) {
+    document.getElementById('panel-body').innerHTML = `
+      <div class="sin-acceso">
+        <i class="fas fa-lock"></i>
+        <p>Su cuenta no tiene secciones asignadas.</p>
+        <p style="font-size:12px;">Contacte al administrador UNITIC.</p>
+      </div>`;
+    return;
+  }
+
+  construirPanel(permisos);
+});
+
+function logout() {
+  localStorage.removeItem('regpol_session');
+  localStorage.removeItem('bienToken');
+  window.location.href = 'login.html';
+}
+
+function hdr() { return { 'Content-Type':'application/json', 'x-admin-token': TOKEN }; }
+
+// ── Construir panel dinámico ───────────────────────────────────────────────────
+function construirPanel(permisos) {
+  var body     = document.getElementById('panel-body');
+  var activas  = SECCIONES.filter(function(s){ return permisos.indexOf(s.id) !== -1; });
+
+  // Bienvenida
+  var chips = activas.map(function(s){
+    return '<span class="perm-chip"><i class="fas '+s.icono+'"></i> '+s.label+'</span>';
+  }).join('');
+
+  var html = '<div class="bienvenida">'
+    +'<i class="fas fa-user-shield"></i>'
+    +'<div>'
+    +'<h2>Bienvenido, '+(SESSION.nombre||'Usuario')+'</h2>'
+    +'<p>REGPOL Callao — Sistema de Administración</p>'
+    +'<div class="perm-chips">'+chips+'</div>'
+    +'</div></div>';
+
+  // Tabs
+  html += '<div class="tabs">';
+  activas.forEach(function(s, i){
+    html += '<button class="tab-btn'+(i===0?' on':'')+'" onclick="cambiarTab(\''+s.id+'\',this)">'
+      +'<i class="fas '+s.icono+'"></i> '+s.label+'</button>';
+  });
+  html += '</div>';
+
+  // Contenido de cada tab
+  activas.forEach(function(s, i){
+    html += '<div id="tab-'+s.id+'" class="tab'+(i===0?' on':'')+'">';
+    if (s.tipo === 'evaluaciones') {
+      html += renderTabEvaluaciones();
+    } else if (s.tipo === 'descargas') {
+      html += renderTabDescargas();
+    } else if (s.tipo === 'cms') {
+      html += renderTabCMS(s.cmsTab, s.label);
+    }
+    html += '</div>';
+  });
+
+  body.innerHTML = html;
+
+  // Inicializar primera sección
+  if (activas.length) {
+    var primera = activas[0];
+    if (primera.tipo === 'evaluaciones') iniciarEvaluaciones();
+    else if (primera.tipo === 'descargas') iniciarDescargas();
+    else if (primera.tipo === 'cms') { setTimeout(function(){ initCMS(); cambiarTabCMS(primera.cmsTab); }, 100); }
+  }
+}
+
+function cambiarTab(id, btn) {
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('on'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('on'); });
+  document.getElementById('tab-'+id).classList.add('on');
+  if (btn) btn.classList.add('on');
+
+  var sec = SECCIONES.find(function(s){ return s.id===id; });
+  if (!sec) return;
+  if (sec.tipo === 'evaluaciones') iniciarEvaluaciones();
+  else if (sec.tipo === 'descargas') iniciarDescargas();
+  else if (sec.tipo === 'cms') { if (!window._cmsIniciado){ window._cmsIniciado=true; initCMS(); } cambiarTabCMS(sec.cmsTab); }
+}
+
+// ── EVALUACIONES ───────────────────────────────────────────────────────────────
+function renderTabEvaluaciones() {
+  return '<div class="card">'
+    +'<h3><i class="fas fa-chart-bar"></i> Resumen de evaluaciones</h3>'
+    +'<div class="stats-row">'
+    +'<div class="stat"><div class="n" id="e-total">—</div><div class="l">Total</div></div>'
+    +'<div class="stat"><div class="n" id="e-comp" style="color:#1a7a3a;">—</div><div class="l">Completas</div></div>'
+    +'<div class="stat"><div class="n" id="e-pend" style="color:#856404;">—</div><div class="l">Parciales</div></div>'
+    +'</div></div>'
+    +'<div class="card">'
+    +'<h3><i class="fas fa-search"></i> Listado de evaluaciones</h3>'
+    +'<div class="filtros">'
+    +'<select id="ev-comisaria" onchange="cargarEval(1)"><option value="">Todas las comisarías</option></select>'
+    +'<select id="ev-unidad" onchange="cargarEval(1)"><option value="">Todas las unidades</option></select>'
+    +'<input id="ev-busq" type="text" placeholder="Nombre / CIP / DNI..." oninput="cargarEval(1)"/>'
+    +'<button class="btn btn-v" onclick="cargarEval(1)"><i class="fas fa-sync"></i></button>'
+    +'</div>'
+    +'<div id="ev-info" style="font-size:11.5px;color:#666;margin-bottom:6px;"></div>'
+    +'<div style="overflow-x:auto;"><table class="t">'
+    +'<thead><tr><th>Nombres</th><th>CIP</th><th>DNI</th><th>Comisaría</th><th>Unidad</th><th>Fecha</th><th>Estado</th><th>PDF</th></tr></thead>'
+    +'<tbody id="ev-body"></tbody>'
+    +'</table></div>'
+    +'<div id="ev-pag" style="margin-top:8px;"></div>'
+    +'</div>';
+}
+
+function iniciarEvaluaciones() {
+  if (document.getElementById('ev-body').innerHTML !== '') return;
+  // Cargar filtros
+  fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok) return;
+    llenarSel('ev-comisaria', d.comisarias||[], 'Todas las comisarías');
+    llenarSel('ev-unidad',    d.unidades||[],   'Todas las unidades');
+  });
+  // Stats
+  fetch(API+'/stats',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok) return;
+    var t=d.totalEvaluaciones||0, c=d.totalCompletas||0;
+    set('e-total',t); set('e-comp',c); set('e-pend',Math.max(0,t-c));
+  });
+  cargarEval(1);
+}
+
+function cargarEval(pag) {
+  var com=encodeURIComponent(val('ev-comisaria'));
+  var uni=encodeURIComponent(val('ev-unidad'));
+  var bus=encodeURIComponent(val('ev-busq'));
+  fetch(API+'/evaluaciones?pagina='+pag+'&comisaria='+com+'&unidad='+uni+'&busqueda='+bus,{headers:hdr()})
+    .then(function(r){return r.json();}).then(function(d){
+      if(!d.ok) return;
+      set('ev-info', d.rows.length+' de '+d.total+' — Pág '+d.pagina+'/'+d.paginas);
+      document.getElementById('ev-body').innerHTML = d.rows.map(function(r){
+        var comp=parseInt(r.total_resp)>=566;
+        var badge=comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+r.total_resp+'/566</span>';
+        return '<tr><td><strong>'+r.nombres+'</strong></td><td>'+r.cip+'</td><td>'+r.dni+'</td>'
+          +'<td style="font-size:11px;">'+r.comisaria+'</td><td style="font-size:11px;">'+r.unidad+'</td>'
+          +'<td style="font-size:11px;">'+r.fecha+'</td><td>'+badge+'</td>'
+          +'<td><a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" '
+          +'class="btn btn-r" style="font-size:11px;padding:3px 8px;">PDF</a></td></tr>';
+      }).join('');
+      var pag=document.getElementById('ev-pag'); pag.innerHTML='';
+      for(var p=1;p<=d.paginas;p++){
+        var b=document.createElement('button');
+        b.className='pag-btn'+(p===d.pagina?' on':''); b.textContent=p;
+        (function(pp){b.onclick=function(){cargarEval(pp);};})(p);
+        pag.appendChild(b);
+      }
+    });
+}
+
+// ── DESCARGAS ─────────────────────────────────────────────────────────────────
+function renderTabDescargas() {
+  return '<div class="card"><h3><i class="fas fa-download"></i> Descargar reportes</h3>'
+    +'<div class="descarga-grid">'
+    +'<div class="descarga-box"><strong><i class="fas fa-file-pdf"></i> PDF por comisaría</strong>'
+    +'<p>Reporte completo de una comisaría.</p>'
+    +'<select id="d-com-pdf"><option value="">— Seleccionar —</option></select>'
+    +'<button class="btn btn-r" onclick="desc(\'pdf\',\'comisaria\',\'d-com-pdf\')" style="width:100%;justify-content:center;"><i class="fas fa-file-pdf"></i> PDF</button></div>'
+    +'<div class="descarga-box"><strong><i class="fas fa-file-pdf"></i> PDF por unidad</strong>'
+    +'<p>Reporte de una unidad policial.</p>'
+    +'<select id="d-uni-pdf"><option value="">— Seleccionar —</option></select>'
+    +'<button class="btn btn-r" onclick="desc(\'pdf\',\'unidad\',\'d-uni-pdf\')" style="width:100%;justify-content:center;"><i class="fas fa-file-pdf"></i> PDF</button></div>'
+    +'<div class="descarga-box"><strong><i class="fas fa-file-csv"></i> CSV por comisaría</strong>'
+    +'<p>Hoja de cálculo por comisaría.</p>'
+    +'<select id="d-com-csv"><option value="">— Todas —</option></select>'
+    +'<button class="btn btn-a" onclick="desc(\'csv\',\'comisaria\',\'d-com-csv\')" style="width:100%;justify-content:center;"><i class="fas fa-file-csv"></i> CSV</button></div>'
+    +'<div class="descarga-box"><strong><i class="fas fa-file-csv"></i> CSV por unidad</strong>'
+    +'<p>Hoja de cálculo por unidad.</p>'
+    +'<select id="d-uni-csv"><option value="">— Todas —</option></select>'
+    +'<button class="btn btn-a" onclick="desc(\'csv\',\'unidad\',\'d-uni-csv\')" style="width:100%;justify-content:center;"><i class="fas fa-file-csv"></i> CSV</button></div>'
+    +'</div></div>';
+}
+
+function iniciarDescargas() {
+  fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok) return;
+    ['d-com-pdf','d-com-csv'].forEach(function(id){ llenarSel(id, d.comisarias||[], '— Seleccionar —'); });
+    ['d-uni-pdf','d-uni-csv'].forEach(function(id){ llenarSel(id, d.unidades||[],   '— Seleccionar —'); });
+  });
+}
+
+function desc(tipo, filtro, selId) {
+  var v = val(selId);
+  if (!v && tipo==='pdf') { alert('Seleccione un '+filtro); return; }
+  var url = tipo==='pdf'
+    ? API+'/pdf/grupo?'+filtro+'='+encodeURIComponent(v)+'&token='+encodeURIComponent(TOKEN)
+    : API+'/descargar?token='+encodeURIComponent(TOKEN)+(v?'&'+filtro+'='+encodeURIComponent(v):'');
+  window.open(url,'_blank');
+}
+
+// ── CMS ───────────────────────────────────────────────────────────────────────
+function renderTabCMS(cmsTab, label) {
+  return '<div class="card">'
+    +'<h3><i class="fas fa-edit"></i> Editor — '+label+'</h3>'
+    +'<div id="cms-tabs" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;">'
+    +'<button class="cms-tab cms-tab-btn activo" data-cms-tab="'+cmsTab+'" onclick="cambiarTabCMS(\''+cmsTab+'\')">'
+    +'<i class="fas fa-edit"></i> '+label+'</button>'
+    +'</div>'
+    +'<div id="cms-contenido"><div style="color:#bbb;text-align:center;padding:30px;">'
+    +'<i class="fas fa-spinner fa-spin" style="font-size:20px;"></i><p style="margin-top:8px;">Cargando editor...</p>'
+    +'</div></div>'
+    +'</div>';
+}
+
+// ── Utils ──────────────────────────────────────────────────────────────────────
+function val(id){ var el=document.getElementById(id); return el?el.value:''; }
+function set(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
+function llenarSel(id, items, ph) {
+  var sel=document.getElementById(id); if(!sel) return;
+  sel.innerHTML='<option value="">'+ph+'</option>';
+  items.forEach(function(v){ var o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+}
+</script>
+</body>
+</html>

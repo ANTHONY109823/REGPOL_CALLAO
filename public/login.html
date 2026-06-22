@@ -73,10 +73,8 @@ var API = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? '
 
 // Redirección según rol
 var RUTAS = {
-  unitic:    'panel-admin.html',
-  bienestar: 'panel-bienestar.html',
-  convenios: 'panel-convenios.html',   // futuro
-  cursos:    'panel-cursos.html'        // futuro
+  unitic:  'panel-admin.html',
+  default: 'panel-usuario.html'   // todos los demás roles
 };
 
 document.addEventListener('keydown', function(e){ if(e.key==='Enter') ingresar(); });
@@ -142,12 +140,8 @@ function ingresar() {
 }
 
 function redirigir(rol) {
-  var ruta = RUTAS[rol];
-  if (ruta) {
-    window.location.href = ruta;
-  } else {
-    document.getElementById('msg').textContent = 'Rol no reconocido: ' + rol;
-  }
+  var ruta = RUTAS[rol] || RUTAS['default'];
+  window.location.href = ruta;
 }
 </script>
 </body>

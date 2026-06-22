@@ -28,10 +28,12 @@ async function initDB() {
       id       SERIAL PRIMARY KEY,
       usuario  VARCHAR(60) UNIQUE NOT NULL,
       passhash VARCHAR(64) NOT NULL,
-      rol      VARCHAR(20) NOT NULL DEFAULT 'bienestar',
+      rol      VARCHAR(20) NOT NULL DEFAULT 'usuario',
       nombre   VARCHAR(120),
-      unidad   VARCHAR(150)
+      unidad   VARCHAR(150),
+      permisos JSONB DEFAULT '[]'
     );
+    ALTER TABLE admins ADD COLUMN IF NOT EXISTS permisos JSONB DEFAULT '[]';
 
     CREATE TABLE IF NOT EXISTS preguntas (
       id      SERIAL PRIMARY KEY,
@@ -72,13 +74,21 @@ async function initDB() {
     );
   `);
 
-  // Insertar admins por defecto
-  await pool.query(`
-    INSERT INTO admins (usuario,passhash,rol,nombre) VALUES
-      ('admin_unitic',  '${sha256('AdminUNITIC2026')}', 'unitic',    'UNITIC REGPOL Callao'),
-      ('admin_bienestar','${sha256('Bienestar2026!')}',  'bienestar', 'Psicología Bienestar')
-    ON CONFLICT (usuario) DO NOTHING;
-  `);
+  // Admins por defecto
+  const adminsDefecto = [
+    ['admin_unitic',    sha256('AdminUNITIC2026'), 'unitic',   'UNITIC REGPOL Callao', null, '[]'],
+    ['psicologia',      sha256('Psico2026!'),      'usuario',  'Oficina de Psicología',  null, '["evaluaciones","descargas"]'],
+    ['convenios',       sha256('Convenios2026!'),  'usuario',  'Oficina de Convenios',   null, '["cms_convenios"]'],
+    ['educacion',       sha256('Educacion2026!'),  'usuario',  'Oficina de Educación',   null, '["cms_cursos"]'],
+    ['imagen',          sha256('Imagen2026!'),     'usuario',  'Oficina de Imagen',      null, '["cms_inicio","cms_resena","cms_labor","cms_novedades"]'],
+  ];
+  for (const [u,h,r,n,un,p] of adminsDefecto) {
+    await pool.query(
+      `INSERT INTO admins (usuario,passhash,rol,nombre,unidad,permisos) VALUES ($1,$2,$3,$4,$5,$6::jsonb)
+       ON CONFLICT (usuario) DO NOTHING`,
+      [u,h,r,n,un,p]
+    );
+  }
 
   // Seed preguntas en lotes de 100 para no superar límite de parámetros
   const { rows } = await pool.query('SELECT COUNT(*) AS t FROM preguntas');
@@ -129,7 +139,7 @@ app.post('/admin/login', async (req, res) => {
     if (!r.rows.length) return res.json({ ok: false, error: 'Credenciales incorrectas' });
     const a = r.rows[0];
     const token = Buffer.from(`${usuario}:${password}`).toString('base64');
-    res.json({ ok: true, token, rol: a.rol, nombre: a.nombre, unidad: a.unidad });
+    res.json({ ok: true, token, rol: a.rol, nombre: a.nombre, unidad: a.unidad, permisos: a.permisos || [] });
   } catch (e) {
     res.json({ ok: false, error: e.message });
   }
@@ -435,22 +445,35 @@ app.get('/pdf/grupo', requireAuth, async (req, res) => {
 // ── Gestión de admins (solo unitic) ───────────────────────────────────────────
 app.get('/admin/usuarios', requireAuth, async (req, res) => {
   if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
-  const r = await pool.query('SELECT id,usuario,rol,nombre,unidad FROM admins ORDER BY rol,usuario');
+  const r = await pool.query('SELECT id,usuario,rol,nombre,unidad,permisos FROM admins ORDER BY rol,usuario');
   res.json({ ok: true, usuarios: r.rows });
 });
 
 app.post('/admin/usuarios', requireAuth, async (req, res) => {
   if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
-  const { usuario, password, rol, nombre, unidad } = req.body;
+  const { usuario, password, rol, nombre, unidad, permisos } = req.body;
   try {
     await pool.query(
-      'INSERT INTO admins (usuario,passhash,rol,nombre,unidad) VALUES ($1,$2,$3,$4,$5)',
-      [usuario, sha256(password), rol||'bienestar', nombre||'', unidad||'']
+      'INSERT INTO admins (usuario,passhash,rol,nombre,unidad,permisos) VALUES ($1,$2,$3,$4,$5,$6::jsonb)',
+      [usuario, sha256(password), rol||'usuario', nombre||'', unidad||'', JSON.stringify(permisos||[])]
     );
     res.json({ ok: true });
   } catch (e) {
     res.json({ ok: false, error: 'Usuario ya existe' });
   }
+});
+
+app.put('/admin/usuarios/:id', requireAuth, async (req, res) => {
+  if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
+  const { nombre, unidad, permisos, password } = req.body;
+  if (password && password.length >= 6) {
+    await pool.query('UPDATE admins SET nombre=$1,unidad=$2,permisos=$3::jsonb,passhash=$4 WHERE id=$5',
+      [nombre||'', unidad||'', JSON.stringify(permisos||[]), sha256(password), req.params.id]);
+  } else {
+    await pool.query('UPDATE admins SET nombre=$1,unidad=$2,permisos=$3::jsonb WHERE id=$4',
+      [nombre||'', unidad||'', JSON.stringify(permisos||[]), req.params.id]);
+  }
+  res.json({ ok: true });
 });
 
 app.delete('/admin/usuarios/:id', requireAuth, async (req, res) => {

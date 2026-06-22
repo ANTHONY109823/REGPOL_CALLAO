@@ -172,10 +172,12 @@
       <div class="card">
         <h3><i class="fas fa-users-cog"></i> Usuarios administradores</h3>
         <button class="btn btn-v" onclick="abrirModalUsuario()" style="margin-bottom:12px;"><i class="fas fa-user-plus"></i> Nuevo usuario</button>
+        <div style="overflow-x:auto;">
         <table class="t">
-          <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Unidad asignada</th><th>Acción</th></tr></thead>
+          <thead><tr><th>Usuario</th><th>Nombre / Oficina</th><th>Rol</th><th>Unidad</th><th>Secciones asignadas</th><th>Acciones</th></tr></thead>
           <tbody id="tabla-usuarios"></tbody>
         </table>
+        </div>
       </div>
     </div>
 
@@ -276,21 +278,77 @@
   </div>
 </div>
 
-<!-- MODAL: Nuevo usuario -->
+<!-- MODAL: Crear / Editar usuario -->
 <div id="modal-usuario" class="modal">
-  <div class="modal-box">
-    <h3><i class="fas fa-user-plus"></i> Nuevo usuario Bienestar</h3>
-    <label style="font-size:12px;color:#555;">Usuario (login)</label>
-    <input type="text" id="mu-usuario" placeholder="Ej: bienestar_callao"/>
-    <label style="font-size:12px;color:#555;">Contraseña</label>
-    <input type="password" id="mu-password" placeholder="Mínimo 6 caracteres"/>
-    <label style="font-size:12px;color:#555;">Nombre completo</label>
-    <input type="text" id="mu-nombre" placeholder="Ej: Psic. María López"/>
-    <label style="font-size:12px;color:#555;">Unidad asignada (filtro automático)</label>
-    <input type="text" id="mu-unidad" placeholder="Ej: COMISARIA BELLAVISTA"/>
-    <div style="display:flex;gap:8px;justify-content:flex-end;">
+  <div class="modal-box" style="width:500px;">
+    <h3><i class="fas fa-user-plus"></i> <span id="mu-titulo">Nuevo usuario</span></h3>
+    <input type="hidden" id="mu-id"/>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <label style="font-size:12px;color:#555;font-weight:600;">Usuario (login)</label>
+        <input type="text" id="mu-usuario" placeholder="Ej: psicologia_callao"/>
+      </div>
+      <div>
+        <label style="font-size:12px;color:#555;font-weight:600;">Contraseña</label>
+        <input type="password" id="mu-password" placeholder="Mínimo 6 caracteres"/>
+      </div>
+    </div>
+
+    <label style="font-size:12px;color:#555;font-weight:600;">Nombre / Oficina</label>
+    <input type="text" id="mu-nombre" placeholder="Ej: Oficina de Psicología"/>
+
+    <label style="font-size:12px;color:#555;font-weight:600;">Unidad asignada <span style="font-weight:400;color:#999;">(opcional — filtra sus datos)</span></label>
+    <input type="text" id="mu-unidad" placeholder="Ej: COMISARIA BELLAVISTA (dejar vacío = ve todo)"/>
+
+    <label style="font-size:12px;color:#555;font-weight:600;display:block;margin-bottom:8px;">Secciones que puede gestionar</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;" id="permisos-checks">
+
+      <div style="background:#f0f7f0;border-radius:6px;padding:8px 10px;border:1px solid #c8e6c9;">
+        <div style="font-size:11px;font-weight:700;color:#004d3d;margin-bottom:5px;text-transform:uppercase;">📋 Psicología</div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+          <input type="checkbox" value="evaluaciones" class="perm-chk"> Ver evaluaciones
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+          <input type="checkbox" value="descargas" class="perm-chk"> Descargar reportes (PDF/CSV)
+        </label>
+      </div>
+
+      <div style="background:#f0f7f0;border-radius:6px;padding:8px 10px;border:1px solid #c8e6c9;">
+        <div style="font-size:11px;font-weight:700;color:#004d3d;margin-bottom:5px;text-transform:uppercase;">📄 Oficina de Convenios</div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+          <input type="checkbox" value="cms_convenios" class="perm-chk"> Editar página Convenios
+        </label>
+      </div>
+
+      <div style="background:#f0f7f0;border-radius:6px;padding:8px 10px;border:1px solid #c8e6c9;">
+        <div style="font-size:11px;font-weight:700;color:#004d3d;margin-bottom:5px;text-transform:uppercase;">🎓 Oficina de Educación</div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+          <input type="checkbox" value="cms_cursos" class="perm-chk"> Editar página Cursos
+        </label>
+      </div>
+
+      <div style="background:#f0f7f0;border-radius:6px;padding:8px 10px;border:1px solid #c8e6c9;">
+        <div style="font-size:11px;font-weight:700;color:#004d3d;margin-bottom:5px;text-transform:uppercase;">📸 Oficina de Imagen</div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+          <input type="checkbox" value="cms_inicio" class="perm-chk"> Editar Inicio / Carrusel
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+          <input type="checkbox" value="cms_resena" class="perm-chk"> Editar Reseña Histórica
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+          <input type="checkbox" value="cms_labor" class="perm-chk"> Editar Nuestra Labor
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+          <input type="checkbox" value="cms_novedades" class="perm-chk"> Editar Novedades
+        </label>
+      </div>
+
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
       <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-usuario')">Cancelar</button>
-      <button class="btn btn-v" onclick="crearUsuario()"><i class="fas fa-save"></i> Crear</button>
+      <button class="btn btn-v" onclick="guardarUsuario()"><i class="fas fa-save"></i> Guardar</button>
     </div>
   </div>
 </div>
@@ -509,40 +567,99 @@ function desactivarPregunta(id){
 }
 
 // ── USUARIOS ──────────────────────────────────────────────────────────────────
+var ETIQUETAS_PERM = {
+  evaluaciones:  '📋 Ver evaluaciones',
+  descargas:     '📥 Descargas PDF/CSV',
+  cms_convenios: '📄 Convenios',
+  cms_cursos:    '🎓 Cursos',
+  cms_inicio:    '🏠 Inicio/Carrusel',
+  cms_resena:    '🏛 Reseña Histórica',
+  cms_labor:     '⚙ Nuestra Labor',
+  cms_novedades: '📰 Novedades'
+};
+
 function cargarUsuarios(){
   fetch(API+'/admin/usuarios',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
     var tbody=document.getElementById('tabla-usuarios');
     tbody.innerHTML=d.usuarios.map(function(u){
+      var perms=(u.permisos||[]).map(function(p){
+        return '<span style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:4px;padding:1px 6px;font-size:10.5px;margin:1px;display:inline-block;">'
+          +(ETIQUETAS_PERM[p]||p)+'</span>';
+      }).join('');
+      var esUnitic=(u.rol==='unitic');
       return '<tr>'
         +'<td><strong>'+u.usuario+'</strong></td>'
         +'<td>'+u.nombre+'</td>'
-        +'<td><span class="badge '+(u.rol==='unitic'?'ok':'pend')+'">'+u.rol+'</span></td>'
-        +'<td>'+( u.unidad||'<em style="color:#bbb;">Sin restricción</em>')+'</td>'
-        +'<td>'+(u.rol!=='unitic'?'<button class="btn btn-r" style="font-size:11px;padding:3px 8px;" onclick="eliminarUsuario('+u.id+')"><i class="fas fa-trash"></i></button>':'—')+'</td>'
+        +'<td><span class="badge '+(esUnitic?'ok':'pend')+'">'+(esUnitic?'⭐ SUPER ADMIN':u.rol)+'</span></td>'
+        +'<td style="font-size:11px;">'+(u.unidad||'<em style="color:#bbb;">Acceso global</em>')+'</td>'
+        +'<td style="max-width:200px;">'+(perms||'<em style="color:#bbb;font-size:11px;">Sin secciones</em>')+'</td>'
+        +'<td style="white-space:nowrap;">'
+        +(!esUnitic?'<button class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="editarUsuario('+u.id+')" title="Editar"><i class="fas fa-edit"></i></button> '
+          +'<button class="btn btn-r" style="font-size:11px;padding:3px 8px;" onclick="eliminarUsuario('+u.id+')" title="Eliminar"><i class="fas fa-trash"></i></button>':'—')
+        +'</td>'
         +'</tr>';
     }).join('');
   });
 }
 
 function abrirModalUsuario(){
+  document.getElementById('mu-id').value='';
+  document.getElementById('mu-titulo').textContent='Nuevo usuario';
+  document.getElementById('mu-usuario').disabled=false;
   ['mu-usuario','mu-password','mu-nombre','mu-unidad'].forEach(function(id){document.getElementById(id).value='';});
+  document.querySelectorAll('.perm-chk').forEach(function(c){c.checked=false;});
   document.getElementById('modal-usuario').classList.add('open');
 }
 
-function crearUsuario(){
+function editarUsuario(id){
+  fetch(API+'/admin/usuarios',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+    var u=d.usuarios.find(function(x){return x.id===id;});
+    if(!u) return;
+    document.getElementById('mu-id').value=u.id;
+    document.getElementById('mu-titulo').textContent='Editar: '+u.usuario;
+    document.getElementById('mu-usuario').value=u.usuario;
+    document.getElementById('mu-usuario').disabled=true;
+    document.getElementById('mu-password').value='';
+    document.getElementById('mu-nombre').value=u.nombre||'';
+    document.getElementById('mu-unidad').value=u.unidad||'';
+    var perms=u.permisos||[];
+    document.querySelectorAll('.perm-chk').forEach(function(c){
+      c.checked=perms.indexOf(c.value)!==-1;
+    });
+    document.getElementById('modal-usuario').classList.add('open');
+  });
+}
+
+function guardarUsuario(){
+  var id=document.getElementById('mu-id').value;
   var u=document.getElementById('mu-usuario').value.trim();
   var p=document.getElementById('mu-password').value;
   var n=document.getElementById('mu-nombre').value.trim();
   var un=document.getElementById('mu-unidad').value.trim();
-  if(!u||p.length<6){alert('Complete usuario y contraseña (mín 6 chars).');return;}
-  fetch(API+'/admin/usuarios',{method:'POST',headers:hdr(),body:JSON.stringify({usuario:u,password:p,rol:'bienestar',nombre:n,unidad:un})})
-    .then(function(r){return r.json();})
-    .then(function(d){if(d.ok){cerrarModal('modal-usuario');cargarUsuarios();}else alert('Error: '+d.error);});
+  var permisos=Array.from(document.querySelectorAll('.perm-chk:checked')).map(function(c){return c.value;});
+
+  if(!u){alert('El usuario es obligatorio.');return;}
+  if(!id && p.length<6){alert('La contraseña debe tener mínimo 6 caracteres.');return;}
+  if(!permisos.length){alert('Seleccione al menos una sección.');return;}
+
+  if(id){
+    // Editar
+    fetch(API+'/admin/usuarios/'+id,{method:'PUT',headers:hdr(),
+      body:JSON.stringify({nombre:n,unidad:un,permisos:permisos,password:p})})
+      .then(function(r){return r.json();})
+      .then(function(d){if(d.ok){cerrarModal('modal-usuario');cargarUsuarios();}else alert('Error: '+(d.error||''));});
+  } else {
+    // Crear
+    fetch(API+'/admin/usuarios',{method:'POST',headers:hdr(),
+      body:JSON.stringify({usuario:u,password:p,rol:'usuario',nombre:n,unidad:un,permisos:permisos})})
+      .then(function(r){return r.json();})
+      .then(function(d){if(d.ok){cerrarModal('modal-usuario');cargarUsuarios();}else alert('Error: '+(d.error||''));});
+  }
 }
 
 function eliminarUsuario(id){
-  if(!confirm('¿Eliminar este usuario?')) return;
+  if(!confirm('¿Eliminar este usuario? Esta acción no se puede deshacer.')) return;
   fetch(API+'/admin/usuarios/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarUsuarios();});
 }
 
