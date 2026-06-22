@@ -70,17 +70,7 @@
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login-wrap">
-  <div class="login-card">
-    <h2><i class="fas fa-shield-alt"></i> UNITIC</h2>
-    <div class="sub">Panel de Control — REGPOL Callao</div>
-    <input type="text"     id="l-user" placeholder="Usuario" autocomplete="username"/>
-    <input type="password" id="l-pass" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"/>
-    <button class="btn-login" onclick="login()"><i class="fas fa-lock"></i> Ingresar</button>
-    <div id="msg-login"></div>
-  </div>
-</div>
+<!-- Sin login propio — redirige a login.html si no hay sesión -->
 
 <!-- PANEL -->
 <div id="panel-wrap" style="display:none;">
@@ -105,6 +95,7 @@
       <button class="tab-btn"   onclick="tab('preguntas',this)"><i class="fas fa-question-circle"></i> Preguntas</button>
       <button class="tab-btn"   onclick="tab('usuarios',this)"><i class="fas fa-users-cog"></i> Usuarios</button>
       <button class="tab-btn"   onclick="tab('descargas',this)"><i class="fas fa-download"></i> Descargas</button>
+      <button class="tab-btn"   onclick="tab('cms',this)"><i class="fas fa-edit"></i> Editar Portal</button>
     </div>
 
     <!-- TAB EVALUACIONES -->
@@ -240,6 +231,32 @@
       </div>
     </div>
 
+    <!-- TAB CMS — Editar portal completo -->
+    <div id="tab-cms" class="tab">
+      <div class="card">
+        <h3><i class="fas fa-edit"></i> Editor del Portal Web — REGPOL Callao</h3>
+        <p style="color:#666;font-size:13px;margin-bottom:16px;">
+          Edita los contenidos del portal: novedades, convenios, cursos, reseña histórica, labor institucional, menús y más.
+        </p>
+        <!-- Tabs del CMS -->
+        <div id="cms-tabs" style="margin-bottom:0;display:flex;flex-wrap:wrap;gap:4px;">
+          <button class="cms-tab tab-btn on" data-cms-tab="novedades"   onclick="cambiarTabCMS('novedades')">  <i class="fas fa-newspaper"></i>   Novedades</button>
+          <button class="cms-tab tab-btn"    data-cms-tab="convenios"   onclick="cambiarTabCMS('convenios')"> <i class="fas fa-file-contract"></i> Convenios</button>
+          <button class="cms-tab tab-btn"    data-cms-tab="cursos"      onclick="cambiarTabCMS('cursos')">    <i class="fas fa-graduation-cap"></i> Cursos</button>
+          <button class="cms-tab tab-btn"    data-cms-tab="resena"      onclick="cambiarTabCMS('resena')">    <i class="fas fa-landmark"></i>      Reseña</button>
+          <button class="cms-tab tab-btn"    data-cms-tab="labor"       onclick="cambiarTabCMS('labor')">     <i class="fas fa-tasks"></i>         Labor</button>
+          <button class="cms-tab tab-btn"    data-cms-tab="carrusel"    onclick="cambiarTabCMS('carrusel')">  <i class="fas fa-images"></i>        Carrusel</button>
+          <button class="cms-tab tab-btn"    data-cms-tab="menu"        onclick="cambiarTabCMS('menu')">      <i class="fas fa-bars"></i>          Menú</button>
+        </div>
+        <div id="cms-contenido" style="margin-top:16px;min-height:300px;">
+          <div style="color:#bbb;text-align:center;padding:40px;font-size:13px;">
+            <i class="fas fa-spinner fa-spin" style="font-size:24px;display:block;margin-bottom:10px;"></i>
+            Cargando editor...
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /pa-body -->
 </div><!-- /panel -->
 
@@ -283,54 +300,38 @@ var API = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? '
 var TOKEN='', ROL='';
 var PREGUNTAS_CACHE=[];
 
-// ── LOGIN ──────────────────────────────────────────────────────────────────────
-function login() {
-  var u=document.getElementById('l-user').value.trim();
-  var p=document.getElementById('l-pass').value;
-  if(!u||!p){document.getElementById('msg-login').textContent='Complete todos los campos.';return;}
-  document.getElementById('msg-login').textContent='Verificando...';
-  fetch(API+'/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario:u,password:p})})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(!d.ok){document.getElementById('msg-login').textContent=d.error||'Credenciales incorrectas.';return;}
-      TOKEN=d.token; ROL=d.rol;
-      if(ROL!=='unitic'){document.getElementById('msg-login').textContent='Acceso denegado. Use el Panel Bienestar.';TOKEN='';return;}
-      localStorage.setItem('uniticToken',TOKEN);
-      document.getElementById('ph-nombre').textContent=d.nombre||u;
-      document.getElementById('login-wrap').style.display='none';
-      document.getElementById('panel-wrap').style.display='block';
-      iniciarPanel();
-    })
-    .catch(function(){document.getElementById('msg-login').textContent='Error de conexión.';});
-}
-
+// ── SESIÓN desde login.html ────────────────────────────────────────────────────
 function logout(){
-  TOKEN=''; localStorage.removeItem('uniticToken');
-  document.getElementById('login-wrap').style.display='flex';
-  document.getElementById('panel-wrap').style.display='none';
+  TOKEN='';
+  localStorage.removeItem('regpol_session');
+  localStorage.removeItem('uniticToken');
+  window.location.href='login.html';
 }
 
 window.addEventListener('DOMContentLoaded',function(){
-  document.getElementById('l-pass').addEventListener('keydown',function(e){if(e.key==='Enter')login();});
-  var t=localStorage.getItem('uniticToken');
-  if(t){TOKEN=t; ROL='unitic';
-    document.getElementById('login-wrap').style.display='none';
-    document.getElementById('panel-wrap').style.display='block';
-    iniciarPanel();
+  var saved = JSON.parse(localStorage.getItem('regpol_session')||'null');
+  if (!saved || !saved.token || saved.rol !== 'unitic') {
+    window.location.href = 'login.html'; return;
   }
+  TOKEN = saved.token; ROL = 'unitic';
+  document.getElementById('ph-nombre').textContent = saved.nombre || 'UNITIC';
+  document.getElementById('panel-wrap').style.display = 'block';
+  iniciarPanel();
 });
 
 function hdr(){return{'Content-Type':'application/json','x-admin-token':TOKEN};}
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
+var CMS_INICIADO = false;
 function tab(id,btn) {
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on');});
-  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('on');});
+  document.querySelectorAll('.tab-btn:not(.cms-tab)').forEach(function(b){b.classList.remove('on');});
   document.getElementById('tab-'+id).classList.add('on');
   btn.classList.add('on');
   if(id==='preguntas') cargarPreguntas();
   if(id==='usuarios')  cargarUsuarios();
   if(id==='descargas') cargarFiltros();
+  if(id==='cms' && !CMS_INICIADO){ CMS_INICIADO=true; initCMS(); }
 }
 
 // ── PANEL INICIO ──────────────────────────────────────────────────────────────
@@ -577,5 +578,7 @@ document.addEventListener('click',function(e){
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escJs(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 </script>
+<script src="portal.js?v=4"></script>
+<script src="panel-cms.js?v=4"></script>
 </body>
 </html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Ingresar — REGPOL Callao</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{min-height:100vh;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(135deg,#002d24 0%,#004d3d 60%,#006b55 100%);
+      font-family:'Segoe UI',sans-serif;}
+
+    .card{background:#fff;border-radius:16px;padding:42px 40px 36px;width:360px;
+      box-shadow:0 16px 48px rgba(0,0,0,.3);position:relative;overflow:hidden;}
+    .card::before{content:'';position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#c8a94a,#004d3d);}
+
+    .logo-wrap{text-align:center;margin-bottom:22px;}
+    .logo-wrap img{width:64px;height:64px;object-fit:contain;border-radius:50%;border:3px solid #004d3d;}
+    .logo-wrap .escudo{width:64px;height:64px;background:#004d3d;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;}
+    .logo-wrap .escudo i{font-size:30px;color:#c8a94a;}
+
+    h2{text-align:center;color:#004d3d;font-size:20px;margin-bottom:3px;}
+    .sub{text-align:center;color:#888;font-size:12px;margin-bottom:24px;}
+
+    label{font-size:12px;color:#555;font-weight:600;display:block;margin-bottom:4px;}
+    input{width:100%;padding:11px 13px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;
+      margin-bottom:14px;transition:border-color .2s;}
+    input:focus{border-color:#004d3d;outline:none;box-shadow:0 0 0 3px rgba(0,77,61,.1);}
+
+    .btn-ingresar{width:100%;background:#004d3d;color:#fff;border:none;padding:13px;
+      border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s;
+      display:flex;align-items:center;justify-content:center;gap:8px;}
+    .btn-ingresar:hover{background:#006b55;}
+    .btn-ingresar:disabled{background:#aaa;cursor:not-allowed;}
+
+    #msg{color:#c0392b;font-size:13px;text-align:center;min-height:18px;margin-top:10px;}
+
+    .footer-card{text-align:center;margin-top:20px;color:#bbb;font-size:11px;}
+    .footer-card a{color:#004d3d;text-decoration:none;}
+
+    .spinner-inline{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);
+      border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo-wrap">
+    <div class="escudo"><i class="fas fa-shield-alt"></i></div>
+  </div>
+  <h2>REGPOL Callao</h2>
+  <div class="sub">Sistema de Administración Institucional</div>
+
+  <label for="l-user"><i class="fas fa-user" style="color:#004d3d;"></i> Usuario</label>
+  <input type="text" id="l-user" placeholder="Ingrese su usuario" autocomplete="username" autofocus/>
+
+  <label for="l-pass"><i class="fas fa-lock" style="color:#004d3d;"></i> Contraseña</label>
+  <input type="password" id="l-pass" placeholder="Ingrese su contraseña" autocomplete="current-password"/>
+
+  <button class="btn-ingresar" id="btn-ing" onclick="ingresar()">
+    <i class="fas fa-sign-in-alt"></i> Ingresar
+  </button>
+  <div id="msg"></div>
+
+  <div class="footer-card">
+    <a href="index.html"><i class="fas fa-arrow-left"></i> Volver al portal</a>
+  </div>
+</div>
+
+<script>
+var API = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '';
+
+// Redirección según rol
+var RUTAS = {
+  unitic:    'panel-admin.html',
+  bienestar: 'panel-bienestar.html',
+  convenios: 'panel-convenios.html',   // futuro
+  cursos:    'panel-cursos.html'        // futuro
+};
+
+document.addEventListener('keydown', function(e){ if(e.key==='Enter') ingresar(); });
+
+// Si ya tiene sesión guardada, redirigir directamente
+window.addEventListener('DOMContentLoaded', function(){
+  var saved = JSON.parse(localStorage.getItem('regpol_session') || 'null');
+  if (saved && saved.token && saved.rol) {
+    // Verificar que el token sigue siendo válido
+    fetch(API+'/stats', { headers: {'x-admin-token': saved.token} })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d.ok !== false) redirigir(saved.rol);
+        else localStorage.removeItem('regpol_session');
+      })
+      .catch(function(){});
+  }
+});
+
+function ingresar() {
+  var usuario  = document.getElementById('l-user').value.trim();
+  var password = document.getElementById('l-pass').value;
+  var btn      = document.getElementById('btn-ing');
+  var msg      = document.getElementById('msg');
+
+  if (!usuario || !password) { msg.textContent = 'Complete usuario y contraseña.'; return; }
+
+  btn.disabled   = true;
+  btn.innerHTML  = '<span class="spinner-inline"></span> Verificando...';
+  msg.textContent = '';
+
+  fetch(API + '/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ usuario, password })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (!d.ok) {
+      msg.textContent = d.error || 'Credenciales incorrectas.';
+      btn.disabled    = false;
+      btn.innerHTML   = '<i class="fas fa-sign-in-alt"></i> Ingresar';
+      return;
+    }
+    // Guardar sesión
+    localStorage.setItem('regpol_session', JSON.stringify({
+      token:  d.token,
+      rol:    d.rol,
+      nombre: d.nombre,
+      unidad: d.unidad || ''
+    }));
+    // Compatibilidad con paneles individuales
+    if (d.rol === 'unitic')    localStorage.setItem('uniticToken',   d.token);
+    if (d.rol === 'bienestar') localStorage.setItem('bienToken',     d.token);
+
+    redirigir(d.rol);
+  })
+  .catch(function(){
+    msg.textContent = 'Error de conexión. Intente nuevamente.';
+    btn.disabled    = false;
+    btn.innerHTML   = '<i class="fas fa-sign-in-alt"></i> Ingresar';
+  });
+}
+
+function redirigir(rol) {
+  var ruta = RUTAS[rol];
+  if (ruta) {
+    window.location.href = ruta;
+  } else {
+    document.getElementById('msg').textContent = 'Rol no reconocido: ' + rol;
+  }
+}
+</script>
+</body>
+</html>

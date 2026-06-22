@@ -51,17 +51,7 @@
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="pantalla-login" class="login-wrap">
-  <div class="login-card">
-    <h2><i class="fas fa-shield-alt"></i> Bienestar</h2>
-    <div class="sub">REGPOL Callao — Psicología</div>
-    <input type="text"     id="l-usuario"  placeholder="Usuario"     autocomplete="username"/>
-    <input type="password" id="l-password" placeholder="Contraseña"  autocomplete="current-password"/>
-    <button class="btn-login" onclick="loginBienestar()"><i class="fas fa-sign-in-alt"></i> Ingresar</button>
-    <div id="msg-login"></div>
-  </div>
-</div>
+<!-- Autenticación centralizada en login.html -->
 
 <!-- PANEL -->
 <div id="pantalla-panel" style="display:none;">
@@ -194,44 +184,25 @@ var API_URL = (location.hostname==='localhost'||location.hostname==='127.0.0.1')
 var TOKEN   = '';
 var ROL     = '';
 
-function loginBienestar() {
-  var usuario  = document.getElementById('l-usuario').value.trim();
-  var password = document.getElementById('l-password').value;
-  if (!usuario||!password) { document.getElementById('msg-login').textContent='Complete todos los campos.'; return; }
-  document.getElementById('msg-login').textContent='Verificando...';
-
-  fetch(API_URL+'/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({usuario,password})})
-    .then(function(r){return r.json();})
-    .then(function(data){
-      if (!data.ok) { document.getElementById('msg-login').textContent=data.error||'Credenciales incorrectas.'; return; }
-      TOKEN=data.token; ROL=data.rol;
-      localStorage.setItem('bienToken',TOKEN);
-      localStorage.setItem('bienRol',ROL);
-      document.getElementById('ph-nombre').textContent=data.nombre||usuario;
-      document.getElementById('pantalla-login').style.display='none';
-      document.getElementById('pantalla-panel').style.display='block';
-      iniciarPanel();
-    })
-    .catch(function(){ document.getElementById('msg-login').textContent='Error de conexión.'; });
-}
-
 function logout() {
-  TOKEN=''; localStorage.removeItem('bienToken'); localStorage.removeItem('bienRol');
-  document.getElementById('pantalla-login').style.display='flex';
-  document.getElementById('pantalla-panel').style.display='none';
+  TOKEN='';
+  localStorage.removeItem('regpol_session');
+  localStorage.removeItem('bienToken');
+  window.location.href='login.html';
 }
 
-// Verificar sesión guardada
+// Verificar sesión desde login.html
 window.addEventListener('DOMContentLoaded',function(){
-  var t=localStorage.getItem('bienToken'), r=localStorage.getItem('bienRol');
-  if(t){ TOKEN=t; ROL=r;
-    document.getElementById('pantalla-login').style.display='none';
-    document.getElementById('pantalla-panel').style.display='block';
-    iniciarPanel();
+  var saved = JSON.parse(localStorage.getItem('regpol_session')||'null');
+  if (!saved || !saved.token || saved.rol !== 'bienestar') {
+    window.location.href = 'login.html'; return;
   }
+  TOKEN = saved.token; ROL = 'bienestar';
+  document.getElementById('ph-nombre').textContent = saved.nombre || 'Bienestar';
+  document.getElementById('pantalla-login').style.display='none';
+  document.getElementById('pantalla-panel').style.display='block';
+  iniciarPanel();
 });
-document.addEventListener('keydown',function(e){if(e.key==='Enter')loginBienestar();});
 
 function authHeaders(){ return {'Content-Type':'application/json','x-admin-token':TOKEN}; }
 
