@@ -18,6 +18,7 @@ var ESTADO = {
   respuestas:      {},
   registroCompleto: false
 };
+var ALERTA_FINAL_MOSTRADA = false;
 
 /* ================================================================
    INICIO — cargar preguntas desde API
@@ -51,22 +52,17 @@ function cargarConfigUnidad() {
         activas = [data.comisariaActiva];
       }
 
-      sel.innerHTML = '<option value="">-- Seleccionar comisaría --</option>';
-      if (!activas.length) {
+      var divisiones = (data.ok && data.divisiones) ? data.divisiones : [];
+      var total = poblarSelectEvaluacionDivisiones(sel, divisiones, activas);
+
+      if (!total) {
         sel.disabled = true;
         mostrarAlerta('El cuestionario no está habilitado para su dependencia en este momento. Contacte a la Oficina de Psicología.', 'error');
         return;
       }
 
-      activas.forEach(function(nombre) {
-        var opt = document.createElement('option');
-        opt.value = nombre;
-        opt.textContent = nombre;
-        sel.appendChild(opt);
-      });
-
-      if (activas.length === 1) {
-        sel.value = activas[0];
+      if (total === 1 && sel.options.length === 2) {
+        sel.selectedIndex = 1;
         sel.disabled = true;
       } else {
         sel.disabled = false;
@@ -208,7 +204,7 @@ function continuarAlCuestionario() {
   // Verificar progreso guardado
   var cip = document.getElementById('f-cip').value.trim();
   verificarProgresoGuardado(cip, function(data) {
-    if (data && data.encontrado && data.total > 0) {
+    if (data && data.total > 0) {
       mostrarBannerProgreso(data);
     } else {
       activarCuestionario(true);
@@ -233,6 +229,10 @@ function actualizarInfoBloque() {
   var ip = document.getElementById('info-pagina');
   if (ip) ip.textContent = 'Bloque '+ESTADO.bloqueActual+' de '+TOTAL_BLOQUES+
     ' — '+pct+'% completado';
+  if (resp >= TOTAL_PREGUNTAS && TOTAL_PREGUNTAS > 0 && ESTADO.registroCompleto && !ALERTA_FINAL_MOSTRADA) {
+    ALERTA_FINAL_MOSTRADA = true;
+    mostrarAlerta('Respondió las '+TOTAL_PREGUNTAS+' preguntas. Pulse "Finalizar y Enviar" para registrar en Psicología.','exito');
+  }
 }
 
 function renderizarBloque(bloque, scroll) {
@@ -315,8 +315,10 @@ function cambiarBloque(delta) {
       mostrarAlerta('Responda las '+sinResp.length+' pregunta(s) marcadas antes de continuar.','error');
       return;
     }
-    // Guardar bloque completado
+    ocultarAlerta();
+    renderizarBloque(nuevo);
     guardarBloqueEnServidor();
+    return;
   }
   ocultarAlerta();
   renderizarBloque(nuevo);
@@ -356,7 +358,27 @@ function guardarBloqueEnServidor(callback) {
 // Botón "Guardar y salir" — guarda y muestra mensaje
 function guardarYSalir() {
   guardarBloqueEnServidor(function(){
-    mostrarAlerta('✅ Progreso guardado. Puede cerrar y retomar después con su CIP.','exito');
+    mostrarAlerta('Progreso guardado (bloque '+ESTADO.bloqueActual+'). Use "Continuar evaluación" arriba con su CIP para retomar.','exito');
+    setTimeout(ocultarAlerta, 6000);
+    document.getElementById('card-continuar-cip').scrollIntoView({behavior:'smooth',block:'start'});
+  });
+}
+
+function continuarConCIP() {
+  var inp = document.getElementById('f-cip-continuar');
+  var cip = inp ? inp.value.trim() : '';
+  if (!cip) { mostrarAlerta('Ingrese su CIP para continuar.','error'); if(inp) inp.focus(); return; }
+  if (!PREGUNTAS.length) { mostrarAlerta('Espere a que cargue el cuestionario.','error'); return; }
+  ocultarAlerta();
+  verificarProgresoGuardado(cip, function(data) {
+    if (!data || !data.total) {
+      mostrarAlerta('No hay progreso guardado para el CIP '+cip+'. Complete el Paso 1 si es su primera vez.','error');
+      return;
+    }
+    document.getElementById('f-cip').value = data.cip || cip;
+    if (data.nombres) document.getElementById('f-nombres').value = data.nombres;
+    seleccionarComisariaEnSelect('f-unidad', data.unidad || data.comisaria || '');
+    aplicarProgresoRestaurado(data);
   });
 }
 
@@ -415,18 +437,24 @@ function mostrarBannerProgreso(data) {
   banner._data=data;
 }
 
+function aplicarProgresoRestaurado(data) {
+  ESTADO.respuestas   = typeof data.respuestas==='string'?JSON.parse(data.respuestas):(data.respuestas||{});
+  ESTADO.bloqueActual = parseInt(data.bloque,10)||1;
+  var banner=document.getElementById('banner-progreso');
+  if(banner) banner.style.display='none';
+  activarCuestionario(true);
+  var total=Object.keys(ESTADO.respuestas).length;
+  mostrarAlerta('Continúa desde el bloque '+ESTADO.bloqueActual+' — '+total+'/'+TOTAL_PREGUNTAS+' respuestas guardadas.','exito');
+  setTimeout(ocultarAlerta,5000);
+}
+
 function restaurarProgreso() {
   var data=document.getElementById('banner-progreso')._data;
   if(!data) return;
   if(data.cip)     document.getElementById('f-cip').value    =data.cip;
   if(data.nombres) document.getElementById('f-nombres').value=data.nombres;
-  if(data.comisaria) seleccionarComisariaEnSelect('f-unidad',data.comisaria);
-  ESTADO.respuestas   = typeof data.respuestas==='string'?JSON.parse(data.respuestas):(data.respuestas||{});
-  ESTADO.bloqueActual = parseInt(data.bloque)||1;
-  document.getElementById('banner-progreso').style.display='none';
-  activarCuestionario(true);
-  mostrarAlerta('✅ Progreso restaurado — continúa desde el bloque '+ESTADO.bloqueActual,'exito');
-  setTimeout(ocultarAlerta,4000);
+  seleccionarComisariaEnSelect('f-unidad', data.unidad || data.comisaria || '');
+  aplicarProgresoRestaurado(data);
 }
 
 function descartarProgreso() {
@@ -502,7 +530,7 @@ function enviarEvaluacion() {
 
 function limpiarFormulario() {
   ['f-unidad','f-nombres','f-cip','f-dni','f-nacimiento','f-edad'].forEach(function(id){document.getElementById(id).value='';});
-  ESTADO.respuestas={}; ESTADO.bloqueActual=1;
+  ESTADO.respuestas={}; ESTADO.bloqueActual=1; ALERTA_FINAL_MOSTRADA=false;
   ocultarCuestionario(); actualizarControles(); actualizarInfoBloque();
   document.getElementById('zona-preguntas').innerHTML='';
   window.scrollTo({top:0,behavior:'smooth'});

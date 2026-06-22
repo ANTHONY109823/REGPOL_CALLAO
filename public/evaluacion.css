@@ -257,6 +257,12 @@
 .btn-gsb-logout:hover { background:#fdecea; }
 
 /* BANNER PROGRESO GUARDADO */
+.card-continuar-cip { margin-bottom:18px; border:2px solid #004d3d; }
+.card-header-continuar { background:linear-gradient(135deg,#004d3d,#006b52); }
+.continuar-cip-fila { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+.continuar-cip-fila input { flex:1; min-width:160px; max-width:280px; padding:11px 14px; border:1.5px solid #ccc; border-radius:8px; font-size:15px; font-weight:600; letter-spacing:.5px; }
+.continuar-cip-fila .btn-eval { white-space:nowrap; }
+
 .banner-progreso { background:linear-gradient(135deg,#e8f5e9,#f1f8f1); border:1.5px solid #a5d6a7; border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
 .banner-progreso > i { font-size:24px; color:var(--verde-pnp); flex-shrink:0; }
 .banner-progreso strong { display:block; font-size:13.5px; color:var(--verde-dark); font-weight:700; }

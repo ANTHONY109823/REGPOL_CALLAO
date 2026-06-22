@@ -328,8 +328,8 @@
         <h3><i class="fas fa-clipboard-list"></i> Evaluaciones — todas las dependencias</h3>
         <div class="descarga-box" style="margin-bottom:16px;background:#f8fcf8;">
           <strong><i class="fas fa-building"></i> Activar dependencias para evaluaciones</strong>
-          <p style="font-size:12px;color:#666;margin:8px 0;">Marque una o más comisarías habilitadas para el cuestionario de Bienestar.</p>
-          <div id="cfg-unidades-list" style="max-height:240px;overflow-y:auto;border:1.5px solid #c8e6c9;border-radius:8px;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;background:#fff;"></div>
+          <p style="font-size:12px;color:#666;margin:8px 0;">Marque las dependencias habilitadas, agrupadas por división (DIVOPUS 1, 2, 3 y DIVUES).</p>
+          <div id="cfg-unidades-list" style="max-height:520px;overflow-y:auto;border:1.5px solid #c8e6c9;border-radius:8px;padding:12px;display:grid;gap:14px;background:#f8fcf8;"></div>
           <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <button class="btn btn-v" onclick="guardarActivacionUnidades()"><i class="fas fa-save"></i> Guardar activación</button>
             <button class="btn" style="background:#888;color:#fff;" onclick="marcarTodasUnidades(true)">Marcar todas</button>
@@ -338,7 +338,7 @@
           <p style="font-size:12px;margin-top:10px;color:#004d3d;font-weight:600;">Activas: <span id="cfg-activa">—</span></p>
         </div>
         <div class="filtros">
-          <select id="f-com" onchange="cargarTabla(1)"><option value="">Todas las comisarías</option></select>
+          <select id="f-div" onchange="onFiltroDivisionAdmin()"><option value="">Todas las divisiones</option></select>
           <select id="f-uni" onchange="cargarTabla(1)"><option value="">Todas las unidades</option></select>
           <input  id="f-bus" type="text" placeholder="Nombre / CIP / DNI..." oninput="cargarTabla(1)"/>
           <button class="btn btn-v" onclick="cargarTabla(1)"><i class="fas fa-sync"></i></button>
@@ -347,7 +347,7 @@
         <div style="overflow-x:auto;">
           <table class="t">
             <thead><tr>
-              <th>Nombres</th><th>CIP</th><th>DNI</th><th>Comisaría</th><th>Unidad</th>
+              <th>Nombres</th><th>CIP</th><th>DNI</th><th>Dependencia</th>
               <th>Fecha</th><th>Edad</th><th>Estado</th><th>PDF</th>
             </tr></thead>
             <tbody id="tabla-body"></tbody>
@@ -399,51 +399,34 @@
         <!-- Tabs de descarga -->
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid #e0e8e0;padding-bottom:8px;">
           <button class="dtab on" onclick="descTab('division',this)"><i class="fas fa-sitemap"></i> Por División</button>
-          <button class="dtab" onclick="descTab('comisaria',this)"><i class="fas fa-building"></i> Por Comisaría / Unidad</button>
+          <button class="dtab" onclick="descTab('unidad',this)"><i class="fas fa-building"></i> Por Unidad</button>
           <button class="dtab" onclick="descTab('persona',this)"><i class="fas fa-user-search"></i> Buscar Persona</button>
           <button class="dtab" onclick="descTab('todo',this)"><i class="fas fa-database"></i> Todos</button>
         </div>
 
         <!-- TAB: División -->
         <div id="dtab-division">
-          <p style="font-size:12px;color:#666;margin-bottom:12px;">Seleccione una división para descargar PDF o CSV de todas sus unidades.</p>
+          <p style="font-size:12px;color:#666;margin-bottom:12px;">Seleccione una división para descargar el PDF de todas sus unidades.</p>
           <div id="div-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;"></div>
         </div>
 
-        <!-- TAB: Comisaría / Unidad -->
-        <div id="dtab-comisaria" style="display:none;">
+        <!-- TAB: Por unidad (agrupadas por división) -->
+        <div id="dtab-unidad" style="display:none;">
           <div class="descarga-grid">
-            <div class="descarga-box">
-              <strong>Reporte por comisaría</strong>
-              <p>Vista previa del listado antes de descargar.</p>
-              <select id="d-com-pdf" onchange="vistaPreviaDescarga('comisaria','d-com-pdf','prev-com')"><option value="">— Seleccionar comisaría —</option></select>
-              <div id="prev-com-wrap" style="display:none;margin:12px 0;">
-                <div style="overflow-x:auto;">
-                  <table class="t">
-                    <thead><tr><th>N°</th><th>Nombres</th><th>CIP</th><th>DNI</th><th>Fecha</th><th>Avance</th><th>Estado</th><th>PDF</th></tr></thead>
-                    <tbody id="prev-com-body"></tbody>
-                  </table>
-                </div>
-                <p id="prev-com-info" style="font-size:11.5px;color:#666;margin-top:6px;"></p>
-              </div>
-              <button class="btn btn-r" onclick="descargar('pdf','comisaria','d-com-pdf')" style="width:100%;justify-content:center;margin-top:6px;">Descargar PDF</button>
-              <button class="btn btn-a" onclick="descargar('csv','comisaria','d-com-pdf')" style="width:100%;justify-content:center;margin-top:5px;">Descargar CSV</button>
-            </div>
-            <div class="descarga-box">
-              <strong>Reporte por unidad especializada</strong>
-              <p>Vista previa del listado antes de descargar.</p>
+            <div class="descarga-box" style="max-width:640px;">
+              <strong>Reporte por unidad</strong>
+              <p>Vista previa del listado antes de descargar. Unidades agrupadas en DIVOPUS 1, 2, 3 y DIVUES.</p>
               <select id="d-uni-pdf" onchange="vistaPreviaDescarga('unidad','d-uni-pdf','prev-uni')"><option value="">— Seleccionar unidad —</option></select>
               <div id="prev-uni-wrap" style="display:none;margin:12px 0;">
                 <div style="overflow-x:auto;">
                   <table class="t">
-                    <thead><tr><th>N°</th><th>Nombres</th><th>CIP</th><th>DNI</th><th>Fecha</th><th>Avance</th><th>Estado</th><th>PDF</th></tr></thead>
+                    <thead><tr><th>N°</th><th>Nombres</th><th>CIP</th><th>DNI</th><th>Fecha</th><th>Bloque</th><th>Avance</th><th>Estado</th><th>PDF</th></tr></thead>
                     <tbody id="prev-uni-body"></tbody>
                   </table>
                 </div>
                 <p id="prev-uni-info" style="font-size:11.5px;color:#666;margin-top:6px;"></p>
               </div>
-              <button class="btn btn-r" onclick="descargar('pdf','unidad','d-uni-pdf')" style="width:100%;justify-content:center;margin-top:6px;">Descargar PDF</button>
-              <button class="btn btn-a" onclick="descargar('csv','unidad','d-uni-pdf')" style="width:100%;justify-content:center;margin-top:5px;">Descargar CSV</button>
+              <button class="btn btn-r" onclick="descargar('unidad','d-uni-pdf')" style="width:100%;justify-content:center;margin-top:6px;">Descargar PDF</button>
             </div>
           </div>
         </div>
@@ -465,13 +448,10 @@
 
         <!-- TAB: Todos -->
         <div id="dtab-todo" style="display:none;">
-          <p style="font-size:12px;color:#666;margin-bottom:14px;">Descarga un archivo con todas las evaluaciones de la región.</p>
+          <p style="font-size:12px;color:#666;margin-bottom:14px;">Descarga el PDF con todas las evaluaciones de la región.</p>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <button class="btn btn-r" style="font-size:13px;" onclick="window.open(API+'/pdf/grupo?division=TODAS&token='+encodeURIComponent(TOKEN),'_blank')">
               <i class="fas fa-file-pdf"></i> PDF — todas las divisiones
-            </button>
-            <button class="btn btn-a" style="font-size:13px;" onclick="descargarTodo()">
-              <i class="fas fa-file-csv"></i> CSV — todos los registros
             </button>
           </div>
         </div>
@@ -666,7 +646,7 @@
       <div class="perm-box">
         <div class="pb-title">🧠 Psicología</div>
         <label><input type="checkbox" value="evaluaciones" class="perm-chk"> Ver evaluaciones</label>
-        <label><input type="checkbox" value="descargas" class="perm-chk"> Descargar PDF / CSV</label>
+        <label><input type="checkbox" value="descargas" class="perm-chk"> Descargar PDF</label>
       </div>
       <div class="perm-box">
         <div class="pb-title">📄 Convenios</div>
@@ -692,6 +672,7 @@
 </div>
 
 <script src="portal.js?v=4"></script>
+<script src="divisiones-ui.js?v=1"></script>
 <script src="panel-cms.js?v=4"></script>
 <script>
 var API = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '';
@@ -795,7 +776,7 @@ function cargarStats(){
 // ── EVALUACIONES ──────────────────────────────────────────────────────────────
 function cargarConfigEvaluacion() {
   fetch(API + '/listar', { headers: hdr() }).then(function(r) { return r.json(); }).then(function(d) {
-    window._todasComisariasCfg = (d && d.ok) ? (d.comisarias || []) : [];
+    if (d && d.ok) guardarDivisionesEnVentana(d.divisiones || []);
     return fetch(API + '/config').then(function(r) { return r.json(); });
   }).then(function(d) {
     var activas = (d && d.ok) ? (d.unidadesActivas || []) : [];
@@ -805,19 +786,8 @@ function cargarConfigEvaluacion() {
 }
 
 function renderCheckboxUnidades(activas) {
-  var lista = window._todasComisariasCfg || [];
-  var cont = document.getElementById('cfg-unidades-list');
-  if (!cont) return;
-  if (!lista.length) {
-    cont.innerHTML = '<p style="color:#888;font-size:12px;grid-column:1/-1;">Cargando unidades...</p>';
-    return;
-  }
-  cont.innerHTML = lista.map(function(u) {
-    var chk = activas.indexOf(u) >= 0 ? ' checked' : '';
-    return '<label style="font-size:12px;display:flex;align-items:flex-start;gap:6px;cursor:pointer;line-height:1.3;">'
-      + '<input type="checkbox" class="cfg-uni-chk" value="'+escHtml(u)+'"'+chk+'> '
-      + '<span>'+escHtml(u)+'</span></label>';
-  }).join('');
+  var divisiones = window._divisionesData || [];
+  renderCheckboxesPorDivision('cfg-unidades-list', divisiones, activas, 'cfg-uni-chk');
 }
 
 function marcarTodasUnidades(estado) {
@@ -826,7 +796,7 @@ function marcarTodasUnidades(estado) {
 
 function guardarActivacionUnidades() {
   var unidades = Array.from(document.querySelectorAll('.cfg-uni-chk:checked')).map(function(c) { return c.value; });
-  if (!unidades.length) { alert('Seleccione al menos una comisaría.'); return; }
+  if (!unidades.length) { alert('Seleccione al menos una dependencia.'); return; }
   fetch(API + '/config', {
     method: 'PUT',
     headers: hdr(),
@@ -844,25 +814,40 @@ function guardarActivacionUnidades() {
 function cargarFiltrosTabla(){
   fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
-    llenarSel('f-com',d.comisarias||[],'Todas las comisarías');
-    llenarSel('f-uni',d.unidades||[],'Todas las unidades');
+    guardarDivisionesEnVentana(d.divisiones || []);
+    llenarSelectDivisiones('f-div', d.divisiones, 'Todas las divisiones');
+    llenarSelectUnidadesAgrupadas('f-uni', d.divisiones, 'Todas las unidades');
   });
 }
 
+function onFiltroDivisionAdmin() {
+  onFiltroDivisionCambio('f-div', 'f-uni', window._divisionesData || [], function() { cargarTabla(1); });
+}
+
 function cargarTabla(pag){
-  var com=encodeURIComponent(val('f-com')), uni=encodeURIComponent(val('f-uni')), bus=encodeURIComponent(val('f-bus'));
-  fetch(API+'/evaluaciones?pagina='+pag+'&comisaria='+com+'&unidad='+uni+'&busqueda='+bus,{headers:hdr()})
+  var div=encodeURIComponent(val('f-div')), uni=encodeURIComponent(val('f-uni')), bus=encodeURIComponent(val('f-bus'));
+  fetch(API+'/evaluaciones?pagina='+pag+'&division='+div+'&unidad='+uni+'&busqueda='+bus,{headers:hdr()})
     .then(function(r){return r.json();}).then(function(d){
       if(!d.ok) return;
       set('tabla-info',d.rows.length+' de '+d.total+' — Página '+d.pagina+' / '+d.paginas);
       document.getElementById('tabla-body').innerHTML=d.rows.map(function(r){
-        var comp=parseInt(r.total_resp)>=566;
-        return '<tr><td><strong>'+r.nombres+'</strong></td><td>'+r.cip+'</td><td>'+r.dni+'</td>'
-          +'<td style="font-size:11px;">'+r.comisaria+'</td><td style="font-size:11px;">'+r.unidad+'</td>'
-          +'<td style="font-size:11px;">'+r.fecha+'</td><td style="text-align:center;">'+r.edad+'</td>'
-          +'<td>'+(comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+r.total_resp+'/566</span>')+'</td>'
-          +'<td><a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" '
-          +'class="btn btn-r" style="font-size:11px;padding:3px 8px;">PDF</a></td></tr>';
+        var total=parseInt(r.total_resp,10)||0;
+        var comp=total>=566 && !r.solo_progreso;
+        var badge;
+        if(r.solo_progreso){
+          badge=total>=566
+            ?'<span class="badge" style="background:#fff3cd;color:#856404;">566/566 — sin enviar</span>'
+            :'<span class="badge pend">'+total+'/566 guardado</span>';
+        } else {
+          badge=comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+total+'/566</span>';
+        }
+        var pdf=r.id && !r.solo_progreso
+          ?'<a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;">PDF</a>'
+          :'<span style="color:#bbb;font-size:10px;">Sin PDF</span>';
+        return '<tr'+(r.solo_progreso?' style="background:#fffdf5;"':'')+'><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
+          +'<td style="font-size:11px;">'+escHtml(r.unidad||r.comisaria||'—')+'</td>'
+          +'<td style="font-size:11px;">'+escHtml(r.fecha)+'</td><td style="text-align:center;">'+(r.edad||'—')+'</td>'
+          +'<td>'+badge+'</td><td>'+pdf+'</td></tr>';
       }).join('');
       var pags=document.getElementById('paginacion'); pags.innerHTML='';
       for(var p=1;p<=d.paginas;p++){
@@ -993,13 +978,6 @@ function eliminarUsuario(id){
 }
 
 // ── DESCARGAS ─────────────────────────────────────────────────────────────────
-function cargarFiltrosDescarga(){
-  fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
-    if(!d.ok) return;
-    ['d-com-pdf','d-com-csv'].forEach(function(id){llenarSel(id,d.comisarias||[],'— Seleccionar —');});
-    ['d-uni-pdf','d-uni-csv'].forEach(function(id){llenarSel(id,d.unidades||[],'— Seleccionar —');});
-  });
-}
 function vistaPreviaDescarga(filtro, selId, prefijo) {
   var v = val(selId);
   var wrap = document.getElementById(prefijo + '-wrap');
@@ -1010,48 +988,69 @@ function vistaPreviaDescarga(filtro, selId, prefijo) {
     return;
   }
   if (wrap) wrap.style.display = '';
-  if (body) body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#bbb;padding:14px;">Cargando...</td></tr>';
+  if (body) body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#bbb;padding:14px;">Cargando...</td></tr>';
   var q = filtro === 'unidad' ? 'unidad=' : 'comisaria=';
-  fetch(API + '/evaluaciones?pagina=1&' + q + encodeURIComponent(v) + '&busqueda=', { headers: hdr() })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (!d.ok || !body) return;
-      if (!d.rows.length) {
-        body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#bbb;padding:14px;">Sin registros para esta selección.</td></tr>';
-        if (info) info.textContent = '0 registros';
-        return;
-      }
-      body.innerHTML = d.rows.map(function(r, i) {
-        var total = parseInt(r.total_resp, 10) || 0;
-        var comp = total >= 566;
-        var badge = comp ? '<span class="badge ok">Completo</span>' : '<span class="badge pend">Parcial</span>';
-        return '<tr>'
-          + '<td style="text-align:center;font-weight:700;">' + (i + 1) + '</td>'
-          + '<td><strong>' + escHtml(r.nombres) + '</strong></td>'
-          + '<td>' + escHtml(r.cip) + '</td>'
-          + '<td>' + escHtml(r.dni) + '</td>'
-          + '<td style="font-size:11px;">' + escHtml(r.fecha) + '</td>'
-          + '<td>' + total + '/566</td>'
-          + '<td>' + badge + '</td>'
-          + '<td><a href="' + API + '/pdf/efectivo?id=' + r.id + '&token=' + encodeURIComponent(TOKEN) + '" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;">PDF</a></td>'
-          + '</tr>';
-      }).join('');
-      if (info) info.textContent = d.rows.length + ' de ' + d.total + ' registros mostrados';
-    })
-    .catch(function() {
-      if (body) body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#c0392b;padding:14px;">Error al cargar vista previa.</td></tr>';
+  Promise.all([
+    fetch(API + '/evaluaciones?pagina=1&' + q + encodeURIComponent(v) + '&busqueda=', { headers: hdr() }).then(function(r) { return r.json(); }),
+    fetch(API + '/admin/avances?' + q + encodeURIComponent(v), { headers: hdr() }).then(function(r) { return r.json(); })
+  ]).then(function(results) {
+    var d = results[0], av = results[1];
+    if (!body) return;
+    var filas = [], cipsListos = {};
+    (d.ok ? d.rows : []).forEach(function(r) {
+      cipsListos[(r.cip || '').toLowerCase()] = true;
+      var total = parseInt(r.total_resp, 10) || 0;
+      var comp = total >= 566;
+      var bloque = parseInt(r.bloque_max, 10) || Math.min(12, Math.ceil(total / 50) || 0);
+      filas.push({
+        nombres: r.nombres, cip: r.cip, dni: r.dni, fecha: r.fecha,
+        bloque: bloque, total: total, comp: comp, id: r.id, enCurso: false
+      });
     });
+    (av.ok ? av.rows : []).forEach(function(p) {
+      if (cipsListos[(p.cip || '').toLowerCase()]) return;
+      filas.push({
+        nombres: p.nombres, cip: p.cip, dni: '—', fecha: p.ultima || '—',
+        bloque: parseInt(p.bloque, 10) || 1, total: parseInt(p.total, 10) || 0,
+        comp: false, id: null, enCurso: true
+      });
+    });
+    if (!filas.length) {
+      body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#bbb;padding:14px;">Sin registros para esta selección.</td></tr>';
+      if (info) info.textContent = '0 registros';
+      return;
+    }
+    body.innerHTML = filas.map(function(r, i) {
+      var badge = r.enCurso
+        ? '<span class="badge" style="background:#fff3cd;color:#856404;">En curso</span>'
+        : (r.comp ? '<span class="badge ok">Completo</span>' : '<span class="badge pend">Parcial</span>');
+      var pdf = r.id
+        ? '<a href="' + API + '/pdf/efectivo?id=' + r.id + '&token=' + encodeURIComponent(TOKEN) + '" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;">PDF</a>'
+        : '<span style="color:#bbb;font-size:11px;">—</span>';
+      return '<tr>'
+        + '<td style="text-align:center;font-weight:700;">' + (i + 1) + '</td>'
+        + '<td><strong>' + escHtml(r.nombres) + '</strong></td>'
+        + '<td>' + escHtml(r.cip) + '</td>'
+        + '<td>' + escHtml(r.dni) + '</td>'
+        + '<td style="font-size:11px;">' + escHtml(r.fecha) + '</td>'
+        + '<td style="text-align:center;">' + r.bloque + '/12</td>'
+        + '<td>' + r.total + '/566</td>'
+        + '<td>' + badge + '</td>'
+        + '<td>' + pdf + '</td>'
+        + '</tr>';
+    }).join('');
+    var enCurso = filas.filter(function(r) { return r.enCurso; }).length;
+    if (info) info.textContent = filas.length + ' registros' + (enCurso ? ' (' + enCurso + ' en curso sin enviar)' : '');
+  }).catch(function() {
+    if (body) body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#c0392b;padding:14px;">Error al cargar vista previa.</td></tr>';
+  });
 }
 
-function descargar(tipo,filtro,selId){
-  var v=val(selId);
-  if(!v&&tipo==='pdf'){alert('Seleccione un '+filtro);return;}
-  var url=tipo==='pdf'
-    ?API+'/pdf/grupo?'+filtro+'='+encodeURIComponent(v)+'&token='+encodeURIComponent(TOKEN)
-    :API+'/descargar?token='+encodeURIComponent(TOKEN)+(v?'&'+filtro+'='+encodeURIComponent(v):'');
-  window.open(url,'_blank');
+function descargar(filtro, selId) {
+  var v = val(selId);
+  if (!v) { alert('Seleccione un ' + filtro); return; }
+  window.open(API + '/pdf/grupo?' + filtro + '=' + encodeURIComponent(v) + '&token=' + encodeURIComponent(TOKEN), '_blank');
 }
-function descargarTodo(){window.open(API+'/descargar?token='+encodeURIComponent(TOKEN),'_blank');}
 
 // ── MODALES ───────────────────────────────────────────────────────────────────
 function cerrarModal(id){document.getElementById(id).classList.remove('open');}
@@ -1061,7 +1060,7 @@ document.addEventListener('click',function(e){if(e.target.classList.contains('mo
 var DIVISIONES_DATA = [];
 
 function descTab(tab, el){
-  ['division','comisaria','persona','todo'].forEach(function(t){
+  ['division','unidad','persona','todo'].forEach(function(t){
     document.getElementById('dtab-'+t).style.display = t===tab ? '' : 'none';
   });
   document.querySelectorAll('.dtab').forEach(function(b){b.classList.remove('on');});
@@ -1082,12 +1081,9 @@ function renderDivCards(){
     return '<div class="descarga-box" style="border-color:#a5d6a7;">'
       +'<strong><i class="fas fa-sitemap" style="color:#004d3d;"></i> '+escHtml(div.nombre)+'</strong>'
       +'<p style="color:#888;font-size:11px;">'+div.unidades.length+' unidades</p>'
-      +'<button class="btn btn-r" style="width:100%;justify-content:center;margin-bottom:5px;" '
+      +'<button class="btn btn-r" style="width:100%;justify-content:center;" '
         +'onclick="window.open(API+\'/pdf/grupo?division=\'+encodeURIComponent(\''+escJs(div.nombre)+'\')+\'&token=\'+encodeURIComponent(TOKEN),\'_blank\')">'
-        +'<i class="fas fa-file-pdf"></i> PDF</button>'
-      +'<button class="btn btn-a" style="width:100%;justify-content:center;" '
-        +'onclick="window.open(API+\'/descargar?division=\'+encodeURIComponent(\''+escJs(div.nombre)+'\')+\'&token=\'+encodeURIComponent(TOKEN),\'_blank\')">'
-        +'<i class="fas fa-file-csv"></i> CSV</button>'
+        +'<i class="fas fa-file-pdf"></i> Descargar PDF</button>'
     +'</div>';
   }).join('');
 }
@@ -1097,18 +1093,57 @@ function buscarPersona(){
   var cip = val('bus-cip').trim();
   var nom = val('bus-nom').trim();
   if(!cip && !nom){alert('Ingrese CIP o nombre.');return;}
-  var q = cip ? 'busqueda='+encodeURIComponent(cip) : 'busqueda='+encodeURIComponent(nom);
+  var tbody = document.getElementById('bus-resultados');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#bbb;padding:12px;">Buscando...</td></tr>';
+
+  if (cip) {
+    fetch(API+'/admin/registro-cip?cip='+encodeURIComponent(cip),{headers:hdr()})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(!d.ok){tbody.innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error al buscar.</td></tr>';return;}
+        var filas = [];
+        if(d.diagnostico){
+          filas.push('<tr><td colspan="7" style="background:#fff8e1;padding:10px;font-size:12px;color:#7a5c00;"><strong>Diagnóstico:</strong> '+escHtml(d.diagnostico)+'</td></tr>');
+        }
+        (d.evaluaciones||[]).forEach(function(r){
+          var comp=parseInt(r.total_resp)>=566;
+          filas.push('<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
+            +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+escHtml(r.fecha)+'</td>'
+            +'<td>'+(comp?'<span class="badge ok">Enviado</span>':'<span class="badge pend">'+r.total_resp+'/566</span>')+'</td>'
+            +'<td><a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;">PDF</a></td></tr>');
+        });
+        if(d.progreso && !(d.evaluaciones||[]).some(function(e){return e.completada;})){
+          var p=d.progreso, pt=parseInt(p.total_resp,10)||0;
+          filas.push('<tr style="background:#fffdf5;"><td><strong>'+escHtml(p.nombres)+'</strong></td><td>'+escHtml(p.cip)+'</td><td>—</td>'
+            +'<td style="font-size:11px;">'+escHtml(p.comisaria||p.unidad)+'</td><td style="font-size:11px;">'+escHtml(p.fecha)+'</td>'
+            +'<td><span class="badge" style="background:#fff3cd;color:#856404;">'+pt+'/566 sin enviar</span></td>'
+            +'<td style="font-size:10px;color:#888;">Falta Finalizar</td></tr>');
+        }
+        if(filas.length<= (d.diagnostico?1:0)){
+          tbody.innerHTML='<tr><td colspan="7" style="color:#bbb;padding:12px;text-align:center;">Sin resultados para CIP '+escHtml(cip)+'.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = filas.join('');
+      });
+    return;
+  }
+
+  var q = 'busqueda='+encodeURIComponent(nom);
   fetch(API+'/evaluaciones?'+q+'&pagina=1',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
-    if(!d.ok){document.getElementById('bus-resultados').innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error al buscar.</td></tr>';return;}
-    if(!d.rows.length){document.getElementById('bus-resultados').innerHTML='<tr><td colspan="7" style="color:#bbb;padding:12px;text-align:center;">Sin resultados.</td></tr>';return;}
-    document.getElementById('bus-resultados').innerHTML = d.rows.map(function(r){
-      var comp=parseInt(r.total_resp)>=566;
-      return '<tr><td><strong>'+escHtml(r.nombres)+'</strong></td>'
-        +'<td>'+r.cip+'</td><td>'+r.dni+'</td>'
-        +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td>'
-        +'<td style="font-size:11px;">'+r.fecha+'</td>'
-        +'<td>'+(comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+r.total_resp+'/566</span>')+'</td>'
-        +'<td><a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;">PDF</a></td></tr>';
+    if(!d.ok){tbody.innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error al buscar.</td></tr>';return;}
+    if(!d.rows.length){tbody.innerHTML='<tr><td colspan="7" style="color:#bbb;padding:12px;text-align:center;">Sin resultados.</td></tr>';return;}
+    tbody.innerHTML = d.rows.map(function(r){
+      var total=parseInt(r.total_resp,10)||0;
+      var comp=total>=566 && !r.solo_progreso;
+      var badge=r.solo_progreso
+        ?'<span class="badge" style="background:#fff3cd;color:#856404;">'+total+'/566 sin enviar</span>'
+        :(comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+total+'/566</span>');
+      var pdf=r.id && !r.solo_progreso
+        ?'<a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;">PDF</a>'
+        :'<span style="color:#bbb;font-size:10px;">—</span>';
+      return '<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+r.fecha+'</td>'
+        +'<td>'+badge+'</td><td>'+pdf+'</td></tr>';
     }).join('');
   });
 }
@@ -1221,22 +1256,11 @@ function eliminarUnidad(id){
 function cargarFiltrosDescarga(){
   fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
-    if(d.divisiones) DIVISIONES_DATA=d.divisiones;
-
-    // Construir listas desde unidades_pol (siempre completas, independiente de evaluaciones)
-    var comisarias = [], unidades = [];
-    (DIVISIONES_DATA||[]).forEach(function(div){
-      (div.unidades||[]).forEach(function(u){
-        if(u.tipo==='especializada') unidades.push(u.nombre);
-        else comisarias.push(u.nombre);
-      });
-    });
-    // Si unidades_pol aún no tiene datos, caer en las de evaluaciones
-    if(!comisarias.length) comisarias = d.comisarias||[];
-    if(!unidades.length)   unidades   = d.unidades||[];
-
-    llenarSel('d-com-pdf', comisarias, '— Seleccionar comisaría —');
-    llenarSel('d-uni-pdf', unidades,   '— Seleccionar unidad —');
+    if(d.divisiones) {
+      DIVISIONES_DATA = d.divisiones;
+      guardarDivisionesEnVentana(d.divisiones);
+    }
+    llenarSelectUnidadesAgrupadas('d-uni-pdf', DIVISIONES_DATA, '— Seleccionar unidad —');
     renderDivCards();
   });
 }
