@@ -14,6 +14,51 @@ const COLOR_NEGRO  = '#1a1a1a';
 const COLOR_CLARO  = '#f5f5f5';
 const COLOR_LINEA  = '#cccccc';
 
+// ── Cabecera compacta (listados) ───────────────────────────────────────────────
+function dibujarCabeceraLista(doc) {
+  doc.rect(0, 0, doc.page.width, 52).fill(COLOR_VERDE);
+  doc.rect(0, 52, doc.page.width, 3).fill(COLOR_ORO);
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(12)
+     .text('POLICÍA NACIONAL DEL PERÚ — REGPOL CALLAO', 40, 14, { align: 'center', width: doc.page.width - 80 });
+  doc.font('Helvetica').fontSize(9)
+     .text('Listado de evaluaciones psicológicas', 40, 32, { align: 'center', width: doc.page.width - 80 });
+}
+
+function contarRespuestas(ev) {
+  try {
+    const r = typeof ev.respuestas === 'string' ? JSON.parse(ev.respuestas || '{}') : (ev.respuestas || {});
+    const vals = Object.values(r);
+    return {
+      total: vals.length,
+      v: vals.filter(function(x) { return x === 'V'; }).length,
+      f: vals.filter(function(x) { return x === 'F'; }).length
+    };
+  } catch (e) {
+    return { total: 0, v: 0, f: 0 };
+  }
+}
+
+function dibujarFilaTabla(doc, x0, y, W, cols, celdas, opts) {
+  const rowH = (opts && opts.rowH) || 16;
+  const esHeader = opts && opts.header;
+  const par = opts && opts.par;
+  const bg = esHeader ? COLOR_VERDE : (par ? '#f7faf7' : '#ffffff');
+  doc.rect(x0, y, W, rowH).fill(bg);
+  if (!esHeader) doc.rect(x0, y, W, rowH).stroke('#e0e8e0');
+  let tx = x0;
+  celdas.forEach(function(c, i) {
+    doc.fillColor(esHeader ? '#ffffff' : (i === 0 ? COLOR_VERDE : COLOR_NEGRO))
+       .font((esHeader || i === 1) ? 'Helvetica-Bold' : 'Helvetica')
+       .fontSize(esHeader ? 8 : 7.5)
+       .text(String(c == null ? '—' : c), tx + 4, y + (esHeader ? 4 : 3), {
+         width: cols[i] - 8,
+         lineBreak: false,
+         ellipsis: true
+       });
+    tx += cols[i];
+  });
+}
+
 // ── Cabecera institucional ────────────────────────────────────────────────────
 function dibujarCabecera(doc) {
   // Fondo verde cabecera
@@ -212,185 +257,64 @@ function generarPDFIndividual(evaluacion, preguntas) {
 // PDF POR COMISARÍA — resumen de todos los efectivos
 // ─────────────────────────────────────────────────────────────────────────────
 function generarPDFComisaria(comisaria, evaluaciones, preguntas) {
-  var PREGUNTAS = preguntas || PREGUNTAS_DEFAULT;
   return new Promise(function(resolve) {
-    const doc    = new PDFDocument({ size: 'A4', margins: { top: 85, bottom: 45, left: 40, right: 40 }, autoFirstPage: false });
+    const doc    = new PDFDocument({ size: 'A4', margins: { top: 70, bottom: 45, left: 40, right: 40 }, autoFirstPage: false });
     const chunks = [];
     doc.on('data', function(c) { chunks.push(c); });
     doc.on('end',  function()  { resolve(Buffer.concat(chunks)); });
 
-    const totalPaginas = evaluaciones.length + 1;
-    let   numPag = 0;
-
-    // ── PORTADA ───────────────────────────────────────────────────────────────
-    numPag++;
-    doc.addPage();
-    dibujarCabecera(doc);
-
     const m  = doc.page.margins;
     const W  = doc.page.width - m.left - m.right;
     const x0 = m.left;
+    const rowH = 16;
+    const cols = [26, 148, 52, 52, 68, 26, 26, 48];
+    const heads = ['N°', 'Apellidos y Nombres', 'CIP', 'DNI', 'Fecha', 'V', 'F', 'Avance'];
+    const rowsPerPage = Math.floor((doc.page.height - 130 - 45) / rowH) - 1;
+    const totalPaginas = Math.max(1, Math.ceil((evaluaciones.length + 1) / rowsPerPage));
 
-    doc.y = 100;
-    doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(15)
-       .text('INFORME DE CUESTIONARIO PSICOLÓGICO', { align: 'center' });
-    doc.moveDown(0.3);
-    doc.fillColor(COLOR_ORO).font('Helvetica-Bold').fontSize(13)
-       .text(comisaria.toUpperCase(), { align: 'center' });
-    doc.moveDown(0.5);
-    doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(9)
-       .text('Inventario Multifásico de Personalidad de Minnesota — 2 (Versión Argentina)', { align: 'center' });
-    doc.moveDown(1.5);
+    let numPag = 1;
+    doc.addPage();
+    dibujarCabeceraLista(doc);
 
-    // Cuadro resumen
-    const fechaHoy = new Date().toLocaleDateString('es-PE', { day:'2-digit', month:'long', year:'numeric' });
-    const totalEval = evaluaciones.length;
-    const totalCompletas = evaluaciones.filter(function(e){
-      try { return Object.keys(JSON.parse(e.respuestas||'{}')).length === 566; } catch(ex){ return false; }
-    }).length;
+    doc.y = 68;
+    doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(13)
+       .text('LISTADO DE EFECTIVOS EVALUADOS', { align: 'center' });
+    doc.moveDown(0.2);
+    doc.fillColor(COLOR_ORO).font('Helvetica-Bold').fontSize(11)
+       .text(String(comisaria || '').toUpperCase(), { align: 'center' });
+    doc.moveDown(0.6);
 
-    doc.rect(x0 + W*0.15, doc.y, W*0.7, 90).fill('#f0f7f0').stroke(COLOR_VERDE);
-    const cy0 = doc.y + 12;
-    doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(10)
-       .text('RESUMEN DEL INFORME', x0 + W*0.15, cy0, { width: W*0.7, align: 'center' });
-    doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(9)
-       .text('Fecha de generación:  ' + fechaHoy, x0 + W*0.15 + 20, cy0 + 18)
-       .text('Total de efectivos evaluados:  ' + totalEval, x0 + W*0.15 + 20, cy0 + 33)
-       .text('Evaluaciones completas (566/566):  ' + totalCompletas, x0 + W*0.15 + 20, cy0 + 48)
-       .text('Dependencia:  ' + comisaria.toUpperCase(), x0 + W*0.15 + 20, cy0 + 63);
-
-    doc.y = cy0 + 100;
-    doc.moveDown(1);
-
-    // Lista de efectivos
-    doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(10)
-       .text('EFECTIVOS EVALUADOS', { align: 'center' });
-    doc.moveDown(0.5);
-
-    // Cabecera tabla lista
-    const cols = [30, 200, 60, 60, 80];
-    const heads = ['N°', 'Apellidos y Nombres', 'CIP', 'DNI', 'Fecha Eval.'];
-    let tx = x0;
-    doc.rect(x0, doc.y, W, 18).fill(COLOR_VERDE);
-    heads.forEach(function(h, i) {
-      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8)
-         .text(h, tx + 4, doc.y + 4, { width: cols[i]-6 });
-      tx += cols[i];
-    });
-    doc.y += 18;
+    let rowY = doc.y;
+    dibujarFilaTabla(doc, x0, rowY, W, cols, heads, { header: true, rowH: rowH });
+    rowY += rowH;
 
     evaluaciones.forEach(function(ev, idx) {
-      const resp   = {};
-      try { Object.assign(resp, JSON.parse(ev.respuestas||'{}')); } catch(e) {}
-      const totalR = Object.keys(resp).length;
-      const par    = idx % 2 === 0;
+      if (rowY > doc.page.height - 55) {
+        dibujarPie(doc, numPag, totalPaginas);
+        numPag++;
+        doc.addPage();
+        dibujarCabeceraLista(doc);
+        rowY = 68;
+        dibujarFilaTabla(doc, x0, rowY, W, cols, heads, { header: true, rowH: rowH });
+        rowY += rowH;
+      }
 
-      doc.rect(x0, doc.y, W, 16).fill(par ? '#f7faf7' : '#ffffff');
-
-      tx = x0;
-      const celdas = [
-        String(idx+1),
+      const stats = contarRespuestas(ev);
+      const fecha = String(ev.fecha || '—').substring(0, 10);
+      dibujarFilaTabla(doc, x0, rowY, W, cols, [
+        String(idx + 1),
         ev.nombres || '—',
         ev.cip || '—',
         ev.dni || '—',
-        (ev.fecha || '—').substring(0, 10)
-      ];
-      celdas.forEach(function(c, i) {
-        const color = i === 0 ? COLOR_VERDE : COLOR_NEGRO;
-        doc.fillColor(color).font(i===0||i===1?'Helvetica-Bold':'Helvetica').fontSize(7.5)
-           .text(c, tx + 4, doc.y + 3, { width: cols[i]-8, ellipsis: true });
-        tx += cols[i];
-      });
-
-      // Badge de completitud
-      const badge = totalR + '/566';
-      const bColor = totalR === 566 ? '#27ae60' : '#e67e22';
-      doc.rect(x0 + W - 50, doc.y + 2, 46, 12).fill(bColor).stroke(bColor);
-      doc.fillColor('#fff').font('Helvetica-Bold').fontSize(7)
-         .text(badge, x0 + W - 50, doc.y + 3, { width: 46, align: 'center' });
-
-      doc.y += 16;
-
-      // Nueva página si no cabe
-      if (doc.y > doc.page.height - 80) {
-        dibujarPie(doc, numPag, totalPaginas);
-        doc.addPage();
-        numPag++;
-        dibujarCabecera(doc);
-        doc.y = 88;
-      }
+        fecha,
+        String(stats.v),
+        String(stats.f),
+        stats.total + '/566'
+      ], { par: idx % 2 === 0, rowH: rowH });
+      rowY += rowH;
     });
 
     dibujarPie(doc, numPag, totalPaginas);
-
-    // ── UNA PÁGINA POR EFECTIVO — Resumen de sus respuestas ──────────────────
-    evaluaciones.forEach(function(ev) {
-      numPag++;
-      doc.addPage();
-      dibujarCabecera(doc);
-
-      let resp = {};
-      try { resp = JSON.parse(ev.respuestas||'{}'); } catch(e) {}
-      const vCount = Object.values(resp).filter(function(v){return v==='V';}).length;
-      const fCount = Object.values(resp).filter(function(v){return v==='F';}).length;
-
-      // Encabezado efectivo
-      doc.y = 82;
-      doc.rect(x0, doc.y, W, 36).fill('#eef7ee').stroke(COLOR_VERDE);
-      doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(10)
-         .text(ev.nombres || '—', x0+10, doc.y+4, { width: W*0.65 });
-      doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(8)
-         .text('CIP: ' + (ev.cip||'—') + '   DNI: ' + (ev.dni||'—') + '   Edad: ' + (ev.edad||'—') + ' años', x0+10, doc.y+18, { width: W*0.65 });
-      // Stats en esquina
-      doc.fillColor('#1a7a3a').font('Helvetica-Bold').fontSize(10)
-         .text('V: ' + vCount, x0+W*0.72, doc.y+4, { width: 50 });
-      doc.fillColor('#7a1a1a').font('Helvetica-Bold').fontSize(10)
-         .text('F: ' + fCount, x0+W*0.72, doc.y+18, { width: 50 });
-      doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(8)
-         .text('Fecha: ' + (ev.fecha||'—').substring(0,16), x0+W*0.82, doc.y+4, { width: W*0.18 });
-      doc.y += 44;
-
-      // Cuadrícula de respuestas compacta (10 columnas × N filas)
-      const anchoCol = Math.floor(W / 10);
-      const altFila  = 15;
-      const NUM_COLS = 10;
-      let col = 0, ry = doc.y;
-
-      PREGUNTAS.forEach(function(p, idx) {
-        const cx  = x0 + col * anchoCol;
-        const res = resp[p.id] || '—';
-        const par = idx % 2 === 0;
-
-        doc.rect(cx, ry, anchoCol, altFila).fill(par ? '#f7faf7' : '#fff').stroke('#e0e8e0');
-
-        // Número
-        doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(6)
-           .text(p.id, cx+2, ry+2, { width: 18, align: 'right' });
-
-        // Respuesta coloreada
-        const rColor = res==='V' ? '#1a7a3a' : (res==='F' ? '#7a1a1a' : '#bbb');
-        const rBg    = res==='V' ? '#d4edda'  : (res==='F' ? '#f8d7da'  : '#eee');
-        doc.rect(cx+anchoCol-14, ry+2, 11, 11).fill(rBg);
-        doc.fillColor(rColor).font('Helvetica-Bold').fontSize(7.5)
-           .text(res, cx+anchoCol-14, ry+3, { width: 11, align: 'center' });
-
-        col++;
-        if (col >= NUM_COLS) {
-          col = 0;
-          ry += altFila;
-          if (ry + altFila > doc.page.height - 50) {
-            dibujarPie(doc, numPag, totalPaginas);
-            doc.addPage();
-            numPag++;
-            dibujarCabecera(doc);
-            ry = 88;
-          }
-        }
-      });
-
-      dibujarPie(doc, numPag, totalPaginas);
-    });
-
     doc.end();
   });
 }
