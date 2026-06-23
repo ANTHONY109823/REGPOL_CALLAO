@@ -216,9 +216,47 @@ img {
 .portal-home .presentation-slider {
     flex: 1 1 auto;
     width: 100%;
-    min-height: 280px;
+    min-height: 260px;
     height: auto;
     max-height: none;
+    background-color: #0a2818;
+}
+
+.portal-home .slide-img {
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+    min-width: 100%;
+    min-height: 100%;
+    transform: scale(1);
+}
+
+.portal-home .slide:not(.active) .slide-img {
+    transform: scale(1);
+}
+
+.portal-home .slide.active .slide-img {
+    animation: slideZoomHome 8s ease-out forwards;
+}
+
+@keyframes slideZoomHome {
+    from { transform: scale(1); }
+    to   { transform: scale(1.06); }
+}
+
+.title-text--home .portal-unitic {
+    color: #666;
+    font-size: clamp(11px, 1.5vw, 14px);
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.35;
+}
+
+.hero-overlay .hero-subtitulo {
+    font-size: clamp(0.9rem, 2.5vw, 1.15rem);
+    margin-top: 12px;
+    opacity: 0.95;
+    font-weight: 500;
 }
 
 .portal-home-content {

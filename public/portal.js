@@ -226,7 +226,7 @@ function marcarNavActivo(activeId) {
 
 function initPortalEncabezado() {
   var box = document.querySelector('.main-header .title-text');
-  if (!box) return;
+  if (!box || document.body.classList.contains('portal-home')) return;
   var h1 = box.querySelector('h1');
   if (h1) h1.textContent = 'REGIÓN POLICIAL CALLAO';
   if (box.querySelector('.portal-eslogan')) return;
