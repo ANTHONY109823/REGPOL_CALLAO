@@ -554,11 +554,15 @@
     </div>
 
     <!-- MODAL CMS -->
-    <div id="cms-modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
-      <div class="modal-box" style="width:500px;">
-        <h3 id="cms-modal-titulo"></h3>
-        <div id="cms-modal-body"></div>
-        <div class="modal-footer">
+    <div id="cms-modal" class="cms-modal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="cms-modal-backdrop" onclick="cerrarCmsModal()"></div>
+      <div class="cms-modal-dialog" style="max-width:560px;">
+        <div class="cms-modal-header">
+          <h3 id="cms-modal-titulo"><i class="fas fa-edit"></i> Editor</h3>
+          <button class="cms-modal-cerrar" onclick="cerrarCmsModal()" title="Cerrar"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="cms-modal-body" id="cms-modal-body"></div>
+        <div class="cms-modal-footer">
           <button class="btn" style="background:#999;color:#fff;" onclick="cerrarCmsModal()">Cancelar</button>
           <button id="cms-modal-guardar" class="btn btn-v"><i class="fas fa-save"></i> Guardar</button>
         </div>

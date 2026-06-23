@@ -185,12 +185,64 @@ function renderNovedades(data, containerId, limite) {
     return;
   }
   el.innerHTML = items.map(function(n) {
-    return '<article class="noticia-card">' +
-      '<div class="noticia-meta"><span class="noticia-cat">' + escHtml(n.categoria) + '</span>' +
-      '<span class="noticia-fecha">' + escHtml(n.fecha) + '</span></div>' +
-      '<h3>' + escHtml(n.titulo) + '</h3>' +
-      '<p>' + escHtml(n.resumen) + '</p></article>';
+    var foto = n.imagen
+      ? '<div class="noticia-foto"><img src="' + n.imagen + '" alt="' + escHtml(n.titulo) + '" loading="lazy"/></div>'
+      : '';
+    return '<article class="noticia-card' + (n.imagen ? ' noticia-card-foto' : '') + '">'
+      + foto
+      + '<div class="noticia-contenido">'
+      + '<div class="noticia-meta"><span class="noticia-cat">' + escHtml(n.categoria) + '</span>'
+      + '<span class="noticia-fecha">' + escHtml(n.fecha) + '</span></div>'
+      + '<h3>' + escHtml(n.titulo) + '</h3>'
+      + '<p>' + escHtml(n.resumen) + '</p>'
+      + '</div></article>';
   }).join('');
+}
+
+function actualizarCarrusel(data) {
+  var slides = data.carrusel || [];
+  var heroT  = data.heroTexto || {};
+  var slider = document.querySelector('.presentation-slider');
+  if (!slider) return;
+
+  if (heroT.titulo || heroT.subtitulo || heroT.parrafo) {
+    var h1 = slider.querySelector('.hero-overlay h1');
+    var h2 = slider.querySelector('.hero-overlay h2');
+    var pp = slider.querySelector('.hero-overlay p');
+    if (h1 && heroT.titulo)    h1.textContent = heroT.titulo;
+    if (h2 && heroT.subtitulo) h2.textContent = heroT.subtitulo;
+    if (pp && heroT.parrafo)   pp.textContent = heroT.parrafo;
+  }
+
+  if (!slides.length) return;
+
+  var slidesDiv = slider.querySelector('.slides');
+  var dotsDiv   = slider.querySelector('.slider-dots');
+  if (!slidesDiv) return;
+
+  slidesDiv.innerHTML = slides.map(function(s, i) {
+    var isActive = i === 0 ? ' active' : '';
+    var imgSrc = s.imagen || '';
+    var imgTag = imgSrc
+      ? '<img src="' + imgSrc + '" alt="' + escHtml(s.titulo || '') + '" class="slide-img" width="1920" height="1080" '
+        + (i === 0 ? 'decoding="async" fetchpriority="high"' : 'loading="lazy" decoding="async"') + '>'
+      : '';
+    var caption = (s.titulo || s.subtitulo)
+      ? '<div class="slide-caption"><strong>' + escHtml(s.titulo || '') + '</strong>'
+        + (s.subtitulo ? '<span>' + escHtml(s.subtitulo) + '</span>' : '') + '</div>'
+      : '';
+    return '<div class="slide' + isActive + '">' + imgTag + caption + '</div>';
+  }).join('');
+
+  if (dotsDiv) {
+    dotsDiv.innerHTML = slides.map(function(s, i) {
+      return '<span class="dot' + (i === 0 ? ' active' : '') + '" data-slide="' + i
+        + '" aria-label="Imagen ' + (i + 1) + '"></span>';
+    }).join('');
+    dotsDiv.querySelectorAll('.dot').forEach(function(dot) {
+      dot.addEventListener('click', function() { irASlide(parseInt(this.getAttribute('data-slide'))); });
+    });
+  }
 }
 
 function actualizarFechaPortal(data) {
@@ -226,6 +278,23 @@ function initPortalPagina(config) {
     if (config.renderConveniosPdf) renderPdfList(data.conveniosPdf, config.renderConveniosPdf);
     if (config.renderCursosPdf) renderPdfList(data.cursosPdf, config.renderCursosPdf);
     if (config.actualizarFecha) actualizarFechaPortal(data);
+    if (config.actualizarCarrusel) actualizarCarrusel(data);
+    if (data.navOcultos && data.navOcultos.length) aplicarNavOcultos(data.navOcultos);
     return data;
+  });
+}
+
+function aplicarNavOcultos(ocultos) {
+  if (!ocultos || !ocultos.length) return;
+  document.querySelectorAll('[data-nav-id]').forEach(function(el) {
+    if (ocultos.indexOf(el.getAttribute('data-nav-id')) !== -1) {
+      el.style.display = 'none';
+    }
+  });
+  REGPOL_NAV.forEach(function(item) {
+    if (ocultos.indexOf(item.id) !== -1) {
+      var link = document.querySelector('a[href="' + item.href + '"]');
+      if (link && link.closest('li')) link.closest('li').style.display = 'none';
+    }
   });
 }

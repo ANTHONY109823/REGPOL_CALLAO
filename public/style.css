@@ -806,6 +806,22 @@ footer.portal-footer {
 .lista-novedades-home .noticia-card { border-left-color: var(--verde-pnp); }
 .texto-vacio { color: #888; text-align: center; padding: 24px; }
 
+/* Novedades con foto */
+.noticia-card-foto { padding: 0; overflow: hidden; }
+.noticia-card-foto .noticia-foto { width: 100%; height: 180px; overflow: hidden; }
+.noticia-card-foto .noticia-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.noticia-card-foto .noticia-contenido { padding: 16px 20px; }
+.noticia-card-foto h3 { margin-top: 6px; }
+
+/* Caption dentro del slider */
+.slide-caption {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,.55));
+  padding: 18px 24px 14px; color: #fff;
+}
+.slide-caption strong { display: block; font-size: 16px; font-weight: 700; }
+.slide-caption span   { font-size: 13px; opacity: .85; }
+
 /* --- PÁGINAS INSTITUCIONALES (Reseña / Labor) --- */
 .institucional-page { max-width: 920px; margin: 0 auto; }
 
