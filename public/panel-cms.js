@@ -67,6 +67,9 @@ function poblarFormulariosCMS() {
   setVal('cms-labor-intro',   (d.nuestraLabor    || {}).intro || '');
   renderParrafosResenaCMS();
   renderPilaresCMS();
+  inicializarBannerImg('resena',   (d.resenaHistorica || {}).imagenBanner || '');
+  inicializarBannerImg('labor',    (d.nuestraLabor    || {}).imagenBanner || '');
+  inicializarBannerImg('novedades', d.imagenBannerNovedades || '');
 }
 
 function setVal(id, val) {
@@ -545,10 +548,13 @@ function recolectarDatosCMS() {
   data.resenaHistorica.titulo  = 'Reseña Histórica';
   data.resenaHistorica.intro   = getVal('cms-resena-intro');
   data.resenaHistorica.parrafos = recolectarParrafosDesdeDOM();
+  data.resenaHistorica.imagenBanner = leerBannerImg('resena');
   data.nuestraLabor       = data.nuestraLabor || {};
   data.nuestraLabor.titulo = 'Nuestra Labor';
   data.nuestraLabor.intro  = getVal('cms-labor-intro');
+  data.nuestraLabor.imagenBanner = leerBannerImg('labor');
   if (!data.nuestraLabor.pilares) data.nuestraLabor.pilares = (cmsDataActual.nuestraLabor || {}).pilares || [];
+  data.imagenBannerNovedades = leerBannerImg('novedades');
   return data;
 }
 
@@ -668,3 +674,62 @@ function leerModal(id) {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') cerrarCmsModal();
 });
+
+// ═══════════════════════════════════════════════════════════════
+// BANNERS HERO — helpers compartidos (resena / labor / novedades)
+// ═══════════════════════════════════════════════════════════════
+function inicializarBannerImg(seccion, valor) {
+  var hidden  = document.getElementById('cms-' + seccion + '-img-data');
+  var preview = document.getElementById('cms-' + seccion + '-img-preview');
+  var thumb   = document.getElementById('cms-' + seccion + '-img-thumb');
+  var urlInput = document.getElementById('cms-' + seccion + '-img-url');
+  if (!hidden) return;
+  hidden.value = valor || '';
+  if (valor) {
+    if (thumb)   { thumb.src = valor; }
+    if (preview) { preview.style.display = 'block'; }
+    if (urlInput && valor.startsWith('http')) urlInput.value = valor;
+  } else {
+    if (preview) preview.style.display = 'none';
+  }
+}
+
+function previewBannerImg(input, seccion) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    alert('La imagen no debe superar 2 MB. Comprime la imagen antes de subirla.');
+    input.value = ''; return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    inicializarBannerImg(seccion, e.target.result);
+    var urlInput = document.getElementById('cms-' + seccion + '-img-url');
+    if (urlInput) urlInput.value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function previewBannerUrl(input, seccion) {
+  var url = input.value.trim();
+  if (!url) { quitarBannerImg(seccion); return; }
+  inicializarBannerImg(seccion, url);
+}
+
+function quitarBannerImg(seccion) {
+  var hidden  = document.getElementById('cms-' + seccion + '-img-data');
+  var preview = document.getElementById('cms-' + seccion + '-img-preview');
+  var thumb   = document.getElementById('cms-' + seccion + '-img-thumb');
+  var fileInput = document.getElementById('cms-' + seccion + '-img-file');
+  var urlInput  = document.getElementById('cms-' + seccion + '-img-url');
+  if (hidden)    hidden.value = '';
+  if (preview)   preview.style.display = 'none';
+  if (thumb)     thumb.src = '';
+  if (fileInput) fileInput.value = '';
+  if (urlInput)  urlInput.value = '';
+}
+
+function leerBannerImg(seccion) {
+  var hidden = document.getElementById('cms-' + seccion + '-img-data');
+  return hidden ? hidden.value.trim() : '';
+}

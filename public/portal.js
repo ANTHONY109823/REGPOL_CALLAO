@@ -342,17 +342,30 @@ function renderPdfList(items, containerId) {
   }).join('');
 }
 
+function renderHeroBanner(imagen, icono, titulo, subtitulo, gradienteClase) {
+  var imgTag = imagen
+    ? '<img src="' + escHtml(imagen) + '" alt="' + escHtml(titulo) + '" class="pagina-hero-img" loading="lazy"/>'
+    : '';
+  return '<div class="pagina-hero-banner ' + (gradienteClase || '') + '">'
+    + imgTag
+    + '<div class="pagina-hero-overlay"></div>'
+    + '<div class="pagina-hero-contenido">'
+    + '<div class="pagina-hero-icono"><i class="fas ' + escHtml(icono) + '"></i></div>'
+    + '<div class="pagina-hero-texto">'
+    + '<h2>' + escHtml(titulo) + '</h2>'
+    + (subtitulo ? '<p>' + escHtml(subtitulo) + '</p>' : '')
+    + '</div></div></div>';
+}
+
 function renderResenaHistorica(data, containerId) {
   var el = document.getElementById(containerId);
   var sec = data.resenaHistorica;
   if (!el || !sec) return;
   var html = '<article class="institucional-page institucional-resena">';
+  html += renderHeroBanner(sec.imagenBanner, 'fa-landmark', sec.titulo || 'Reseña Histórica', 'Provincia Constitucional del Callao', 'hero-resena');
   html += '<div class="institucional-cabecera">';
-  html += '<div class="institucional-icono"><i class="fas fa-landmark"></i></div>';
-  html += '<div class="institucional-cabecera-texto">';
-  html += '<h2>' + escHtml(sec.titulo || 'Reseña Histórica') + '</h2>';
   html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
-  html += '</div></div>';
+  html += '</div>';
   html += '<div class="institucional-cuerpo">';
   (sec.parrafos || []).forEach(function(p, i) {
     html += '<div class="institucional-bloque">' +
@@ -368,12 +381,10 @@ function renderNuestraLabor(data, containerId) {
   var sec = data.nuestraLabor;
   if (!el || !sec) return;
   var html = '<article class="institucional-page institucional-labor">';
+  html += renderHeroBanner(sec.imagenBanner, 'fa-hands-helping', sec.titulo || 'Nuestra Labor', 'Seguridad, prevención y servicio ciudadano', 'hero-labor');
   html += '<div class="institucional-cabecera">';
-  html += '<div class="institucional-icono institucional-icono-naranja"><i class="fas fa-hands-helping"></i></div>';
-  html += '<div class="institucional-cabecera-texto">';
-  html += '<h2>' + escHtml(sec.titulo || 'Nuestra Labor') + '</h2>';
   html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
-  html += '</div></div>';
+  html += '</div>';
   html += '<div class="pilares-grid-v2">';
   (sec.pilares || []).forEach(function(p) {
     html += '<div class="card-pilar-v2">' +
@@ -388,13 +399,17 @@ function renderNuestraLabor(data, containerId) {
 function renderNovedades(data, containerId, limite) {
   var el = document.getElementById(containerId);
   if (!el) return;
+  var banner = '';
+  if (!limite) {
+    banner = renderHeroBanner(data.imagenBannerNovedades || '', 'fa-newspaper', 'Novedades', 'Últimas noticias de la Región Policial Callao', 'hero-novedades');
+  }
   var items = (data.novedades || []).slice();
   if (limite) items = items.slice(0, limite);
   if (!items.length) {
-    el.innerHTML = '<p class="texto-vacio">Sin novedades publicadas.</p>';
+    el.innerHTML = banner + '<p class="texto-vacio">Sin novedades publicadas.</p>';
     return;
   }
-  el.innerHTML = items.map(function(n) {
+  el.innerHTML = banner + items.map(function(n) {
     var foto = n.imagen
       ? '<div class="noticia-foto"><img src="' + n.imagen + '" alt="' + escHtml(n.titulo) + '" loading="lazy"/></div>'
       : '';

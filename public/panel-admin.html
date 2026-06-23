@@ -521,11 +521,30 @@
 
         <!-- PANEL: Novedades -->
         <div id="cms-panel-novedades" class="cms-panel">
+          <div style="background:#f0f7f4;border:1.5px dashed #004d3d;border-radius:8px;padding:12px;margin-bottom:14px;">
+            <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Imagen del banner de la sección Novedades</strong>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <label style="flex:1;min-width:180px;">
+                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Subir foto (JPG/PNG máx 2MB)</span>
+                <input type="file" id="cms-novedades-img-file" accept="image/jpeg,image/png,image/webp" style="font-size:12px;width:100%;" onchange="previewBannerImg(this,'novedades')"/>
+              </label>
+              <label style="flex:1;min-width:180px;">
+                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">O pegar URL de imagen web</span>
+                <input type="text" id="cms-novedades-img-url" placeholder="https://..." style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;" oninput="previewBannerUrl(this,'novedades')"/>
+              </label>
+            </div>
+            <input type="hidden" id="cms-novedades-img-data"/>
+            <div id="cms-novedades-img-preview" style="margin-top:8px;display:none;">
+              <img id="cms-novedades-img-thumb" src="" style="max-height:90px;border-radius:6px;border:1.5px solid #ccc;" alt=""/>
+              <button type="button" onclick="quitarBannerImg('novedades')" style="margin-left:8px;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;"><i class="fas fa-times"></i> Quitar</button>
+            </div>
+          </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
             <strong style="color:#004d3d;">Novedades</strong>
             <button class="btn btn-v" onclick="agregarNovedadCMS()"><i class="fas fa-plus"></i> Nueva</button>
           </div>
           <div id="cms-lista-novedades"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
+          <button class="btn btn-v" onclick="guardarSitioWeb()" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar Novedades</button>
         </div>
 
         <!-- PANEL: Convenios -->
@@ -548,6 +567,24 @@
 
         <!-- PANEL: Reseña Histórica -->
         <div id="cms-panel-resena" class="cms-panel">
+          <div style="background:#f0f7f4;border:1.5px dashed #004d3d;border-radius:8px;padding:12px;margin-bottom:14px;">
+            <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Imagen del banner superior</strong>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <label style="flex:1;min-width:180px;">
+                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Subir foto (JPG/PNG máx 2MB)</span>
+                <input type="file" id="cms-resena-img-file" accept="image/jpeg,image/png,image/webp" style="font-size:12px;width:100%;" onchange="previewBannerImg(this,'resena')"/>
+              </label>
+              <label style="flex:1;min-width:180px;">
+                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">O pegar URL de imagen web</span>
+                <input type="text" id="cms-resena-img-url" placeholder="https://..." style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;" oninput="previewBannerUrl(this,'resena')"/>
+              </label>
+            </div>
+            <input type="hidden" id="cms-resena-img-data"/>
+            <div id="cms-resena-img-preview" style="margin-top:8px;display:none;">
+              <img id="cms-resena-img-thumb" src="" style="max-height:90px;border-radius:6px;border:1.5px solid #ccc;" alt=""/>
+              <button type="button" onclick="quitarBannerImg('resena')" style="margin-left:8px;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;"><i class="fas fa-times"></i> Quitar</button>
+            </div>
+          </div>
           <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Introducción</label>
           <textarea id="cms-resena-intro" rows="3" style="width:100%;padding:8px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;margin-bottom:12px;font-family:inherit;" placeholder="Texto introductorio de la reseña..."></textarea>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -560,6 +597,24 @@
 
         <!-- PANEL: Nuestra Labor -->
         <div id="cms-panel-labor" class="cms-panel">
+          <div style="background:#f0f7f4;border:1.5px dashed #004d3d;border-radius:8px;padding:12px;margin-bottom:14px;">
+            <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Imagen del banner superior</strong>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <label style="flex:1;min-width:180px;">
+                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Subir foto (JPG/PNG máx 2MB)</span>
+                <input type="file" id="cms-labor-img-file" accept="image/jpeg,image/png,image/webp" style="font-size:12px;width:100%;" onchange="previewBannerImg(this,'labor')"/>
+              </label>
+              <label style="flex:1;min-width:180px;">
+                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">O pegar URL de imagen web</span>
+                <input type="text" id="cms-labor-img-url" placeholder="https://..." style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;" oninput="previewBannerUrl(this,'labor')"/>
+              </label>
+            </div>
+            <input type="hidden" id="cms-labor-img-data"/>
+            <div id="cms-labor-img-preview" style="margin-top:8px;display:none;">
+              <img id="cms-labor-img-thumb" src="" style="max-height:90px;border-radius:6px;border:1.5px solid #ccc;" alt=""/>
+              <button type="button" onclick="quitarBannerImg('labor')" style="margin-left:8px;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;"><i class="fas fa-times"></i> Quitar</button>
+            </div>
+          </div>
           <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Introducción</label>
           <textarea id="cms-labor-intro" rows="3" style="width:100%;padding:8px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;margin-bottom:12px;font-family:inherit;" placeholder="Texto introductorio de Nuestra Labor..."></textarea>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -968,7 +1023,7 @@
 <script src="portal-data.js?v=2"></script>
 <script src="portal.js?v=16"></script>
 <script src="divisiones-ui.js?v=1"></script>
-<script src="panel-cms.js?v=4"></script>
+<script src="panel-cms.js?v=5"></script>
 <script>
 var API = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
   : ((location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '');

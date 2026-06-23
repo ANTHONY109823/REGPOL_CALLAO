@@ -1180,3 +1180,106 @@ table.t { min-width: 600px; }
   .institucional-bloque { flex-direction: column; gap: 8px; padding: 18px; }
   .institucional-num { font-size: 1.1rem; }
 }
+/* ═══════════════════════════════════════════════════════════
+   BANNERS HERO DE PÁGINAS (Reseña, Labor, Novedades)
+═══════════════════════════════════════════════════════════ */
+.pagina-hero-banner {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #003d2e 0%, #005244 50%, #1a7a5e 100%);
+  box-shadow: 0 6px 28px rgba(0,0,0,0.22);
+}
+
+.pagina-hero-banner.hero-resena {
+  background: linear-gradient(135deg, #1a2a4a 0%, #2c3e6a 40%, #3a5a8a 70%, #c8a94a 100%);
+}
+
+.pagina-hero-banner.hero-labor {
+  background: linear-gradient(135deg, #002d1e 0%, #004d3d 40%, #006b54 70%, #1a9a7a 100%);
+}
+
+.pagina-hero-banner.hero-novedades {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #004d3d 100%);
+}
+
+.pagina-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.pagina-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.55) 100%);
+  z-index: 1;
+}
+
+.pagina-hero-contenido {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 36px;
+  width: 100%;
+}
+
+.pagina-hero-icono {
+  flex-shrink: 0;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: 2.5px solid rgba(255,255,255,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #fff;
+  backdrop-filter: blur(4px);
+}
+
+.pagina-hero-texto h2 {
+  color: #fff;
+  font-size: 1.65rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  margin-bottom: 6px;
+}
+
+.pagina-hero-texto p {
+  color: rgba(255,255,255,0.82);
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+/* Cuando la cabecera ya no muestra el título h2 (se movió al banner) */
+.institucional-page .institucional-cabecera {
+  padding: 18px 28px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  margin-bottom: 20px;
+}
+
+@media (max-width: 560px) {
+  .pagina-hero-banner { height: 180px; border-radius: 10px; }
+  .pagina-hero-contenido { padding: 0 18px; gap: 14px; }
+  .pagina-hero-icono { width: 50px; height: 50px; font-size: 20px; }
+  .pagina-hero-texto h2 { font-size: 1.15rem; }
+  .pagina-hero-texto p { font-size: 0.8rem; }
+}

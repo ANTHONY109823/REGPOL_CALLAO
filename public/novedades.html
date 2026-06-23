@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Novedades - REGPOL CALLAO</title>
-  <link rel="stylesheet" href="style.css?v=27">
+  <link rel="stylesheet" href="style.css?v=28">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
-    /* ── SORTEOS BANNER ── */
+    /* â”€â”€ SORTEOS BANNER â”€â”€ */
     .sorteos-section { margin: 32px 0; }
     .sorteos-section-titulo {
       display: flex; align-items: center; gap: 10px;
@@ -17,7 +17,7 @@
     }
     .sorteos-section-titulo i { color: #c8a94a; font-size: 18px; }
 
-    /* FLYER próximo sorteo */
+    /* FLYER prÃ³ximo sorteo */
     .sorteos-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 18px; }
     .sorteo-flyer {
       border-radius: 14px; overflow: hidden;
@@ -104,7 +104,7 @@
       <img src="img/regpol-callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90">
     </div>
     <div class="title-text">
-      <h1 class="portal-eslogan">REGIÓN POLICIAL CALLAO</h1>
+      <h1 class="portal-eslogan">REGIÃ“N POLICIAL CALLAO</h1>
       <p class="portal-subtitulo">UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES</p>
     </div>
   </div>
@@ -114,10 +114,10 @@
 
 <main class="container content-area">
 
-  <!-- PRÓXIMOS SORTEOS -->
+  <!-- PRÃ“XIMOS SORTEOS -->
   <div id="seccion-proximos" class="sorteos-section" style="display:none;">
     <div class="sorteos-section-titulo">
-      <i class="fas fa-calendar-star"></i> PRÓXIMOS SORTEOS Y CONVOCATORIAS
+      <i class="fas fa-calendar-star"></i> PRÃ“XIMOS SORTEOS Y CONVOCATORIAS
     </div>
     <div class="sorteos-grid" id="grid-proximos"></div>
   </div>
@@ -125,7 +125,7 @@
   <!-- NOVEDADES INSTITUCIONALES -->
   <div class="page-intro">
     <h2>NOVEDADES DEL CALLAO</h2>
-    <p>Noticias y operativos recientes de la Región Policial Callao.</p>
+    <p>Noticias y operativos recientes de la RegiÃ³n Policial Callao.</p>
   </div>
   <div id="lista-novedades" class="lista-novedades"></div>
 
@@ -140,11 +140,11 @@
 </main>
 
 <footer class="portal-footer">
-  <p>&copy; 2026 Región Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
+  <p>&copy; 2026 RegiÃ³n Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
 </footer>
 
-<script src="portal-data.js?v=2"></script>
-<script src="portal.js?v=16"></script>
+<script src="portal-data.js?v=3"></script>
+<script src="portal.js?v=17"></script>
 <script>
 function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -167,7 +167,7 @@ function renderProximos(list){
   document.getElementById('grid-proximos').innerHTML = list.map(function(s){
     var imgHtml = s.imagen
       ? '<img src="'+escH(s.imagen)+'" alt="'+escH(s.titulo)+'"/>'
-      : '<div class="sorteo-placeholder"><i class="fas fa-random"></i><span style="font-size:12px;font-weight:700;">PRÓXIMO SORTEO</span></div>';
+      : '<div class="sorteo-placeholder"><i class="fas fa-random"></i><span style="font-size:12px;font-weight:700;">PRÃ“XIMO SORTEO</span></div>';
     return '<div class="sorteo-flyer">'
       +'<div class="sorteo-flyer-img">'+imgHtml
       +'<span class="sorteo-flyer-badge">CONVOCATORIA</span>'
@@ -204,7 +204,7 @@ function renderResultados(list){
       +(s.descripcion?'<div style="padding:10px 20px;font-size:12.5px;color:#666;background:#f7faf7;">'+escH(s.descripcion)+'</div>':'')
       +(filas
         ? '<table class="resultado-tabla"><thead><tr><th>#</th><th>Nombres y Apellidos</th><th>Unidad</th></tr></thead><tbody>'+filas+'</tbody></table>'
-        : '<p class="vacio-msg">Resultados pendientes de publicación.</p>')
+        : '<p class="vacio-msg">Resultados pendientes de publicaciÃ³n.</p>')
       +'</div>';
   }).join('');
 }
