@@ -266,26 +266,39 @@
     <!-- CONVOCATORIAS -->
     <div class="sb-section" id="sb-sec-convocatorias">
       <div class="sb-section-label">Convocatorias</div>
-      <div class="sb-group">
+
+      <!-- GRUPO: CURSOS -->
+      <div class="sb-group" id="sb-grp-cursos">
         <div class="sb-group-header" onclick="toggleGrupo(this)">
-          <div class="gi"><i class="fas fa-clipboard-list" style="color:#c8a94a;font-size:13px;"></i> Cursos y Convenios</div>
+          <div class="gi"><i class="fas fa-graduation-cap" style="color:#2980b9;font-size:13px;"></i> Cursos</div>
           <i class="fas fa-chevron-down"></i>
         </div>
         <div class="sb-group-body">
-          <div class="sb-item" data-page="items" data-perm-cursos onclick="ir('items',this);cargarItems('curso')">
-            <i class="fas fa-graduation-cap"></i> Cursos
+          <div class="sb-item" onclick="ir('items',this);cargarItems('curso')">
+            <i class="fas fa-list-alt"></i> Convocatorias
           </div>
-          <div class="sb-item" data-page="items-conv" data-perm-convenios onclick="ir('items',this);cargarItems('convenio')">
-            <i class="fas fa-handshake"></i> Convenios
+          <div class="sb-item" onclick="ir('sorteos',this)">
+            <i class="fas fa-trophy"></i> Inscritos / Aprobados
           </div>
-          <div class="sb-item" data-page="sorteos" data-perm-cursos onclick="ir('sorteos',this)">
-            <i class="fas fa-trophy"></i> Sorteos / Resultados
+        </div>
+      </div>
+
+      <!-- GRUPO: CONVENIOS -->
+      <div class="sb-group" id="sb-grp-convenios" style="margin-top:4px;">
+        <div class="sb-group-header" onclick="toggleGrupo(this)">
+          <div class="gi"><i class="fas fa-handshake" style="color:#27ae60;font-size:13px;"></i> Convenios</div>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="sb-group-body">
+          <div class="sb-item" onclick="ir('items',this);cargarItems('convenio')">
+            <i class="fas fa-list-alt"></i> Convocatorias
           </div>
-          <div class="sb-item" data-page="sorteos" data-perm-convenios onclick="ir('sorteos',this)" style="display:none;">
+          <div class="sb-item" onclick="ir('sorteos',this)">
             <i class="fas fa-trophy"></i> Sorteos / Resultados
           </div>
         </div>
       </div>
+
     </div>
 
     <!-- ADMINISTRACIÓN (solo Super Admin) -->
@@ -1077,11 +1090,15 @@ function aplicarPermisosSidebar(s){
   var tieneGrupoConv  = tieneCursos || tieneConvenios;
 
   document.querySelectorAll('[data-rol-unitic]').forEach(function(el){if(!esU)el.style.display='none';});
-  document.querySelectorAll('[data-perm-cursos]').forEach(function(el){el.style.display=tieneCursos?'':'none';});
-  document.querySelectorAll('[data-perm-convenios]').forEach(function(el){el.style.display=tieneConvenios?'':'none';});
   document.querySelectorAll('[data-perm-evaluaciones]').forEach(function(el){el.style.display=tieneEval?'':'none';});
   document.querySelectorAll('[data-perm-descargas]').forEach(function(el){el.style.display=tieneDesc?'':'none';});
   document.querySelectorAll('[data-perm-preguntas]').forEach(function(el){el.style.display=tienePreguntas?'':'none';});
+
+  // Grupos de convocatorias: control por grupo completo (sin duplicar ítems)
+  var grpCursos=document.getElementById('sb-grp-cursos');
+  if(grpCursos) grpCursos.style.display=tieneCursos?'':'none';
+  var grpConvenios=document.getElementById('sb-grp-convenios');
+  if(grpConvenios) grpConvenios.style.display=tieneConvenios?'':'none';
 
   var secPsico=document.getElementById('sb-sec-psico');
   if(secPsico) secPsico.style.display=tieneGrupoPsico?'':'none';
