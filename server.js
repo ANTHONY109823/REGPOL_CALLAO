@@ -480,21 +480,27 @@ app.get('/preguntas', async (req, res) => {
   }
 });
 
-// ── CRUD preguntas (solo unitic) ───────────────────────────────────────────────
+function puedeGestionarPreguntas(admin) {
+  return admin.rol === 'unitic' || normalizarPermisos(admin.permisos).includes('evaluaciones');
+}
+
+// ── CRUD preguntas (Super Admin o Psicología con permiso evaluaciones) ─────────
 app.get('/admin/preguntas', requireAuth, async (req, res) => {
+  if (!puedeGestionarPreguntas(req.admin))
+    return res.status(403).json({ ok: false, error: 'Sin acceso' });
   const r = await pool.query('SELECT * FROM preguntas ORDER BY orden,numero');
   res.json({ ok: true, preguntas: r.rows });
 });
 
 app.put('/admin/preguntas/:id', requireAuth, async (req, res) => {
-  if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false, error: 'Solo UNITIC' });
+  if (!puedeGestionarPreguntas(req.admin)) return res.status(403).json({ ok: false, error: 'Sin acceso' });
   const { texto, activa } = req.body;
   await pool.query('UPDATE preguntas SET texto=$1,activa=$2 WHERE id=$3', [texto, activa, req.params.id]);
   res.json({ ok: true });
 });
 
 app.post('/admin/preguntas', requireAuth, async (req, res) => {
-  if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false, error: 'Solo UNITIC' });
+  if (!puedeGestionarPreguntas(req.admin)) return res.status(403).json({ ok: false, error: 'Sin acceso' });
   const { numero, texto } = req.body;
   const r = await pool.query(
     'INSERT INTO preguntas (numero,texto,orden) VALUES ($1,$2,$3) RETURNING id',
@@ -503,7 +509,7 @@ app.post('/admin/preguntas', requireAuth, async (req, res) => {
 });
 
 app.delete('/admin/preguntas/:id', requireAuth, async (req, res) => {
-  if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false, error: 'Solo UNITIC' });
+  if (!puedeGestionarPreguntas(req.admin)) return res.status(403).json({ ok: false, error: 'Sin acceso' });
   await pool.query('UPDATE preguntas SET activa=FALSE WHERE id=$1', [req.params.id]);
   res.json({ ok: true });
 });

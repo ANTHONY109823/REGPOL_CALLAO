@@ -247,34 +247,28 @@
       </div>
     </div>
 
-    <!-- PSICOLOGÍA (grupo colapsable) -->
-    <div class="sb-section">
-      <div class="sb-section-label">Gestión</div>
+    <!-- BIENESTAR / PSICOLOGÍA -->
+    <div class="sb-section" id="sb-sec-psico">
+      <div class="sb-section-label">Bienestar / Psicología</div>
       <div class="sb-group">
         <div class="sb-group-header" onclick="toggleGrupo(this)">
-          <div class="gi"><i class="fas fa-brain" style="color:#8e44ad;font-size:13px;"></i> Psicología</div>
+          <div class="gi"><i class="fas fa-brain" style="color:#8e44ad;font-size:13px;"></i> Evaluación MMPI-2</div>
           <i class="fas fa-chevron-down"></i>
         </div>
         <div class="sb-group-body">
-          <div class="sb-item" onclick="ir('evaluaciones',this)"><i class="fas fa-clipboard-list"></i> Evaluaciones</div>
-          <div class="sb-item" onclick="ir('preguntas',this)"><i class="fas fa-question-circle"></i> Preguntas</div>
-          <div class="sb-item" onclick="ir('descargas',this)"><i class="fas fa-download"></i> Descargas</div>
+          <div class="sb-item" data-perm-evaluaciones onclick="ir('evaluaciones',this)"><i class="fas fa-clipboard-list"></i> Evaluaciones</div>
+          <div class="sb-item" data-perm-preguntas onclick="ir('preguntas',this)"><i class="fas fa-question-circle"></i> Preguntas</div>
+          <div class="sb-item" data-perm-descargas onclick="ir('descargas',this)"><i class="fas fa-download"></i> Descargas</div>
         </div>
-      </div>
-      <div class="sb-item" onclick="ir('usuarios',this)">
-        <i class="fas fa-users-cog"></i> Usuarios
-      </div>
-      <div class="sb-item" onclick="ir('divisiones',this)">
-        <i class="fas fa-sitemap"></i> Divisiones / Unidades
       </div>
     </div>
 
-    <!-- GESTIÓN CONVOCATORIAS -->
-    <div class="sb-section">
+    <!-- CONVOCATORIAS -->
+    <div class="sb-section" id="sb-sec-convocatorias">
       <div class="sb-section-label">Convocatorias</div>
       <div class="sb-group">
         <div class="sb-group-header" onclick="toggleGrupo(this)">
-          <div class="gi"><i class="fas fa-clipboard-list" style="color:#c8a94a;font-size:13px;"></i> Gestión</div>
+          <div class="gi"><i class="fas fa-clipboard-list" style="color:#c8a94a;font-size:13px;"></i> Cursos y Convenios</div>
           <i class="fas fa-chevron-down"></i>
         </div>
         <div class="sb-group-body">
@@ -294,7 +288,18 @@
       </div>
     </div>
 
-    <!-- EDITAR PORTAL (grupo colapsable) -->
+    <!-- ADMINISTRACIÓN (solo Super Admin) -->
+    <div class="sb-section" data-rol-unitic>
+      <div class="sb-section-label">Administración</div>
+      <div class="sb-item" onclick="ir('usuarios',this)">
+        <i class="fas fa-users-cog"></i> Usuarios y permisos
+      </div>
+      <div class="sb-item" onclick="ir('divisiones',this)">
+        <i class="fas fa-sitemap"></i> Divisiones / Unidades
+      </div>
+    </div>
+
+    <!-- EDITAR PORTAL (solo Super Admin) -->
     <div class="sb-section" data-rol-unitic>
       <div class="sb-section-label">Portal Web</div>
       <div class="sb-group">
@@ -932,9 +937,10 @@
     <label style="margin-bottom:8px;">Secciones que puede gestionar</label>
     <div class="perm-grid">
       <div class="perm-box">
-        <div class="pb-title">🧠 Psicología</div>
+        <div class="pb-title">🧠 Bienestar / Psicología</div>
         <label><input type="checkbox" value="evaluaciones" class="perm-chk"> Ver evaluaciones</label>
         <label><input type="checkbox" value="descargas" class="perm-chk"> Descargar PDF</label>
+        <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Gestionar preguntas MMPI-2: solo Super Admin o usuario con «Ver evaluaciones».</p>
       </div>
       <div class="perm-box">
         <div class="pb-title">📄 Convenios</div>
@@ -999,18 +1005,33 @@ function hdr(){return{'Content-Type':'application/json','x-admin-token':TOKEN};}
 
 function tienePermiso(p){ return SESION&&(SESION.rol==='unitic'||(SESION.permisos||[]).indexOf(p)!==-1); }
 function esUnitic(){ return SESION&&SESION.rol==='unitic'; }
+function puedeVerPreguntas(){ return esUnitic()||tienePermiso('evaluaciones'); }
+function puedeVerEvaluaciones(){ return esUnitic()||tienePermiso('evaluaciones'); }
+function puedeVerDescargas(){ return esUnitic()||tienePermiso('descargas'); }
 
 function aplicarPermisosSidebar(s){
   var perms=s.permisos||[], rol=s.rol;
   var esU=(rol==='unitic');
   var tieneCursos   =esU||perms.indexOf('cms_cursos')!==-1;
   var tieneConvenios=esU||perms.indexOf('cms_convenios')!==-1;
-  var tienePsico    =esU||perms.indexOf('evaluaciones')!==-1||perms.indexOf('descargas')!==-1;
-  // Mostrar/ocultar secciones del sidebar
+  var tieneEval     =esU||perms.indexOf('evaluaciones')!==-1;
+  var tieneDesc     =esU||perms.indexOf('descargas')!==-1;
+  var tienePreguntas=tieneEval;
+  var tieneGrupoPsico = tieneEval || tieneDesc;
+  var tieneGrupoConv  = tieneCursos || tieneConvenios;
+
   document.querySelectorAll('[data-rol-unitic]').forEach(function(el){if(!esU)el.style.display='none';});
-  document.querySelectorAll('[data-perm-cursos]').forEach(function(el){if(!tieneCursos)el.style.display='none';});
-  document.querySelectorAll('[data-perm-convenios]').forEach(function(el){if(!tieneConvenios)el.style.display='none';});
-  document.querySelectorAll('[data-perm-psico]').forEach(function(el){if(!tienePsico)el.style.display='none';});
+  document.querySelectorAll('[data-perm-cursos]').forEach(function(el){el.style.display=tieneCursos?'':'none';});
+  document.querySelectorAll('[data-perm-convenios]').forEach(function(el){el.style.display=tieneConvenios?'':'none';});
+  document.querySelectorAll('[data-perm-evaluaciones]').forEach(function(el){el.style.display=tieneEval?'':'none';});
+  document.querySelectorAll('[data-perm-descargas]').forEach(function(el){el.style.display=tieneDesc?'':'none';});
+  document.querySelectorAll('[data-perm-preguntas]').forEach(function(el){el.style.display=tienePreguntas?'':'none';});
+
+  var secPsico=document.getElementById('sb-sec-psico');
+  if(secPsico) secPsico.style.display=tieneGrupoPsico?'':'none';
+  var secConv=document.getElementById('sb-sec-convocatorias');
+  if(secConv) secConv.style.display=tieneGrupoConv?'':'none';
+
   // Badge de rol
   var badge=document.querySelector('.super-badge');
   if(badge){
@@ -1018,6 +1039,7 @@ function aplicarPermisosSidebar(s){
     else if(tieneCursos&&tieneConvenios) badge.textContent='📋 CONVENIOS + EDUCACIÓN';
     else if(tieneCursos)   badge.textContent='🎓 EDUCACIÓN';
     else if(tieneConvenios)badge.textContent='📋 CONVENIOS';
+    else if(tieneGrupoPsico) badge.textContent='🧠 PSICOLOGÍA';
     else badge.textContent='👤 USUARIO';
   }
 }
@@ -1040,6 +1062,10 @@ function iniciarPanel(s){
 
 // ── NAVEGACIÓN SIDEBAR ────────────────────────────────────────────────────────
 function ir(page, el){
+  if(page==='preguntas'&&!puedeVerPreguntas()){alert('Sin acceso. Las preguntas solo las gestiona Psicología/Bienestar o Super Admin.');return;}
+  if(page==='evaluaciones'&&!puedeVerEvaluaciones()){alert('Sin acceso a evaluaciones.');return;}
+  if(page==='descargas'&&!puedeVerDescargas()){alert('Sin acceso a descargas.');return;}
+  if((page==='usuarios'||page==='divisiones')&&!esUnitic()){alert('Solo el Super Admin puede acceder a esta sección.');return;}
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
   var pg=document.getElementById('page-'+page);
   if(pg) pg.classList.add('on');
