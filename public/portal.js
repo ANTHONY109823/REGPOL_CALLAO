@@ -19,6 +19,11 @@ var PORTAL_MARCA = {
   subtitulo: 'UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES'
 };
 
+var PORTAL_HERO = {
+  titulo: 'REGIÓN POLICIAL CALLAO',
+  subtitulo: 'Compromiso, Honor y Servicio en la Provincia Constitucional'
+};
+
 var REGPOL_NAV = [
   { id: 'inicio',    href: 'index.html',            label: 'INICIO',             icon: 'fa-home' },
   { id: 'novedades', href: 'novedades.html',         label: 'NOVEDADES' },
@@ -229,16 +234,41 @@ function marcarNavActivo(activeId) {
   });
 }
 
-function aplicarPortalMarca(heroT) {
+function normalizarHeroTexto(heroT) {
   heroT = heroT || {};
-  var titulo = (heroT.titulo || PORTAL_MARCA.titulo).trim();
-  var subtitulo = (heroT.subtitulo || PORTAL_MARCA.subtitulo).trim();
-  document.querySelectorAll('.portal-eslogan').forEach(function(el) { el.textContent = titulo; });
-  document.querySelectorAll('.portal-subtitulo').forEach(function(el) { el.textContent = subtitulo; });
+  var subtitulo = String(heroT.subtitulo || '').trim();
+  var titulo = String(heroT.titulo || '').trim();
+  if (!titulo) titulo = PORTAL_HERO.titulo;
+  if (!subtitulo
+    || subtitulo === PORTAL_MARCA.subtitulo
+    || subtitulo === 'UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES'
+    || subtitulo === 'AL SERVICIO DE LA CIUDADANÍA') {
+    subtitulo = PORTAL_HERO.subtitulo;
+  }
+  return { titulo: titulo, subtitulo: subtitulo };
+}
+
+function aplicarEncabezadoMarca() {
+  document.querySelectorAll('.main-header .portal-eslogan').forEach(function(el) {
+    el.textContent = PORTAL_MARCA.titulo;
+  });
+  document.querySelectorAll('.main-header .portal-subtitulo').forEach(function(el) {
+    el.textContent = PORTAL_MARCA.subtitulo;
+  });
+}
+
+function aplicarHeroMarca(heroT) {
+  var hero = normalizarHeroTexto(heroT);
+  document.querySelectorAll('.hero-overlay .portal-eslogan').forEach(function(el) {
+    el.textContent = hero.titulo;
+  });
+  document.querySelectorAll('.hero-overlay .portal-subtitulo').forEach(function(el) {
+    el.textContent = hero.subtitulo;
+  });
 }
 
 function initPortalNav(activeId) {
-  aplicarPortalMarca();
+  aplicarEncabezadoMarca();
   var ul = document.querySelector('.nav-main ul');
   if (!ul) return;
   ul.innerHTML = REGPOL_NAV.map(function(item) {
@@ -360,9 +390,7 @@ function actualizarCarrusel(data) {
   var slider = document.querySelector('.presentation-slider');
   if (!slider) return;
 
-  if (heroT.titulo || heroT.subtitulo) {
-    aplicarPortalMarca(heroT);
-  }
+  aplicarHeroMarca(heroT.titulo || heroT.subtitulo ? heroT : null);
 
   if (!slides.length) return;
 
@@ -417,6 +445,7 @@ function initPortalPageHero(activeId) {
 function initPortalPagina(config) {
   config = config || {};
   initPortalNav(config.activeNav || '');
+  aplicarHeroMarca();
   if (config.showPageHero !== false) initPortalPageHero(config.activeNav || '');
   var data = obtenerSiteDataSync();
   if (data) aplicarPortalConfig(config, data);

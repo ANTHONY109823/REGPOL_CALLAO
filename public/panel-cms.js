@@ -32,7 +32,7 @@ function initCMS() {
     if (!cmsDataActual.cursos)    cmsDataActual.cursos    = [];
     if (!cmsDataActual.heroTexto) cmsDataActual.heroTexto = {
       titulo:    'REGIÓN POLICIAL CALLAO',
-      subtitulo: 'UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES',
+      subtitulo: 'Compromiso, Honor y Servicio en la Provincia Constitucional',
       parrafo:   ''
     };
     poblarFormulariosCMS();
@@ -117,7 +117,7 @@ function renderEditorCarrusel() {
   }
 
   html += '<hr style="margin:16px 0;border:none;border-top:1.5px solid #e0e8e0;"/>'
-    + '<strong style="color:#004d3d;font-size:13px;display:block;margin-bottom:10px;"><i class="fas fa-heading"></i> Texto del hero (encabezado de inicio)</strong>'
+    + '<strong style="color:#004d3d;font-size:13px;display:block;margin-bottom:10px;"><i class="fas fa-heading"></i> Texto del banner central (solo inicio)</strong>'
     + '<div class="cms-modal-campo"><label class="cms-label">Título principal</label>'
     + '<input type="text" id="cms-hero-titulo" class="cms-input" value="' + escHtml(heroT.titulo || '') + '"/></div>'
     + '<div class="cms-modal-campo"><label class="cms-label">Subtítulo</label>'
