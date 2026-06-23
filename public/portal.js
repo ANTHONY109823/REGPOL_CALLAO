@@ -518,24 +518,42 @@ function renderUnidadesPublico(data) {
   var msg  = document.getElementById('msg-cargando');
   if (!cont || !msg) return;
   if (!data || !data.ok || !data.divisiones || !data.divisiones.length) {
-    msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> No se pudo cargar la informaci\u00f3n de las unidades.';
+    msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> No se pudo cargar la informaci?n.';
     return;
   }
   msg.style.display = 'none';
   var html = '';
   data.divisiones.forEach(function(div) {
     if (!div.unidades || !div.unidades.length) return;
-    html += '<div class="unidades-seccion"><h3>' + escHtml(div.nombre) + '</h3><div class="unidades-grid">';
-    div.unidades.forEach(function(u) {
-      var dirHtml = u.direccion
-        ? '<div class="unidad-dato"><i class="fas fa-map-marker-alt"></i><span>' + escHtml(u.direccion) + '</span></div>'
-        : '<div class="unidad-dato unidad-sin-dato"><i class="fas fa-map-marker-alt"></i><span>Direcci\u00f3n no disponible</span></div>';
-      var telHtml = u.telefono
-        ? '<div class="unidad-dato"><i class="fas fa-phone"></i><span><a href="tel:' + escHtml(u.telefono) + '" style="color:inherit;text-decoration:none;">' + escHtml(u.telefono) + '</a></span></div>'
-        : '<div class="unidad-dato unidad-sin-dato"><i class="fas fa-phone"></i><span>Tel\u00e9fono no disponible</span></div>';
-      html += '<div class="unidad-card"><h4>' + escHtml(u.nombre) + '</h4>' + dirHtml + telHtml + '</div>';
+    html += '<div class="unidades-seccion">'
+      + '<h3 class="unidades-seccion-titulo"><i class="fas fa-shield-alt"></i> ' + escHtml(div.nombre) + '</h3>'
+      + '<div class="tabla-unidades-wrap"><table class="tabla-unidades">'
+      + '<thead><tr>'
+      + '<th>#</th>'
+      + '<th>Comisaria / Unidad</th>'
+      + '<th>Direcci?n</th>'
+      + '<th>Tel?fono</th>'
+      + '<th>Mapa</th>'
+      + '</tr></thead><tbody>';
+    div.unidades.forEach(function(u, i) {
+      var mapsUrl = u.direccion
+        ? 'https://www.google.com/maps/search/' + encodeURIComponent(u.direccion + ', Callao, Peru')
+        : '';
+      var mapsBtn = mapsUrl
+        ? '<a href="' + mapsUrl + '" target="_blank" rel="noopener noreferrer" class="btn-mapa"><i class="fas fa-map-marker-alt"></i> Ver mapa</a>'
+        : '<span class="sin-dato">-</span>';
+      var tel = u.telefono
+        ? '<a href="tel:' + escHtml(u.telefono) + '" class="tel-link">' + escHtml(u.telefono) + '</a>'
+        : '<span class="sin-dato">-</span>';
+      html += '<tr>'
+        + '<td class="td-num">' + (i + 1) + '</td>'
+        + '<td class="td-nombre">' + escHtml(u.nombre) + '</td>'
+        + '<td class="td-dir">' + (u.direccion ? escHtml(u.direccion) : '<span class="sin-dato">No disponible</span>') + '</td>'
+        + '<td class="td-tel">' + tel + '</td>'
+        + '<td class="td-mapa">' + mapsBtn + '</td>'
+        + '</tr>';
     });
-    html += '</div></div>';
+    html += '</tbody></table></div></div>';
   });
   cont.innerHTML = html;
 }

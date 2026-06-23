@@ -1392,3 +1392,47 @@ table.t { min-width: 600px; }
   .novedades-grid { grid-template-columns: 1fr; gap: 14px; }
   .nov-card-img { height: 140px; }
 }
+
+/* ── TABLA UNIDADES ─────────────────────────────────── */
+.unidades-seccion { margin-bottom: 38px; }
+.unidades-seccion-titulo {
+  color: #004d3d; font-size: 15px; font-weight: 800; letter-spacing: .5px;
+  text-transform: uppercase; border-bottom: 3px solid #c8a94a;
+  padding-bottom: 10px; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.unidades-seccion-titulo i { color: #c8a94a; }
+.tabla-unidades-wrap { overflow-x: auto; border-radius: 10px; box-shadow: 0 2px 14px rgba(0,77,61,.10); }
+.tabla-unidades {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+  background: #fff; min-width: 600px;
+}
+.tabla-unidades thead th {
+  background: linear-gradient(90deg,#004d3d,#006b55);
+  color: #fff; font-size: 11px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .5px;
+  padding: 11px 14px; text-align: left;
+}
+.tabla-unidades thead th:first-child { border-radius: 10px 0 0 0; }
+.tabla-unidades thead th:last-child  { border-radius: 0 10px 0 0; }
+.tabla-unidades tbody tr { border-bottom: 1px solid #f0f0f0; transition: background .15s; }
+.tabla-unidades tbody tr:last-child { border-bottom: none; }
+.tabla-unidades tbody tr:hover { background: #f0f7f4; }
+.tabla-unidades tbody tr:nth-child(even) { background: #f8faf8; }
+.tabla-unidades tbody tr:nth-child(even):hover { background: #e8f4f0; }
+.tabla-unidades td { padding: 10px 14px; vertical-align: middle; }
+.td-num { width: 36px; text-align: center; color: #c8a94a; font-weight: 900; font-size: 14px; }
+.td-nombre { font-weight: 700; color: #004d3d; }
+.td-dir { color: #555; font-size: 12.5px; }
+.td-tel { white-space: nowrap; }
+.td-mapa { white-space: nowrap; text-align: center; }
+.tel-link { color: #004d3d; text-decoration: none; font-weight: 600; }
+.tel-link:hover { text-decoration: underline; }
+.btn-mapa {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #1a73e8; color: #fff; font-size: 11px; font-weight: 700;
+  padding: 5px 10px; border-radius: 6px; text-decoration: none;
+  transition: background .15s;
+}
+.btn-mapa:hover { background: #1557b0; }
+.sin-dato { color: #bbb; font-size: 12px; }
