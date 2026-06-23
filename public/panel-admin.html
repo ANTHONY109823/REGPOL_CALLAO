@@ -1,16 +1,16 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Panel UNITIC — REGPOL Callao</title>
+  <title>Panel UNITIC â€” REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
   <link rel="stylesheet" href="panel-admin.css?v=8"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{background:#f0f4f0;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;min-height:100vh;}
 
-    /* ── TOP HEADER ── */
+    /* â”€â”€ TOP HEADER â”€â”€ */
     .top-bar{background:linear-gradient(135deg,#002d24,#004d3d);color:#fff;
       padding:0 20px;height:54px;display:flex;align-items:center;justify-content:space-between;
       box-shadow:0 2px 8px rgba(0,0,0,.3);position:sticky;top:0;z-index:100;flex-shrink:0;}
@@ -24,10 +24,10 @@
       color:#fff;padding:5px 13px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;}
     .btn-logout:hover{background:rgba(255,255,255,.25);}
 
-    /* ── LAYOUT ── */
+    /* â”€â”€ LAYOUT â”€â”€ */
     .layout{display:flex;flex:1;overflow:hidden;}
 
-    /* ── SIDEBAR ── */
+    /* â”€â”€ SIDEBAR â”€â”€ */
     .sidebar{width:220px;background:#fff;border-right:1px solid #e0e8e0;
       display:flex;flex-direction:column;flex-shrink:0;
       box-shadow:2px 0 8px rgba(0,77,61,.06);overflow-y:auto;}
@@ -57,18 +57,18 @@
     .sb-group-body .sb-item{padding-left:28px;font-weight:500;border-left:none;}
     .sb-group-body.hidden{display:none;}
 
-    /* ── CONTENT ── */
+    /* â”€â”€ CONTENT â”€â”€ */
     .content{flex:1;overflow-y:auto;padding:20px;}
     .page{display:none;} .page.on{display:block;}
 
-    /* ── CARDS ── */
+    /* â”€â”€ CARDS â”€â”€ */
     .card{background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,77,61,.07);
       padding:22px;margin-bottom:18px;}
     .card h3{color:#004d3d;margin:0 0 16px;font-size:14px;
       border-bottom:2px solid #c8a94a;padding-bottom:8px;
       display:flex;align-items:center;gap:8px;}
 
-    /* ── STATS ── */
+    /* â”€â”€ STATS â”€â”€ */
     .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;}
     .stat{background:#f0f7f0;border-radius:8px;padding:14px;text-align:center;border:1.5px solid #c8e6c9;}
     .stat .n{font-size:26px;font-weight:800;color:#004d3d;}
@@ -87,7 +87,7 @@
     .ult-nom{font-weight:600;font-size:12.5px;}
     .ult-meta{font-size:11px;color:#888;}
 
-    /* ── TABLA DATOS ── */
+    /* â”€â”€ TABLA DATOS â”€â”€ */
     .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
     .filtros input,.filtros select{padding:7px 10px;border:1.5px solid #ccc;
       border-radius:6px;font-size:12.5px;min-width:140px;}
@@ -101,7 +101,7 @@
       color:#004d3d;border-radius:4px;cursor:pointer;font-size:11px;}
     .pag-btn.on{background:#004d3d;color:#fff;}
 
-    /* ── BOTONES ── */
+    /* â”€â”€ BOTONES â”€â”€ */
     .btn{padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12.5px;
       font-weight:600;display:inline-flex;align-items:center;gap:5px;}
     .btn-v{background:#004d3d;color:#fff;} .btn-v:hover{background:#006b55;}
@@ -110,7 +110,7 @@
     .btn-o{background:#c8a94a;color:#fff;} .btn-o:hover{background:#b09040;}
     .btn-p{background:#8e44ad;color:#fff;} .btn-p:hover{background:#7d3a99;}
 
-    /* ── MODAL ── */
+    /* â”€â”€ MODAL â”€â”€ */
     .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
       z-index:1000;align-items:center;justify-content:center;}
     .modal.open{display:flex;}
@@ -133,7 +133,7 @@
       font-weight:400;color:#333;cursor:pointer;margin-bottom:5px;}
     .perm-box label:last-child{margin-bottom:0;}
 
-    /* ── DESCARGAS GRID ── */
+    /* â”€â”€ DESCARGAS GRID â”€â”€ */
     .descarga-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
     .descarga-box{border:1.5px solid #c8e6c9;border-radius:8px;padding:14px;}
     .descarga-box strong{color:#004d3d;font-size:13px;}
@@ -141,7 +141,7 @@
     .descarga-box select{width:100%;padding:7px;margin-bottom:8px;border-radius:5px;
       border:1.5px solid #ccc;font-size:12.5px;}
 
-    /* ── CMS ── */
+    /* â”€â”€ CMS â”€â”€ */
     .cms-panel{display:none;}
     .cms-panel.activo{display:block;}
     .alerta{padding:9px 14px;border-radius:7px;font-size:13px;margin-bottom:12px;
@@ -183,17 +183,17 @@
       border-radius:6px;font-size:13px;font-family:inherit;}
     .cms-input:focus,.cms-select:focus,.cms-textarea:focus{border-color:#004d3d;outline:none;}
 
-    /* ── INFO TINFO ── */
+    /* â”€â”€ INFO TINFO â”€â”€ */
     .tinfo{font-size:11.5px;color:#666;margin-bottom:8px;}
 
-    /* ── DOWNLOAD TABS ── */
+    /* â”€â”€ DOWNLOAD TABS â”€â”€ */
     .dtab{padding:7px 14px;border:none;background:#e8f0e8;border-radius:6px;
       cursor:pointer;font-size:12px;font-weight:600;color:#555;transition:all .15s;
       display:inline-flex;align-items:center;gap:5px;}
     .dtab:hover{background:#c8e6c9;}
     .dtab.on{background:#004d3d;color:#fff;}
 
-    /* ── DIVISIONES CARD ── */
+    /* â”€â”€ DIVISIONES CARD â”€â”€ */
     .div-card{border:1.5px solid #c8e6c9;border-radius:9px;overflow:hidden;margin-bottom:12px;}
     .div-card-head{background:#004d3d;color:#fff;padding:10px 14px;
       display:flex;align-items:center;justify-content:space-between;}
@@ -208,14 +208,14 @@
     .uni-tipo{font-size:10.5px;background:#e8f5e9;color:#1a7a3a;border-radius:10px;
       padding:1px 7px;margin:0 6px;font-weight:600;}
 
-    /* ── DESCARGA BOXES ── */
+    /* â”€â”€ DESCARGA BOXES â”€â”€ */
     .descarga-box{border:1.5px solid #c8e6c9;border-radius:8px;padding:14px;}
     .descarga-box strong{color:#004d3d;font-size:13px;display:block;margin-bottom:4px;}
     .descarga-box p{font-size:11.5px;color:#666;margin:0 0 8px;}
     .descarga-box select{width:100%;padding:7px;margin-bottom:8px;border-radius:5px;
       border:1.5px solid #ccc;font-size:12.5px;}
 
-    /* ── RESPONSIVE ── */
+    /* â”€â”€ RESPONSIVE â”€â”€ */
     @media(max-width:700px){.sidebar{display:none;} .breakdown-grid{grid-template-columns:1fr;}}
   </style>
 </head>
@@ -225,8 +225,8 @@
 <div class="top-bar">
   <div class="top-bar-left">
     <i class="fas fa-shield-alt" style="font-size:20px;color:#c8a94a;"></i>
-    <h1>REGPOL Callao — Panel de Control</h1>
-    <span class="super-badge">⭐ SUPER ADMIN</span>
+    <h1>REGPOL Callao â€” Panel de Control</h1>
+    <span class="super-badge">â­ SUPER ADMIN</span>
   </div>
   <div class="top-bar-right">
     <span class="top-user" id="ph-nombre"></span>
@@ -247,12 +247,12 @@
       </div>
     </div>
 
-    <!-- BIENESTAR / PSICOLOGÍA -->
+    <!-- BIENESTAR / PSICOLOGÃA -->
     <div class="sb-section" id="sb-sec-psico">
-      <div class="sb-section-label">Bienestar / Psicología</div>
+      <div class="sb-section-label">Bienestar / PsicologÃ­a</div>
       <div class="sb-group">
         <div class="sb-group-header" onclick="toggleGrupo(this)">
-          <div class="gi"><i class="fas fa-brain" style="color:#8e44ad;font-size:13px;"></i> Evaluación MMPI-2</div>
+          <div class="gi"><i class="fas fa-brain" style="color:#8e44ad;font-size:13px;"></i> EvaluaciÃ³n MMPI-2</div>
           <i class="fas fa-chevron-down"></i>
         </div>
         <div class="sb-group-body">
@@ -301,9 +301,9 @@
 
     </div>
 
-    <!-- ADMINISTRACIÓN (solo Super Admin) -->
+    <!-- ADMINISTRACIÃ“N (solo Super Admin) -->
     <div class="sb-section" data-rol-unitic>
-      <div class="sb-section-label">Administración</div>
+      <div class="sb-section-label">AdministraciÃ³n</div>
       <div class="sb-item" onclick="ir('usuarios',this)">
         <i class="fas fa-users-cog"></i> Usuarios y permisos
       </div>
@@ -322,10 +322,10 @@
         </div>
         <div class="sb-group-body">
           <div class="sb-item" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> Novedades</div>
-          <div class="sb-item" onclick="irCMS('resena',this)"><i class="fas fa-landmark"></i> Reseña Histórica</div>
+          <div class="sb-item" onclick="irCMS('resena',this)"><i class="fas fa-landmark"></i> ReseÃ±a HistÃ³rica</div>
           <div class="sb-item" onclick="irCMS('labor',this)"><i class="fas fa-tasks"></i> Nuestra Labor</div>
           <div class="sb-item" onclick="irCMS('carrusel',this)"><i class="fas fa-images"></i> Inicio / Carrusel</div>
-          <div class="sb-item" onclick="irCMS('menu',this)"><i class="fas fa-bars"></i> Menú</div>
+          <div class="sb-item" onclick="irCMS('menu',this)"><i class="fas fa-bars"></i> MenÃº</div>
         </div>
       </div>
     </div>
@@ -338,17 +338,17 @@
     <!-- DASHBOARD -->
     <div id="page-dashboard" class="page on">
       <div class="card">
-        <h3><i class="fas fa-chart-bar"></i> Resumen global — todas las dependencias</h3>
+        <h3><i class="fas fa-chart-bar"></i> Resumen global â€” todas las dependencias</h3>
         <div class="stats-grid">
-          <div class="stat"><div class="n" id="s-total">—</div><div class="l">Total evaluaciones</div></div>
-          <div class="stat" style="border-color:#a5d6a7;"><div class="n" id="s-completas" style="color:#1a7a3a;">—</div><div class="l">Completas</div></div>
-          <div class="stat" style="border-color:#ffe082;"><div class="n" id="s-pendientes" style="color:#856404;">—</div><div class="l">Parciales</div></div>
-          <div class="stat"><div class="n" id="s-comisarias">—</div><div class="l">Comisarías</div></div>
-          <div class="stat"><div class="n" id="s-unidades">—</div><div class="l">Unidades</div></div>
+          <div class="stat"><div class="n" id="s-total">â€”</div><div class="l">Total evaluaciones</div></div>
+          <div class="stat" style="border-color:#a5d6a7;"><div class="n" id="s-completas" style="color:#1a7a3a;">â€”</div><div class="l">Completas</div></div>
+          <div class="stat" style="border-color:#ffe082;"><div class="n" id="s-pendientes" style="color:#856404;">â€”</div><div class="l">Parciales</div></div>
+          <div class="stat"><div class="n" id="s-comisarias">â€”</div><div class="l">ComisarÃ­as</div></div>
+          <div class="stat"><div class="n" id="s-unidades">â€”</div><div class="l">Unidades</div></div>
         </div>
         <div class="breakdown-grid">
           <div class="bl-box">
-            <div class="bl-head"><i class="fas fa-building"></i> Por comisaría</div>
+            <div class="bl-head"><i class="fas fa-building"></i> Por comisarÃ­a</div>
             <table><tbody id="bd-comisaria"><tr><td colspan="2" style="color:#bbb;padding:10px;text-align:center;">Cargando...</td></tr></tbody></table>
           </div>
           <div class="bl-box">
@@ -358,7 +358,7 @@
         </div>
         <div style="margin-top:14px;">
           <div class="bl-box">
-            <div class="bl-head"><i class="fas fa-clock"></i> Últimas 10 evaluaciones</div>
+            <div class="bl-head"><i class="fas fa-clock"></i> Ãšltimas 10 evaluaciones</div>
             <div id="ult-lista" style="padding:0 12px;"></div>
           </div>
         </div>
@@ -368,17 +368,17 @@
     <!-- EVALUACIONES -->
     <div id="page-evaluaciones" class="page">
       <div class="card">
-        <h3><i class="fas fa-clipboard-list"></i> Evaluaciones — todas las dependencias</h3>
+        <h3><i class="fas fa-clipboard-list"></i> Evaluaciones â€” todas las dependencias</h3>
         <div class="descarga-box" style="margin-bottom:16px;background:#f8fcf8;">
           <strong><i class="fas fa-building"></i> Activar dependencias para evaluaciones</strong>
-          <p style="font-size:12px;color:#666;margin:8px 0;">Marque las dependencias habilitadas, agrupadas por división (DIVOPUS 1, 2, 3 y DIVUES).</p>
+          <p style="font-size:12px;color:#666;margin:8px 0;">Marque las dependencias habilitadas, agrupadas por divisiÃ³n (DIVOPUS 1, 2, 3 y DIVUES).</p>
           <div id="cfg-unidades-list" style="max-height:520px;overflow-y:auto;border:1.5px solid #c8e6c9;border-radius:8px;padding:12px;display:grid;gap:14px;background:#f8fcf8;"></div>
           <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <button class="btn btn-v" onclick="guardarActivacionUnidades()"><i class="fas fa-save"></i> Guardar activación</button>
+            <button class="btn btn-v" onclick="guardarActivacionUnidades()"><i class="fas fa-save"></i> Guardar activaciÃ³n</button>
             <button class="btn" style="background:#888;color:#fff;" onclick="marcarTodasUnidades(true)">Marcar todas</button>
             <button class="btn" style="background:#aaa;color:#fff;" onclick="marcarTodasUnidades(false)">Desmarcar todas</button>
           </div>
-          <p style="font-size:12px;margin-top:10px;color:#004d3d;font-weight:600;">Activas: <span id="cfg-activa">—</span></p>
+          <p style="font-size:12px;margin-top:10px;color:#004d3d;font-weight:600;">Activas: <span id="cfg-activa">â€”</span></p>
         </div>
         <div class="filtros">
           <select id="f-div" onchange="onFiltroDivisionAdmin()"><option value="">Todas las divisiones</option></select>
@@ -403,10 +403,10 @@
     <!-- PREGUNTAS -->
     <div id="page-preguntas" class="page">
       <div class="card">
-        <h3><i class="fas fa-list-ol"></i> Gestión de preguntas del cuestionario</h3>
+        <h3><i class="fas fa-list-ol"></i> GestiÃ³n de preguntas del cuestionario</h3>
         <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
           <button class="btn btn-v" onclick="abrirModalPregunta()"><i class="fas fa-plus"></i> Nueva pregunta</button>
-          <input id="f-busq-preg" type="text" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:220px;" placeholder="Buscar por número o texto..." oninput="filtrarPreguntas()"/>
+          <input id="f-busq-preg" type="text" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:220px;" placeholder="Buscar por nÃºmero o texto..." oninput="filtrarPreguntas()"/>
           <span id="cnt-preguntas" style="font-size:12px;color:#666;"></span>
         </div>
         <div style="overflow-x:auto;max-height:580px;overflow-y:auto;">
@@ -441,29 +441,29 @@
 
         <!-- Tabs de descarga -->
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid #e0e8e0;padding-bottom:8px;">
-          <button class="dtab on" onclick="descTab('division',this)"><i class="fas fa-sitemap"></i> Por División</button>
+          <button class="dtab on" onclick="descTab('division',this)"><i class="fas fa-sitemap"></i> Por DivisiÃ³n</button>
           <button class="dtab" onclick="descTab('unidad',this)"><i class="fas fa-building"></i> Por Unidad</button>
           <button class="dtab" onclick="descTab('persona',this)"><i class="fas fa-user-search"></i> Buscar Persona</button>
           <button class="dtab" onclick="descTab('todo',this)"><i class="fas fa-database"></i> Todos</button>
         </div>
 
-        <!-- TAB: División -->
+        <!-- TAB: DivisiÃ³n -->
         <div id="dtab-division">
-          <p style="font-size:12px;color:#666;margin-bottom:12px;">Seleccione una división para descargar el PDF de todas sus unidades.</p>
+          <p style="font-size:12px;color:#666;margin-bottom:12px;">Seleccione una divisiÃ³n para descargar el PDF de todas sus unidades.</p>
           <div id="div-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;"></div>
         </div>
 
-        <!-- TAB: Por unidad (agrupadas por división) -->
+        <!-- TAB: Por unidad (agrupadas por divisiÃ³n) -->
         <div id="dtab-unidad" style="display:none;">
           <div class="descarga-grid">
             <div class="descarga-box" style="max-width:640px;">
               <strong>Reporte por unidad</strong>
               <p>Vista previa del listado antes de descargar. Unidades agrupadas en DIVOPUS 1, 2, 3 y DIVUES.</p>
-              <select id="d-uni-pdf" onchange="vistaPreviaDescarga('unidad','d-uni-pdf','prev-uni')"><option value="">— Seleccionar unidad —</option></select>
+              <select id="d-uni-pdf" onchange="vistaPreviaDescarga('unidad','d-uni-pdf','prev-uni')"><option value="">â€” Seleccionar unidad â€”</option></select>
               <div id="prev-uni-wrap" style="display:none;margin:12px 0;">
                 <div style="overflow-x:auto;">
                   <table class="t">
-                    <thead><tr><th>N°</th><th>Nombres</th><th>CIP</th><th>DNI</th><th>Fecha</th><th>Bloque</th><th>Avance</th><th>Estado</th><th>PDF</th></tr></thead>
+                    <thead><tr><th>NÂ°</th><th>Nombres</th><th>CIP</th><th>DNI</th><th>Fecha</th><th>Bloque</th><th>Avance</th><th>Estado</th><th>PDF</th></tr></thead>
                     <tbody id="prev-uni-body"></tbody>
                   </table>
             </div>
@@ -483,7 +483,7 @@
           </div>
           <div style="overflow-x:auto;">
             <table class="t">
-              <thead><tr><th>Nombres</th><th>CIP</th><th>DNI</th><th>Comisaría / Unidad</th><th>Fecha</th><th>Estado</th><th>PDF</th></tr></thead>
+              <thead><tr><th>Nombres</th><th>CIP</th><th>DNI</th><th>ComisarÃ­a / Unidad</th><th>Fecha</th><th>Estado</th><th>PDF</th></tr></thead>
               <tbody id="bus-resultados"><tr><td colspan="7" style="text-align:center;color:#bbb;padding:18px;">Ingrese CIP o nombre para buscar.</td></tr></tbody>
             </table>
           </div>
@@ -491,10 +491,10 @@
 
         <!-- TAB: Todos -->
         <div id="dtab-todo" style="display:none;">
-          <p style="font-size:12px;color:#666;margin-bottom:14px;">Descarga el PDF con todas las evaluaciones de la región.</p>
+          <p style="font-size:12px;color:#666;margin-bottom:14px;">Descarga el PDF con todas las evaluaciones de la regiÃ³n.</p>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <button class="btn btn-r" style="font-size:13px;" onclick="window.open(API+'/pdf/grupo?division=TODAS&token='+encodeURIComponent(TOKEN),'_blank')">
-              <i class="fas fa-file-pdf"></i> PDF — todas las divisiones
+              <i class="fas fa-file-pdf"></i> PDF â€” todas las divisiones
             </button>
           </div>
         </div>
@@ -504,9 +504,9 @@
     <!-- DIVISIONES / UNIDADES -->
     <div id="page-divisiones" class="page">
       <div class="card">
-        <h3><i class="fas fa-sitemap"></i> Gestión de divisiones y unidades</h3>
+        <h3><i class="fas fa-sitemap"></i> GestiÃ³n de divisiones y unidades</h3>
         <button class="btn btn-v" style="margin-bottom:14px;" onclick="abrirModalDivision()">
-          <i class="fas fa-plus"></i> Nueva división
+          <i class="fas fa-plus"></i> Nueva divisiÃ³n
         </button>
         <div id="div-lista"></div>
       </div>
@@ -520,25 +520,19 @@
         <!-- Alerta global CMS -->
         <div id="alerta-cms" class="alerta" style="display:none;"></div>
 
-        <!-- Botones publicar / exportar -->
+        <!-- BotÃ³n publicar -->
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
           <button class="btn btn-v" onclick="guardarSitioWeb()"><i class="fas fa-upload"></i> Publicar cambios</button>
-          <button class="btn btn-a" onclick="exportarSiteJSON()"><i class="fas fa-file-export"></i> Exportar JSON</button>
-          <label class="btn" style="background:#8e44ad;color:#fff;cursor:pointer;">
-            <i class="fas fa-file-import"></i> Importar JSON
-            <input type="file" accept=".json" onchange="importarSiteJSON(this)" style="display:none;"/>
-          </label>
-          <button class="btn" style="background:#999;color:#fff;" onclick="restaurarSiteDefault()"><i class="fas fa-undo"></i> Restaurar</button>
           <input type="hidden" id="cms-actualizacion"/>
         </div>
 
         <!-- PANEL: Novedades -->
         <div id="cms-panel-novedades" class="cms-panel">
           <div style="background:#f0f7f4;border:1.5px dashed #004d3d;border-radius:8px;padding:12px;margin-bottom:14px;">
-            <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Imagen del banner de la sección Novedades</strong>
+            <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Imagen del banner de la secciÃ³n Novedades</strong>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <label style="flex:1;min-width:180px;">
-                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Subir foto (JPG/PNG máx 2MB)</span>
+                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Subir foto (JPG/PNG mÃ¡x 2MB)</span>
                 <input type="file" id="cms-novedades-img-file" accept="image/jpeg,image/png,image/webp" style="font-size:12px;width:100%;" onchange="previewBannerImg(this,'novedades')"/>
               </label>
               <label style="flex:1;min-width:180px;">
@@ -578,13 +572,13 @@
           <div id="cms-lista-cursos"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
         </div>
 
-        <!-- PANEL: Reseña Histórica -->
+        <!-- PANEL: ReseÃ±a HistÃ³rica -->
         <div id="cms-panel-resena" class="cms-panel">
           <div style="background:#f0f7f4;border:1.5px dashed #004d3d;border-radius:8px;padding:12px;margin-bottom:14px;">
             <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Imagen del banner superior</strong>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <label style="flex:1;min-width:180px;">
-                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Subir foto (JPG/PNG máx 2MB)</span>
+                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Subir foto (JPG/PNG mÃ¡x 2MB)</span>
                 <input type="file" id="cms-resena-img-file" accept="image/jpeg,image/png,image/webp" style="font-size:12px;width:100%;" onchange="previewBannerImg(this,'resena')"/>
               </label>
               <label style="flex:1;min-width:180px;">
@@ -598,14 +592,14 @@
               <button type="button" onclick="quitarBannerImg('resena')" style="margin-left:8px;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;"><i class="fas fa-times"></i> Quitar</button>
             </div>
           </div>
-          <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Introducción</label>
-          <textarea id="cms-resena-intro" rows="3" style="width:100%;padding:8px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;margin-bottom:12px;font-family:inherit;" placeholder="Texto introductorio de la reseña..."></textarea>
+          <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">IntroducciÃ³n</label>
+          <textarea id="cms-resena-intro" rows="3" style="width:100%;padding:8px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;margin-bottom:12px;font-family:inherit;" placeholder="Texto introductorio de la reseÃ±a..."></textarea>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <strong style="color:#004d3d;font-size:13px;">Párrafos</strong>
-            <button class="btn btn-v" onclick="agregarParrafoResena()"><i class="fas fa-plus"></i> Agregar párrafo</button>
+            <strong style="color:#004d3d;font-size:13px;">PÃ¡rrafos</strong>
+            <button class="btn btn-v" onclick="agregarParrafoResena()"><i class="fas fa-plus"></i> Agregar pÃ¡rrafo</button>
           </div>
           <div id="cms-lista-parrafos"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
-          <button class="btn btn-v" onclick="guardarSitioWeb()" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar Reseña</button>
+          <button class="btn btn-v" onclick="guardarSitioWeb()" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar ReseÃ±a</button>
         </div>
 
         <!-- PANEL: Nuestra Labor -->
@@ -614,7 +608,7 @@
             <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Imagen del banner superior</strong>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <label style="flex:1;min-width:180px;">
-                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Subir foto (JPG/PNG máx 2MB)</span>
+                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Subir foto (JPG/PNG mÃ¡x 2MB)</span>
                 <input type="file" id="cms-labor-img-file" accept="image/jpeg,image/png,image/webp" style="font-size:12px;width:100%;" onchange="previewBannerImg(this,'labor')"/>
               </label>
               <label style="flex:1;min-width:180px;">
@@ -628,7 +622,7 @@
               <button type="button" onclick="quitarBannerImg('labor')" style="margin-left:8px;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;"><i class="fas fa-times"></i> Quitar</button>
             </div>
           </div>
-          <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Introducción</label>
+          <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">IntroducciÃ³n</label>
           <textarea id="cms-labor-intro" rows="3" style="width:100%;padding:8px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;margin-bottom:12px;font-family:inherit;" placeholder="Texto introductorio de Nuestra Labor..."></textarea>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <strong style="color:#004d3d;font-size:13px;">Pilares institucionales</strong>
@@ -643,15 +637,15 @@
           <div id="editor-carrusel"><p style="color:#bbb;font-size:12px;">Cargando editor de carrusel...</p></div>
         </div>
 
-        <!-- PANEL: Menú -->
+        <!-- PANEL: MenÃº -->
         <div id="cms-panel-menu" class="cms-panel">
-          <div id="editor-menu"><p style="color:#bbb;font-size:12px;">Cargando editor de menú...</p></div>
+          <div id="editor-menu"><p style="color:#bbb;font-size:12px;">Cargando editor de menÃº...</p></div>
         </div>
 
       </div><!-- /card -->
     </div>
 
-    <!-- GESTIÓN ITEMS (cursos / convenios) -->
+    <!-- GESTIÃ“N ITEMS (cursos / convenios) -->
     <div id="page-items" class="page">
       <div class="card">
         <h3 id="items-titulo"><i class="fas fa-clipboard-list"></i> Convocatorias</h3>
@@ -699,9 +693,9 @@
     <!-- SORTEOS / RESULTADOS -->
     <div id="page-sorteos" class="page">
       <div class="card">
-        <h3><i class="fas fa-trophy" style="color:#c8a94a;"></i> Sorteos y Publicación de Resultados</h3>
+        <h3><i class="fas fa-trophy" style="color:#c8a94a;"></i> Sorteos y PublicaciÃ³n de Resultados</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-          <button class="btn btn-o" onclick="abrirModalSorteo(null,'proximo')"><i class="fas fa-bullhorn"></i> Nuevo flyer / Próximo sorteo</button>
+          <button class="btn btn-o" onclick="abrirModalSorteo(null,'proximo')"><i class="fas fa-bullhorn"></i> Nuevo flyer / PrÃ³ximo sorteo</button>
           <button class="btn btn-v" onclick="abrirModalSorteo(null,'resultado')"><i class="fas fa-trophy"></i> Publicar resultados</button>
         </div>
         <div id="sorteos-alerta" class="alerta" style="display:none;"></div>
@@ -737,12 +731,12 @@
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div style="grid-column:1/-1;">
-        <label>Título *</label>
-        <input type="text" id="mi-titulo-val" placeholder="Ej: CURSO DE INVESTIGACIÓN EN ACCIDENTES DE TRÁNSITO" maxlength="200"/>
+        <label>TÃ­tulo *</label>
+        <input type="text" id="mi-titulo-val" placeholder="Ej: CURSO DE INVESTIGACIÃ“N EN ACCIDENTES DE TRÃNSITO" maxlength="200"/>
       </div>
       <div style="grid-column:1/-1;">
-        <label>Descripción / Subtítulo</label>
-        <input type="text" id="mi-descripcion" placeholder="Breve descripción para la tarjeta" maxlength="300"/>
+        <label>DescripciÃ³n / SubtÃ­tulo</label>
+        <input type="text" id="mi-descripcion" placeholder="Breve descripciÃ³n para la tarjeta" maxlength="300"/>
       </div>
       <div>
         <label>Estado</label>
@@ -755,16 +749,16 @@
       <div>
         <label>Icono (Font Awesome)</label>
         <select id="mi-icono">
-          <option value="fa-graduation-cap">🎓 Graduación</option>
-          <option value="fa-handshake">🤝 Convenio</option>
-          <option value="fa-book">📖 Libro</option>
-          <option value="fa-shield-alt">🛡 Escudo</option>
-          <option value="fa-car">🚗 Auto/Tránsito</option>
-          <option value="fa-stethoscope">⚕ Médico</option>
-          <option value="fa-laptop">💻 Tecnología</option>
-          <option value="fa-users">👥 Personas</option>
-          <option value="fa-certificate">🏅 Certificado</option>
-          <option value="fa-file-contract">📄 Contrato</option>
+          <option value="fa-graduation-cap">ðŸŽ“ GraduaciÃ³n</option>
+          <option value="fa-handshake">ðŸ¤ Convenio</option>
+          <option value="fa-book">ðŸ“– Libro</option>
+          <option value="fa-shield-alt">ðŸ›¡ Escudo</option>
+          <option value="fa-car">ðŸš— Auto/TrÃ¡nsito</option>
+          <option value="fa-stethoscope">âš• MÃ©dico</option>
+          <option value="fa-laptop">ðŸ’» TecnologÃ­a</option>
+          <option value="fa-users">ðŸ‘¥ Personas</option>
+          <option value="fa-certificate">ðŸ… Certificado</option>
+          <option value="fa-file-contract">ðŸ“„ Contrato</option>
         </select>
       </div>
       <div>
@@ -780,7 +774,7 @@
         <input type="text" id="mi-fecha-inicio" placeholder="Ej: 15 DE JULIO 2026" maxlength="100"/>
       </div>
       <div>
-        <label>Duración</label>
+        <label>DuraciÃ³n</label>
         <input type="text" id="mi-duracion" placeholder="Ej: SEIS (06) SEMANAS" maxlength="100"/>
       </div>
       <div>
@@ -793,11 +787,11 @@
       </div>
       <div style="grid-column:1/-1;">
         <label>Observaciones</label>
-        <input type="text" id="mi-observaciones" placeholder="Ej: Sujeta a modificación por necesidad de servicio" maxlength="300"/>
+        <input type="text" id="mi-observaciones" placeholder="Ej: Sujeta a modificaciÃ³n por necesidad de servicio" maxlength="300"/>
       </div>
       <div style="grid-column:1/-1;">
-        <label>Requisitos (uno por línea)</label>
-        <textarea id="mi-requisitos" rows="4" placeholder="Pertenecer a la REGPOL Callao.&#10;Encontrarse en situación de Actividad.&#10;No tener sanciones vigentes."></textarea>
+        <label>Requisitos (uno por lÃ­nea)</label>
+        <textarea id="mi-requisitos" rows="4" placeholder="Pertenecer a la REGPOL Callao.&#10;Encontrarse en situaciÃ³n de Actividad.&#10;No tener sanciones vigentes."></textarea>
       </div>
       <div style="grid-column:1/-1;">
         <label>URL de formulario externo (opcional)</label>
@@ -814,7 +808,7 @@
         <label for="mi-visible" style="font-size:12px;color:#555;cursor:pointer;margin:0;">Visible en el portal</label>
       </div>
       <div>
-        <label>Orden de visualización</label>
+        <label>Orden de visualizaciÃ³n</label>
         <input type="number" id="mi-orden" value="0" min="0"/>
       </div>
     </div>
@@ -826,8 +820,8 @@
         <i class="fas fa-file-pdf"></i> PLANTILLA / FORMULARIO DESCARGABLE
       </div>
       <p style="font-size:12px;color:#666;margin-bottom:10px;">
-        Suba el formulario modelo (PDF) que los usuarios deberán descargar, completar, firmar y adjuntar al inscribirse.<br/>
-        <strong style="color:#c0392b;">Máx. 10 MB. Solo PDF.</strong>
+        Suba el formulario modelo (PDF) que los usuarios deberÃ¡n descargar, completar, firmar y adjuntar al inscribirse.<br/>
+        <strong style="color:#c0392b;">MÃ¡x. 10 MB. Solo PDF.</strong>
       </p>
       <div id="mi-plantilla-actual" style="display:none;margin-bottom:8px;background:#f0f7f0;border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
         <i class="fas fa-file-pdf" style="color:#e74c3c;font-size:18px;"></i>
@@ -856,16 +850,16 @@
     <input type="hidden" id="ms-id"/>
     <input type="hidden" id="ms-tipo"/>
 
-    <label>Título *</label>
-    <input type="text" id="ms-titulo-val" placeholder="Ej: SORTEO PLAN CELADOR — JULIO 2026" maxlength="200"/>
+    <label>TÃ­tulo *</label>
+    <input type="text" id="ms-titulo-val" placeholder="Ej: SORTEO PLAN CELADOR â€” JULIO 2026" maxlength="200"/>
 
-    <label>Descripción / Detalle</label>
+    <label>DescripciÃ³n / Detalle</label>
     <textarea id="ms-descripcion" rows="3" placeholder="Convocatoria para servicio policial voluntario remunerado..."></textarea>
 
-    <label>Fecha del sorteo / publicación</label>
+    <label>Fecha del sorteo / publicaciÃ³n</label>
     <input type="text" id="ms-fecha" placeholder="Ej: 15 DE JULIO 2026, 10:00 HRS"/>
 
-    <label>Imagen de portada del flyer (JPG/PNG — máx 1.5 MB)</label>
+    <label>Imagen de portada del flyer (JPG/PNG â€” mÃ¡x 1.5 MB)</label>
     <input type="file" id="ms-img-file" accept="image/jpeg,image/png,image/webp" onchange="previewImgSorteo(this)"/>
     <img id="ms-img-preview" src="" style="max-width:100%;max-height:140px;border-radius:8px;margin:6px 0;display:none;" alt=""/>
     <input type="hidden" id="ms-img-data"/>
@@ -875,21 +869,21 @@
       <label for="ms-publicado" style="margin:0;font-size:13px;color:#555;cursor:pointer;">Publicado (visible en el portal)</label>
     </div>
 
-    <!-- Sección resultados (solo tipo resultado) -->
+    <!-- SecciÃ³n resultados (solo tipo resultado) -->
     <div id="ms-resultados-section" style="display:none;">
       <hr style="margin:14px 0;border:none;border-top:1.5px solid #e0e8e0;"/>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
         <strong style="color:#004d3d;font-size:13px;"><i class="fas fa-users"></i> Lista de seleccionados</strong>
         <div style="display:flex;gap:6px;">
           <select id="ms-import-item" style="padding:5px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;min-width:180px;">
-            <option value="">— Importar desde item —</option>
+            <option value="">â€” Importar desde item â€”</option>
           </select>
           <button class="btn-mini" onclick="importarInscritos()"><i class="fas fa-download"></i> Importar aceptados</button>
           <button class="btn-mini" onclick="agregarFilaResultado()"><i class="fas fa-plus"></i> Agregar</button>
         </div>
       </div>
       <div id="ms-resultados-lista" style="max-height:320px;overflow-y:auto;">
-        <p style="color:#bbb;font-size:12px;text-align:center;padding:14px;">Sin resultados. Importe desde un ítem o agregue manualmente.</p>
+        <p style="color:#bbb;font-size:12px;text-align:center;padding:14px;">Sin resultados. Importe desde un Ã­tem o agregue manualmente.</p>
       </div>
     </div>
 
@@ -900,23 +894,23 @@
   </div>
 </div>
 
-<!-- MODAL: Inscripción (editar estado) -->
+<!-- MODAL: InscripciÃ³n (editar estado) -->
 <div id="modal-inscripcion" class="modal">
   <div class="modal-box" style="width:420px;">
-    <h3><i class="fas fa-user-check"></i> Gestionar inscripción</h3>
+    <h3><i class="fas fa-user-check"></i> Gestionar inscripciÃ³n</h3>
     <input type="hidden" id="mins-id"/>
     <div id="mins-info" style="background:#f0f7f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;"></div>
     <label>Estado</label>
     <select id="mins-estado">
-      <option value="pendiente">Pendiente (revisión)</option>
-      <option value="verificado">✓ Verificado (expediente OK — pasa al sorteo/aprobados)</option>
-      <option value="ganador">🏆 Ganador (seleccionado en sorteo)</option>
-      <option value="aprobado">✅ Aprobado (seleccionado por méritos)</option>
-      <option value="reserva">📋 Reserva (no seleccionado)</option>
-      <option value="rechazado">✗ Rechazado (expediente inválido)</option>
+      <option value="pendiente">Pendiente (revisiÃ³n)</option>
+      <option value="verificado">âœ“ Verificado (expediente OK â€” pasa al sorteo/aprobados)</option>
+      <option value="ganador">ðŸ† Ganador (seleccionado en sorteo)</option>
+      <option value="aprobado">âœ… Aprobado (seleccionado por mÃ©ritos)</option>
+      <option value="reserva">ðŸ“‹ Reserva (no seleccionado)</option>
+      <option value="rechazado">âœ— Rechazado (expediente invÃ¡lido)</option>
     </select>
-    <label>Observación</label>
-    <textarea id="mins-observacion" rows="3" placeholder="Motivo de aceptación o rechazo..."></textarea>
+    <label>ObservaciÃ³n</label>
+    <textarea id="mins-observacion" rows="3" placeholder="Motivo de aceptaciÃ³n o rechazo..."></textarea>
     <div class="modal-footer">
       <button class="btn btn-r" onclick="eliminarInscripcion()"><i class="fas fa-trash"></i> Eliminar</button>
       <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-inscripcion')">Cancelar</button>
@@ -925,14 +919,14 @@
   </div>
 </div>
 
-<!-- MODAL: División -->
+<!-- MODAL: DivisiÃ³n -->
 <div id="modal-division" class="modal">
   <div class="modal-box" style="width:420px;">
-    <h3><i class="fas fa-sitemap"></i> <span id="md-titulo">Nueva división</span></h3>
+    <h3><i class="fas fa-sitemap"></i> <span id="md-titulo">Nueva divisiÃ³n</span></h3>
     <input type="hidden" id="md-id"/>
-    <label>Nombre de la división</label>
+    <label>Nombre de la divisiÃ³n</label>
     <input type="text" id="md-nombre" placeholder="Ej: DIVOPUS 4"/>
-    <label>Orden de visualización</label>
+    <label>Orden de visualizaciÃ³n</label>
     <input type="number" id="md-orden" value="5" min="1"/>
     <div class="modal-footer">
       <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-division')">Cancelar</button>
@@ -951,14 +945,14 @@
     <input type="text" id="mu2-nombre" placeholder="Ej: CIA NUEVA ARENILLA"/>
     <label>Tipo</label>
     <select id="mu2-tipo">
-      <option value="comisaria">Comisaría (DIVOPUS)</option>
+      <option value="comisaria">ComisarÃ­a (DIVOPUS)</option>
       <option value="especializada">Unidad especializada (DIVUES)</option>
     </select>
     <label>Orden</label>
     <input type="number" id="mu2-orden" value="99" min="1"/>
-    <label>Dirección</label>
-    <input type="text" id="mu2-direccion" placeholder="Ej: Jr. Constitución 123, Callao"/>
-    <label>Teléfono</label>
+    <label>DirecciÃ³n</label>
+    <input type="text" id="mu2-direccion" placeholder="Ej: Jr. ConstituciÃ³n 123, Callao"/>
+    <label>TelÃ©fono</label>
     <input type="text" id="mu2-telefono" placeholder="Ej: 01-429-0000"/>
     <div class="modal-footer">
       <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-unidad')">Cancelar</button>
@@ -972,10 +966,10 @@
   <div class="modal-box" style="width:460px;">
     <h3><i class="fas fa-question-circle"></i> <span id="mp-titulo">Nueva pregunta</span></h3>
     <input type="hidden" id="mp-id"/>
-    <label>Número de ítem</label>
+    <label>NÃºmero de Ã­tem</label>
     <input type="number" id="mp-numero" placeholder="Ej: 567" min="1"/>
     <label>Texto de la pregunta</label>
-    <textarea id="mp-texto" rows="3" placeholder="Escriba el enunciado aquí..."></textarea>
+    <textarea id="mp-texto" rows="3" placeholder="Escriba el enunciado aquÃ­..."></textarea>
     <div class="modal-footer">
       <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-pregunta')">Cancelar</button>
       <button class="btn btn-v" onclick="guardarPregunta()"><i class="fas fa-save"></i> Guardar</button>
@@ -994,34 +988,34 @@
         <input type="text" id="mu-usuario" placeholder="Ej: psicologia_callao"/>
       </div>
       <div>
-        <label>Contraseña <span id="mu-pass-hint" style="font-weight:400;color:#999;">(mín 6 caracteres)</span></label>
-        <input type="password" id="mu-password" placeholder="••••••"/>
+        <label>ContraseÃ±a <span id="mu-pass-hint" style="font-weight:400;color:#999;">(mÃ­n 6 caracteres)</span></label>
+        <input type="password" id="mu-password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢"/>
       </div>
     </div>
     <label>Nombre / Oficina</label>
-    <input type="text" id="mu-nombre" placeholder="Ej: Oficina de Psicología"/>
-    <label>Unidad asignada <span style="font-weight:400;color:#999;">(vacío = todas las unidades, ideal para Psicología)</span></label>
-    <input type="text" id="mu-unidad" placeholder="Dejar vacío para acceso global"/>
+    <input type="text" id="mu-nombre" placeholder="Ej: Oficina de PsicologÃ­a"/>
+    <label>Unidad asignada <span style="font-weight:400;color:#999;">(vacÃ­o = todas las unidades, ideal para PsicologÃ­a)</span></label>
+    <input type="text" id="mu-unidad" placeholder="Dejar vacÃ­o para acceso global"/>
     <label style="margin-bottom:8px;">Secciones que puede gestionar</label>
     <div class="perm-grid">
       <div class="perm-box">
-        <div class="pb-title">🧠 Bienestar / Psicología</div>
+        <div class="pb-title">ðŸ§  Bienestar / PsicologÃ­a</div>
         <label><input type="checkbox" value="evaluaciones" class="perm-chk"> Ver evaluaciones</label>
         <label><input type="checkbox" value="descargas" class="perm-chk"> Descargar PDF</label>
-        <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Gestionar preguntas MMPI-2: solo Super Admin o usuario con «Ver evaluaciones».</p>
+        <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Gestionar preguntas MMPI-2: solo Super Admin o usuario con Â«Ver evaluacionesÂ».</p>
       </div>
       <div class="perm-box">
-        <div class="pb-title">📄 Convenios</div>
+        <div class="pb-title">ðŸ“„ Convenios</div>
         <label><input type="checkbox" value="cms_convenios" class="perm-chk"> Editar Convenios</label>
       </div>
       <div class="perm-box">
-        <div class="pb-title">🎓 Educación</div>
+        <div class="pb-title">ðŸŽ“ EducaciÃ³n</div>
         <label><input type="checkbox" value="cms_cursos" class="perm-chk"> Editar Cursos</label>
       </div>
       <div class="perm-box">
-        <div class="pb-title">📸 Imagen</div>
+        <div class="pb-title">ðŸ“¸ Imagen</div>
         <label><input type="checkbox" value="cms_inicio" class="perm-chk"> Inicio / Carrusel</label>
-        <label><input type="checkbox" value="cms_resena" class="perm-chk"> Reseña Histórica</label>
+        <label><input type="checkbox" value="cms_resena" class="perm-chk"> ReseÃ±a HistÃ³rica</label>
         <label><input type="checkbox" value="cms_labor" class="perm-chk"> Nuestra Labor</label>
         <label><input type="checkbox" value="cms_novedades" class="perm-chk"> Novedades</label>
       </div>
@@ -1036,7 +1030,7 @@
 <script src="portal-data.js?v=2"></script>
 <script src="portal.js?v=16"></script>
 <script src="divisiones-ui.js?v=1"></script>
-<script src="panel-cms.js?v=5"></script>
+<script src="panel-cms.js?v=6"></script>
 <script>
 var API = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
   : ((location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '');
@@ -1044,13 +1038,13 @@ var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[], SESION=null;
 var ITEMS_CACHE=[], ITEM_ACTIVO_ID=null;
 
 var ETIQUETAS_PERM={
-  evaluaciones:'📋 Evaluaciones',descargas:'📥 Descargas',
-  cms_convenios:'📄 Convenios',cms_cursos:'🎓 Cursos',
-  cms_inicio:'🏠 Inicio',cms_resena:'🏛 Reseña',
-  cms_labor:'⚙ Labor',cms_novedades:'📰 Novedades'
+  evaluaciones:'ðŸ“‹ Evaluaciones',descargas:'ðŸ“¥ Descargas',
+  cms_convenios:'ðŸ“„ Convenios',cms_cursos:'ðŸŽ“ Cursos',
+  cms_inicio:'ðŸ  Inicio',cms_resena:'ðŸ› ReseÃ±a',
+  cms_labor:'âš™ Labor',cms_novedades:'ðŸ“° Novedades'
 };
 
-// ── SESIÓN ────────────────────────────────────────────────────────────────────
+// â”€â”€ SESIÃ“N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 window.addEventListener('DOMContentLoaded',function(){
   var s=JSON.parse(localStorage.getItem('regpol_session')||'null');
   var perms=s&&s.permisos?s.permisos:[];
@@ -1085,7 +1079,7 @@ function aplicarPermisosSidebar(s){
   var tieneEval     =esU||perms.indexOf('evaluaciones')!==-1;
   var tieneDesc     =esU||perms.indexOf('descargas')!==-1;
   var tienePreguntas=tieneEval;
-  // Psicología: solo unitic y bienestar (no cursos/convenios)
+  // PsicologÃ­a: solo unitic y bienestar (no cursos/convenios)
   var tieneGrupoPsico = esU || (rol === 'bienestar');
   var tieneGrupoConv  = tieneCursos || tieneConvenios;
 
@@ -1094,7 +1088,7 @@ function aplicarPermisosSidebar(s){
   document.querySelectorAll('[data-perm-descargas]').forEach(function(el){el.style.display=tieneDesc?'':'none';});
   document.querySelectorAll('[data-perm-preguntas]').forEach(function(el){el.style.display=tienePreguntas?'':'none';});
 
-  // Grupos de convocatorias: control por grupo completo (sin duplicar ítems)
+  // Grupos de convocatorias: control por grupo completo (sin duplicar Ã­tems)
   var grpCursos=document.getElementById('sb-grp-cursos');
   if(grpCursos) grpCursos.style.display=tieneCursos?'':'none';
   var grpConvenios=document.getElementById('sb-grp-convenios');
@@ -1108,12 +1102,12 @@ function aplicarPermisosSidebar(s){
   // Badge de rol
   var badge=document.querySelector('.super-badge');
   if(badge){
-    if(esU)      badge.textContent='⭐ SUPER ADMIN';
-    else if(tieneCursos&&tieneConvenios) badge.textContent='📋 CONVENIOS + EDUCACIÓN';
-    else if(tieneCursos)   badge.textContent='🎓 EDUCACIÓN';
-    else if(tieneConvenios)badge.textContent='📋 CONVENIOS';
-    else if(tieneGrupoPsico) badge.textContent='🧠 PSICOLOGÍA';
-    else badge.textContent='👤 USUARIO';
+    if(esU)      badge.textContent='â­ SUPER ADMIN';
+    else if(tieneCursos&&tieneConvenios) badge.textContent='ðŸ“‹ CONVENIOS + EDUCACIÃ“N';
+    else if(tieneCursos)   badge.textContent='ðŸŽ“ EDUCACIÃ“N';
+    else if(tieneConvenios)badge.textContent='ðŸ“‹ CONVENIOS';
+    else if(tieneGrupoPsico) badge.textContent='ðŸ§  PSICOLOGÃA';
+    else badge.textContent='ðŸ‘¤ USUARIO';
   }
 }
 
@@ -1133,14 +1127,14 @@ function iniciarPanel(s){
   }
 }
 
-// ── NAVEGACIÓN SIDEBAR ────────────────────────────────────────────────────────
+// â”€â”€ NAVEGACIÃ“N SIDEBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 var panelPaginasCargadas = {};
 
 function ir(page, el){
-  if(page==='preguntas'&&!puedeVerPreguntas()){alert('Sin acceso. Las preguntas solo las gestiona Psicología/Bienestar o Super Admin.');return;}
+  if(page==='preguntas'&&!puedeVerPreguntas()){alert('Sin acceso. Las preguntas solo las gestiona PsicologÃ­a/Bienestar o Super Admin.');return;}
   if(page==='evaluaciones'&&!puedeVerEvaluaciones()){alert('Sin acceso a evaluaciones.');return;}
   if(page==='descargas'&&!puedeVerDescargas()){alert('Sin acceso a descargas.');return;}
-  if((page==='usuarios'||page==='divisiones')&&!esUnitic()){alert('Solo el Super Admin puede acceder a esta sección.');return;}
+  if((page==='usuarios'||page==='divisiones')&&!esUnitic()){alert('Solo el Super Admin puede acceder a esta secciÃ³n.');return;}
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
   var pg=document.getElementById('page-'+page);
   if(pg) pg.classList.add('on');
@@ -1177,7 +1171,7 @@ function toggleGrupo(header){
   body.classList.toggle('hidden');
 }
 
-// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+// â”€â”€ DASHBOARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function cargarStats(){
   fetch(API+'/stats',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
@@ -1205,19 +1199,19 @@ function cargarStats(){
     document.getElementById('ult-lista').innerHTML=(d.ultimasEvaluaciones||[]).length
       ?(d.ultimasEvaluaciones||[]).map(function(e){
           var badge=e.completada
-            ?'<span class="badge ok">✓ Completo</span>'
+            ?'<span class="badge ok">âœ“ Completo</span>'
             :'<span class="badge pend">Parcial</span>';
           return '<div class="ult-item">'
             +'<div><span class="ult-nom">'+e.nombres+'</span>'
-            +'<span class="ult-meta"> — '+e.comisaria+'</span></div>'
+            +'<span class="ult-meta"> â€” '+e.comisaria+'</span></div>'
             +'<div style="display:flex;align-items:center;gap:8px;">'
             +badge+'<span style="color:#bbb;font-size:10.5px;">'+e.fecha+'</span></div></div>';
         }).join('')
-      :'<div style="color:#bbb;padding:12px;font-size:12px;text-align:center;">Sin evaluaciones aún.</div>';
+      :'<div style="color:#bbb;padding:12px;font-size:12px;text-align:center;">Sin evaluaciones aÃºn.</div>';
   });
 }
 
-// ── EVALUACIONES ──────────────────────────────────────────────────────────────
+// â”€â”€ EVALUACIONES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function cargarConfigEvaluacion() {
   fetch(API + '/listar', { headers: hdr() }).then(function(r) { return r.json(); }).then(function(d) {
     if (d && d.ok) guardarDivisionesEnVentana(d.divisiones || []);
@@ -1248,11 +1242,11 @@ function guardarActivacionUnidades() {
   }).then(function(r) { return r.json(); }).then(function(d) {
     if (d.ok) {
       set('cfg-activa', (d.unidadesActivas || []).join(', '));
-      alert('Activación guardada: ' + (d.unidadesActivas || []).join(', '));
+      alert('ActivaciÃ³n guardada: ' + (d.unidadesActivas || []).join(', '));
     } else {
-      alert(d.error || 'No se pudo guardar la activación.');
+      alert(d.error || 'No se pudo guardar la activaciÃ³n.');
     }
-  }).catch(function() { alert('Error de conexión con el servidor.'); });
+  }).catch(function() { alert('Error de conexiÃ³n con el servidor.'); });
 }
 
 function cargarFiltrosTabla(){
@@ -1273,14 +1267,14 @@ function cargarTabla(pag){
   fetch(API+'/evaluaciones?pagina='+pag+'&division='+div+'&unidad='+uni+'&busqueda='+bus,{headers:hdr()})
     .then(function(r){return r.json();}).then(function(d){
       if(!d.ok) return;
-      set('tabla-info',d.rows.length+' de '+d.total+' — Página '+d.pagina+' / '+d.paginas);
+      set('tabla-info',d.rows.length+' de '+d.total+' â€” PÃ¡gina '+d.pagina+' / '+d.paginas);
       document.getElementById('tabla-body').innerHTML=d.rows.map(function(r){
         var total=parseInt(r.total_resp,10)||0;
         var comp=total>=566 && !r.solo_progreso;
         var badge;
         if(r.solo_progreso){
           badge=total>=566
-            ?'<span class="badge" style="background:#fff3cd;color:#856404;">566/566 — sin enviar</span>'
+            ?'<span class="badge" style="background:#fff3cd;color:#856404;">566/566 â€” sin enviar</span>'
             :'<span class="badge pend">'+total+'/566 guardado</span>';
         } else {
           badge=comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+total+'/566</span>';
@@ -1288,9 +1282,9 @@ function cargarTabla(pag){
         var pdf=r.id && !r.solo_progreso
           ?'<a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;">PDF</a>'
           :'<span style="color:#bbb;font-size:10px;">Sin PDF</span>';
-        return '<tr'+(r.solo_progreso?' style="background:#fffdf5;"':'')+'><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
-          +'<td style="font-size:11px;">'+escHtml(r.unidad||r.comisaria||'—')+'</td>'
-          +'<td style="font-size:11px;">'+escHtml(r.fecha)+'</td><td style="text-align:center;">'+(r.edad||'—')+'</td>'
+        return '<tr'+(r.solo_progreso?' style="background:#fffdf5;"':'')+'><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'â€”')+'</td>'
+          +'<td style="font-size:11px;">'+escHtml(r.unidad||r.comisaria||'â€”')+'</td>'
+          +'<td style="font-size:11px;">'+escHtml(r.fecha)+'</td><td style="text-align:center;">'+(r.edad||'â€”')+'</td>'
           +'<td>'+badge+'</td><td>'+pdf+'</td></tr>';
       }).join('');
       var pags=document.getElementById('paginacion'); pags.innerHTML='';
@@ -1303,7 +1297,7 @@ function cargarTabla(pag){
     });
 }
 
-// ── PREGUNTAS ─────────────────────────────────────────────────────────────────
+// â”€â”€ PREGUNTAS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function cargarPreguntas(){
   fetch(API+'/admin/preguntas',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
@@ -1343,7 +1337,7 @@ function editarPregunta(id,numero,texto){
 }
 function guardarPregunta(){
   var id=val('mp-id'), numero=parseInt(val('mp-numero')), texto=val('mp-texto').trim();
-  if(!numero||!texto){alert('Complete número y texto.');return;}
+  if(!numero||!texto){alert('Complete nÃºmero y texto.');return;}
   var url=id?API+'/admin/preguntas/'+id:API+'/admin/preguntas';
   var method=id?'PUT':'POST';
   var body=id?JSON.stringify({texto:texto,activa:true}):JSON.stringify({numero:numero,texto:texto});
@@ -1352,11 +1346,11 @@ function guardarPregunta(){
   });
 }
 function desactivarPregunta(id){
-  if(!confirm('¿Desactivar esta pregunta?')) return;
+  if(!confirm('Â¿Desactivar esta pregunta?')) return;
   fetch(API+'/admin/preguntas/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarPreguntas();});
 }
 
-// ── USUARIOS ──────────────────────────────────────────────────────────────────
+// â”€â”€ USUARIOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function cargarUsuarios(){
   fetch(API+'/admin/usuarios',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
@@ -1367,14 +1361,14 @@ function cargarUsuarios(){
       var esUnitic=u.rol==='unitic';
       return '<tr><td><strong>'+u.usuario+'</strong></td>'
         +'<td>'+u.nombre+'</td>'
-        +'<td><span class="badge '+(esUnitic?'ok':'pend')+'">'+(esUnitic?'⭐ SUPER ADMIN':u.rol)+'</span></td>'
+        +'<td><span class="badge '+(esUnitic?'ok':'pend')+'">'+(esUnitic?'â­ SUPER ADMIN':u.rol)+'</span></td>'
         +'<td style="font-size:11px;">'+(u.unidad||'<em style="color:#bbb;">Global</em>')+'</td>'
         +'<td>'+(perms||'<em style="color:#bbb;font-size:11px;">Sin secciones</em>')+'</td>'
         +'<td style="white-space:nowrap;">'
         +(!esUnitic
           ?'<button class="btn btn-o" style="font-size:11px;padding:3px 7px;" onclick="editarUsuario('+u.id+')"><i class="fas fa-edit"></i></button> '
            +'<button class="btn btn-r" style="font-size:11px;padding:3px 7px;" onclick="eliminarUsuario('+u.id+')"><i class="fas fa-trash"></i></button>'
-          :'—')
+          :'â€”')
         +'</td></tr>';
     }).join('');
   });
@@ -1383,7 +1377,7 @@ function abrirModalUsuario(){
   document.getElementById('mu-id').value='';
   document.getElementById('mu-titulo').textContent='Nuevo usuario';
   document.getElementById('mu-usuario').disabled=false;
-  document.getElementById('mu-pass-hint').textContent='(mín 6 caracteres)';
+  document.getElementById('mu-pass-hint').textContent='(mÃ­n 6 caracteres)';
   ['mu-usuario','mu-password','mu-nombre','mu-unidad'].forEach(function(id){document.getElementById(id).value='';});
   document.querySelectorAll('.perm-chk').forEach(function(c){c.checked=false;});
   document.getElementById('modal-usuario').classList.add('open');
@@ -1395,7 +1389,7 @@ function editarUsuario(id){
     document.getElementById('mu-titulo').textContent='Editar: '+u.usuario;
     document.getElementById('mu-usuario').value=u.usuario; document.getElementById('mu-usuario').disabled=true;
     document.getElementById('mu-password').value='';
-    document.getElementById('mu-pass-hint').textContent='(dejar vacío para no cambiar)';
+    document.getElementById('mu-pass-hint').textContent='(dejar vacÃ­o para no cambiar)';
     document.getElementById('mu-nombre').value=u.nombre||'';
     document.getElementById('mu-unidad').value=u.unidad||'';
     var perms=u.permisos||[];
@@ -1408,8 +1402,8 @@ function guardarUsuario(){
   var n=val('mu-nombre'), un=val('mu-unidad');
   var permisos=Array.from(document.querySelectorAll('.perm-chk:checked')).map(function(c){return c.value;});
   if(!u){alert('El usuario es obligatorio.');return;}
-  if(!id&&p.length<6){alert('La contraseña debe tener mínimo 6 caracteres.');return;}
-  if(!permisos.length){alert('Seleccione al menos una sección.');return;}
+  if(!id&&p.length<6){alert('La contraseÃ±a debe tener mÃ­nimo 6 caracteres.');return;}
+  if(!permisos.length){alert('Seleccione al menos una secciÃ³n.');return;}
   var url=id?API+'/admin/usuarios/'+id:API+'/admin/usuarios';
   var method=id?'PUT':'POST';
   var body=id?{nombre:n,unidad:un,permisos:permisos,password:p}:{usuario:u,password:p,rol:'usuario',nombre:n,unidad:un,permisos:permisos};
@@ -1417,11 +1411,11 @@ function guardarUsuario(){
     .then(function(d){if(d.ok){cerrarModal('modal-usuario');cargarUsuarios();}else alert('Error: '+(d.error||''));});
 }
 function eliminarUsuario(id){
-  if(!confirm('¿Eliminar este usuario?')) return;
+  if(!confirm('Â¿Eliminar este usuario?')) return;
   fetch(API+'/admin/usuarios/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarUsuarios();});
 }
 
-// ── DESCARGAS ─────────────────────────────────────────────────────────────────
+// â”€â”€ DESCARGAS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function vistaPreviaDescarga(filtro, selId, prefijo) {
   var v = val(selId);
   var wrap = document.getElementById(prefijo + '-wrap');
@@ -1454,13 +1448,13 @@ function vistaPreviaDescarga(filtro, selId, prefijo) {
     (av.ok ? av.rows : []).forEach(function(p) {
       if (cipsListos[(p.cip || '').toLowerCase()]) return;
       filas.push({
-        nombres: p.nombres, cip: p.cip, dni: '—', fecha: p.ultima || '—',
+        nombres: p.nombres, cip: p.cip, dni: 'â€”', fecha: p.ultima || 'â€”',
         bloque: parseInt(p.bloque, 10) || 1, total: parseInt(p.total, 10) || 0,
         comp: false, id: null, enCurso: true
       });
     });
     if (!filas.length) {
-      body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#bbb;padding:14px;">Sin registros para esta selección.</td></tr>';
+      body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#bbb;padding:14px;">Sin registros para esta selecciÃ³n.</td></tr>';
       if (info) info.textContent = '0 registros';
       return;
     }
@@ -1470,7 +1464,7 @@ function vistaPreviaDescarga(filtro, selId, prefijo) {
         : (r.comp ? '<span class="badge ok">Completo</span>' : '<span class="badge pend">Parcial</span>');
       var pdf = r.id
         ? '<a href="' + API + '/pdf/efectivo?id=' + r.id + '&token=' + encodeURIComponent(TOKEN) + '" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;">PDF</a>'
-        : '<span style="color:#bbb;font-size:11px;">—</span>';
+        : '<span style="color:#bbb;font-size:11px;">â€”</span>';
       return '<tr>'
         + '<td style="text-align:center;font-weight:700;">' + (i + 1) + '</td>'
         + '<td><strong>' + escHtml(r.nombres) + '</strong></td>'
@@ -1496,11 +1490,11 @@ function descargar(filtro, selId) {
   window.open(API + '/pdf/grupo?' + filtro + '=' + encodeURIComponent(v) + '&token=' + encodeURIComponent(TOKEN), '_blank');
 }
 
-// ── MODALES ───────────────────────────────────────────────────────────────────
+// â”€â”€ MODALES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function cerrarModal(id){document.getElementById(id).classList.remove('open');}
 document.addEventListener('click',function(e){if(e.target.classList.contains('modal'))e.target.classList.remove('open');});
 
-// ── DESCARGAS — TABS ──────────────────────────────────────────────────────────
+// â”€â”€ DESCARGAS â€” TABS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 var DIVISIONES_DATA = [];
 
 function descTab(tab, el){
@@ -1532,7 +1526,7 @@ function renderDivCards(){
   }).join('');
 }
 
-// ── BUSCAR PERSONA ────────────────────────────────────────────────────────────
+// â”€â”€ BUSCAR PERSONA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function buscarPersona(){
   var cip = val('bus-cip').trim();
   var nom = val('bus-nom').trim();
@@ -1547,18 +1541,18 @@ function buscarPersona(){
         if(!d.ok){tbody.innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error al buscar.</td></tr>';return;}
         var filas = [];
         if(d.diagnostico){
-          filas.push('<tr><td colspan="7" style="background:#fff8e1;padding:10px;font-size:12px;color:#7a5c00;"><strong>Diagnóstico:</strong> '+escHtml(d.diagnostico)+'</td></tr>');
+          filas.push('<tr><td colspan="7" style="background:#fff8e1;padding:10px;font-size:12px;color:#7a5c00;"><strong>DiagnÃ³stico:</strong> '+escHtml(d.diagnostico)+'</td></tr>');
         }
         (d.evaluaciones||[]).forEach(function(r){
       var comp=parseInt(r.total_resp)>=566;
-          filas.push('<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
+          filas.push('<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'â€”')+'</td>'
             +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+escHtml(r.fecha)+'</td>'
             +'<td>'+(comp?'<span class="badge ok">Enviado</span>':'<span class="badge pend">'+r.total_resp+'/566</span>')+'</td>'
             +'<td><a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;">PDF</a></td></tr>');
         });
         if(d.progreso && !(d.evaluaciones||[]).some(function(e){return e.completada;})){
           var p=d.progreso, pt=parseInt(p.total_resp,10)||0;
-          filas.push('<tr style="background:#fffdf5;"><td><strong>'+escHtml(p.nombres)+'</strong></td><td>'+escHtml(p.cip)+'</td><td>—</td>'
+          filas.push('<tr style="background:#fffdf5;"><td><strong>'+escHtml(p.nombres)+'</strong></td><td>'+escHtml(p.cip)+'</td><td>â€”</td>'
             +'<td style="font-size:11px;">'+escHtml(p.comisaria||p.unidad)+'</td><td style="font-size:11px;">'+escHtml(p.fecha)+'</td>'
             +'<td><span class="badge" style="background:#fff3cd;color:#856404;">'+pt+'/566 sin enviar</span></td>'
             +'<td style="font-size:10px;color:#888;">Falta Finalizar</td></tr>');
@@ -1584,15 +1578,15 @@ function buscarPersona(){
         :(comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+total+'/566</span>');
       var pdf=r.id && !r.solo_progreso
         ?'<a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;">PDF</a>'
-        :'<span style="color:#bbb;font-size:10px;">—</span>';
-      return '<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
+        :'<span style="color:#bbb;font-size:10px;">â€”</span>';
+      return '<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'â€”')+'</td>'
         +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+r.fecha+'</td>'
         +'<td>'+badge+'</td><td>'+pdf+'</td></tr>';
     }).join('');
   });
 }
 
-// ── GESTIÓN DIVISIONES ────────────────────────────────────────────────────────
+// â”€â”€ GESTIÃ“N DIVISIONES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function cargarDivisiones(){
   fetch(API+'/admin/divisiones',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
@@ -1637,7 +1631,7 @@ function abrirModalDivision(){
   document.getElementById('md-id').value='';
   document.getElementById('md-nombre').value='';
   document.getElementById('md-orden').value='5';
-  document.getElementById('md-titulo').textContent='Nueva división';
+  document.getElementById('md-titulo').textContent='Nueva divisiÃ³n';
   document.getElementById('modal-division').classList.add('open');
 }
 function editarDivision(id,nombre,orden){
@@ -1659,7 +1653,7 @@ function guardarDivision(){
     });
 }
 function eliminarDivision(id){
-  if(!confirm('¿Eliminar esta división y todas sus unidades?')) return;
+  if(!confirm('Â¿Eliminar esta divisiÃ³n y todas sus unidades?')) return;
   fetch(API+'/admin/divisiones/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarDivisiones();});
 }
 
@@ -1700,11 +1694,11 @@ function guardarUnidad(){
     });
 }
 function eliminarUnidad(id){
-  if(!confirm('¿Eliminar esta unidad?')) return;
+  if(!confirm('Â¿Eliminar esta unidad?')) return;
   fetch(API+'/admin/unidades/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarDivisiones();});
 }
 
-// ── DESCARGAS — actualizar filtros al entrar ──────────────────────────────────
+// â”€â”€ DESCARGAS â€” actualizar filtros al entrar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function cargarFiltrosDescarga(){
   fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
@@ -1712,12 +1706,12 @@ function cargarFiltrosDescarga(){
       DIVISIONES_DATA = d.divisiones;
       guardarDivisionesEnVentana(d.divisiones);
     }
-    llenarSelectUnidadesAgrupadas('d-uni-pdf', DIVISIONES_DATA, '— Seleccionar unidad —');
+    llenarSelectUnidadesAgrupadas('d-uni-pdf', DIVISIONES_DATA, 'â€” Seleccionar unidad â€”');
     renderDivCards();
   });
 }
 
-// ── SORTEOS Y RESULTADOS ──────────────────────────────────────────────────────
+// â”€â”€ SORTEOS Y RESULTADOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 var SORTEOS_CACHE = [], RESULTADOS_EDIT = [];
 
 function cargarSorteos(){
@@ -1735,17 +1729,17 @@ function renderTablaSorteos(list){
     el.innerHTML='<p style="color:#bbb;text-align:center;padding:24px;">No hay sorteos. Cree uno con los botones de arriba.</p>';
     return;
   }
-  el.innerHTML = '<table class="t"><thead><tr><th>Tipo</th><th>Título</th><th>Fecha</th><th>Publicado</th><th>Seleccionados</th><th>Acciones</th></tr></thead><tbody>'
+  el.innerHTML = '<table class="t"><thead><tr><th>Tipo</th><th>TÃ­tulo</th><th>Fecha</th><th>Publicado</th><th>Seleccionados</th><th>Acciones</th></tr></thead><tbody>'
     + list.map(function(s){
         var tipoBadge = s.tipo==='proximo'
-          ? '<span class="badge" style="background:#fff3cd;color:#856404;">📢 PRÓXIMO</span>'
-          : '<span class="badge ok">🏆 RESULTADO</span>';
+          ? '<span class="badge" style="background:#fff3cd;color:#856404;">ðŸ“¢ PRÃ“XIMO</span>'
+          : '<span class="badge ok">ðŸ† RESULTADO</span>';
         return '<tr>'
           +'<td>'+tipoBadge+'</td>'
           +'<td style="font-weight:600;max-width:220px;">'+escHtml(s.titulo)+'</td>'
-          +'<td style="font-size:11.5px;">'+escHtml(s.fecha_sorteo||'—')+'</td>'
-          +'<td>'+(s.publicado?'<span class="badge ok">✓ Sí</span>':'<span class="badge pend">No</span>')+'</td>'
-          +'<td style="text-align:center;font-weight:700;color:#004d3d;">'+(s.resultados&&s.resultados.length?s.resultados.length:'—')+'</td>'
+          +'<td style="font-size:11.5px;">'+escHtml(s.fecha_sorteo||'â€”')+'</td>'
+          +'<td>'+(s.publicado?'<span class="badge ok">âœ“ SÃ­</span>':'<span class="badge pend">No</span>')+'</td>'
+          +'<td style="text-align:center;font-weight:700;color:#004d3d;">'+(s.resultados&&s.resultados.length?s.resultados.length:'â€”')+'</td>'
           +'<td><div style="display:flex;gap:5px;">'
           +'<button class="btn-mini" onclick="abrirModalSorteo('+s.id+')"><i class="fas fa-edit"></i> Editar</button>'
           +'<button class="btn-mini btn-mini-danger" onclick="eliminarSorteo('+s.id+')"><i class="fas fa-trash"></i></button>'
@@ -1775,10 +1769,10 @@ function abrirModalSorteo(id, tipoForzado){
   document.getElementById('ms-img-data').value='';
   document.getElementById('ms-img-file').value='';
   document.getElementById('ms-publicado').checked=true;
-  document.getElementById('ms-titulo').textContent=tipoForzado==='resultado'?'Publicar resultados':'Nuevo flyer / Próximo sorteo';
+  document.getElementById('ms-titulo').textContent=tipoForzado==='resultado'?'Publicar resultados':'Nuevo flyer / PrÃ³ximo sorteo';
   document.getElementById('ms-resultados-section').style.display=tipoForzado==='resultado'?'':'none';
 
-  // Cargar items en select de importación
+  // Cargar items en select de importaciÃ³n
   cargarSelectItems();
 
   if(id){
@@ -1821,7 +1815,7 @@ function previewImgSorteo(input){
 
 function cargarSelectItems(){
   var sel=document.getElementById('ms-import-item');
-  sel.innerHTML='<option value="">— Importar desde item —</option>';
+  sel.innerHTML='<option value="">â€” Importar desde item â€”</option>';
   fetch(API+'/admin/items',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     (d.items||[]).forEach(function(i){
       var o=document.createElement('option');
@@ -1834,7 +1828,7 @@ function cargarSelectItems(){
 
 function importarInscritos(){
   var itemId=document.getElementById('ms-import-item').value;
-  if(!itemId){alert('Seleccione un ítem para importar los aceptados.');return;}
+  if(!itemId){alert('Seleccione un Ã­tem para importar los aceptados.');return;}
   var sorteoId=val('ms-id');
   if(!sorteoId){alert('Guarde primero el sorteo antes de importar.');return;}
   fetch(API+'/admin/sorteos/'+sorteoId+'/importar-inscritos',{
@@ -1859,7 +1853,7 @@ function agregarFilaResultado(){
 function renderFilasResultado(){
   var el=document.getElementById('ms-resultados-lista');
   if(!RESULTADOS_EDIT.length){
-    el.innerHTML='<p style="color:#bbb;font-size:12px;text-align:center;padding:14px;">Sin resultados. Importe desde un ítem o agregue manualmente.</p>';
+    el.innerHTML='<p style="color:#bbb;font-size:12px;text-align:center;padding:14px;">Sin resultados. Importe desde un Ã­tem o agregue manualmente.</p>';
     return;
   }
   el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;">'
@@ -1875,7 +1869,7 @@ function renderFilasResultado(){
         +'<td style="padding:4px 4px;"><input style="width:160px;padding:3px 5px;border:1px solid #ccc;border-radius:4px;font-size:11.5px;" value="'+escHtml(r.nombres||'')+'" oninput="RESULTADOS_EDIT['+i+'].nombres=this.value" placeholder="APELLIDOS Y NOMBRES"/></td>'
         +'<td style="padding:4px 4px;"><input style="width:120px;padding:3px 5px;border:1px solid #ccc;border-radius:4px;font-size:11.5px;" value="'+escHtml(r.unidad||'')+'" oninput="RESULTADOS_EDIT['+i+'].unidad=this.value"/></td>'
         +'<td style="padding:4px 4px;"><input style="width:80px;padding:3px 5px;border:1px solid #ccc;border-radius:4px;font-size:11.5px;" value="'+escHtml(r.cargo||'')+'" oninput="RESULTADOS_EDIT['+i+'].cargo=this.value"/></td>'
-        +'<td style="padding:4px 4px;"><button class="btn-mini btn-mini-danger" onclick="eliminarFilaResultado('+i+')">✕</button></td>'
+        +'<td style="padding:4px 4px;"><button class="btn-mini btn-mini-danger" onclick="eliminarFilaResultado('+i+')">âœ•</button></td>'
         +'</tr>';
     }).join('')
     +'</tbody></table>';
@@ -1889,7 +1883,7 @@ function eliminarFilaResultado(i){
 function guardarSorteo(){
   var id=val('ms-id'), tipo=val('ms-tipo');
   var titulo=val('ms-titulo-val').trim();
-  if(!titulo){alert('El título es obligatorio.');return;}
+  if(!titulo){alert('El tÃ­tulo es obligatorio.');return;}
   var body={
     tipo:tipo, titulo:titulo.toUpperCase(),
     descripcion:val('ms-descripcion'),
@@ -1922,7 +1916,7 @@ function guardarSorteo(){
 }
 
 function eliminarSorteo(id){
-  if(!confirm('¿Eliminar este sorteo y sus resultados?'))return;
+  if(!confirm('Â¿Eliminar este sorteo y sus resultados?'))return;
   fetch(API+'/admin/sorteos/'+id,{method:'DELETE',headers:hdr()})
     .then(function(r){return r.json();}).then(function(d){
       if(d.ok){cargarSorteos();mostrarAlertaSorteos('Sorteo eliminado.','ok');}
@@ -1930,7 +1924,7 @@ function eliminarSorteo(id){
     });
 }
 
-// ── PLANTILLA DE ITEMS ────────────────────────────────────────────────────────
+// â”€â”€ PLANTILLA DE ITEMS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function cargarPlantillaItem(input){
   var file=input.files&&input.files[0];
   if(!file)return;
@@ -1953,7 +1947,7 @@ function quitarPlantillaItem(){
   document.getElementById('mi-plantilla-label').textContent='Seleccionar plantilla PDF';
 }
 
-// ── GESTIÓN ITEMS (CURSOS / CONVENIOS) ────────────────────────────────────────
+// â”€â”€ GESTIÃ“N ITEMS (CURSOS / CONVENIOS) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 var INSCRITOS_CACHE = [];
 
 function cargarItems(tipo){
@@ -1967,7 +1961,7 @@ function cargarItems(tipo){
     if(!d.ok){mostrarAlertaItems('Error: '+(d.error||''),'error');return;}
     ITEMS_CACHE=d.items||[];
     renderTablaItems(ITEMS_CACHE);
-  }).catch(function(){ mostrarAlertaItems('Error de conexión','error'); });
+  }).catch(function(){ mostrarAlertaItems('Error de conexiÃ³n','error'); });
 }
 
 function filtrarTablaItems(){
@@ -1984,12 +1978,12 @@ function renderTablaItems(items){
   }
   var colorEstado={'DISPONIBLE':'#1a7a3a','EN PROCESO':'#856404','CERRADO':'#c0392b'};
   el.innerHTML='<table class="t"><thead><tr>'
-    +'<th>Tipo</th><th>Título</th><th>Estado</th><th>Vacantes</th><th>Inscritos</th><th>Inscr. abiertas</th><th>Acciones</th>'
+    +'<th>Tipo</th><th>TÃ­tulo</th><th>Estado</th><th>Vacantes</th><th>Inscritos</th><th>Inscr. abiertas</th><th>Acciones</th>'
     +'</tr></thead><tbody>'
     +items.map(function(item){
       var color=colorEstado[item.estado]||'#444';
       var badge=item.inscripciones_abiertas
-        ?'<span class="badge ok">✓ Abiertas</span>'
+        ?'<span class="badge ok">âœ“ Abiertas</span>'
         :'<span class="badge pend">Cerradas</span>';
       return '<tr>'
         +'<td><span style="font-size:10px;font-weight:700;background:#e8f0e8;padding:2px 7px;border-radius:10px;text-transform:uppercase;">'+escHtml(item.tipo)+'</span></td>'
@@ -2044,7 +2038,7 @@ function abrirModalItem(id){
     document.getElementById('modal-item').classList.add('open');
     return;
   }
-  // Buscar en caché o hacer fetch individual
+  // Buscar en cachÃ© o hacer fetch individual
   var cached=ITEMS_CACHE.find(function(i){return i.id===id;});
   if(cached && cached.requisitos !== undefined){
     poblarModalItem(cached);
@@ -2095,7 +2089,7 @@ function poblarModalItem(item){
 function guardarItem(){
   var id=val('mi-id'), tipo=val('mi-tipo');
   var titulo=val('mi-titulo-val').trim();
-  if(!titulo){alert('El título es obligatorio.');return;}
+  if(!titulo){alert('El tÃ­tulo es obligatorio.');return;}
   var reqText=document.getElementById('mi-requisitos').value;
   var requisitos=reqText.split('\n').map(function(r){return r.trim();}).filter(Boolean);
   var body={
@@ -2141,7 +2135,7 @@ function guardarItem(){
 }
 
 function eliminarItem(id){
-  if(!confirm('¿Eliminar esta convocatoria y todas sus inscripciones?')) return;
+  if(!confirm('Â¿Eliminar esta convocatoria y todas sus inscripciones?')) return;
   fetch(API+'/admin/items/'+id,{method:'DELETE',headers:hdr()})
     .then(function(r){return r.json();}).then(function(d){
       if(d.ok){ cargarItems(); mostrarAlertaItems('Convocatoria eliminada.','ok'); }
@@ -2149,11 +2143,11 @@ function eliminarItem(id){
     });
 }
 
-// ── INSCRITOS ─────────────────────────────────────────────────────────────────
+// â”€â”€ INSCRITOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function verInscritos(itemId, titulo){
   ITEM_ACTIVO_ID=itemId;
   ir('inscritos',null);
-  document.getElementById('inscritos-titulo').innerHTML='<i class="fas fa-users"></i> Inscritos — '+escHtml(titulo);
+  document.getElementById('inscritos-titulo').innerHTML='<i class="fas fa-users"></i> Inscritos â€” '+escHtml(titulo);
   document.getElementById('inscritos-buscar').value='';
   document.getElementById('inscritos-filtro-estado').value='';
   document.getElementById('inscritos-tabla').innerHTML='<p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i></p>';
@@ -2188,7 +2182,7 @@ function renderInscritos(list, tipo){
 
   var esConvenio = INSCRITOS_TIPO_ACTUAL==='convenio';
 
-  // Botón de acción masiva
+  // BotÃ³n de acciÃ³n masiva
   var btnAccion = '';
   if(esConvenio && verif>0){
     btnAccion='<a href="sorteo-live.html?item_id='+ITEM_ACTIVO_ID+'" target="_blank" '
@@ -2221,7 +2215,7 @@ function renderInscritos(list, tipo){
 
   document.getElementById('inscritos-tabla').innerHTML=
     '<div style="overflow-x:auto;"><table class="t" style="min-width:900px;"><thead><tr>'
-    +'<th>#</th><th>Grado</th><th>CIP</th><th>DNI</th><th>Apellidos y Nombres</th><th>Unidad/Área</th>'
+    +'<th>#</th><th>Grado</th><th>CIP</th><th>DNI</th><th>Apellidos y Nombres</th><th>Unidad/Ãrea</th>'
     +(esConvenio?'<th>Disponib.</th>':'<th>T. Servicio</th>')
     +'<th>PDF</th><th>Estado</th><th>Fecha</th><th>Acciones</th>'
     +'</tr></thead><tbody>'
@@ -2231,10 +2225,10 @@ function renderInscritos(list, tipo){
       var fecha=ins.fecha?new Date(ins.fecha).toLocaleDateString('es-PE'):'';
       var dispBadge='';
       if(esConvenio){
-        if(ins.disponibilidad==='VACACIONES') dispBadge='<span class="badge ok" style="background:#d4edda;color:#1a7a3a;">🏖 VAC</span>';
-        else if(ins.disponibilidad==='FRANCO') dispBadge='<span class="badge" style="background:#cce5ff;color:#004085;">🌙 '+(ins.dia_franco||'')+'</span>';
+        if(ins.disponibilidad==='VACACIONES') dispBadge='<span class="badge ok" style="background:#d4edda;color:#1a7a3a;">ðŸ– VAC</span>';
+        else if(ins.disponibilidad==='FRANCO') dispBadge='<span class="badge" style="background:#cce5ff;color:#004085;">ðŸŒ™ '+(ins.dia_franco||'')+'</span>';
       } else {
-        dispBadge='<span style="font-size:11px;color:#555;">'+escHtml(ins.tiempo_servicio||'—')+'</span>';
+        dispBadge='<span style="font-size:11px;color:#555;">'+escHtml(ins.tiempo_servicio||'â€”')+'</span>';
       }
       return '<tr>'
         +'<td style="color:#aaa;font-size:11px;">'+(idx+1)+'</td>'
@@ -2246,7 +2240,7 @@ function renderInscritos(list, tipo){
         +'<td>'+dispBadge+'</td>'
         +'<td style="text-align:center;">'+(ins.tiene_pdf
           ?'<button class="btn-mini" style="background:#e74c3c;color:#fff;" title="Ver PDF" onclick="verPdfInscripcion('+ins.id+')"><i class="fas fa-file-pdf"></i></button>'
-          :'<span style="color:#bbb;font-size:11px;">—</span>')+'</td>'
+          :'<span style="color:#bbb;font-size:11px;">â€”</span>')+'</td>'
         +'<td><span class="badge" style="background:'+bg+';color:'+c+';font-size:10px;">'+escHtml(ins.estado)+'</span></td>'
         +'<td style="font-size:11px;color:#888;">'+fecha+'</td>'
         +'<td style="white-space:nowrap;">'
@@ -2261,12 +2255,12 @@ function renderInscritos(list, tipo){
 }
 
 function verificarInscripcion(id){
-  if(!confirm('¿Marcar este expediente como VERIFICADO?\nEl postulante pasará a la lista del sorteo o aprobados.')) return;
+  if(!confirm('Â¿Marcar este expediente como VERIFICADO?\nEl postulante pasarÃ¡ a la lista del sorteo o aprobados.')) return;
   fetch(API+'/admin/inscripciones/'+id,{
     method:'PUT', headers:hdr(),
-    body:JSON.stringify({estado:'verificado', observacion:'Expediente verificado por el área'})
+    body:JSON.stringify({estado:'verificado', observacion:'Expediente verificado por el Ã¡rea'})
   }).then(function(r){return r.json();}).then(function(d){
-    if(d.ok) verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/.*— /,''));
+    if(d.ok) verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/.*â€” /,''));
     else alert('Error: '+(d.error||''));
   });
 }
@@ -2274,9 +2268,9 @@ function verificarInscripcion(id){
 function verAprobadosCurso(){
   var verificados = INSCRITOS_CACHE.filter(function(i){return i.estado==='verificado'||i.estado==='aprobado';});
   verificados.sort(function(a,b){
-    // Ordenar por tiempo de servicio descendente (más años primero)
-    var ta=parseInt((a.tiempo_servicio||'0 años').split(' ')[0])||0;
-    var tb=parseInt((b.tiempo_servicio||'0 años').split(' ')[0])||0;
+    // Ordenar por tiempo de servicio descendente (mÃ¡s aÃ±os primero)
+    var ta=parseInt((a.tiempo_servicio||'0 aÃ±os').split(' ')[0])||0;
+    var tb=parseInt((b.tiempo_servicio||'0 aÃ±os').split(' ')[0])||0;
     return tb-ta;
   });
   var item_vacantes = 0;
@@ -2288,10 +2282,10 @@ function verAprobadosCurso(){
   var html='<div style="max-height:75vh;overflow-y:auto;">'
     +'<div style="background:#f0f7f0;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:12.5px;color:#555;">'
     +'<i class="fas fa-info-circle" style="color:#004d3d;"></i> '
-    +'Lista ordenada por mayor tiempo de servicio. Los primeros en cubrir vacantes son los más calificados.'
+    +'Lista ordenada por mayor tiempo de servicio. Los primeros en cubrir vacantes son los mÃ¡s calificados.'
     +'</div>'
     +'<table class="t" style="width:100%;"><thead><tr>'
-    +'<th>#</th><th>Grado</th><th>CIP</th><th>Apellidos y Nombres</th><th>Unidad</th><th>T. Servicio</th><th>Estado</th><th>Acción</th>'
+    +'<th>#</th><th>Grado</th><th>CIP</th><th>Apellidos y Nombres</th><th>Unidad</th><th>T. Servicio</th><th>Estado</th><th>AcciÃ³n</th>'
     +'</tr></thead><tbody>'
     +verificados.map(function(ins,i){
       var esAprobado=ins.estado==='aprobado';
@@ -2301,7 +2295,7 @@ function verAprobadosCurso(){
         +'<td style="font-weight:700;">'+escHtml(ins.cip||'')+'</td>'
         +'<td style="font-weight:600;">'+escHtml(ins.nombres||'')+'</td>'
         +'<td style="font-size:11.5px;">'+escHtml(ins.unidad||'')+'</td>'
-        +'<td style="font-weight:700;color:#004d3d;font-size:12px;">'+escHtml(ins.tiempo_servicio||'—')+'</td>'
+        +'<td style="font-weight:700;color:#004d3d;font-size:12px;">'+escHtml(ins.tiempo_servicio||'â€”')+'</td>'
         +'<td><span class="badge '+(esAprobado?'ok':'pend')+'">'+escHtml(ins.estado)+'</span></td>'
         +'<td>'+(esAprobado
           ?'<button class="btn-mini btn-mini-danger" onclick="cambiarEstadoAprobado('+ins.id+',\'verificado\')"><i class="fas fa-times"></i> Quitar</button>'
@@ -2311,7 +2305,7 @@ function verAprobadosCurso(){
     +'</tbody></table>'
     +'</div>';
 
-  document.getElementById('cms-modal-header').querySelector('h3').textContent='Lista de aprobados — Cursos';
+  document.getElementById('cms-modal-header').querySelector('h3').textContent='Lista de aprobados â€” Cursos';
   document.getElementById('cms-modal-body').innerHTML=html;
   document.getElementById('cms-modal-footer').innerHTML='<button class="btn" style="background:#999;color:#fff;" onclick="document.getElementById(\'cms-modal\').classList.remove(\'visible\')">Cerrar</button>';
   document.getElementById('cms-modal').classList.add('visible');
@@ -2320,7 +2314,7 @@ function verAprobadosCurso(){
 function cambiarEstadoAprobado(id, nuevoEstado){
   fetch(API+'/admin/inscripciones/'+id,{
     method:'PUT',headers:hdr(),
-    body:JSON.stringify({estado:nuevoEstado,observacion:nuevoEstado==='aprobado'?'Aprobado por méritos':'Marcado como verificado'})
+    body:JSON.stringify({estado:nuevoEstado,observacion:nuevoEstado==='aprobado'?'Aprobado por mÃ©ritos':'Marcado como verificado'})
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok){
       var ins=INSCRITOS_CACHE.find(function(i){return i.id===id;});
@@ -2337,9 +2331,9 @@ function abrirModalInscripcion(id){
 
   var filas=[
     ['Grado',ins.grado],['CIP',ins.cip],['DNI',ins.dni],
-    ['Nombres',ins.nombres],['Unidad',ins.unidad],['Área',ins.area],['Cargo',ins.cargo],
-    ['Arma/Condición',ins.arma],['Disponibilidad',ins.disponibilidad],['Día Franco',ins.dia_franco],
-    ['T. Servicio',ins.tiempo_servicio],['Teléfono',ins.telefono],['Email',ins.email]
+    ['Nombres',ins.nombres],['Unidad',ins.unidad],['Ãrea',ins.area],['Cargo',ins.cargo],
+    ['Arma/CondiciÃ³n',ins.arma],['Disponibilidad',ins.disponibilidad],['DÃ­a Franco',ins.dia_franco],
+    ['T. Servicio',ins.tiempo_servicio],['TelÃ©fono',ins.telefono],['Email',ins.email]
   ].filter(function(f){return f[1];});
 
   document.getElementById('mins-info').innerHTML=
@@ -2380,13 +2374,13 @@ function guardarEstadoInscripcion(){
     .then(function(r){return r.json();}).then(function(d){
       if(d.ok){
         cerrarModal('modal-inscripcion');
-        verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/^[^—]+— /,''));
+        verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/^[^â€”]+â€” /,''));
       } else alert('Error: '+(d.error||''));
     });
 }
 
 function eliminarInscripcion(){
-  if(!confirm('¿Eliminar esta inscripción permanentemente?')) return;
+  if(!confirm('Â¿Eliminar esta inscripciÃ³n permanentemente?')) return;
   var id=val('mins-id');
   fetch(API+'/admin/inscripciones/'+id,{method:'DELETE',headers:hdr()})
     .then(function(r){return r.json();}).then(function(d){
@@ -2399,20 +2393,20 @@ function eliminarInscripcion(){
 
 function exportarInscritos(){
   if(!INSCRITOS_CACHE.length){alert('No hay inscritos para exportar.');return;}
-  var rows=[['CIP','Nombres','Unidad','Cargo','Teléfono','Email','Estado','Observación','Fecha']];
+  var rows=[['CIP','Nombres','Unidad','Cargo','TelÃ©fono','Email','Estado','ObservaciÃ³n','Fecha']];
   INSCRITOS_CACHE.forEach(function(i){
     rows.push([i.cip,i.nombres,i.unidad,i.cargo,i.telefono,i.email,i.estado,i.observacion,
       i.fecha?new Date(i.fecha).toLocaleDateString('es-PE'):'']);
   });
   var csv=rows.map(function(r){return r.map(function(c){return '"'+(c||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
-  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+  var blob=new Blob(['ï»¿'+csv],{type:'text/csv;charset=utf-8;'});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   a.download='inscritos_'+ITEM_ACTIVO_ID+'_'+new Date().toISOString().slice(0,10)+'.csv';
   a.click();
 }
 
-// ── UTILS ─────────────────────────────────────────────────────────────────────
+// â”€â”€ UTILS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function val(id){var el=document.getElementById(id);return el?el.value:'';}
 function set(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
 function llenarSel(id,items,ph){

@@ -194,6 +194,12 @@ async function initDB() {
       cargo     VARCHAR(80) DEFAULT '',
       orden     SMALLINT DEFAULT 0
     );
+
+    CREATE TABLE IF NOT EXISTS portal_configuracion (
+      id         INTEGER PRIMARY KEY DEFAULT 1,
+      data_json  TEXT NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
 
   // Admins por defecto
@@ -431,7 +437,17 @@ app.get('/health', function(req, res) {
 app.use(cors());
 app.use(express.json({ limit: '4mb' }));
 app.use(staticBufferado);
-app.use(express.static(PUBLIC_DIR, { maxAge: '1d', etag: true, fallthrough: true }));
+app.use(express.static(PUBLIC_DIR, {
+  maxAge: '1d', etag: true, fallthrough: true,
+  setHeaders: function(res, filePath) {
+    if (/\.(js|json)$/.test(filePath)) {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    }
+    if (/\.json$/.test(filePath)) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    }
+  }
+}));
 
 app.get('/img/regpol%20callao.jpg', function(req, res) {
   res.redirect(301, '/img/regpol-callao.jpg');
@@ -1274,6 +1290,38 @@ app.delete('/admin/unidades/:id', requireAuth, async (req, res) => {
   invalidarUnidadesPublicoCache();
   configCache = null;
   res.json({ ok: true });
+});
+
+// ── GET /portal/configuracion — datos CMS del portal ─────────────────────────
+app.get('/portal/configuracion', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT data_json FROM portal_configuracion WHERE id=1');
+    if (r.rows.length && r.rows[0].data_json) {
+      res.set('Content-Type', 'application/json; charset=utf-8');
+      res.send(r.rows[0].data_json);
+    } else {
+      res.status(404).json({ ok: false, error: 'Sin datos' });
+    }
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'Error al leer configuración' });
+  }
+});
+
+// ── POST /admin/configuracion — guardar CMS (requiere auth) ──────────────────
+app.post('/admin/configuracion', requireAuth, async (req, res) => {
+  try {
+    const data = req.body;
+    if (!data || typeof data !== 'object') return res.status(400).json({ ok: false, error: 'Datos inválidos' });
+    const json = JSON.stringify(data);
+    await pool.query(
+      `INSERT INTO portal_configuracion(id, data_json, updated_at) VALUES(1, $1, NOW())
+       ON CONFLICT(id) DO UPDATE SET data_json = EXCLUDED.data_json, updated_at = NOW()`,
+      [json]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'Error al guardar configuración' });
+  }
 });
 
 // ── GET /portal/sorteos — público ─────────────────────────────────────────────

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -33,7 +33,7 @@
       <img src="img/regpol-callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90">
     </div>
     <div class="title-text">
-      <h1 class="portal-eslogan">REGIÓN POLICIAL CALLAO</h1>
+      <h1 class="portal-eslogan">REGIÃ“N POLICIAL CALLAO</h1>
       <p class="portal-subtitulo">UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES</p>
     </div>
   </div>
@@ -47,18 +47,18 @@
     <p>Haz clic en cada tarjeta para ver los detalles e inscribirte.</p>
   </div>
   <div class="grid-modern" id="grid-convenios"></div>
-  <div class="page-intro" id="section-pdf" style="display:none;"><h2>RELACIÓN DE SELECCIONADOS</h2></div>
+  <div class="page-intro" id="section-pdf" style="display:none;"><h2>RELACIÃ“N DE SELECCIONADOS</h2></div>
   <div id="lista-pdf-convenios"></div>
 </main>
 
 <footer class="portal-footer">
-  <p>&copy; 2026 Región Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
+  <p>&copy; 2026 RegiÃ³n Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
 </footer>
 
 <script src="portal-data.js?v=2"></script>
-<script src="portal.js?v=16"></script>
+<script src="portal.js?v=18"></script>
 <script>
-// 1️⃣ Nav + CMS items (portal-data.js — siempre han estado aquí)
+// 1ï¸âƒ£ Nav + CMS items (portal-data.js â€” siempre han estado aquÃ­)
 initPortalPagina({
   activeNav: 'convenios',
   renderConveniosPdf: 'lista-pdf-convenios'
@@ -70,7 +70,7 @@ cargarSiteData().then(function(data){
   renderGrid(data ? (data.convenios||[]) : []);
 });
 
-// 2️⃣ Convenios editables desde el panel (items_portal)
+// 2ï¸âƒ£ Convenios editables desde el panel (items_portal)
 var dbConvenios = [];
 fetch('/portal/items?tipo=convenio')
   .then(function(r){return r.json();})
@@ -97,7 +97,7 @@ function renderGrid(cms){
   var htmlDb = dbConvenios.map(function(item){
     var colorEstado = item.estado==='DISPONIBLE'?'#1a7a3a':item.estado==='CERRADO'?'#c0392b':'#856404';
     var inscBadge = item.inscripciones_abiertas
-      ? '<span style="display:inline-block;background:#d4edda;color:#1a7a3a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:4px;">✓ Inscripciones abiertas</span>'
+      ? '<span style="display:inline-block;background:#d4edda;color:#1a7a3a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:4px;">âœ“ Inscripciones abiertas</span>'
       : '';
     return '<a href="detalle.html?id='+item.id+'&tipo=convenio">'
       +'<div class="card-modern">'

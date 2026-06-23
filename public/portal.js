@@ -1,4 +1,4 @@
-/* portal.js — Datos y renderizado compartido del portal REGPOL Callao */
+﻿/* portal.js — Datos y renderizado compartido del portal REGPOL Callao */
 (function() {
   if (window.REGPOL_API_BASE != null) return;
   var h = location.hostname;
@@ -157,9 +157,14 @@ function fetchConTimeout(url, ms) {
 }
 
 function fetchSiteDataDefault() {
-  return fetchConTimeout('site-data.json?v=3', 5000)
-    .then(function(r) { if (!r.ok) throw new Error('site-data'); return r.json(); })
-    .catch(function() { return null; });
+  var base = apiBasePortal();
+  return fetchConTimeout((base || '') + '/portal/configuracion', 6000)
+    .then(function(r) { if (!r.ok) throw new Error('no-config'); return r.json(); })
+    .catch(function() {
+      return fetchConTimeout('site-data.json?v=3', 4000)
+        .then(function(r) { if (!r.ok) throw new Error('site-data'); return r.json(); })
+        .catch(function() { return null; });
+    });
 }
 
 function obtenerSiteDataSync() {
@@ -228,6 +233,15 @@ function cargarSiteData() {
 
 function publicarSiteData(data) {
   saveSiteDataToStorage(data);
+  var base = apiBasePortal();
+  var token = (typeof TOKEN !== 'undefined' && TOKEN) ? TOKEN : '';
+  if (token) {
+    fetch((base || '') + '/admin/configuracion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+      body: JSON.stringify(data)
+    }).catch(function() {});
+  }
   var url = (typeof WEB_APP_URL !== 'undefined' && WEB_APP_URL) ? WEB_APP_URL : REGPOL_WEB_APP;
   return fetch(url, {
     method: 'POST',

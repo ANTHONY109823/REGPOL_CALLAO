@@ -562,7 +562,24 @@ function guardarSitioWeb() {
   cmsDataActual = recolectarDatosCMS();
   saveSiteDataToStorage(cmsDataActual);
   publicarSiteData(cmsDataActual);
-  mostrarAlertaCMS('Contenido publicado correctamente. Los visitantes verán los cambios al recargar el portal.', 'ok');
+  mostrarAlertaCMS('Publicando...', 'ok');
+  var base = (window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE : '');
+  var token = (typeof TOKEN !== 'undefined' && TOKEN) ? TOKEN : '';
+  fetch(base + '/admin/configuracion', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+    body: JSON.stringify(cmsDataActual)
+  }).then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.ok) {
+        mostrarAlertaCMS('¡Publicado! Los visitantes ven los cambios al recargar.', 'ok');
+      } else {
+        mostrarAlertaCMS('Guardado local. Verifica la conexión al servidor.', 'ok');
+      }
+    })
+    .catch(function() {
+      mostrarAlertaCMS('Guardado local. Sin conexión al servidor.', 'ok');
+    });
 }
 
 function exportarSiteJSON() {
