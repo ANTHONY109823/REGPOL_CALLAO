@@ -47,7 +47,7 @@
     <p>Haz clic en cada tarjeta para ver los detalles e inscribirte.</p>
   </div>
   <div class="grid-modern" id="grid-convenios"></div>
-  <div class="page-intro"><h2>RELACIÓN DE SELECCIONADOS</h2></div>
+  <div class="page-intro" id="section-pdf" style="display:none;"><h2>RELACIÓN DE SELECCIONADOS</h2></div>
   <div id="lista-pdf-convenios"></div>
 </main>
 
@@ -58,11 +58,62 @@
 <script src="portal-data.js?v=2"></script>
 <script src="portal.js?v=16"></script>
 <script>
+// 1️⃣ Nav + CMS items (portal-data.js — siempre han estado aquí)
 initPortalPagina({
   activeNav: 'convenios',
-  renderConvenios: 'grid-convenios',
   renderConveniosPdf: 'lista-pdf-convenios'
 });
+
+cargarSiteData().then(function(data){
+  if(data && data.conveniosPdf && data.conveniosPdf.length)
+    document.getElementById('section-pdf').style.display='';
+  renderGrid(data ? (data.convenios||[]) : []);
+});
+
+// 2️⃣ Convenios editables desde el panel (items_portal)
+var dbConvenios = [];
+fetch('/portal/items?tipo=convenio')
+  .then(function(r){return r.json();})
+  .then(function(d){ dbConvenios = d.ok&&d.items ? d.items : []; renderGrid([]); })
+  .catch(function(){});
+
+var cmsConvenios = [];
+function renderGrid(cms){
+  if(cms.length) cmsConvenios = cms;
+  var el = document.getElementById('grid-convenios');
+
+  var htmlCms = cmsConvenios.map(function(item){
+    return '<a href="'+escHtml(item.url||'#')+'">'
+      +'<div class="card-modern">'
+      +'<div class="icon-wrapper" style="background:'+escHtml(item.color||'#004d3d')+';">'
+      +'<i class="fas '+escHtml(item.icono||'fa-handshake')+'"></i></div>'
+      +'<h4>'+escHtml(item.titulo)+'</h4>'
+      +'<p>'+escHtml(item.descripcion||'')+'</p>'
+      +'<span style="color:'+escHtml(item.estadoColor||'green')+';font-weight:bold;font-size:12px;">'
+      +escHtml(item.estado||'')+'</span>'
+      +'</div></a>';
+  }).join('');
+
+  var htmlDb = dbConvenios.map(function(item){
+    var colorEstado = item.estado==='DISPONIBLE'?'#1a7a3a':item.estado==='CERRADO'?'#c0392b':'#856404';
+    var inscBadge = item.inscripciones_abiertas
+      ? '<span style="display:inline-block;background:#d4edda;color:#1a7a3a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:4px;">✓ Inscripciones abiertas</span>'
+      : '';
+    return '<a href="detalle.html?id='+item.id+'&tipo=convenio">'
+      +'<div class="card-modern">'
+      +'<div class="icon-wrapper" style="background:'+escHtml(item.color||'#004d3d')+';">'
+      +'<i class="fas '+escHtml(item.icono||'fa-handshake')+'"></i></div>'
+      +'<h4>'+escHtml(item.titulo)+'</h4>'
+      +'<p>'+escHtml(item.descripcion||'')+'</p>'
+      +(item.vacantes?'<p style="font-size:12px;color:#666;margin-top:4px;"><i class="fas fa-users" style="margin-right:4px;"></i>'+item.vacantes+' vacantes</p>':'')
+      +'<span style="color:'+colorEstado+';font-weight:bold;font-size:12px;">'+escHtml(item.estado)+'</span>'
+      +inscBadge
+      +'</div></a>';
+  }).join('');
+
+  var total = htmlCms + htmlDb;
+  el.innerHTML = total || '<p class="texto-vacio">No hay convenios publicados actualmente.</p>';
+}
 </script>
 </body>
 </html>

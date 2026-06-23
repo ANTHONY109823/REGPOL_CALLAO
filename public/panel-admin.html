@@ -1017,7 +1017,8 @@ function aplicarPermisosSidebar(s){
   var tieneEval     =esU||perms.indexOf('evaluaciones')!==-1;
   var tieneDesc     =esU||perms.indexOf('descargas')!==-1;
   var tienePreguntas=tieneEval;
-  var tieneGrupoPsico = tieneEval || tieneDesc;
+  // Psicología: solo unitic y bienestar (no cursos/convenios)
+  var tieneGrupoPsico = esU || (rol === 'bienestar');
   var tieneGrupoConv  = tieneCursos || tieneConvenios;
 
   document.querySelectorAll('[data-rol-unitic]').forEach(function(el){if(!esU)el.style.display='none';});
