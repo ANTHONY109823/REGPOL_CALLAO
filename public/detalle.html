@@ -182,43 +182,132 @@ function renderDetalle(item){
   cargarDivisionesPublico();
 }
 
+var GRADOS_PNP = [
+  'MAYOR GENERAL PNP','CORONEL PNP','COMANDANTE PNP','MAYOR PNP','CAPITÁN PNP',
+  'TENIENTE PNP','ALFÉREZ PNP','TÉCNICO SUPERIOR PNP','TÉCNICO 1° PNP','TÉCNICO 2° PNP',
+  'TÉCNICO 3° PNP','SUBOFICIAL BRIGADIER PNP','SUBOFICIAL 1° PNP','SUBOFICIAL 2° PNP',
+  'SUBOFICIAL 3° PNP','SUBOFICIAL DE 1RA PNP','SUBOFICIAL DE 2DA PNP','SUBOFICIAL DE 3RA PNP'
+];
+
+function optsGrado(){
+  return '<option value="">— Seleccionar grado —</option>'
+    + GRADOS_PNP.map(function(g){return '<option value="'+g+'">'+g+'</option>';}).join('');
+}
+
 function renderFormInscripcion(item){
-  var tieneRequisitos = item.tipo === 'convenio' || item.tipo === 'curso';
+  var esConvenio = item.tipo === 'convenio';
+  var esCurso    = item.tipo === 'curso';
   return '<form class="form-inscripcion" id="form-inscripcion" onsubmit="enviarInscripcion(event)">'
-    +'<h3><i class="fas fa-edit"></i> Formulario de Inscripción</h3>'
+    +'<h3><i class="fas fa-edit"></i> Formulario de Inscripción — '+(esConvenio?'CONVENIO':'CURSO')+'</h3>'
     +'<div id="fi-alerta" class="fi-alerta"></div>'
     +'<div class="fi-grid">'
-    +'<div class="fi-group"><label>CIP *</label><input type="text" id="fi-cip" maxlength="20" placeholder="Ingrese su CIP" required/></div>'
-    +'<div class="fi-group"><label>Nombres y Apellidos *</label><input type="text" id="fi-nombres" maxlength="200" placeholder="APELLIDOS Y NOMBRES" required/></div>'
-    +'<div class="fi-group"><label>Unidad/Dependencia *</label>'
+
+    // ── FILA 1: Grado + Nombres
+    +'<div class="fi-group"><label>Grado / Rango *</label>'
+    +'<select id="fi-grado" required>'+optsGrado()+'</select></div>'
+    +'<div class="fi-group fi-full" style="grid-column:unset"><label>Apellidos y Nombres *</label>'
+    +'<input type="text" id="fi-nombres" maxlength="200" placeholder="APELLIDOS APELLIDOS, Nombres" required/></div>'
+
+    // ── FILA 2: CIP + DNI
+    +'<div class="fi-group"><label>CIP *</label>'
+    +'<input type="text" id="fi-cip" maxlength="20" placeholder="Número de CIP" required/></div>'
+    +'<div class="fi-group"><label>DNI *</label>'
+    +'<input type="text" id="fi-dni" maxlength="12" placeholder="Número de DNI" required/></div>'
+
+    // ── FILA 3: Unidad + Área
+    +'<div class="fi-group"><label>Unidad / Dependencia *</label>'
     +'<select id="fi-unidad" required><option value="">— Seleccionar —</option></select></div>'
-    +'<div class="fi-group"><label>Cargo / Grado</label><input type="text" id="fi-cargo" maxlength="80" placeholder="Ej: S2 PNP, Técnico PNP"/></div>'
-    +'<div class="fi-group"><label>Teléfono / Celular</label><input type="tel" id="fi-telefono" maxlength="30" placeholder="Ej: 987654321"/></div>'
-    +'<div class="fi-group"><label>Correo electrónico</label><input type="email" id="fi-email" maxlength="100" placeholder="correo@pnp.gob.pe"/></div>'
-    +(tieneRequisitos
-      ? '<div class="pdf-upload-box">'
-        +'<div class="pdf-titulo"><i class="fas fa-file-pdf"></i> EXPEDIENTE DE REQUISITOS (PDF)</div>'
-        +'<div class="pdf-aviso">'
-        +'Adjunte todos sus documentos en un <strong>único archivo PDF</strong>.<br/>'
-        +'⚠ <strong>El documento debe estar debidamente firmado, sin enmendaduras y con toda la documentación completa.</strong><br/>'
-        +'El expediente incompleto o con errores será anulado automáticamente.<br/>'
-        +'<span style="color:#004d3d;font-weight:700;">Tamaño máximo: 5 MB.</span>'
-        +'</div>'
-        +renderBannerPlantilla(item)
-        +'<label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:4px;">Seleccione su PDF *</label>'
-        +'<input type="file" id="fi-pdf-file" accept="application/pdf" onchange="cargarPdfInscripcion(this)" required/>'
-        +'<div id="fi-pdf-preview" class="pdf-preview-bar" style="display:none;">'
-        +'<i class="fas fa-file-pdf"></i><span id="fi-pdf-nombre"></span>'
-        +'<button type="button" onclick="quitarPdfInscripcion()" style="background:#c0392b;color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;margin-left:auto;">✕ Quitar</button>'
-        +'</div>'
-        +'<input type="hidden" id="fi-pdf-data"/>'
-        +'</div>'
+    +'<div class="fi-group"><label>Área / Sección</label>'
+    +'<input type="text" id="fi-area" maxlength="100" placeholder="Ej: DEPINCRI, SIT, DIVPOS"/></div>'
+
+    // ── FILA 4: Cargo
+    +'<div class="fi-group"><label>Cargo</label>'
+    +'<input type="text" id="fi-cargo" maxlength="80" placeholder="Ej: Jefe de guardia, Investigador"/></div>'
+
+    // ── CAMPOS ESPECÍFICOS CONVENIO
+    +(esConvenio
+      ? '<div class="fi-group"><label>Armada (Condición laboral) *</label>'
+        +'<select id="fi-arma" required>'
+        +'<option value="">— Seleccionar —</option>'
+        +'<option value="ESTADO">Estado (en actividad)</option>'
+        +'<option value="PARTICULAR">Particular / Fuera de actividad</option>'
+        +'</select></div>'
+        +'<div class="fi-group"><label>Disponibilidad para el servicio *</label>'
+        +'<select id="fi-disponibilidad" required onchange="toggleDiaFranco(this.value)">'
+        +'<option value="">— Seleccionar —</option>'
+        +'<option value="VACACIONES">VACACIONES (período de vacaciones)</option>'
+        +'<option value="FRANCO">FRANCO (trabaja en día de franco)</option>'
+        +'</select></div>'
+        +'<div class="fi-group" id="fi-dia-franco-box" style="display:none;">'
+        +'<label>Día de franco *</label>'
+        +'<select id="fi-dia-franco">'
+        +'<option value="">— Seleccionar —</option>'
+        +'<option value="PAR">Día PAR</option>'
+        +'<option value="IMPAR">Día IMPAR</option>'
+        +'</select></div>'
       : '')
+
+    // ── CAMPOS ESPECÍFICOS CURSO
+    +(esCurso
+      ? '<div class="fi-group"><label>Fecha de Egreso de Escuela *</label>'
+        +'<input type="date" id="fi-fecha-egreso" required onchange="calcularTiempoServicio(this.value)"/></div>'
+        +'<div class="fi-group"><label>Tiempo de Servicio (calculado)</label>'
+        +'<input type="text" id="fi-tiempo-servicio" readonly placeholder="Se calculará automáticamente" '
+        +'style="background:#f0f7f0;color:#004d3d;font-weight:700;"/></div>'
+      : '')
+
+    // ── CONTACTO
+    +'<div class="fi-group"><label>Teléfono / Celular</label>'
+    +'<input type="tel" id="fi-telefono" maxlength="30" placeholder="Ej: 987654321"/></div>'
+    +'<div class="fi-group"><label>Correo electrónico</label>'
+    +'<input type="email" id="fi-email" maxlength="100" placeholder="correo@pnp.gob.pe"/></div>'
+
+    // ── PDF EXPEDIENTE
+    +'<div class="pdf-upload-box">'
+    +'<div class="pdf-titulo"><i class="fas fa-file-pdf"></i> EXPEDIENTE DE REQUISITOS (PDF)</div>'
+    +'<div class="pdf-aviso">'
+    +'Escanee y adjunte <strong>todos sus documentos en un único archivo PDF</strong> correctamente ordenados.<br/>'
+    +'⚠ <strong>Debe estar debidamente firmado, sin enmendaduras y con toda la documentación completa.</strong><br/>'
+    +'El expediente incompleto o con errores será anulado automáticamente.<br/>'
+    +'<span style="color:#004d3d;font-weight:700;">Tamaño máximo: 5 MB.</span>'
     +'</div>'
-    +'<div style="margin-top:16px;text-align:center;">'
+    +renderBannerPlantilla(item)
+    +'<label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:4px;">Seleccione su PDF *</label>'
+    +'<input type="file" id="fi-pdf-file" accept="application/pdf" onchange="cargarPdfInscripcion(this)" required/>'
+    +'<div id="fi-pdf-preview" class="pdf-preview-bar" style="display:none;">'
+    +'<i class="fas fa-file-pdf"></i><span id="fi-pdf-nombre"></span>'
+    +'<button type="button" onclick="quitarPdfInscripcion()" '
+    +'style="background:#c0392b;color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;margin-left:auto;">✕ Quitar</button>'
+    +'</div>'
+    +'<input type="hidden" id="fi-pdf-data"/>'
+    +'</div>'
+
+    +'</div>'
+    +'<div style="margin-top:18px;text-align:center;">'
     +'<button type="submit" class="btn-registro-grande"><i class="fas fa-paper-plane"></i> ENVIAR INSCRIPCIÓN</button>'
     +'</div>'
     +'</form>';
+}
+
+function toggleDiaFranco(val){
+  var box = document.getElementById('fi-dia-franco-box');
+  if(!box) return;
+  box.style.display = (val==='FRANCO') ? '' : 'none';
+  var sel = document.getElementById('fi-dia-franco');
+  if(sel) sel.required = (val==='FRANCO');
+}
+
+function calcularTiempoServicio(val){
+  var el = document.getElementById('fi-tiempo-servicio');
+  if(!el || !val) return;
+  var egreso = new Date(val);
+  if(isNaN(egreso)) return;
+  var hoy = new Date();
+  var anios = hoy.getFullYear() - egreso.getFullYear();
+  var mes   = hoy.getMonth() - egreso.getMonth();
+  if(mes < 0){ anios--; mes += 12; }
+  el.value = anios+' años '+mes+' meses de servicio';
+  document.getElementById('fi-tiempo-servicio').setAttribute('data-val', anios+' años '+mes+' meses');
 }
 
 function renderBannerPlantilla(item){
@@ -301,38 +390,75 @@ function enviarInscripcion(e){
   e.preventDefault();
   var alerta = document.getElementById('fi-alerta');
   alerta.className='fi-alerta'; alerta.style.display='none';
-  var cip     = document.getElementById('fi-cip').value.trim();
-  var nombres = document.getElementById('fi-nombres').value.trim();
-  var unidad  = document.getElementById('fi-unidad').value;
-  var cargo   = document.getElementById('fi-cargo').value.trim();
-  var tel     = document.getElementById('fi-telefono').value.trim();
-  var email   = document.getElementById('fi-email').value.trim();
+
+  function v(id){ var el=document.getElementById(id); return el?el.value.trim():''; }
+
+  var cip     = v('fi-cip');
+  var dni     = v('fi-dni');
+  var grado   = v('fi-grado');
+  var nombres = v('fi-nombres');
+  var unidad  = v('fi-unidad');
+  var area    = v('fi-area');
+  var cargo   = v('fi-cargo');
+  var tel     = v('fi-telefono');
+  var email   = v('fi-email');
+  // Convenio
+  var arma           = v('fi-arma');
+  var disponibilidad = v('fi-disponibilidad');
+  var dia_franco     = v('fi-dia-franco');
+  // Curso
+  var fecha_egreso   = v('fi-fecha-egreso');
+  var tsEl = document.getElementById('fi-tiempo-servicio');
+  var tiempo_servicio = tsEl ? tsEl.value : '';
+  // PDF
   var pdfEl   = document.getElementById('fi-pdf-data');
   var pdfFile = document.getElementById('fi-pdf-file');
   var pdfData = pdfEl ? pdfEl.value : '';
   var pdfNomb = (pdfFile&&pdfFile.files&&pdfFile.files[0]) ? pdfFile.files[0].name : 'requisitos.pdf';
-  if(!cip||!nombres||!unidad){
-    alerta.textContent='Complete los campos obligatorios (*).';
+
+  if(!grado||!cip||!dni||!nombres||!unidad){
+    alerta.textContent='Complete los campos obligatorios: grado, CIP, DNI, nombres y unidad.';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
-  if(pdfFile&&pdfFile.required&&!pdfData){
+  if(ITEM_TIPO==='convenio' && !disponibilidad){
+    alerta.textContent='Indique su disponibilidad (Vacaciones o Franco).';
+    alerta.className='fi-alerta error'; alerta.style.display='block'; return;
+  }
+  if(ITEM_TIPO==='convenio' && disponibilidad==='FRANCO' && !dia_franco){
+    alerta.textContent='Seleccione su día de franco (Par o Impar).';
+    alerta.className='fi-alerta error'; alerta.style.display='block'; return;
+  }
+  if(ITEM_TIPO==='curso' && !fecha_egreso){
+    alerta.textContent='Ingrese su fecha de egreso de la Escuela PNP.';
+    alerta.className='fi-alerta error'; alerta.style.display='block'; return;
+  }
+  if(!pdfData){
     alerta.textContent='Debe adjuntar su expediente de requisitos en PDF.';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
+
   var btn = document.querySelector('#form-inscripcion button[type="submit"]');
   if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Enviando...';}
+
   fetch('/portal/items/'+ITEM_ID+'/inscribir',{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({cip:cip,nombres:nombres,unidad:unidad,cargo:cargo,
-      telefono:tel,email:email,pdf_requisitos:pdfData,pdf_nombre:pdfNomb})
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      cip:cip, dni:dni, grado:grado, nombres:nombres,
+      unidad:unidad, area:area, cargo:cargo, telefono:tel, email:email,
+      arma:arma, disponibilidad:disponibilidad, dia_franco:dia_franco,
+      fecha_egreso:fecha_egreso||null, tiempo_servicio:tiempo_servicio,
+      pdf_requisitos:pdfData, pdf_nombre:pdfNomb
+    })
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok){
-      alerta.textContent='✓ Inscripción registrada correctamente. El área correspondiente revisará su expediente y se comunicará con usted.';
+      alerta.textContent='✓ Inscripción registrada. El área correspondiente revisará su expediente y se comunicará con usted.';
       alerta.className='fi-alerta ok'; alerta.style.display='block';
       document.getElementById('form-inscripcion').reset();
       if(pdfEl) pdfEl.value='';
       var prev=document.getElementById('fi-pdf-preview');
       if(prev) prev.style.display='none';
+      var diaBox=document.getElementById('fi-dia-franco-box');
+      if(diaBox) diaBox.style.display='none';
     } else {
       alerta.textContent=d.error||'Error al procesar la inscripción.';
       alerta.className='fi-alerta error'; alerta.style.display='block';

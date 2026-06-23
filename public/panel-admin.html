@@ -163,6 +163,8 @@
     .btn-mini:hover{background:#004d3d;color:#fff;}
     .btn-mini-danger{border-color:#c0392b;color:#c0392b;}
     .btn-mini-danger:hover{background:#c0392b;color:#fff;}
+    .btn-mini-ok{border-color:#1a7a3a;color:#1a7a3a;}
+    .btn-mini-ok:hover{background:#1a7a3a;color:#fff;}
     .cms-parrafo-item{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px;}
     .cms-parrafo-num{font-size:11px;font-weight:800;color:#004d3d;min-width:22px;padding-top:10px;}
     .cms-textarea{width:100%;padding:8px;border:1.5px solid #ccc;border-radius:6px;
@@ -833,9 +835,12 @@
     <div id="mins-info" style="background:#f0f7f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;"></div>
     <label>Estado</label>
     <select id="mins-estado">
-      <option value="pendiente">Pendiente</option>
-      <option value="aceptado">Aceptado ✓</option>
-      <option value="rechazado">Rechazado ✗</option>
+      <option value="pendiente">Pendiente (revisión)</option>
+      <option value="verificado">✓ Verificado (expediente OK — pasa al sorteo/aprobados)</option>
+      <option value="ganador">🏆 Ganador (seleccionado en sorteo)</option>
+      <option value="aprobado">✅ Aprobado (seleccionado por méritos)</option>
+      <option value="reserva">📋 Reserva (no seleccionado)</option>
+      <option value="rechazado">✗ Rechazado (expediente inválido)</option>
     </select>
     <label>Observación</label>
     <textarea id="mins-observacion" rows="3" placeholder="Motivo de aceptación o rechazo..."></textarea>
@@ -2050,7 +2055,7 @@ function verInscritos(itemId, titulo){
     .then(function(r){return r.json();}).then(function(d){
       if(!d.ok){document.getElementById('inscritos-tabla').innerHTML='<p style="color:#c00;padding:16px;">'+escHtml(d.error||'Error')+'</p>';return;}
       INSCRITOS_CACHE=d.inscritos||[];
-      renderInscritos(INSCRITOS_CACHE);
+      renderInscritos(INSCRITOS_CACHE, d.tipo||'convenio');
     });
 }
 
@@ -2058,65 +2063,192 @@ function filtrarInscritos(){
   var txt=(document.getElementById('inscritos-buscar').value||'').toLowerCase();
   var est=document.getElementById('inscritos-filtro-estado').value;
   var filtrados=INSCRITOS_CACHE.filter(function(i){
-    var matchTxt=!txt||(i.cip||'').toLowerCase().includes(txt)||(i.nombres||'').toLowerCase().includes(txt);
+    var matchTxt=!txt||(i.cip||'').toLowerCase().includes(txt)||(i.nombres||'').toLowerCase().includes(txt)||(i.dni||'').toLowerCase().includes(txt);
     var matchEst=!est||i.estado===est;
     return matchTxt&&matchEst;
   });
-  renderInscritos(filtrados);
+  renderInscritos(filtrados, INSCRITOS_TIPO_ACTUAL);
 }
 
-function renderInscritos(list){
+var INSCRITOS_TIPO_ACTUAL = 'convenio';
+
+function renderInscritos(list, tipo){
+  if(tipo) INSCRITOS_TIPO_ACTUAL = tipo;
   var total=INSCRITOS_CACHE.length;
-  var pend=INSCRITOS_CACHE.filter(function(i){return i.estado==='pendiente';}).length;
-  var acept=INSCRITOS_CACHE.filter(function(i){return i.estado==='aceptado';}).length;
-  var rech=INSCRITOS_CACHE.filter(function(i){return i.estado==='rechazado';}).length;
+  var pend =INSCRITOS_CACHE.filter(function(i){return i.estado==='pendiente';}).length;
+  var verif=INSCRITOS_CACHE.filter(function(i){return i.estado==='verificado';}).length;
+  var gan  =INSCRITOS_CACHE.filter(function(i){return i.estado==='ganador'||i.estado==='aprobado';}).length;
+  var rech =INSCRITOS_CACHE.filter(function(i){return i.estado==='rechazado';}).length;
+
+  var esConvenio = INSCRITOS_TIPO_ACTUAL==='convenio';
+
+  // Botón de acción masiva
+  var btnAccion = '';
+  if(esConvenio && verif>0){
+    btnAccion='<a href="sorteo-live.html?item_id='+ITEM_ACTIVO_ID+'" target="_blank" '
+      +'class="btn btn-o" style="text-decoration:none;margin-left:8px;">'
+      +'<i class="fas fa-random"></i> ABRIR SORTEO EN VIVO ('+verif+' verificados)</a>';
+  } else if(!esConvenio && verif>0){
+    btnAccion='<button class="btn btn-v" style="margin-left:8px;" onclick="verAprobadosCurso()">'
+      +'<i class="fas fa-list-ol"></i> VER LISTA DE APROBADOS ('+verif+' verificados)</button>';
+  }
+
   document.getElementById('inscritos-stats').innerHTML=
-    '<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:8px;">'
+    '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
+    +'<div class="stats-grid" style="grid-template-columns:repeat(5,auto);gap:8px;flex:1;">'
     +'<div class="stat"><div class="n">'+total+'</div><div class="l">Total</div></div>'
     +'<div class="stat" style="border-color:#ffe082;"><div class="n" style="color:#856404;">'+pend+'</div><div class="l">Pendientes</div></div>'
-    +'<div class="stat" style="border-color:#a5d6a7;"><div class="n" style="color:#1a7a3a;">'+acept+'</div><div class="l">Aceptados</div></div>'
+    +'<div class="stat" style="border-color:#a5d6a7;"><div class="n" style="color:#1a7a3a;">'+verif+'</div><div class="l">Verificados</div></div>'
+    +'<div class="stat" style="border-color:#c8a94a;"><div class="n" style="color:#856404;">'+gan+'</div><div class="l">'+(esConvenio?'Ganadores':'Aprobados')+'</div></div>'
     +'<div class="stat" style="border-color:#f5c2c7;"><div class="n" style="color:#c0392b;">'+rech+'</div><div class="l">Rechazados</div></div>'
+    +'</div>'
+    +btnAccion
     +'</div>';
+
   if(!list.length){
     document.getElementById('inscritos-tabla').innerHTML='<p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">Sin inscripciones registradas.</p>';
     return;
   }
-  var colorEst={pendiente:'#856404',aceptado:'#1a7a3a',rechazado:'#c0392b'};
-  var bgEst={pendiente:'#fff3cd',aceptado:'#d4edda',rechazado:'#f8d7da'};
-  document.getElementById('inscritos-tabla').innerHTML='<table class="t"><thead><tr>'
-    +'<th>#</th><th>CIP</th><th>Nombres</th><th>Unidad</th><th>Cargo</th><th>Teléfono</th><th>Estado</th><th>Fecha</th><th>Acción</th>'
+
+  var colorEst={pendiente:'#856404',verificado:'#1a7a3a',ganador:'#c8a94a',aprobado:'#c8a94a',rechazado:'#c0392b',reserva:'#6c757d'};
+  var bgEst   ={pendiente:'#fff3cd',verificado:'#d4edda',ganador:'#fff8e1',aprobado:'#fff8e1',rechazado:'#f8d7da',reserva:'#e9ecef'};
+
+  document.getElementById('inscritos-tabla').innerHTML=
+    '<div style="overflow-x:auto;"><table class="t" style="min-width:900px;"><thead><tr>'
+    +'<th>#</th><th>Grado</th><th>CIP</th><th>DNI</th><th>Apellidos y Nombres</th><th>Unidad/Área</th>'
+    +(esConvenio?'<th>Disponib.</th>':'<th>T. Servicio</th>')
+    +'<th>PDF</th><th>Estado</th><th>Fecha</th><th>Acciones</th>'
     +'</tr></thead><tbody>'
     +list.map(function(ins,idx){
       var c=colorEst[ins.estado]||'#444';
       var bg=bgEst[ins.estado]||'#fff';
       var fecha=ins.fecha?new Date(ins.fecha).toLocaleDateString('es-PE'):'';
+      var dispBadge='';
+      if(esConvenio){
+        if(ins.disponibilidad==='VACACIONES') dispBadge='<span class="badge ok" style="background:#d4edda;color:#1a7a3a;">🏖 VAC</span>';
+        else if(ins.disponibilidad==='FRANCO') dispBadge='<span class="badge" style="background:#cce5ff;color:#004085;">🌙 '+(ins.dia_franco||'')+'</span>';
+      } else {
+        dispBadge='<span style="font-size:11px;color:#555;">'+escHtml(ins.tiempo_servicio||'—')+'</span>';
+      }
       return '<tr>'
         +'<td style="color:#aaa;font-size:11px;">'+(idx+1)+'</td>'
+        +'<td style="font-size:11px;font-weight:600;">'+escHtml(ins.grado||'')+'</td>'
         +'<td style="font-weight:700;">'+escHtml(ins.cip||'')+'</td>'
-        +'<td>'+escHtml(ins.nombres||'')+'</td>'
-        +'<td style="font-size:11.5px;">'+escHtml(ins.unidad||'')+'</td>'
-        +'<td style="font-size:11.5px;">'+escHtml(ins.cargo||'')+'</td>'
-        +'<td>'+escHtml(ins.telefono||'')+'</td>'
-        +'<td><span class="badge" style="background:'+bg+';color:'+c+';">'+escHtml(ins.estado)+'</span></td>'
+        +'<td style="font-size:11.5px;">'+escHtml(ins.dni||'')+'</td>'
+        +'<td style="font-weight:600;">'+escHtml(ins.nombres||'')+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(ins.unidad||'')+(ins.area?'<br/><span style="color:#888;">'+escHtml(ins.area)+'</span>':'')+'</td>'
+        +'<td>'+dispBadge+'</td>'
+        +'<td style="text-align:center;">'+(ins.tiene_pdf
+          ?'<button class="btn-mini" style="background:#e74c3c;color:#fff;" title="Ver PDF" onclick="verPdfInscripcion('+ins.id+')"><i class="fas fa-file-pdf"></i></button>'
+          :'<span style="color:#bbb;font-size:11px;">—</span>')+'</td>'
+        +'<td><span class="badge" style="background:'+bg+';color:'+c+';font-size:10px;">'+escHtml(ins.estado)+'</span></td>'
         +'<td style="font-size:11px;color:#888;">'+fecha+'</td>'
-        +'<td style="white-space:nowrap;"><button class="btn-mini" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i></button>'
-        +(ins.pdf_requisitos?'<button class="btn-mini" style="background:#e74c3c;color:#fff;margin-left:3px;" title="Ver PDF de requisitos" onclick="verPdfInscripcion('+ins.id+')"><i class="fas fa-file-pdf"></i></button>':'')
+        +'<td style="white-space:nowrap;">'
+        +(ins.estado==='pendiente'
+          ?'<button class="btn-mini btn-mini-ok" title="Verificar expediente OK" onclick="verificarInscripcion('+ins.id+')"><i class="fas fa-check-double"></i> Verificar</button> '
+          :'')
+        +'<button class="btn-mini" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i></button>'
         +'</td>'
         +'</tr>';
     }).join('')
-    +'</tbody></table>';
+    +'</tbody></table></div>';
+}
+
+function verificarInscripcion(id){
+  if(!confirm('¿Marcar este expediente como VERIFICADO?\nEl postulante pasará a la lista del sorteo o aprobados.')) return;
+  fetch(API+'/admin/inscripciones/'+id,{
+    method:'PUT', headers:hdr(),
+    body:JSON.stringify({estado:'verificado', observacion:'Expediente verificado por el área'})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok) verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/.*— /,''));
+    else alert('Error: '+(d.error||''));
+  });
+}
+
+function verAprobadosCurso(){
+  var verificados = INSCRITOS_CACHE.filter(function(i){return i.estado==='verificado'||i.estado==='aprobado';});
+  verificados.sort(function(a,b){
+    // Ordenar por tiempo de servicio descendente (más años primero)
+    var ta=parseInt((a.tiempo_servicio||'0 años').split(' ')[0])||0;
+    var tb=parseInt((b.tiempo_servicio||'0 años').split(' ')[0])||0;
+    return tb-ta;
+  });
+  var item_vacantes = 0;
+  fetch(API+'/admin/items', {headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+    var it=(d.items||[]).find(function(x){return x.id===ITEM_ACTIVO_ID;});
+    if(it) item_vacantes=it.vacantes||0;
+  });
+
+  var html='<div style="max-height:75vh;overflow-y:auto;">'
+    +'<div style="background:#f0f7f0;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:12.5px;color:#555;">'
+    +'<i class="fas fa-info-circle" style="color:#004d3d;"></i> '
+    +'Lista ordenada por mayor tiempo de servicio. Los primeros en cubrir vacantes son los más calificados.'
+    +'</div>'
+    +'<table class="t" style="width:100%;"><thead><tr>'
+    +'<th>#</th><th>Grado</th><th>CIP</th><th>Apellidos y Nombres</th><th>Unidad</th><th>T. Servicio</th><th>Estado</th><th>Acción</th>'
+    +'</tr></thead><tbody>'
+    +verificados.map(function(ins,i){
+      var esAprobado=ins.estado==='aprobado';
+      return '<tr style="'+(esAprobado?'background:#f0fff4;':'')+'">'
+        +'<td style="font-weight:900;color:'+(esAprobado?'#27ae60':'#004d3d')+';text-align:center;">'+(i+1)+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(ins.grado||'')+'</td>'
+        +'<td style="font-weight:700;">'+escHtml(ins.cip||'')+'</td>'
+        +'<td style="font-weight:600;">'+escHtml(ins.nombres||'')+'</td>'
+        +'<td style="font-size:11.5px;">'+escHtml(ins.unidad||'')+'</td>'
+        +'<td style="font-weight:700;color:#004d3d;font-size:12px;">'+escHtml(ins.tiempo_servicio||'—')+'</td>'
+        +'<td><span class="badge '+(esAprobado?'ok':'pend')+'">'+escHtml(ins.estado)+'</span></td>'
+        +'<td>'+(esAprobado
+          ?'<button class="btn-mini btn-mini-danger" onclick="cambiarEstadoAprobado('+ins.id+',\'verificado\')"><i class="fas fa-times"></i> Quitar</button>'
+          :'<button class="btn-mini btn-mini-ok" onclick="cambiarEstadoAprobado('+ins.id+',\'aprobado\')"><i class="fas fa-check"></i> Aprobar</button>')
+        +'</td></tr>';
+    }).join('')
+    +'</tbody></table>'
+    +'</div>';
+
+  document.getElementById('cms-modal-header').querySelector('h3').textContent='Lista de aprobados — Cursos';
+  document.getElementById('cms-modal-body').innerHTML=html;
+  document.getElementById('cms-modal-footer').innerHTML='<button class="btn" style="background:#999;color:#fff;" onclick="document.getElementById(\'cms-modal\').classList.remove(\'visible\')">Cerrar</button>';
+  document.getElementById('cms-modal').classList.add('visible');
+}
+
+function cambiarEstadoAprobado(id, nuevoEstado){
+  fetch(API+'/admin/inscripciones/'+id,{
+    method:'PUT',headers:hdr(),
+    body:JSON.stringify({estado:nuevoEstado,observacion:nuevoEstado==='aprobado'?'Aprobado por méritos':'Marcado como verificado'})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){
+      var ins=INSCRITOS_CACHE.find(function(i){return i.id===id;});
+      if(ins) ins.estado=nuevoEstado;
+      verAprobadosCurso();
+    } else alert('Error: '+(d.error||''));
+  });
 }
 
 function abrirModalInscripcion(id){
   var ins=INSCRITOS_CACHE.find(function(i){return i.id===id;});
   if(!ins)return;
   document.getElementById('mins-id').value=id;
+
+  var filas=[
+    ['Grado',ins.grado],['CIP',ins.cip],['DNI',ins.dni],
+    ['Nombres',ins.nombres],['Unidad',ins.unidad],['Área',ins.area],['Cargo',ins.cargo],
+    ['Arma/Condición',ins.arma],['Disponibilidad',ins.disponibilidad],['Día Franco',ins.dia_franco],
+    ['T. Servicio',ins.tiempo_servicio],['Teléfono',ins.telefono],['Email',ins.email]
+  ].filter(function(f){return f[1];});
+
   document.getElementById('mins-info').innerHTML=
-    '<strong>'+escHtml(ins.nombres||'')+'</strong> — CIP: '+escHtml(ins.cip||'')+'<br/>'
-    +'Unidad: '+escHtml(ins.unidad||'')+'<br/>'
-    +(ins.cargo?'Cargo: '+escHtml(ins.cargo)+'<br/>':'')
-    +(ins.telefono?'Tel: '+escHtml(ins.telefono)+'<br/>':'')
-    +(ins.email?'Email: '+escHtml(ins.email):'');
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12px;">'
+    +filas.map(function(f){
+      return '<div style="color:#888;font-weight:700;">'+f[0]+':</div>'
+            +'<div style="color:#222;">'+escHtml(f[1])+'</div>';
+    }).join('')
+    +'</div>'
+    +(ins.tiene_pdf
+      ?'<div style="margin-top:10px;padding:8px 12px;background:#fff5f5;border-radius:6px;border:1px solid #fcc;">'
+       +'<button class="btn-mini" style="background:#e74c3c;color:#fff;" onclick="verPdfInscripcion('+id+')">'
+       +'<i class="fas fa-file-pdf"></i> Ver PDF adjunto ('+escHtml(ins.pdf_nombre||'')+')</button></div>'
+      :'<div style="margin-top:8px;font-size:11.5px;color:#c0392b;"><i class="fas fa-exclamation-triangle"></i> Sin PDF adjunto</div>');
+
   document.getElementById('mins-estado').value=ins.estado||'pendiente';
   document.getElementById('mins-observacion').value=ins.observacion||'';
   document.getElementById('modal-inscripcion').classList.add('open');

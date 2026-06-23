@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SORTEO EN VIVO — REGPOL Callao</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',sans-serif;background:#001a12;color:#fff;min-height:100vh;overflow-x:hidden;}
+
+    /* ── HEADER ── */
+    .sl-header{background:linear-gradient(90deg,#002d24,#004d3d);padding:14px 24px;display:flex;align-items:center;gap:16px;border-bottom:3px solid #c8a94a;}
+    .sl-logo{width:52px;height:52px;background:#c8a94a;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:#002d24;font-weight:900;flex-shrink:0;}
+    .sl-header-txt h1{font-size:18px;font-weight:900;letter-spacing:1px;color:#c8a94a;}
+    .sl-header-txt p{font-size:11.5px;opacity:.75;margin-top:2px;}
+    .sl-header-right{margin-left:auto;display:flex;align-items:center;gap:12px;}
+    .badge-live{background:#e74c3c;color:#fff;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:900;letter-spacing:2px;animation:pulseLive 1.2s infinite;}
+    @keyframes pulseLive{0%,100%{opacity:1;}50%{opacity:.5;}}
+
+    /* ── CONFIG PANEL ── */
+    #config-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 80px);gap:28px;padding:32px 24px;}
+    .cfg-card{background:#002d24;border:2px solid #c8a94a;border-radius:16px;padding:32px;width:100%;max-width:600px;text-align:center;}
+    .cfg-card h2{color:#c8a94a;font-size:20px;margin-bottom:8px;}
+    .cfg-card .item-nombre{font-size:15px;font-weight:700;margin-bottom:24px;color:#a0e0b0;}
+    .cfg-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;justify-content:center;}
+    .cfg-label{font-size:13px;font-weight:700;color:#c8a94a;min-width:160px;text-align:right;}
+    .cfg-input{background:#001a12;border:2px solid #c8a94a;color:#fff;padding:9px 14px;border-radius:8px;font-size:16px;font-weight:700;width:90px;text-align:center;}
+    .cfg-info{background:#001a12;border:1.5px solid #004d3d;border-radius:8px;padding:10px 16px;font-size:13px;color:#a0e0b0;text-align:left;margin-top:8px;}
+    .cfg-info div{padding:4px 0;border-bottom:1px solid #004d3d;}
+    .cfg-info div:last-child{border:none;}
+    .btn-iniciar{background:#c8a94a;color:#002d24;border:none;padding:16px 40px;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:1px;transition:all .2s;margin-top:16px;}
+    .btn-iniciar:hover{background:#dfc060;transform:scale(1.03);}
+    .btn-iniciar:disabled{background:#555;color:#999;cursor:not-allowed;transform:none;}
+
+    /* ── SORTEO STAGE ── */
+    #sorteo-panel{display:none;padding:20px 24px;}
+    .sl-grid{display:grid;grid-template-columns:1fr 340px;gap:20px;max-width:1200px;margin:0 auto;}
+    @media(max-width:900px){.sl-grid{grid-template-columns:1fr;}}
+
+    /* ── DRUM / RUEDA ── */
+    .drum-section{background:#002d24;border-radius:16px;border:2px solid #004d3d;overflow:hidden;}
+    .drum-header{background:#004d3d;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;}
+    .drum-header h2{font-size:14px;font-weight:800;color:#c8a94a;letter-spacing:.5px;}
+    .drum-stats{font-size:12px;color:#a0e0b0;}
+    .drum-body{padding:20px;text-align:center;}
+
+    .drum-wrapper{position:relative;height:260px;overflow:hidden;margin:0 auto 20px;max-width:500px;border-radius:12px;background:#001a12;border:2px solid #004d3d;}
+    .drum-overlay-top{position:absolute;top:0;left:0;right:0;height:90px;background:linear-gradient(to bottom,#001a12,transparent);z-index:2;}
+    .drum-overlay-bot{position:absolute;bottom:0;left:0;right:0;height:90px;background:linear-gradient(to top,#001a12,transparent);z-index:2;}
+    .drum-highlight{position:absolute;top:50%;left:0;right:0;transform:translateY(-50%);height:52px;background:rgba(200,169,74,.12);border-top:2px solid #c8a94a;border-bottom:2px solid #c8a94a;z-index:3;pointer-events:none;}
+    .drum-reel{position:absolute;width:100%;transition:transform .05s linear;padding:0;}
+    .drum-item{height:52px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#a0e0b0;padding:0 16px;text-align:center;line-height:1.3;}
+    .drum-item.active{color:#c8a94a;font-size:14px;font-weight:900;}
+
+    .btn-sortear{background:#e74c3c;color:#fff;border:none;padding:16px 40px;border-radius:12px;font-size:17px;font-weight:900;cursor:pointer;letter-spacing:1px;width:100%;max-width:340px;transition:all .2s;position:relative;overflow:hidden;}
+    .btn-sortear:hover:not(:disabled){background:#c0392b;transform:scale(1.02);}
+    .btn-sortear:disabled{background:#555;cursor:not-allowed;transform:none;}
+    .btn-sortear.spinning{background:#e67e22;animation:btnPulse .3s infinite alternate;}
+    @keyframes btnPulse{from{opacity:.8;}to{opacity:1;}}
+
+    /* ── GANADOR FLASH ── */
+    .ganador-flash{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+    .ganador-flash.show{display:flex;}
+    .gf-inner{background:linear-gradient(135deg,#004d3d,#002d24);border:4px solid #c8a94a;border-radius:24px;padding:40px 56px;animation:zoomIn .4s cubic-bezier(.17,.67,.38,1.27);}
+    @keyframes zoomIn{from{transform:scale(.3);opacity:0;}to{transform:scale(1);opacity:1;}}
+    .gf-confetti{font-size:48px;margin-bottom:12px;animation:spin1 .8s linear infinite;}
+    @keyframes spin1{to{transform:rotate(360deg);}}
+    .gf-titulo{font-size:13px;font-weight:800;color:#c8a94a;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+    .gf-nombre{font-size:28px;font-weight:900;color:#fff;margin-bottom:4px;max-width:500px;line-height:1.2;}
+    .gf-sub{font-size:14px;color:#a0e0b0;margin-bottom:24px;}
+    .gf-nro{font-size:64px;font-weight:900;color:#c8a94a;margin-bottom:8px;}
+    .btn-continuar{background:#c8a94a;color:#002d24;border:none;padding:13px 32px;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;}
+
+    /* ── PANEL DERECHO: RESULTADOS ── */
+    .resultados-panel{background:#002d24;border-radius:16px;border:2px solid #004d3d;}
+    .rp-header{background:#004d3d;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;border-radius:14px 14px 0 0;}
+    .rp-header h3{font-size:13px;font-weight:800;color:#c8a94a;}
+    .rp-vacantes{font-size:12px;color:#a0e0b0;}
+    .rp-body{padding:12px;max-height:calc(100vh - 280px);overflow-y:auto;}
+
+    .rp-ganador{background:#001a12;border-radius:9px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;border-left:3px solid #c8a94a;animation:slideIn .3s ease;}
+    @keyframes slideIn{from{transform:translateX(-20px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+    .rp-ganador.vacaciones{border-left-color:#27ae60;}
+    .rp-nro{width:34px;height:34px;border-radius:50%;background:#c8a94a;color:#002d24;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .rp-nro.vacaciones{background:#27ae60;}
+    .rp-info strong{display:block;font-size:12.5px;font-weight:800;color:#fff;}
+    .rp-info span{font-size:11px;color:#88b0a0;}
+
+    /* Candidatos restantes */
+    .candidatos-lista{background:#001a12;border-radius:9px;padding:10px;margin-top:10px;}
+    .candidatos-lista-titulo{font-size:11px;font-weight:800;color:#c8a94a;letter-spacing:.5px;padding:6px 8px 8px;text-transform:uppercase;}
+    .cand-item{font-size:11.5px;padding:5px 8px;border-bottom:1px solid #004d3d;color:#88b0a0;}
+    .cand-item:last-child{border:none;}
+    .cand-item.eliminado{text-decoration:line-through;opacity:.4;}
+
+    /* Barra de progreso */
+    .progress-bar{height:6px;background:#004d3d;border-radius:3px;overflow:hidden;margin-bottom:14px;}
+    .progress-fill{height:100%;background:#c8a94a;border-radius:3px;transition:width .5s;}
+
+    .btn-guardar{background:#27ae60;color:#fff;border:none;padding:12px 24px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-top:12px;}
+    .btn-guardar:hover{background:#219a52;}
+    .empty-msg{text-align:center;padding:24px;color:#444;font-size:12px;}
+  </style>
+</head>
+<body>
+
+<div class="sl-header">
+  <div class="sl-logo">⭐</div>
+  <div class="sl-header-txt">
+    <h1>SORTEO PÚBLICO — REGIÓN POLICIAL CALLAO</h1>
+    <p id="sl-subtitulo">Cargando convocatoria...</p>
+  </div>
+  <div class="sl-header-right">
+    <div class="badge-live">● EN VIVO</div>
+  </div>
+</div>
+
+<!-- CONFIG -->
+<div id="config-panel">
+  <div class="cfg-card">
+    <h2><i class="fas fa-cog"></i> CONFIGURACIÓN DEL SORTEO</h2>
+    <div class="item-nombre" id="cfg-nombre">Cargando...</div>
+    <div class="cfg-info" id="cfg-info">
+      <p style="text-align:center;color:#666;"><i class="fas fa-spinner fa-spin"></i> Cargando candidatos...</p>
+    </div>
+    <div class="cfg-row" style="margin-top:20px;">
+      <span class="cfg-label"><i class="fas fa-users"></i> N° de vacantes:</span>
+      <input type="number" class="cfg-input" id="cfg-vacantes" min="1" value="1"/>
+    </div>
+    <button class="btn-iniciar" id="btn-iniciar" onclick="iniciarSorteo()" disabled>
+      <i class="fas fa-play"></i> INICIAR SORTEO EN VIVO
+    </button>
+  </div>
+</div>
+
+<!-- SORTEO STAGE -->
+<div id="sorteo-panel">
+  <div class="sl-grid">
+    <!-- DRUM -->
+    <div class="drum-section">
+      <div class="drum-header">
+        <h2><i class="fas fa-random"></i> RUEDA DE SORTEO</h2>
+        <span class="drum-stats" id="drum-stats">—</span>
+      </div>
+      <div class="drum-body">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+        <div class="drum-wrapper" id="drum-wrapper">
+          <div class="drum-overlay-top"></div>
+          <div class="drum-overlay-bot"></div>
+          <div class="drum-highlight"></div>
+          <div class="drum-reel" id="drum-reel"></div>
+        </div>
+        <button class="btn-sortear" id="btn-sortear" onclick="sortear()" disabled>
+          <i class="fas fa-random"></i> SORTEAR
+        </button>
+      </div>
+    </div>
+
+    <!-- RESULTADOS -->
+    <div class="resultados-panel">
+      <div class="rp-header">
+        <h3><i class="fas fa-trophy"></i> GANADORES</h3>
+        <span class="rp-vacantes" id="rp-vacantes">0 / 0</span>
+      </div>
+      <div class="rp-body">
+        <div id="rp-lista"><p class="empty-msg">Inicie el sorteo para ver los resultados.</p></div>
+        <div class="candidatos-lista" id="candidatos-restantes" style="display:none;">
+          <div class="candidatos-lista-titulo"><i class="fas fa-list"></i> En rueda</div>
+          <div id="cand-lista-items"></div>
+        </div>
+        <button class="btn-guardar" id="btn-guardar" onclick="guardarResultados()" style="display:none;">
+          <i class="fas fa-save"></i> GUARDAR Y PUBLICAR RESULTADOS
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FLASH GANADOR -->
+<div class="ganador-flash" id="ganador-flash">
+  <div class="gf-inner">
+    <div class="gf-confetti">🎊</div>
+    <div class="gf-titulo">¡GANADOR N°</div>
+    <div class="gf-nro" id="gf-nro">1</div>
+    <div class="gf-nombre" id="gf-nombre">APELLIDO APELLIDO, Nombres</div>
+    <div class="gf-sub" id="gf-sub">Unidad — CIP: 000000</div>
+    <button class="btn-continuar" onclick="cerrarFlash()">
+      <i class="fas fa-check"></i> CONTINUAR
+    </button>
+  </div>
+</div>
+
+<script src="api-config.js?v=1"></script>
+<script>
+var API = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
+  : ((location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '');
+
+var SESION = JSON.parse(localStorage.getItem('regpol_session')||'null');
+var HDR = SESION ? {'Content-Type':'application/json','x-admin-token':SESION.token} : {'Content-Type':'application/json'};
+
+var ITEM_ID   = new URLSearchParams(location.search).get('item_id');
+var ITEM_DATA = null;
+var SORTEO_ID = new URLSearchParams(location.search).get('sorteo_id')||null;
+
+var TODOS_CAND      = [];   // candidatos verificados
+var VACACIONES_CAND = [];   // auto-ganadores (vacaciones)
+var RUEDA_CAND      = [];   // entran al sorteo
+var GANADORES       = [];   // resultados finales
+var VACANTES        = 1;
+var SORTEANDO       = false;
+var DRUM_INTERVAL   = null;
+var DRUM_POS        = 0;
+var ITEM_H          = 52;
+
+if(!SESION || !SESION.token){
+  document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;"><div style="background:#002d24;border:2px solid #c8a94a;border-radius:16px;padding:40px;text-align:center;"><i class="fas fa-lock" style="font-size:48px;color:#c8a94a;margin-bottom:16px;display:block;"></i><h2 style="color:#fff;margin-bottom:8px;">Acceso restringido</h2><p style="color:#aaa;margin-bottom:20px;">Inicie sesión como administrador para acceder al sorteo en vivo.</p><a href="login.html" style="background:#c8a94a;color:#002d24;padding:12px 28px;border-radius:8px;font-weight:700;text-decoration:none;">INGRESAR</a></div></div>';
+} else {
+  cargarCandidatos();
+}
+
+function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function cargarCandidatos(){
+  if(!ITEM_ID){ alert('Falta item_id en la URL.'); return; }
+  fetch(API+'/admin/items/'+ITEM_ID+'/candidatos',{headers:HDR})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok){ alert('Error: '+(d.error||'')); return; }
+      ITEM_DATA = d.item;
+      TODOS_CAND = d.candidatos||[];
+      VACANTES   = ITEM_DATA.vacantes||1;
+      document.getElementById('cfg-vacantes').value = VACANTES;
+      document.getElementById('cfg-nombre').textContent = ITEM_DATA.titulo||'';
+      document.getElementById('sl-subtitulo').textContent = ITEM_DATA.titulo||'';
+      renderConfigInfo();
+      document.getElementById('btn-iniciar').disabled = false;
+    });
+}
+
+function renderConfigInfo(){
+  var ya_ganadores = TODOS_CAND.filter(function(c){return c.estado==='ganador';});
+  var verificados  = TODOS_CAND.filter(function(c){return c.estado==='verificado';});
+  var vacaciones_n = verificados.filter(function(c){return c.disponibilidad==='VACACIONES';}).length;
+  var franco_n     = verificados.filter(function(c){return c.disponibilidad==='FRANCO';}).length;
+
+  document.getElementById('cfg-info').innerHTML =
+    '<div><i class="fas fa-users" style="color:#c8a94a;width:20px;"></i> Candidatos verificados: <strong>'+verificados.length+'</strong></div>'
+   +'<div><i class="fas fa-umbrella-beach" style="color:#27ae60;width:20px;"></i> En VACACIONES (pasan automático): <strong style="color:#27ae60;">'+vacaciones_n+'</strong></div>'
+   +'<div><i class="fas fa-moon" style="color:#3498db;width:20px;"></i> En FRANCO (entran a la rueda): <strong style="color:#3498db;">'+franco_n+'</strong></div>'
+   +(ya_ganadores.length?'<div><i class="fas fa-trophy" style="color:#c8a94a;width:20px;"></i> Ya sorteados: <strong style="color:#c8a94a;">'+ya_ganadores.length+'</strong></div>':'')
+   +'<div style="color:#c8a94a;font-weight:700;padding-top:4px;"><i class="fas fa-info-circle" style="width:20px;"></i> Vacantes configuradas en la convocatoria: '+VACANTES+'</div>';
+}
+
+function iniciarSorteo(){
+  VACANTES = parseInt(document.getElementById('cfg-vacantes').value)||1;
+  var verificados = TODOS_CAND.filter(function(c){return c.estado==='verificado';});
+  VACACIONES_CAND = verificados.filter(function(c){return c.disponibilidad==='VACACIONES';});
+  RUEDA_CAND      = verificados.filter(function(c){return c.disponibilidad!=='VACACIONES';});
+
+  // Ya ganadores previos
+  GANADORES = TODOS_CAND.filter(function(c){return c.estado==='ganador';}).map(function(c){
+    return {id:c.id,grado:c.grado,nombres:c.nombres,unidad:c.unidad,area:c.area,cip:c.cip,tipo:'sorteo'};
+  });
+
+  // Vacaciones pasan automáticamente
+  for(var i=0; i<VACACIONES_CAND.length && (GANADORES.length+VACACIONES_CAND.filter(function(x){return x._auto;}).length)<VACANTES; i++){
+    VACACIONES_CAND[i]._auto=true;
+    GANADORES.push({id:VACACIONES_CAND[i].id,grado:VACACIONES_CAND[i].grado,nombres:VACACIONES_CAND[i].nombres,
+      unidad:VACACIONES_CAND[i].unidad,area:VACACIONES_CAND[i].area,cip:VACACIONES_CAND[i].cip,tipo:'vacaciones'});
+  }
+
+  document.getElementById('config-panel').style.display='none';
+  document.getElementById('sorteo-panel').style.display='block';
+
+  buildDrum();
+  renderGanadores();
+  renderCandidatosRestantes();
+  actualizarBtnSortear();
+  document.getElementById('drum-stats').textContent = RUEDA_CAND.length+' en la rueda';
+}
+
+// ── DRUM ──────────────────────────────────────────────────────────────────────
+function buildDrum(){
+  var reel = document.getElementById('drum-reel');
+  var html = '';
+  // repetimos la lista 3 veces para el efecto de scroll circular
+  for(var rep=0;rep<4;rep++){
+    RUEDA_CAND.forEach(function(c,i){
+      html += '<div class="drum-item" data-idx="'+i+'">'+escH(c.grado+' '+c.nombres)+'</div>';
+    });
+  }
+  reel.innerHTML = html;
+  DRUM_POS = 0;
+  reel.style.transform='translateY(0)';
+}
+
+function sortear(){
+  if(SORTEANDO || GANADORES.length>=VACANTES || !RUEDA_CAND.length) return;
+  SORTEANDO=true;
+  var btn=document.getElementById('btn-sortear');
+  btn.disabled=true; btn.className='btn-sortear spinning';
+  btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> SORTEANDO...';
+
+  // Elegir ganador al azar
+  var idx = Math.floor(Math.random()*RUEDA_CAND.length);
+  var ganador = RUEDA_CAND[idx];
+
+  // Animación: acelerar y desacelerar en el índice ganador
+  var totalItems = RUEDA_CAND.length;
+  var startPos   = Math.abs(DRUM_POS);
+  var targetItem = totalItems + idx; // segunda vuelta
+  var targetPos  = targetItem * ITEM_H;
+  var distance   = targetPos - (startPos % (totalItems*ITEM_H)) + (2*totalItems*ITEM_H);
+
+  var elapsed=0, duration=3500;
+  var startTime=null;
+
+  function easeOut(t){ return 1 - Math.pow(1-t, 3); }
+
+  function animate(ts){
+    if(!startTime) startTime=ts;
+    var dt=ts-startTime, progress=Math.min(dt/duration,1);
+    var moved=distance*easeOut(progress);
+    DRUM_POS=-(startPos+moved);
+    document.getElementById('drum-reel').style.transform='translateY('+DRUM_POS+'px)';
+
+    // reset scroll position to prevent infinite growth
+    var maxScroll = totalItems*ITEM_H*3;
+    if(Math.abs(DRUM_POS) > maxScroll){
+      DRUM_POS = -(Math.abs(DRUM_POS) % (totalItems*ITEM_H));
+    }
+
+    if(progress<1){
+      requestAnimationFrame(animate);
+    } else {
+      // Finalizado
+      SORTEANDO=false;
+      mostrarGanador(ganador, idx);
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+function mostrarGanador(ganador, idx){
+  RUEDA_CAND.splice(idx,1);
+  GANADORES.push({id:ganador.id,grado:ganador.grado,nombres:ganador.nombres,
+    unidad:ganador.unidad,area:ganador.area,cip:ganador.cip,tipo:'sorteo'});
+
+  document.getElementById('gf-nro').textContent=GANADORES.length;
+  document.getElementById('gf-nombre').textContent=(ganador.grado||'')+' '+ganador.nombres;
+  document.getElementById('gf-sub').textContent=(ganador.unidad||'')+(ganador.area?' — '+ganador.area:'')+(ganador.cip?' — CIP: '+ganador.cip:'');
+  document.getElementById('ganador-flash').classList.add('show');
+
+  renderGanadores();
+  renderCandidatosRestantes();
+  buildDrum();
+}
+
+function cerrarFlash(){
+  document.getElementById('ganador-flash').classList.remove('show');
+  actualizarBtnSortear();
+}
+
+function actualizarBtnSortear(){
+  var btn=document.getElementById('btn-sortear');
+  var listo=GANADORES.length>=VACANTES||!RUEDA_CAND.length;
+  btn.disabled=listo||SORTEANDO;
+  if(GANADORES.length>=VACANTES){
+    btn.innerHTML='<i class="fas fa-check-circle"></i> SORTEO COMPLETO';
+    btn.className='btn-sortear';
+    btn.style.background='#27ae60';
+    document.getElementById('btn-guardar').style.display='';
+  } else if(!RUEDA_CAND.length){
+    btn.innerHTML='<i class="fas fa-exclamation-circle"></i> SIN CANDIDATOS RESTANTES';
+    btn.className='btn-sortear';
+    btn.style.background='#e67e22';
+    document.getElementById('btn-guardar').style.display='';
+  } else {
+    btn.innerHTML='<i class="fas fa-random"></i> SORTEAR';
+    btn.className='btn-sortear';
+    btn.style.background='';
+    btn.disabled=false;
+  }
+  var pct=Math.round((GANADORES.length/VACANTES)*100);
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('rp-vacantes').textContent=GANADORES.length+' / '+VACANTES;
+  document.getElementById('drum-stats').textContent=RUEDA_CAND.length+' en la rueda';
+}
+
+function renderGanadores(){
+  var el=document.getElementById('rp-lista');
+  if(!GANADORES.length){
+    el.innerHTML='<p class="empty-msg">Aún no hay ganadores sorteados.</p>';
+    return;
+  }
+  el.innerHTML=GANADORES.map(function(g,i){
+    var isVac=g.tipo==='vacaciones';
+    return '<div class="rp-ganador'+(isVac?' vacaciones':''">'
+      +'<div class="rp-nro'+(isVac?' vacaciones':''">'+(i+1)+'</div>'
+      +'<div class="rp-info">'
+      +'<strong>'+escH((g.grado||'')+' '+g.nombres)+'</strong>'
+      +'<span>'+escH(g.unidad||'')+(g.area?' — '+escH(g.area):'')+(isVac?' 🏖 VACACIONES':'')+'</span>'
+      +'</div></div>';
+  }).join('');
+}
+
+function renderCandidatosRestantes(){
+  var box=document.getElementById('candidatos-restantes');
+  var lista=document.getElementById('cand-lista-items');
+  if(!RUEDA_CAND.length){box.style.display='none';return;}
+  box.style.display='';
+  lista.innerHTML=RUEDA_CAND.map(function(c){
+    return '<div class="cand-item">'+escH(c.grado+' '+c.nombres)+'<span style="float:right;font-size:10px;color:#666;">'+escH(c.disponibilidad||'')+'</span></div>';
+  }).join('');
+}
+
+function guardarResultados(){
+  if(!GANADORES.length){alert('No hay resultados para guardar.');return;}
+  var sorteoId=SORTEO_ID;
+
+  var btn=document.getElementById('btn-guardar');
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+  // Actualizar estados en inscripciones
+  var promesas=[];
+  var todosIds=TODOS_CAND.filter(function(c){return c.estado==='verificado';}).map(function(c){return c.id;});
+
+  // Marcar ganadores
+  GANADORES.forEach(function(g){
+    promesas.push(fetch(API+'/admin/inscripciones/'+g.id,{
+      method:'PUT',headers:HDR,
+      body:JSON.stringify({estado:'ganador',observacion:'Seleccionado en sorteo público'})
+    }));
+  });
+
+  // Marcar restantes como reserva
+  var idsGanadores=GANADORES.map(function(g){return g.id;});
+  todosIds.filter(function(id){return idsGanadores.indexOf(id)<0;}).forEach(function(id){
+    promesas.push(fetch(API+'/admin/inscripciones/'+id,{
+      method:'PUT',headers:HDR,
+      body:JSON.stringify({estado:'reserva',observacion:'No seleccionado en el sorteo'})
+    }));
+  });
+
+  Promise.all(promesas).then(function(){
+    // Si hay sorteo_id, guardar resultados ahí también
+    if(sorteoId){
+      return fetch(API+'/admin/sorteos/'+sorteoId+'/resultados',{
+        method:'POST',headers:HDR,
+        body:JSON.stringify({resultados:GANADORES.map(function(g,i){
+          return {cip:g.cip||'',nombres:(g.grado||'')+' '+g.nombres,unidad:g.unidad||'',cargo:g.area||''};
+        })})
+      });
+    }
+  }).then(function(){
+    btn.innerHTML='<i class="fas fa-check"></i> ¡Resultados guardados!';
+    btn.style.background='#27ae60';
+    setTimeout(function(){window.location.href='panel-admin.html';},2000);
+  }).catch(function(err){
+    btn.disabled=false;
+    btn.innerHTML='<i class="fas fa-save"></i> GUARDAR Y PUBLICAR RESULTADOS';
+    alert('Error al guardar: '+err.message);
+  });
+}
+</script>
+</body>
+</html>

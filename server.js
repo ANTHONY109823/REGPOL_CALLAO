@@ -152,6 +152,14 @@ async function initDB() {
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS observacion TEXT DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS pdf_requisitos TEXT DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS pdf_nombre VARCHAR(200) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS dni VARCHAR(20) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS grado VARCHAR(60) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS area VARCHAR(100) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS arma VARCHAR(30) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS disponibilidad VARCHAR(20) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS dia_franco VARCHAR(10) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS fecha_egreso DATE;
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS tiempo_servicio VARCHAR(50) DEFAULT '';
 
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS plantilla_pdf TEXT DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS plantilla_nombre VARCHAR(200) DEFAULT '';
@@ -1301,7 +1309,12 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
     if (!item.rows.length) return res.json({ ok: false, error: 'Item no encontrado' });
     if (!item.rows[0].inscripciones_abiertas)
       return res.json({ ok: false, error: 'Las inscripciones no están abiertas para esta convocatoria.' });
-    const { cip, nombres, unidad, cargo, telefono, email, pdf_requisitos, pdf_nombre } = req.body;
+    const {
+      cip, nombres, unidad, cargo, telefono, email,
+      pdf_requisitos, pdf_nombre,
+      dni, grado, area, arma, disponibilidad, dia_franco,
+      fecha_egreso, tiempo_servicio
+    } = req.body;
     if (!cip || !nombres) return res.json({ ok: false, error: 'CIP y nombres son obligatorios.' });
     const dup = await pool.query(
       'SELECT id FROM inscripciones WHERE item_id=$1 AND cip=$2', [req.params.id, cip]);
@@ -1310,9 +1323,16 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
     const pdfBase64 = pdf_requisitos || '';
     if (pdfBase64 && pdfBase64.length > 7 * 1024 * 1024)
       return res.json({ ok: false, error: 'El PDF no debe superar 5 MB.' });
+    const feNorm = fecha_egreso && fecha_egreso.match(/^\d{4}-\d{2}-\d{2}$/) ? fecha_egreso : null;
     await pool.query(
-      'INSERT INTO inscripciones(item_id,cip,nombres,unidad,cargo,telefono,email,pdf_requisitos,pdf_nombre) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',
-      [req.params.id, cip, nombres, unidad||'', cargo||'', telefono||'', email||'', pdfBase64, pdf_nombre||'requisitos.pdf']);
+      `INSERT INTO inscripciones
+         (item_id,cip,nombres,unidad,cargo,telefono,email,pdf_requisitos,pdf_nombre,
+          dni,grado,area,arma,disponibilidad,dia_franco,fecha_egreso,tiempo_servicio)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+      [req.params.id, cip, nombres, unidad||'', cargo||'', telefono||'', email||'',
+       pdfBase64, pdf_nombre||'requisitos.pdf',
+       dni||'', grado||'', area||'', arma||'', disponibilidad||'', dia_franco||'',
+       feNorm, tiempo_servicio||'']);
     res.json({ ok: true, mensaje: 'Inscripción registrada correctamente.' });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
@@ -1409,8 +1429,28 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
     if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const r = await pool.query(
-      'SELECT * FROM inscripciones WHERE item_id=$1 ORDER BY fecha DESC', [req.params.id]);
-    res.json({ ok: true, inscritos: r.rows });
+      `SELECT id,item_id,cip,dni,grado,nombres,unidad,area,cargo,telefono,email,
+              arma,disponibilidad,dia_franco,fecha_egreso,tiempo_servicio,
+              estado,observacion,fecha,
+              CASE WHEN pdf_requisitos IS NOT NULL AND pdf_requisitos<>'' THEN true ELSE false END AS tiene_pdf,
+              pdf_nombre
+       FROM inscripciones WHERE item_id=$1 ORDER BY fecha ASC`, [req.params.id]);
+    res.json({ ok: true, inscritos: r.rows, tipo: cur.rows[0].tipo });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── GET /admin/items/:id/candidatos-sorteo — verificados para la rueda ─────────
+app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
+  try {
+    const cur = await pool.query('SELECT tipo,titulo,vacantes FROM items_portal WHERE id=$1', [req.params.id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const r = await pool.query(
+      `SELECT id,cip,dni,grado,nombres,unidad,area,cargo,disponibilidad,dia_franco,tiempo_servicio,estado
+       FROM inscripciones WHERE item_id=$1 AND estado IN ('verificado','ganador','reserva')
+       ORDER BY fecha ASC`, [req.params.id]);
+    res.json({ ok: true, candidatos: r.rows, item: cur.rows[0] });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
