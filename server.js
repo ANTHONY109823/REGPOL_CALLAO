@@ -215,6 +215,42 @@ async function sincronizarDivisionesUnidades() {
     }
   }
   console.log('Divisiones sincronizadas: DIVOPUS 1-3 + DIVUES.');
+  await seedContactoComisarias();
+}
+
+const CONTACTO_COMISARIAS = [
+  { nombre: 'CIA CALLAO',            direccion: 'AV FERNANDINI / JR SUPE',                                                                  telefono: '980 121 440' },
+  { nombre: 'CIA BELLAVISTA',        direccion: 'AV. GUARDIA CHALACA 1800',                                                                  telefono: '980121172'  },
+  { nombre: 'CIA CIUDADELA CHALACA', direccion: 'CALLE 12 DE MAYO MZ. J LOTE 27 – AA. HH CIUDADELA CHALACA',                                telefono: '920 370 886' },
+  { nombre: 'CIA CIUDAD DEL PESCADOR', direccion: 'AV. JUAN VELASCO ALVARADO N°1299',                                                       telefono: '959 042 602' },
+  { nombre: 'CIA RAMON CASTILLA',    direccion: 'JR TALARA 200 - URB RAMON CASTILLA',                                                        telefono: '980 121 417' },
+  { nombre: 'CIA LA LEGUA',          direccion: 'AV MANUEL VIDAURRE S/N URB LA COLONIAL',                                                    telefono: '980121623'  },
+  { nombre: 'CIA LA PERLA',          direccion: 'JR. BRASIL Nº 664 - LA PERLA',                                                              telefono: '958 892 952' },
+  { nombre: 'CIA LA PUNTA',          direccion: 'AV. GRAU, CUADRA 10 S/N - LA PUNTA',                                                       telefono: '945336 049'  },
+  { nombre: 'CIA JUAN INGUNZA',      direccion: 'TOMAS VALLE CUADRA 34',                                                                     telefono: '980121618'  },
+  { nombre: 'CIA BOCANEGRA',         direccion: 'CALLE GAMMMA S/N MZ A30. LT1 A.H BOCANEGRA SECTOR 1',                                      telefono: '980121629'  },
+  { nombre: 'CIA MANUEL DULANTO',    direccion: 'JR HUANCAYO CON JR AREQUIPA S/N',                                                           telefono: '980121621'  },
+  { nombre: 'CIA PLAYA RIMAC',       direccion: 'JR MIGUEL GRAU S/N',                                                                        telefono: '980 121 622' },
+  { nombre: 'CIA CARMEN DE LA LEGUA', direccion: 'AV PRIMERO DE MAYO 1108',                                                                  telefono: '980122525'  },
+  { nombre: 'CIA SARITA COLONIA',    direccion: 'AV. VÍCTOR ANDRÉS BELAUNDE S/N. MZ. G2 LTE. 6 1ER SECTOR - ASENT. H. SARITA COLONIA - CALLAO', telefono: '980121362' },
+  { nombre: 'CIA VENTANILLA',        direccion: 'AV. PEDRO BELTRAN N° 138',                                                                  telefono: '966834361'  },
+  { nombre: 'CIA MI PERU',           direccion: 'CALLE MI PERU S/N MZ.G LOTE1',                                                              telefono: '942896563'  },
+  { nombre: 'CIA PACHACUTEC',        direccion: 'AV. 225 MZ-W, LT-13 AA.HH. HIROSHIMA PACHACUTEC',                                          telefono: '957832427'  },
+  { nombre: 'CIA VILLA LOS REYES',   direccion: 'AH VILLA LOS REYES III SECTOR MZ C LT 03',                                                  telefono: '980122543'  },
+  { nombre: 'CIA MARQUEZ',           direccion: 'JR UCAYALI S/N Y AV. VENCEDOR AAHH MARQUEZ CALLAO',                                        telefono: '920019019'  },
+  { nombre: 'CIA OQUENDO',           direccion: 'CALLE BOLIVIA CON CALLE BUENOS AIRES - CPV OQUENDO',                                        telefono: '980121592'  },
+];
+
+async function seedContactoComisarias() {
+  for (const c of CONTACTO_COMISARIAS) {
+    await pool.query(
+      `UPDATE unidades_pol SET direccion=$1, telefono=$2
+       WHERE UPPER(TRIM(nombre))=UPPER(TRIM($3))
+         AND (direccion IS NULL OR direccion = '' OR telefono IS NULL OR telefono = '')`,
+      [c.direccion, c.telefono, c.nombre]
+    );
+  }
+  console.log('Contacto de comisarías actualizado.');
 }
 
 // ── Middlewares ────────────────────────────────────────────────────────────────
