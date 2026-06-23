@@ -39,11 +39,11 @@
 
 <main class="container content-area">
   <div class="page-intro">
-    <h2>CURSOS REGIONALES</h2>
+    <h2>CURSOS VIGENTES</h2>
     <p>Haz clic en cada tarjeta para ver los detalles e inscribirte.</p>
   </div>
-  <div class="grid-modern" id="grid-cursos"><p class="texto-vacio"><i class="fas fa-spinner fa-spin"></i> Cargando cursos...</p></div>
-  <div class="page-intro" id="section-pdf" style="display:none;"><h2>RELACIÓN DE SELECCIONADOS</h2></div>
+  <div class="grid-modern" id="grid-cursos"></div>
+  <div class="page-intro"><h2>RELACIÓN DE SELECCIONADOS</h2></div>
   <div id="lista-pdf-cursos"></div>
 </main>
 
@@ -51,44 +51,13 @@
   <p>&copy; 2026 Región Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
 </footer>
 
-<script src="portal.js?v=6"></script>
+<script src="api-config.js?v=1"></script>
+<script src="portal.js?v=7"></script>
 <script>
-initPortalPagina({ activeNav: 'cursos' });
-
-fetch('/portal/items?tipo=curso')
-  .then(function(r){ return r.json(); })
-  .then(function(d){
-    var el = document.getElementById('grid-cursos');
-    if(!d.ok || !d.items || !d.items.length){
-      el.innerHTML = '<p class="texto-vacio">No hay cursos publicados actualmente.</p>';
-      return;
-    }
-    el.innerHTML = d.items.map(function(item){
-      var colorEstado = item.estado==='DISPONIBLE' ? 'green' : item.estado==='CERRADO' ? '#c0392b' : '#856404';
-      var inscBadge = item.inscripciones_abiertas
-        ? '<span style="display:inline-block;background:#d4edda;color:#1a7a3a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:4px;">✓ Inscripciones abiertas</span>'
-        : '';
-      return '<a href="detalle.html?id='+item.id+'&tipo=curso">'
-        +'<div class="card-modern">'
-        +'<div class="icon-wrapper" style="background:'+escHtml(item.color||'#004d3d')+';"><i class="fas '+escHtml(item.icono||'fa-graduation-cap')+'"></i></div>'
-        +'<h4>'+escHtml(item.titulo)+'</h4>'
-        +'<p>'+escHtml(item.descripcion||'')+'</p>'
-        +(item.vacantes?'<p style="font-size:12px;color:#666;"><i class="fas fa-users" style="margin-right:4px;"></i>'+escHtml(item.vacantes)+' vacantes</p>':'')
-        +'<span style="color:'+colorEstado+';font-weight:bold;font-size:12px;">'+escHtml(item.estado)+'</span>'
-        +inscBadge
-        +'</div></a>';
-    }).join('');
-  })
-  .catch(function(){
-    document.getElementById('grid-cursos').innerHTML='<p class="texto-vacio">Error al cargar cursos.</p>';
-  });
-
-// PDF de seleccionados (sigue desde site-data si existe)
-cargarSiteData().then(function(data){
-  if(data && data.cursosPdf && data.cursosPdf.length){
-    document.getElementById('section-pdf').style.display='';
-    renderPdfList(data.cursosPdf, 'lista-pdf-cursos');
-  }
+initPortalPagina({
+  activeNav: 'cursos',
+  renderCursos: 'grid-cursos',
+  renderCursosPdf: 'lista-pdf-cursos'
 });
 </script>
 </body>

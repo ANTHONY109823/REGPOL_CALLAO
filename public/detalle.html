@@ -104,8 +104,11 @@
   <p>&copy; 2026 Región Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
 </footer>
 
-<script src="portal.js?v=6"></script>
+<script src="api-config.js?v=1"></script>
+<script src="portal.js?v=7"></script>
 <script>
+var API_PUBLIC = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
+  : ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '');
 var ITEM_ID = null;
 var ITEM_TIPO = null;
 var ITEM_DATA = null;
@@ -226,7 +229,7 @@ function renderFormInscripcion(item){
 
     // ── CAMPOS ESPECÍFICOS CONVENIO
     +(esConvenio
-      ? '<div class="fi-group"><label>Armada (Condición laboral) *</label>'
+      ? '<div class="fi-group"><label>Arma (Condición laboral) *</label>'
         +'<select id="fi-arma" required>'
         +'<option value="">— Seleccionar —</option>'
         +'<option value="ESTADO">Estado (en actividad)</option>'
@@ -325,7 +328,7 @@ function renderBannerPlantilla(item){
 }
 
 function descargarPlantilla(itemId){
-  fetch('/portal/items/'+itemId+'/plantilla')
+  fetch(API_PUBLIC + '/portal/items/'+itemId+'/plantilla')
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d.ok){alert('No hay plantilla disponible para esta convocatoria.');return;}
@@ -367,7 +370,7 @@ function quitarPdfInscripcion(){
 }
 
 function cargarDivisionesPublico(){
-  fetch('/config').then(function(r){return r.json();}).then(function(d){
+  fetch(API_PUBLIC + '/config').then(function(r){return r.json();}).then(function(d){
     if(!d.ok||!d.divisiones) return;
     DIVISIONES_PUBL = d.divisiones;
     var sel = document.getElementById('fi-unidad');
@@ -440,7 +443,7 @@ function enviarInscripcion(e){
   var btn = document.querySelector('#form-inscripcion button[type="submit"]');
   if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Enviando...';}
 
-  fetch('/portal/items/'+ITEM_ID+'/inscribir',{
+  fetch(API_PUBLIC + '/portal/items/'+ITEM_ID+'/inscribir',{
     method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       cip:cip, dni:dni, grado:grado, nombres:nombres,
@@ -478,7 +481,7 @@ function cargarDetalle(){
     document.getElementById('cuerpo-detalle').innerHTML='<p class="loading-msg">No se especificó el item. <a href="cursos.html">Volver a cursos</a></p>';
     return;
   }
-  fetch('/portal/items/'+ITEM_ID)
+  fetch(API_PUBLIC + '/portal/items/'+ITEM_ID)
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d.ok||!d.item){

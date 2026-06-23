@@ -42,8 +42,8 @@
     <h2>CONVENIOS VIGENTES</h2>
     <p>Haz clic en cada tarjeta para ver los detalles e inscribirte.</p>
   </div>
-  <div class="grid-modern" id="grid-convenios"><p class="texto-vacio"><i class="fas fa-spinner fa-spin"></i> Cargando convenios...</p></div>
-  <div class="page-intro" id="section-pdf" style="display:none;"><h2>RELACIÓN DE SELECCIONADOS</h2></div>
+  <div class="grid-modern" id="grid-convenios"></div>
+  <div class="page-intro"><h2>RELACIÓN DE SELECCIONADOS</h2></div>
   <div id="lista-pdf-convenios"></div>
 </main>
 
@@ -51,43 +51,13 @@
   <p>&copy; 2026 Región Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
 </footer>
 
-<script src="portal.js?v=6"></script>
+<script src="api-config.js?v=1"></script>
+<script src="portal.js?v=7"></script>
 <script>
-initPortalPagina({ activeNav: 'convenios' });
-
-fetch('/portal/items?tipo=convenio')
-  .then(function(r){ return r.json(); })
-  .then(function(d){
-    var el = document.getElementById('grid-convenios');
-    if(!d.ok || !d.items || !d.items.length){
-      el.innerHTML = '<p class="texto-vacio">No hay convenios publicados actualmente.</p>';
-      return;
-    }
-    el.innerHTML = d.items.map(function(item){
-      var colorEstado = item.estado==='DISPONIBLE' ? 'green' : item.estado==='CERRADO' ? '#c0392b' : '#856404';
-      var inscBadge = item.inscripciones_abiertas
-        ? '<span style="display:inline-block;background:#d4edda;color:#1a7a3a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:4px;">✓ Inscripciones abiertas</span>'
-        : '';
-      return '<a href="detalle.html?id='+item.id+'&tipo=convenio">'
-        +'<div class="card-modern">'
-        +'<div class="icon-wrapper" style="background:'+escHtml(item.color||'#004d3d')+';"><i class="fas '+escHtml(item.icono||'fa-handshake')+'"></i></div>'
-        +'<h4>'+escHtml(item.titulo)+'</h4>'
-        +'<p>'+escHtml(item.descripcion||'')+'</p>'
-        +(item.vacantes?'<p style="font-size:12px;color:#666;"><i class="fas fa-users" style="margin-right:4px;"></i>'+escHtml(item.vacantes)+' vacantes</p>':'')
-        +'<span style="color:'+colorEstado+';font-weight:bold;font-size:12px;">'+escHtml(item.estado)+'</span>'
-        +inscBadge
-        +'</div></a>';
-    }).join('');
-  })
-  .catch(function(){
-    document.getElementById('grid-convenios').innerHTML='<p class="texto-vacio">Error al cargar convenios.</p>';
-  });
-
-cargarSiteData().then(function(data){
-  if(data && data.conveniosPdf && data.conveniosPdf.length){
-    document.getElementById('section-pdf').style.display='';
-    renderPdfList(data.conveniosPdf, 'lista-pdf-convenios');
-  }
+initPortalPagina({
+  activeNav: 'convenios',
+  renderConvenios: 'grid-convenios',
+  renderConveniosPdf: 'lista-pdf-convenios'
 });
 </script>
 </body>

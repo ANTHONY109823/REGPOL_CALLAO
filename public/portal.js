@@ -21,6 +21,63 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+function apiBasePortal() {
+  if (window.REGPOL_API_BASE != null) return window.REGPOL_API_BASE;
+  var h = location.hostname;
+  if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
+  return '';
+}
+
+function htmlTarjetaPortalItem(item) {
+  var colorEstado = item.estado === 'DISPONIBLE' ? 'green'
+    : item.estado === 'CERRADO' ? '#c0392b' : '#856404';
+  var inscBadge = item.inscripciones_abiertas
+    ? '<span style="display:inline-block;background:#d4edda;color:#1a7a3a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:4px;">✓ Inscripciones abiertas</span>'
+    : '';
+  var tipo = item.tipo || 'convenio';
+  var icono = item.icono || (tipo === 'curso' ? 'fa-graduation-cap' : 'fa-handshake');
+  return '<a href="detalle.html?id=' + item.id + '&tipo=' + tipo + '">' +
+    '<div class="card-modern">' +
+      '<div class="icon-wrapper" style="background:' + escHtml(item.color || '#004d3d') + ';">' +
+        '<i class="fas ' + escHtml(icono) + '"></i>' +
+      '</div>' +
+      '<h4>' + escHtml(item.titulo) + '</h4>' +
+      '<p>' + escHtml(item.descripcion || '') + '</p>' +
+      (item.vacantes ? '<p style="font-size:12px;color:#666;"><i class="fas fa-users" style="margin-right:4px;"></i>' + escHtml(String(item.vacantes)) + ' vacantes</p>' : '') +
+      '<span style="color:' + colorEstado + ';font-weight:bold;font-size:12px;">' + escHtml(item.estado) + '</span>' +
+      inscBadge +
+    '</div></a>';
+}
+
+function appendPortalItems(tipo, containerId) {
+  var el = document.getElementById(containerId);
+  if (!el) return Promise.resolve();
+  var base = apiBasePortal();
+  if (!base) {
+    if (!el.innerHTML.trim()) {
+      el.innerHTML = '<p class="texto-vacio">No hay ' + tipo + 's publicados actualmente.</p>';
+    }
+    return Promise.resolve();
+  }
+  return fetch(base + '/portal/items?tipo=' + encodeURIComponent(tipo))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok || !d.items || !d.items.length) {
+        if (!el.innerHTML.trim()) {
+          el.innerHTML = '<p class="texto-vacio">No hay ' + tipo + 's publicados actualmente.</p>';
+        }
+        return;
+      }
+      var htmlDb = d.items.map(htmlTarjetaPortalItem).join('');
+      el.innerHTML = (el.innerHTML || '') + htmlDb;
+    })
+    .catch(function() {
+      if (!el.innerHTML.trim()) {
+        el.innerHTML = '<p class="texto-vacio">No hay ' + tipo + 's publicados actualmente.</p>';
+      }
+    });
+}
+
 function cloneSiteData(data) {
   return JSON.parse(JSON.stringify(data));
 }
@@ -99,7 +156,11 @@ function initPortalNav(activeId) {
 
 function renderTarjetas(items, containerId) {
   var el = document.getElementById(containerId);
-  if (!el || !items || !items.length) return;
+  if (!el) return;
+  if (!items || !items.length) {
+    el.innerHTML = '';
+    return;
+  }
   el.innerHTML = items.map(function(item) {
     var url = item.url || '#';
     return '<a href="' + escHtml(url) + '">' +
@@ -273,8 +334,14 @@ function initPortalPagina(config) {
     if (config.renderResena) renderResenaHistorica(data, config.renderResena);
     if (config.renderLabor) renderNuestraLabor(data, config.renderLabor);
     if (config.renderNovedades) renderNovedades(data, config.renderNovedades, config.limiteNovedades);
-    if (config.renderConvenios) renderTarjetas(data.convenios, config.renderConvenios);
-    if (config.renderCursos) renderTarjetas(data.cursos, config.renderCursos);
+    if (config.renderConvenios) {
+      renderTarjetas(data.convenios, config.renderConvenios);
+      appendPortalItems('convenio', config.renderConvenios);
+    }
+    if (config.renderCursos) {
+      renderTarjetas(data.cursos, config.renderCursos);
+      appendPortalItems('curso', config.renderCursos);
+    }
     if (config.renderConveniosPdf) renderPdfList(data.conveniosPdf, config.renderConveniosPdf);
     if (config.renderCursosPdf) renderPdfList(data.cursosPdf, config.renderCursosPdf);
     if (config.actualizarFecha) actualizarFechaPortal(data);
