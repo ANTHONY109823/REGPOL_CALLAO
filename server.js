@@ -356,20 +356,46 @@ const MIME_TYPES = {
 };
 
 const staticCache = new Map();
+const pendingStaticReads = new Map();
+const STATIC_WARM_FILES = [
+  'index.html', 'style.css', 'portal.js', 'site-data.json', 'api-config.js',
+  'cursos.html', 'convenios.html', 'unidades.html', 'unidades-data.json',
+  'evaluacion.html', 'detalle.html', 'img/regpol-callao.jpg'
+];
 
-function preloadStaticCache(dir) {
-  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, ent.name);
-    if (ent.isDirectory()) {
-      preloadStaticCache(full);
-      continue;
-    }
-    const rel = path.relative(PUBLIC_DIR, full).replace(/\\/g, '/');
-    const data = fs.readFileSync(full);
-    const entry = { data, ext: path.extname(full).toLowerCase() };
-    staticCache.set(rel, entry);
-    staticCache.set(rel.toLowerCase(), entry);
+function cacheStaticEntry(rel, data) {
+  const entry = { data, ext: path.extname(rel).toLowerCase() };
+  staticCache.set(rel, entry);
+  staticCache.set(rel.toLowerCase(), entry);
+  return entry;
+}
+
+function leerEstaticoAsync(rel, cb) {
+  const key = rel.toLowerCase();
+  const cached = staticCache.get(rel) || staticCache.get(key);
+  if (cached) return cb(null, cached);
+  if (pendingStaticReads.has(key)) {
+    pendingStaticReads.get(key).push(cb);
+    return;
   }
+  const full = path.join(PUBLIC_DIR, rel);
+  pendingStaticReads.set(key, [cb]);
+  fs.readFile(full, function(err, data) {
+    const waiters = pendingStaticReads.get(key) || [];
+    pendingStaticReads.delete(key);
+    if (err) {
+      waiters.forEach(function(fn) { fn(err); });
+      return;
+    }
+    const entry = cacheStaticEntry(rel, data);
+    waiters.forEach(function(fn) { fn(null, entry); });
+  });
+}
+
+function precalentarEstaticos() {
+  STATIC_WARM_FILES.forEach(function(rel) {
+    leerEstaticoAsync(rel, function() {});
+  });
 }
 
 function enviarEstatico(res, entry, method) {
@@ -388,7 +414,10 @@ function staticBufferado(req, res, next) {
   var rel = urlPath.replace(/^\//, '').replace(/\.\./g, '');
   var entry = staticCache.get(rel) || staticCache.get(rel.toLowerCase());
   if (entry) return enviarEstatico(res, entry, req.method);
-  return next();
+  leerEstaticoAsync(rel, function(err, loaded) {
+    if (err || !loaded) return next();
+    enviarEstatico(res, loaded, req.method);
+  });
 }
 
 // ── Middlewares ────────────────────────────────────────────────────────────────
@@ -402,6 +431,7 @@ app.get('/health', function(req, res) {
 app.use(cors());
 app.use(express.json({ limit: '4mb' }));
 app.use(staticBufferado);
+app.use(express.static(PUBLIC_DIR, { maxAge: '1d', etag: true, fallthrough: true }));
 
 app.get('/img/regpol%20callao.jpg', function(req, res) {
   res.redirect(301, '/img/regpol-callao.jpg');
@@ -1147,9 +1177,16 @@ app.delete('/admin/usuarios/:id', requireAuth, async (req, res) => {
 });
 
 // ── GET /admin/divisiones ─────────────────────────────────────────────────────
+let unidadesPublicoCache = null;
+let unidadesPublicoCacheExp = 0;
+const UNIDADES_PUBLICO_CACHE_MS = 600000;
+
 // ── GET /unidades-publico (sin auth — para la página pública) ────────────────
 app.get('/unidades-publico', async (req, res) => {
   try {
+    if (unidadesPublicoCache && unidadesPublicoCacheExp > Date.now()) {
+      return res.json(unidadesPublicoCache);
+    }
     const divs  = await pool.query('SELECT id,nombre,orden FROM divisiones ORDER BY orden,nombre');
     const upols = await pool.query(
       "SELECT id,nombre,division_id,tipo,orden,direccion,telefono FROM unidades_pol WHERE tipo='comisaria' ORDER BY division_id,orden,nombre"
@@ -1161,7 +1198,9 @@ app.get('/unidades-publico', async (req, res) => {
         unidades: upols.rows.filter(u => u.division_id === d.id)
           .map(u => ({ id: u.id, nombre: u.nombre, direccion: u.direccion||'', telefono: u.telefono||'' }))
       }));
-    res.json({ ok: true, divisiones: result });
+    unidadesPublicoCache = { ok: true, divisiones: result };
+    unidadesPublicoCacheExp = Date.now() + UNIDADES_PUBLICO_CACHE_MS;
+    res.json(unidadesPublicoCache);
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -1182,6 +1221,8 @@ app.post('/admin/divisiones', requireAuth, async (req, res) => {
   const { nombre, orden } = req.body;
   try {
     const r = await pool.query('INSERT INTO divisiones (nombre,orden) VALUES ($1,$2) RETURNING id', [nombre, orden||0]);
+    invalidarUnidadesPublicoCache();
+    configCache = null;
     res.json({ ok: true, id: r.rows[0].id });
   } catch (e) { res.json({ ok: false, error: 'Ya existe esa división' }); }
 });
@@ -1190,12 +1231,16 @@ app.put('/admin/divisiones/:id', requireAuth, async (req, res) => {
   if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
   const { nombre, orden } = req.body;
   await pool.query('UPDATE divisiones SET nombre=$1,orden=$2 WHERE id=$3', [nombre, orden||0, req.params.id]);
+  invalidarUnidadesPublicoCache();
+  configCache = null;
   res.json({ ok: true });
 });
 
 app.delete('/admin/divisiones/:id', requireAuth, async (req, res) => {
   if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
   await pool.query('DELETE FROM divisiones WHERE id=$1', [req.params.id]);
+  invalidarUnidadesPublicoCache();
+  configCache = null;
   res.json({ ok: true });
 });
 
@@ -1206,6 +1251,8 @@ app.post('/admin/unidades', requireAuth, async (req, res) => {
     const r = await pool.query(
       'INSERT INTO unidades_pol (nombre,division_id,tipo,orden,direccion,telefono) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
       [nombre, division_id||null, tipo||'comisaria', orden||0, direccion||'', telefono||'']);
+    invalidarUnidadesPublicoCache();
+    configCache = null;
     res.json({ ok: true, id: r.rows[0].id });
   } catch (e) { res.json({ ok: false, error: 'Unidad ya existe' }); }
 });
@@ -1216,12 +1263,16 @@ app.put('/admin/unidades/:id', requireAuth, async (req, res) => {
   await pool.query(
     'UPDATE unidades_pol SET nombre=$1,division_id=$2,tipo=$3,orden=$4,direccion=$5,telefono=$6 WHERE id=$7',
     [nombre, division_id||null, tipo||'comisaria', orden||0, direccion||'', telefono||'', req.params.id]);
+  invalidarUnidadesPublicoCache();
+  configCache = null;
   res.json({ ok: true });
 });
 
 app.delete('/admin/unidades/:id', requireAuth, async (req, res) => {
   if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
   await pool.query('DELETE FROM unidades_pol WHERE id=$1', [req.params.id]);
+  invalidarUnidadesPublicoCache();
+  configCache = null;
   res.json({ ok: true });
 });
 
@@ -1408,6 +1459,10 @@ app.get('/portal/items', async (req, res) => {
 
 function invalidarPortalItemsCache() {
   portalItemsCache.clear();
+}
+
+function invalidarUnidadesPublicoCache() {
+  unidadesPublicoCache = null;
 }
 
 // ── GET /portal/items/:id — público (detalle completo) ────────────────────────
@@ -1624,12 +1679,7 @@ function iniciarDB() {
 }
 
 app.listen(PORT, '0.0.0.0', function() {
-  try {
-    preloadStaticCache(PUBLIC_DIR);
-    console.log('Cache estáticos: ' + staticCache.size + ' entradas');
-  } catch (e) {
-    console.error('Error precargando estáticos:', e.message);
-  }
   console.log('\n=== REGPOL Callao — Puerto ' + PORT + ' ===');
+  setImmediate(precalentarEstaticos);
   iniciarDB();
 });

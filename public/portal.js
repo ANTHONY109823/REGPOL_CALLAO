@@ -1,4 +1,16 @@
 /* portal.js — Datos y renderizado compartido del portal REGPOL Callao */
+(function() {
+  if (window.REGPOL_API_BASE != null) return;
+  var h = location.hostname;
+  if (h === 'localhost' || h === '127.0.0.1') {
+    window.REGPOL_API_BASE = 'http://localhost:3000';
+  } else if (h.indexOf('github.io') !== -1 || h.indexOf('github.com') !== -1) {
+    window.REGPOL_API_BASE = 'https://regpolcallao-production.up.railway.app';
+  } else {
+    window.REGPOL_API_BASE = '';
+  }
+})();
+
 var REGPOL_WEB_APP = 'https://script.google.com/macros/s/AKfycbzHHCUjXQVNtgVTERGx3RuiGPfSHuhCgTVddHL8ByDJUE-lLQessVsdFCFabayhCC5u/exec';
 var REGPOL_SITE_KEY = 'regpolSiteData_v1';
 
@@ -66,7 +78,7 @@ function appendPortalItems(tipo, containerId) {
     }
   } catch (e) {}
   var url = base + '/portal/items?tipo=' + encodeURIComponent(tipo);
-  return fetch(url)
+  return fetchConTimeout(url, 12000)
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.ok || !d.items || !d.items.length) {
@@ -116,8 +128,18 @@ function fetchSiteDataFromServer() {
     .catch(function() { return null; });
 }
 
+function fetchConTimeout(url, ms) {
+  ms = ms || 12000;
+  return Promise.race([
+    fetch(url),
+    new Promise(function(_, reject) {
+      setTimeout(function() { reject(new Error('timeout')); }, ms);
+    })
+  ]);
+}
+
 function fetchSiteDataDefault() {
-  return fetch('site-data.json?v=2')
+  return fetchConTimeout('site-data.json?v=2', 10000)
     .then(function(r) { if (!r.ok) throw new Error('site-data'); return r.json(); })
     .catch(function() { return null; });
 }
