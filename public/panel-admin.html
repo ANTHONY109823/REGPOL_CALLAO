@@ -453,7 +453,7 @@
                     <thead><tr><th>N°</th><th>Nombres</th><th>CIP</th><th>DNI</th><th>Fecha</th><th>Bloque</th><th>Avance</th><th>Estado</th><th>PDF</th></tr></thead>
                     <tbody id="prev-uni-body"></tbody>
                   </table>
-                </div>
+            </div>
                 <p id="prev-uni-info" style="font-size:11.5px;color:#666;margin-top:6px;"></p>
               </div>
               <button class="btn btn-r" onclick="descargar('unidad','d-uni-pdf')" style="width:100%;justify-content:center;margin-top:6px;">Descargar PDF</button>
@@ -1477,7 +1477,7 @@ function buscarPersona(){
           filas.push('<tr><td colspan="7" style="background:#fff8e1;padding:10px;font-size:12px;color:#7a5c00;"><strong>Diagnóstico:</strong> '+escHtml(d.diagnostico)+'</td></tr>');
         }
         (d.evaluaciones||[]).forEach(function(r){
-          var comp=parseInt(r.total_resp)>=566;
+      var comp=parseInt(r.total_resp)>=566;
           filas.push('<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
             +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+escHtml(r.fecha)+'</td>'
             +'<td>'+(comp?'<span class="badge ok">Enviado</span>':'<span class="badge pend">'+r.total_resp+'/566</span>')+'</td>'
