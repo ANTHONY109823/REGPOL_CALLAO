@@ -14,6 +14,11 @@
 var REGPOL_WEB_APP = 'https://script.google.com/macros/s/AKfycbzHHCUjXQVNtgVTERGx3RuiGPfSHuhCgTVddHL8ByDJUE-lLQessVsdFCFabayhCC5u/exec';
 var REGPOL_SITE_KEY = 'regpolSiteData_v1';
 
+var PORTAL_MARCA = {
+  titulo: 'REGIÓN POLICIAL CALLAO',
+  subtitulo: 'UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES'
+};
+
 var REGPOL_NAV = [
   { id: 'inicio',    href: 'index.html',            label: 'INICIO',             icon: 'fa-home' },
   { id: 'novedades', href: 'novedades.html',         label: 'NOVEDADES' },
@@ -224,25 +229,16 @@ function marcarNavActivo(activeId) {
   });
 }
 
-function initPortalEncabezado() {
-  var box = document.querySelector('.main-header .title-text');
-  if (!box || document.body.classList.contains('portal-home')) return;
-  var h1 = box.querySelector('h1');
-  if (h1) h1.textContent = 'REGIÓN POLICIAL CALLAO';
-  if (box.querySelector('.portal-eslogan')) return;
-  box.querySelectorAll('p').forEach(function(p) { p.remove(); });
-  var eslogan = document.createElement('p');
-  eslogan.className = 'portal-eslogan';
-  eslogan.textContent = 'REGIÓN POLICIAL CALLAO';
-  var subtitulo = document.createElement('p');
-  subtitulo.className = 'portal-subtitulo';
-  subtitulo.textContent = 'UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES';
-  box.appendChild(eslogan);
-  box.appendChild(subtitulo);
+function aplicarPortalMarca(heroT) {
+  heroT = heroT || {};
+  var titulo = (heroT.titulo || PORTAL_MARCA.titulo).trim();
+  var subtitulo = (heroT.subtitulo || PORTAL_MARCA.subtitulo).trim();
+  document.querySelectorAll('.portal-eslogan').forEach(function(el) { el.textContent = titulo; });
+  document.querySelectorAll('.portal-subtitulo').forEach(function(el) { el.textContent = subtitulo; });
 }
 
 function initPortalNav(activeId) {
-  initPortalEncabezado();
+  aplicarPortalMarca();
   var ul = document.querySelector('.nav-main ul');
   if (!ul) return;
   ul.innerHTML = REGPOL_NAV.map(function(item) {
@@ -364,13 +360,8 @@ function actualizarCarrusel(data) {
   var slider = document.querySelector('.presentation-slider');
   if (!slider) return;
 
-  if (heroT.titulo || heroT.subtitulo || heroT.parrafo) {
-    var h1 = slider.querySelector('.hero-overlay h1');
-    var h2 = slider.querySelector('.hero-overlay h2');
-    var pp = slider.querySelector('.hero-overlay p');
-    if (h1 && heroT.titulo)    h1.textContent = heroT.titulo;
-    if (h2 && heroT.subtitulo) h2.textContent = heroT.subtitulo;
-    if (pp && heroT.parrafo)   pp.textContent = heroT.parrafo;
+  if (heroT.titulo || heroT.subtitulo) {
+    aplicarPortalMarca(heroT);
   }
 
   if (!slides.length) return;

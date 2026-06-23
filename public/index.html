@@ -14,9 +14,6 @@
       .portal-flex{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
       .main-header{background:#fff;border-bottom:3px solid #004d3d}
       .header-flex{display:flex;align-items:center;gap:20px;padding:12px 0}
-      .title-text h1{color:#004d3d;font-size:clamp(18px,3vw,26px);font-weight:900}
-      .portal-eslogan{color:#004d3d;font-weight:700;font-size:clamp(13px,2vw,16px);margin-top:4px}
-      .portal-subtitulo{color:#555;font-size:clamp(11px,1.6vw,13px);margin-top:2px;font-style:italic}
       .nav-main{background:#004d3d}
       .nav-main ul{list-style:none;display:flex;flex-wrap:wrap;justify-content:center;margin:0;padding:0}
       .nav-main ul li a{color:#fff;text-decoration:none;padding:14px 12px;display:block;font-weight:700;font-size:12px}
@@ -25,7 +22,7 @@
       .portal-viewport-wrap{min-height:100vh;min-height:100dvh;width:100%;display:flex;flex-direction:column}
       .presentation-slider{flex:1;width:100%;min-height:280px}
     </style>
-    <link rel="stylesheet" href="style.css?v=24">
+    <link rel="stylesheet" href="style.css?v=25">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="body-portal portal-home">
@@ -49,8 +46,8 @@
             <div class="logo-container">
                 <img src="img/regpol-callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90">
             </div>
-            <div class="title-text title-text--home">
-                <p class="portal-eslogan">REGIÓN POLICIAL CALLAO</p>
+            <div class="title-text">
+                <h1 class="portal-eslogan">REGIÓN POLICIAL CALLAO</h1>
                 <p class="portal-subtitulo">UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES</p>
             </div>
         </div>
@@ -73,8 +70,8 @@
 
         <div class="hero-overlay">
             <div class="container">
-                <h1 class="animate-text">REGIÓN POLICIAL CALLAO</h1>
-                <h2 class="animate-text">UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES</h2>
+                <h1 class="portal-eslogan animate-text">REGIÓN POLICIAL CALLAO</h1>
+                <p class="portal-subtitulo animate-text">UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES</p>
             </div>
         </div>
 
@@ -141,7 +138,7 @@
 </footer>
 
 <script src="portal-data.js?v=1"></script>
-<script src="portal.js?v=12"></script>
+<script src="portal.js?v=13"></script>
 <script>
     initPortalPagina({
         activeNav: 'inicio',
