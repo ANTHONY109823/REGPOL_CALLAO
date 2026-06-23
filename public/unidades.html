@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nuestras Unidades - REGPOL CALLAO</title>
-    <link rel="stylesheet" href="style.css?v=13">
+    <link rel="stylesheet" href="style.css?v=19">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
       .unidades-seccion { margin-bottom: 40px; }
@@ -70,7 +70,7 @@
         <h2>NUESTRAS UNIDADES POLICIALES</h2>
         <p>Directorio de comisarías de la Región Policial Callao con dirección y teléfono de contacto.</p>
     </div>
-    <div id="msg-cargando"><i class="fas fa-spinner fa-spin"></i> Cargando unidades...</div>
+    <div id="msg-cargando" style="display:none;"></div>
     <div id="contenedor-unidades"></div>
 </main>
 
@@ -78,67 +78,9 @@
     <p>&copy; 2026 Región Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
 </footer>
 
-<script src="portal.js?v=10"></script>
-<script>
-var LOCAL_API = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
-  : ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '');
-
-initPortalNav('unidades');
-if (typeof initPortalPageHero === 'function') initPortalPageHero('unidades');
-
-function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-function renderUnidades(data) {
-  var cont = document.getElementById('contenedor-unidades');
-  var msg  = document.getElementById('msg-cargando');
-  if (!data || !data.ok || !data.divisiones || !data.divisiones.length) {
-    msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> No se pudo cargar la información de las unidades.';
-    return;
-  }
-  msg.style.display = 'none';
-  var html = '';
-  data.divisiones.forEach(function(div) {
-    if (!div.unidades || !div.unidades.length) return;
-    html += '<div class="unidades-seccion"><h3>' + escH(div.nombre) + '</h3><div class="unidades-grid">';
-    div.unidades.forEach(function(u) {
-      var dirHtml = u.direccion
-        ? '<div class="unidad-dato"><i class="fas fa-map-marker-alt"></i><span>' + escH(u.direccion) + '</span></div>'
-        : '<div class="unidad-dato unidad-sin-dato"><i class="fas fa-map-marker-alt"></i><span>Dirección no disponible</span></div>';
-      var telHtml = u.telefono
-        ? '<div class="unidad-dato"><i class="fas fa-phone"></i><span><a href="tel:' + escH(u.telefono) + '" style="color:inherit;text-decoration:none;">' + escH(u.telefono) + '</a></span></div>'
-        : '<div class="unidad-dato unidad-sin-dato"><i class="fas fa-phone"></i><span>Teléfono no disponible</span></div>';
-      html += '<div class="unidad-card"><h4>' + escH(u.nombre) + '</h4>' + dirHtml + telHtml + '</div>';
-    });
-    html += '</div></div>';
-  });
-  cont.innerHTML = html;
-}
-
-function fetchUnidadesApi() {
-  var ctrl = new AbortController();
-  var t = setTimeout(function() { ctrl.abort(); }, 8000);
-  return fetch(LOCAL_API + '/unidades-publico', { signal: ctrl.signal })
-    .then(function(r) { return r.json(); })
-    .finally(function() { clearTimeout(t); });
-}
-
-fetch('unidades-data.json')
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    renderUnidades(data);
-    return fetchUnidadesApi().catch(function() { return null; });
-  })
-  .then(function(live) {
-    if (live && live.ok && live.divisiones && live.divisiones.length) renderUnidades(live);
-  })
-  .catch(function() {
-    fetchUnidadesApi()
-      .then(renderUnidades)
-      .catch(function() {
-        document.getElementById('msg-cargando').innerHTML =
-          '<i class="fas fa-exclamation-circle"></i> Error al conectar con el servidor.';
-      });
-  });
-</script>
+<script src="portal-data.js?v=1"></script>
+<script src="portal-data.js?v=1"></script>
+<script src="portal.js?v=11"></script>
+<script>initUnidadesPagina();</script>
 </body>
 </html>

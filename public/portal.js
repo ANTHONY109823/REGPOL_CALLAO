@@ -139,37 +139,71 @@ function fetchConTimeout(url, ms) {
 }
 
 function fetchSiteDataDefault() {
-  return fetchConTimeout('site-data.json?v=2', 10000)
+  return fetchConTimeout('site-data.json?v=3', 5000)
     .then(function(r) { if (!r.ok) throw new Error('site-data'); return r.json(); })
     .catch(function() { return null; });
 }
 
-function cargarSiteData() {
+function obtenerSiteDataSync() {
   var local = getSiteDataFromStorage();
+  if (local) return local;
+  if (typeof REGPOL_SITE_DATA_BUILTIN !== 'undefined' && REGPOL_SITE_DATA_BUILTIN) {
+    return REGPOL_SITE_DATA_BUILTIN;
+  }
+  return null;
+}
+
+function aplicarPortalConfig(config, data) {
+  if (!data) return;
+  if (config.renderResena) renderResenaHistorica(data, config.renderResena);
+  if (config.renderLabor) renderNuestraLabor(data, config.renderLabor);
+  if (config.renderNovedades) renderNovedades(data, config.renderNovedades, config.limiteNovedades);
+  if (config.renderConvenios) {
+    renderTarjetas(data.convenios, config.renderConvenios);
+    appendPortalItems('convenio', config.renderConvenios);
+  }
+  if (config.renderCursos) {
+    renderTarjetas(data.cursos, config.renderCursos);
+    appendPortalItems('curso', config.renderCursos);
+  }
+  if (config.renderConveniosPdf) renderPdfList(data.conveniosPdf, config.renderConveniosPdf);
+  if (config.renderCursosPdf) renderPdfList(data.cursosPdf, config.renderCursosPdf);
+  if (config.actualizarFecha) actualizarFechaPortal(data);
+  if (config.actualizarCarrusel) actualizarCarrusel(data);
+  if (data.navOcultos && data.navOcultos.length) aplicarNavOcultos(data.navOcultos);
+}
+
+function refrescarSiteDataEnFondo(config) {
+  return fetchSiteDataDefault().then(function(fresh) {
+    if (!fresh) return null;
+    saveSiteDataToStorage(fresh);
+    if (config) aplicarPortalConfig(config, fresh);
+    return fresh;
+  }).catch(function() { return null; });
+}
+
+function cargarSiteData() {
+  var sync = obtenerSiteDataSync();
+  if (sync) {
+    refrescarSiteDataEnFondo(null);
+    return Promise.resolve(sync);
+  }
   var h = location.hostname;
   var usarJsonLocal = h.indexOf('railway.app') !== -1 || h.indexOf('github.io') !== -1;
-
   if (usarJsonLocal) {
-    if (local) return Promise.resolve(local);
     return fetchSiteDataDefault().then(function(data) {
       if (data) { saveSiteDataToStorage(data); return data; }
-      return null;
+      return obtenerSiteDataSync();
     });
   }
-
   return fetchSiteDataFromServer()
     .then(function(server) {
-      if (server) {
-        saveSiteDataToStorage(server);
-        return server;
-      }
-      if (local) return local;
+      if (server) { saveSiteDataToStorage(server); return server; }
       return fetchSiteDataDefault();
     })
     .then(function(data) {
-      if (data) return data;
-      if (local) return local;
-      return fetchSiteDataDefault();
+      if (data) { saveSiteDataToStorage(data); return data; }
+      return obtenerSiteDataSync();
     });
 }
 
@@ -375,26 +409,62 @@ function initPortalPagina(config) {
   config = config || {};
   initPortalNav(config.activeNav || '');
   if (config.showPageHero !== false) initPortalPageHero(config.activeNav || '');
-  return cargarSiteData().then(function(data) {
-    if (!data) return;
-    if (config.renderResena) renderResenaHistorica(data, config.renderResena);
-    if (config.renderLabor) renderNuestraLabor(data, config.renderLabor);
-    if (config.renderNovedades) renderNovedades(data, config.renderNovedades, config.limiteNovedades);
-    if (config.renderConvenios) {
-      renderTarjetas(data.convenios, config.renderConvenios);
-      appendPortalItems('convenio', config.renderConvenios);
-    }
-    if (config.renderCursos) {
-      renderTarjetas(data.cursos, config.renderCursos);
-      appendPortalItems('curso', config.renderCursos);
-    }
-    if (config.renderConveniosPdf) renderPdfList(data.conveniosPdf, config.renderConveniosPdf);
-    if (config.renderCursosPdf) renderPdfList(data.cursosPdf, config.renderCursosPdf);
-    if (config.actualizarFecha) actualizarFechaPortal(data);
-    if (config.actualizarCarrusel) actualizarCarrusel(data);
-    if (data.navOcultos && data.navOcultos.length) aplicarNavOcultos(data.navOcultos);
-    return data;
+  var data = obtenerSiteDataSync();
+  if (data) aplicarPortalConfig(config, data);
+  return cargarSiteData().then(function(fresh) {
+    if (fresh) aplicarPortalConfig(config, fresh);
+    return fresh;
   });
+}
+
+function renderUnidadesPublico(data) {
+  var cont = document.getElementById('contenedor-unidades');
+  var msg  = document.getElementById('msg-cargando');
+  if (!cont || !msg) return;
+  if (!data || !data.ok || !data.divisiones || !data.divisiones.length) {
+    msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> No se pudo cargar la información de las unidades.';
+    return;
+  }
+  msg.style.display = 'none';
+  var html = '';
+  data.divisiones.forEach(function(div) {
+    if (!div.unidades || !div.unidades.length) return;
+    html += '<div class="unidades-seccion"><h3>' + escHtml(div.nombre) + '</h3><div class="unidades-grid">';
+    div.unidades.forEach(function(u) {
+      var dirHtml = u.direccion
+        ? '<div class="unidad-dato"><i class="fas fa-map-marker-alt"></i><span>' + escHtml(u.direccion) + '</span></div>'
+        : '<div class="unidad-dato unidad-sin-dato"><i class="fas fa-map-marker-alt"></i><span>Dirección no disponible</span></div>';
+      var telHtml = u.telefono
+        ? '<div class="unidad-dato"><i class="fas fa-phone"></i><span><a href="tel:' + escHtml(u.telefono) + '" style="color:inherit;text-decoration:none;">' + escHtml(u.telefono) + '</a></span></div>'
+        : '<div class="unidad-dato unidad-sin-dato"><i class="fas fa-phone"></i><span>Teléfono no disponible</span></div>';
+      html += '<div class="unidad-card"><h4>' + escHtml(u.nombre) + '</h4>' + dirHtml + telHtml + '</div>';
+    });
+    html += '</div></div>';
+  });
+  cont.innerHTML = html;
+}
+
+function initUnidadesPagina() {
+  initPortalNav('unidades');
+  if (typeof initPortalPageHero === 'function') initPortalPageHero('unidades');
+  var base = apiBasePortal();
+  if (base === null || base === undefined) base = '';
+  if (typeof REGPOL_UNIDADES_BUILTIN !== 'undefined' && REGPOL_UNIDADES_BUILTIN) {
+    renderUnidadesPublico(REGPOL_UNIDADES_BUILTIN);
+  }
+  fetchConTimeout('unidades-data.json', 5000)
+    .then(function(r) { return r.json(); })
+    .then(function(data) { renderUnidadesPublico(data); })
+    .catch(function() {});
+  var ctrl = new AbortController();
+  var t = setTimeout(function() { ctrl.abort(); }, 6000);
+  fetch(base + '/unidades-publico', { signal: ctrl.signal })
+    .then(function(r) { return r.json(); })
+    .then(function(live) {
+      if (live && live.ok && live.divisiones && live.divisiones.length) renderUnidadesPublico(live);
+    })
+    .catch(function() {})
+    .finally(function() { clearTimeout(t); });
 }
 
 function aplicarNavOcultos(ocultos) {

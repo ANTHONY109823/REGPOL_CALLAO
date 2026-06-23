@@ -29,8 +29,8 @@
       <img src="img/regpol-callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90" />
     </div>
     <div class="title-text">
-      <h1>REGIÓN POLICIAL CALLAO</h1>
-      <p>UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p>
+      <h1>REGIï¿½N POLICIAL CALLAO</h1>
+      <p>UNIDAD DE TECNOLOGï¿½AS DE LA INFORMACIï¿½N Y COMUNICACIONES</p>
     </div>
   </div>
 </header>
@@ -45,11 +45,11 @@
     <i class="fas fa-bookmark"></i>
     <div>
       <strong>Tienes un progreso guardado</strong>
-      <span id="banner-progreso-info">Página -- — -- preguntas respondidas</span>
+      <span id="banner-progreso-info">Pï¿½gina -- ï¿½ -- preguntas respondidas</span>
     </div>
     <div class="banner-prog-btns">
       <button class="btn-prog-continuar" onclick="restaurarProgreso()">
-        <i class="fas fa-play"></i> Continuar donde quedé
+        <i class="fas fa-play"></i> Continuar donde quedï¿½
       </button>
       <button class="btn-prog-nuevo" onclick="descartarProgreso()">
         <i class="fas fa-trash-alt"></i> Empezar de nuevo
@@ -69,14 +69,14 @@
       <h2>Paso 1 -- Registro e Identificacion del Efectivo Policial</h2>
     </div>
     <div class="card-body-eval">
-      <p class="registro-intro">Complete sus datos personales. Luego podrá acceder al cuestionario. <strong>Puede guardar su progreso y continuar en otra sesión.</strong></p>
+      <p class="registro-intro">Complete sus datos personales. Luego podrï¿½ acceder al cuestionario. <strong>Puede guardar su progreso y continuar en otra sesiï¿½n.</strong></p>
       <div class="form-grid">
         <div class="campo campo-full">
           <label for="f-unidad">Dependencia actual <span class="req">*</span></label>
           <select id="f-unidad" class="select-eval">
             <option value="">-- Seleccionar dependencia --</option>
           </select>
-          <span class="msg-error">Seleccione su comisaría.</span>
+          <span class="msg-error">Seleccione su comisarï¿½a.</span>
         </div>
         <div class="campo campo-full">
           <label for="f-nombres">Apellidos y Nombres Completos <span class="req">*</span></label>
@@ -132,17 +132,17 @@
           </div>
         </div>
         <div class="campo campo-full campo-foto">
-          <label for="f-foto">Fotografía del efectivo <span class="req">*</span></label>
+          <label for="f-foto">Fotografï¿½a del efectivo <span class="req">*</span></label>
           <div class="foto-carga-wrap">
             <input type="file" id="f-foto" accept="image/jpeg,image/png,image/webp" />
             <div id="foto-preview" class="foto-preview" style="display:none;">
-              <img id="foto-preview-img" alt="Vista previa de la fotografía" />
+              <img id="foto-preview-img" alt="Vista previa de la fotografï¿½a" />
               <button type="button" class="btn-quitar-foto" onclick="quitarFoto()" title="Quitar foto">
                 <i class="fas fa-times"></i>
               </button>
             </div>
           </div>
-          <span class="msg-error" id="msg-foto">Suba una foto (JPG, PNG o WEBP, máx. 2 MB).</span>
+          <span class="msg-error" id="msg-foto">Suba una foto (JPG, PNG o WEBP, mï¿½x. 2 MB).</span>
         </div>
       </div>
       <div class="registro-acciones">
@@ -158,15 +158,15 @@
   <div class="card-eval card-continuar-cip" id="card-continuar-cip">
     <div class="card-header-eval card-header-continuar">
       <i class="fas fa-play-circle"></i>
-      <h2>¿Ya comenzó el cuestionario? Continúe con su CIP</h2>
+      <h2>ï¿½Ya comenzï¿½ el cuestionario? Continï¿½e con su CIP</h2>
     </div>
     <div class="card-body-eval">
-      <p class="registro-intro">Si guardó un bloque y salió, ingrese solo su <strong>CIP</strong> para retomar donde lo dejó. No necesita volver a llenar el registro.</p>
+      <p class="registro-intro">Si guardï¿½ un bloque y saliï¿½, ingrese solo su <strong>CIP</strong> para retomar donde lo dejï¿½. No necesita volver a llenar el registro.</p>
       <div class="continuar-cip-fila">
         <input type="text" id="f-cip-continuar" placeholder="Ingrese su CIP" maxlength="20" autocomplete="off"
           onkeydown="if(event.key==='Enter'){event.preventDefault();continuarConCIP();}" />
         <button type="button" class="btn-eval btn-verde" onclick="continuarConCIP()">
-          <i class="fas fa-play"></i> Continuar evaluación
+          <i class="fas fa-play"></i> Continuar evaluaciï¿½n
         </button>
       </div>
     </div>
@@ -176,7 +176,7 @@
   <div class="card-eval seccion-bloqueada" id="card-cuestionario">
     <div class="card-header-eval">
       <i class="fas fa-tasks"></i>
-      <h2>Paso 2 — Cuestionario Psicológico</h2>
+      <h2>Paso 2 ï¿½ Cuestionario Psicolï¿½gico</h2>
     </div>
     <div class="card-body-eval">
       <div class="progreso-wrap">
@@ -214,7 +214,8 @@
   <p>&copy; 2026 -- REGPOL Callao -- Policia Nacional del Peru &nbsp;|&nbsp; Desarrollado por <strong>Ing. Anthony Ccayo -- UNITIC</strong> &nbsp;|&nbsp; <a href="index.html">Volver al Portal</a></p>
 </footer>
 
-<script src="portal.js?v=10"></script>
+<script src="portal-data.js?v=1"></script>
+<script src="portal.js?v=11"></script>
 <script>initPortalPagina({ activeNav: 'bienestar' });</script>
 <!-- preguntas se cargan desde /preguntas (PostgreSQL) -->
 <script src="api-config.js?v=1"></script>

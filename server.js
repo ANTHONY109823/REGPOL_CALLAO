@@ -358,7 +358,7 @@ const MIME_TYPES = {
 const staticCache = new Map();
 const pendingStaticReads = new Map();
 const STATIC_WARM_FILES = [
-  'index.html', 'style.css', 'portal.js', 'site-data.json', 'api-config.js',
+  'index.html', 'style.css', 'portal.js', 'portal-data.js', 'site-data.json', 'api-config.js',
   'cursos.html', 'convenios.html', 'unidades.html', 'unidades-data.json',
   'evaluacion.html', 'detalle.html', 'img/regpol-callao.jpg'
 ];
