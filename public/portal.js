@@ -233,10 +233,10 @@ function initPortalEncabezado() {
   box.querySelectorAll('p').forEach(function(p) { p.remove(); });
   var eslogan = document.createElement('p');
   eslogan.className = 'portal-eslogan';
-  eslogan.textContent = 'AL SERVICIO DE LA CIUDADANÍA';
+  eslogan.textContent = 'REGIÓN POLICIAL CALLAO';
   var subtitulo = document.createElement('p');
   subtitulo.className = 'portal-subtitulo';
-  subtitulo.textContent = 'Compromiso, Honor y Servicio en la Provincia Constitucional';
+  subtitulo.textContent = 'UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES';
   box.appendChild(eslogan);
   box.appendChild(subtitulo);
 }

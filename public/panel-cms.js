@@ -32,8 +32,8 @@ function initCMS() {
     if (!cmsDataActual.cursos)    cmsDataActual.cursos    = [];
     if (!cmsDataActual.heroTexto) cmsDataActual.heroTexto = {
       titulo:    'REGIÓN POLICIAL CALLAO',
-      subtitulo: 'AL SERVICIO DE LA CIUDADANÍA',
-      parrafo:   'Compromiso, Honor y Servicio en la Provincia Constitucional'
+      subtitulo: 'UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES',
+      parrafo:   ''
     };
     poblarFormulariosCMS();
     renderListasCMS();
