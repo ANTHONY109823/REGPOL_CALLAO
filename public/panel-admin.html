@@ -267,8 +267,27 @@
       </div>
     </div>
 
-    <!-- EDITAR PORTAL (grupo colapsable) -->
+    <!-- GESTIÓN CONVOCATORIAS -->
     <div class="sb-section">
+      <div class="sb-section-label">Convocatorias</div>
+      <div class="sb-group">
+        <div class="sb-group-header" onclick="toggleGrupo(this)">
+          <div class="gi"><i class="fas fa-clipboard-list" style="color:#c8a94a;font-size:13px;"></i> Gestión</div>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="sb-group-body">
+          <div class="sb-item" data-page="items" data-perm-cursos onclick="ir('items',this);cargarItems('curso')">
+            <i class="fas fa-graduation-cap"></i> Cursos
+          </div>
+          <div class="sb-item" data-page="items-conv" data-perm-convenios onclick="ir('items',this);cargarItems('convenio')">
+            <i class="fas fa-handshake"></i> Convenios
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDITAR PORTAL (grupo colapsable) -->
+    <div class="sb-section" data-rol-unitic>
       <div class="sb-section-label">Portal Web</div>
       <div class="sb-group">
         <div class="sb-group-header" onclick="toggleGrupo(this)">
@@ -277,8 +296,6 @@
         </div>
         <div class="sb-group-body">
           <div class="sb-item" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> Novedades</div>
-          <div class="sb-item" onclick="irCMS('convenios',this)"><i class="fas fa-file-contract"></i> Convenios</div>
-          <div class="sb-item" onclick="irCMS('cursos',this)"><i class="fas fa-graduation-cap"></i> Cursos</div>
           <div class="sb-item" onclick="irCMS('resena',this)"><i class="fas fa-landmark"></i> Reseña Histórica</div>
           <div class="sb-item" onclick="irCMS('labor',this)"><i class="fas fa-tasks"></i> Nuestra Labor</div>
           <div class="sb-item" onclick="irCMS('carrusel',this)"><i class="fas fa-images"></i> Inicio / Carrusel</div>
@@ -553,6 +570,51 @@
       </div><!-- /card -->
     </div>
 
+    <!-- GESTIÓN ITEMS (cursos / convenios) -->
+    <div id="page-items" class="page">
+      <div class="card">
+        <h3 id="items-titulo"><i class="fas fa-clipboard-list"></i> Convocatorias</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+          <button class="btn btn-v" onclick="abrirModalItem(null)"><i class="fas fa-plus"></i> Nueva convocatoria</button>
+          <select id="items-filtro-tipo" onchange="cargarItems(this.value)" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
+            <option value="">Todos</option>
+            <option value="curso">Solo Cursos</option>
+            <option value="convenio">Solo Convenios</option>
+          </select>
+          <select id="items-filtro-estado" onchange="filtrarTablaItems()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
+            <option value="">Todos los estados</option>
+            <option value="DISPONIBLE">Disponible</option>
+            <option value="EN PROCESO">En proceso</option>
+            <option value="CERRADO">Cerrado</option>
+          </select>
+        </div>
+        <div id="items-alerta" class="alerta" style="display:none;"></div>
+        <div id="items-tabla"><p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">Seleccione un tipo para cargar.</p></div>
+      </div>
+    </div>
+
+    <!-- INSCRITOS DE UN ITEM -->
+    <div id="page-inscritos" class="page">
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <button class="btn" style="background:#888;color:#fff;" onclick="ir('items',null)"><i class="fas fa-chevron-left"></i> Volver</button>
+          <h3 id="inscritos-titulo" style="margin:0;border:none;padding:0;"><i class="fas fa-users"></i> Inscritos</h3>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+          <input type="text" id="inscritos-buscar" placeholder="Buscar por CIP o nombre..." oninput="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:220px;"/>
+          <select id="inscritos-filtro-estado" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
+            <option value="">Todos</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="aceptado">Aceptado</option>
+            <option value="rechazado">Rechazado</option>
+          </select>
+          <button class="btn btn-v" onclick="exportarInscritos()"><i class="fas fa-download"></i> Exportar CSV</button>
+        </div>
+        <div id="inscritos-stats" style="margin-bottom:10px;"></div>
+        <div id="inscritos-tabla"><p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">Cargando...</p></div>
+      </div>
+    </div>
+
     <!-- MODAL CMS -->
     <div id="cms-modal" class="cms-modal" role="dialog" aria-modal="true" aria-hidden="true">
       <div class="cms-modal-backdrop" onclick="cerrarCmsModal()"></div>
@@ -570,6 +632,126 @@
     </div>
 
   </main>
+</div>
+
+<!-- MODAL: Item (curso / convenio) -->
+<div id="modal-item" class="modal">
+  <div class="modal-box" style="width:620px;max-height:90vh;overflow-y:auto;">
+    <h3><i class="fas fa-clipboard-list"></i> <span id="mi-titulo">Nueva convocatoria</span></h3>
+    <input type="hidden" id="mi-id"/>
+    <input type="hidden" id="mi-tipo"/>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="grid-column:1/-1;">
+        <label>Título *</label>
+        <input type="text" id="mi-titulo-val" placeholder="Ej: CURSO DE INVESTIGACIÓN EN ACCIDENTES DE TRÁNSITO" maxlength="200"/>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label>Descripción / Subtítulo</label>
+        <input type="text" id="mi-descripcion" placeholder="Breve descripción para la tarjeta" maxlength="300"/>
+      </div>
+      <div>
+        <label>Estado</label>
+        <select id="mi-estado">
+          <option value="DISPONIBLE">DISPONIBLE</option>
+          <option value="EN PROCESO">EN PROCESO</option>
+          <option value="CERRADO">CERRADO</option>
+        </select>
+      </div>
+      <div>
+        <label>Icono (Font Awesome)</label>
+        <select id="mi-icono">
+          <option value="fa-graduation-cap">🎓 Graduación</option>
+          <option value="fa-handshake">🤝 Convenio</option>
+          <option value="fa-book">📖 Libro</option>
+          <option value="fa-shield-alt">🛡 Escudo</option>
+          <option value="fa-car">🚗 Auto/Tránsito</option>
+          <option value="fa-stethoscope">⚕ Médico</option>
+          <option value="fa-laptop">💻 Tecnología</option>
+          <option value="fa-users">👥 Personas</option>
+          <option value="fa-certificate">🏅 Certificado</option>
+          <option value="fa-file-contract">📄 Contrato</option>
+        </select>
+      </div>
+      <div>
+        <label>Color de tarjeta</label>
+        <input type="color" id="mi-color" value="#004d3d" style="height:38px;padding:2px;"/>
+      </div>
+      <div>
+        <label>Vacantes</label>
+        <input type="number" id="mi-vacantes" min="0" placeholder="0" value="0"/>
+      </div>
+      <div>
+        <label>Fecha de inicio</label>
+        <input type="text" id="mi-fecha-inicio" placeholder="Ej: 15 DE JULIO 2026" maxlength="100"/>
+      </div>
+      <div>
+        <label>Duración</label>
+        <input type="text" id="mi-duracion" placeholder="Ej: SEIS (06) SEMANAS" maxlength="100"/>
+      </div>
+      <div>
+        <label>Horario</label>
+        <input type="text" id="mi-horario" placeholder="Ej: 08:00 hrs a 13:00 hrs" maxlength="200"/>
+      </div>
+      <div>
+        <label>Lugar</label>
+        <input type="text" id="mi-lugar" placeholder="Ej: Escuela PNP Callao" maxlength="200"/>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label>Observaciones</label>
+        <input type="text" id="mi-observaciones" placeholder="Ej: Sujeta a modificación por necesidad de servicio" maxlength="300"/>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label>Requisitos (uno por línea)</label>
+        <textarea id="mi-requisitos" rows="4" placeholder="Pertenecer a la REGPOL Callao.&#10;Encontrarse en situación de Actividad.&#10;No tener sanciones vigentes."></textarea>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label>URL de formulario externo (opcional)</label>
+        <input type="url" id="mi-formulario-url" placeholder="https://forms.google.com/..."/>
+      </div>
+      <div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:10px;background:#f0f7f0;border-radius:7px;">
+        <input type="checkbox" id="mi-inscripciones-abiertas" style="width:18px;height:18px;accent-color:#004d3d;"/>
+        <label for="mi-inscripciones-abiertas" style="font-size:13px;font-weight:700;color:#004d3d;cursor:pointer;margin:0;">
+          <i class="fas fa-door-open"></i> Inscripciones abiertas en el portal (formulario interno habilitado)
+        </label>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="mi-visible" checked style="width:16px;height:16px;accent-color:#004d3d;"/>
+        <label for="mi-visible" style="font-size:12px;color:#555;cursor:pointer;margin:0;">Visible en el portal</label>
+      </div>
+      <div>
+        <label>Orden de visualización</label>
+        <input type="number" id="mi-orden" value="0" min="0"/>
+      </div>
+    </div>
+
+    <div class="modal-footer" style="margin-top:16px;">
+      <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-item')">Cancelar</button>
+      <button class="btn btn-v" onclick="guardarItem()"><i class="fas fa-save"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Inscripción (editar estado) -->
+<div id="modal-inscripcion" class="modal">
+  <div class="modal-box" style="width:420px;">
+    <h3><i class="fas fa-user-check"></i> Gestionar inscripción</h3>
+    <input type="hidden" id="mins-id"/>
+    <div id="mins-info" style="background:#f0f7f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;"></div>
+    <label>Estado</label>
+    <select id="mins-estado">
+      <option value="pendiente">Pendiente</option>
+      <option value="aceptado">Aceptado ✓</option>
+      <option value="rechazado">Rechazado ✗</option>
+    </select>
+    <label>Observación</label>
+    <textarea id="mins-observacion" rows="3" placeholder="Motivo de aceptación o rechazo..."></textarea>
+    <div class="modal-footer">
+      <button class="btn btn-r" onclick="eliminarInscripcion()"><i class="fas fa-trash"></i> Eliminar</button>
+      <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-inscripcion')">Cancelar</button>
+      <button class="btn btn-v" onclick="guardarEstadoInscripcion()"><i class="fas fa-save"></i> Guardar</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL: División -->
@@ -686,7 +868,8 @@
 <script>
 var API = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
   : ((location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '');
-var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[];
+var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[], SESION=null;
+var ITEMS_CACHE=[], ITEM_ACTIVO_ID=null;
 
 var ETIQUETAS_PERM={
   evaluaciones:'📋 Evaluaciones',descargas:'📥 Descargas',
@@ -698,34 +881,80 @@ var ETIQUETAS_PERM={
 // ── SESIÓN ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',function(){
   var s=JSON.parse(localStorage.getItem('regpol_session')||'null');
-  if(!s||!s.token||s.rol!=='unitic'){window.location.href='login.html';return;}
+  var perms=s&&s.permisos?s.permisos:[];
+  var puedeEntrar = s&&s.token&&(
+    s.rol==='unitic'||
+    perms.indexOf('cms_cursos')!==-1||
+    perms.indexOf('cms_convenios')!==-1||
+    perms.indexOf('evaluaciones')!==-1||
+    perms.indexOf('descargas')!==-1
+  );
+  if(!puedeEntrar){window.location.href='login.html';return;}
   TOKEN=s.token;
-  document.getElementById('ph-nombre').textContent=s.nombre||'UNITIC';
-  iniciarPanel();
+  SESION=s;
+  document.getElementById('ph-nombre').textContent=s.nombre||s.usuario||'Panel';
+  aplicarPermisosSidebar(s);
+  iniciarPanel(s);
 });
 function logout(){localStorage.removeItem('regpol_session');localStorage.removeItem('uniticToken');window.location.href='login.html';}
 function hdr(){return{'Content-Type':'application/json','x-admin-token':TOKEN};}
 
-function iniciarPanel(){
-  cargarStats();
-  cargarFiltrosTabla();
+function tienePermiso(p){ return SESION&&(SESION.rol==='unitic'||(SESION.permisos||[]).indexOf(p)!==-1); }
+function esUnitic(){ return SESION&&SESION.rol==='unitic'; }
+
+function aplicarPermisosSidebar(s){
+  var perms=s.permisos||[], rol=s.rol;
+  var esU=(rol==='unitic');
+  var tieneCursos   =esU||perms.indexOf('cms_cursos')!==-1;
+  var tieneConvenios=esU||perms.indexOf('cms_convenios')!==-1;
+  var tienePsico    =esU||perms.indexOf('evaluaciones')!==-1||perms.indexOf('descargas')!==-1;
+  // Mostrar/ocultar secciones del sidebar
+  document.querySelectorAll('[data-rol-unitic]').forEach(function(el){if(!esU)el.style.display='none';});
+  document.querySelectorAll('[data-perm-cursos]').forEach(function(el){if(!tieneCursos)el.style.display='none';});
+  document.querySelectorAll('[data-perm-convenios]').forEach(function(el){if(!tieneConvenios)el.style.display='none';});
+  document.querySelectorAll('[data-perm-psico]').forEach(function(el){if(!tienePsico)el.style.display='none';});
+  // Badge de rol
+  var badge=document.querySelector('.super-badge');
+  if(badge){
+    if(esU)      badge.textContent='⭐ SUPER ADMIN';
+    else if(tieneCursos&&tieneConvenios) badge.textContent='📋 CONVENIOS + EDUCACIÓN';
+    else if(tieneCursos)   badge.textContent='🎓 EDUCACIÓN';
+    else if(tieneConvenios)badge.textContent='📋 CONVENIOS';
+    else badge.textContent='👤 USUARIO';
+  }
+}
+
+function iniciarPanel(s){
+  s=s||SESION;
+  var esU=s&&s.rol==='unitic';
+  var perms=s&&s.permisos?s.permisos:[];
+  var tienePsico=esU||perms.indexOf('evaluaciones')!==-1||perms.indexOf('descargas')!==-1;
+  var tieneCursos=esU||perms.indexOf('cms_cursos')!==-1;
+  var tieneConvenios=esU||perms.indexOf('cms_convenios')!==-1;
+  if(esU||tienePsico){ cargarStats(); cargarFiltrosTabla(); }
+  // Si solo tiene cursos/convenios, ir directo a items
+  if(!esU&&!tienePsico&&(tieneCursos||tieneConvenios)){
+    var tipo=tieneConvenios&&!tieneCursos?'convenio':tieneCursos&&!tieneConvenios?'curso':'';
+    ir('items', document.querySelector('[data-page="items"]'));
+    if(tipo) cargarItems(tipo);
+  }
 }
 
 // ── NAVEGACIÓN SIDEBAR ────────────────────────────────────────────────────────
 function ir(page, el){
-  // Activar página
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
-  document.getElementById('page-'+page).classList.add('on');
-  // Activar item sidebar
+  var pg=document.getElementById('page-'+page);
+  if(pg) pg.classList.add('on');
   document.querySelectorAll('.sb-item').forEach(function(i){i.classList.remove('on');});
   if(el) el.classList.add('on');
-  // Acciones al entrar
+  else { var found=document.querySelector('[data-page="'+page+'"]'); if(found) found.classList.add('on'); }
   if(page==='evaluaciones'){ cargarConfigEvaluacion(); cargarTabla(1); }
   if(page==='preguntas')    cargarPreguntas();
   if(page==='usuarios')     cargarUsuarios();
   if(page==='descargas')    cargarFiltrosDescarga();
   if(page==='dashboard')    cargarStats();
   if(page==='divisiones')   cargarDivisiones();
+  if(page==='items')        cargarItems();
 }
 
 function irCMS(tab, el){
@@ -1281,6 +1510,300 @@ function cargarFiltrosDescarga(){
     llenarSelectUnidadesAgrupadas('d-uni-pdf', DIVISIONES_DATA, '— Seleccionar unidad —');
     renderDivCards();
   });
+}
+
+// ── GESTIÓN ITEMS (CURSOS / CONVENIOS) ────────────────────────────────────────
+var INSCRITOS_CACHE = [];
+
+function cargarItems(tipo){
+  if(tipo) document.getElementById('items-filtro-tipo').value=tipo;
+  else tipo=document.getElementById('items-filtro-tipo').value||'';
+  var tipoLabel = tipo==='curso'?'Cursos':tipo==='convenio'?'Convenios':'Convocatorias';
+  document.getElementById('items-titulo').innerHTML='<i class="fas fa-clipboard-list"></i> '+tipoLabel;
+  var url=API+'/admin/items'+(tipo?'?tipo='+tipo:'');
+  document.getElementById('items-tabla').innerHTML='<p style="color:#bbb;font-size:13px;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>';
+  fetch(url,{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){mostrarAlertaItems('Error: '+(d.error||''),'error');return;}
+    ITEMS_CACHE=d.items||[];
+    renderTablaItems(ITEMS_CACHE);
+  }).catch(function(){ mostrarAlertaItems('Error de conexión','error'); });
+}
+
+function filtrarTablaItems(){
+  var est=document.getElementById('items-filtro-estado').value;
+  var filtrados=est?ITEMS_CACHE.filter(function(i){return i.estado===est;}):ITEMS_CACHE;
+  renderTablaItems(filtrados);
+}
+
+function renderTablaItems(items){
+  var el=document.getElementById('items-tabla');
+  if(!items.length){
+    el.innerHTML='<p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">No hay convocatorias. Pulse "Nueva convocatoria".</p>';
+    return;
+  }
+  var colorEstado={'DISPONIBLE':'#1a7a3a','EN PROCESO':'#856404','CERRADO':'#c0392b'};
+  el.innerHTML='<table class="t"><thead><tr>'
+    +'<th>Tipo</th><th>Título</th><th>Estado</th><th>Vacantes</th><th>Inscritos</th><th>Inscr. abiertas</th><th>Acciones</th>'
+    +'</tr></thead><tbody>'
+    +items.map(function(item){
+      var color=colorEstado[item.estado]||'#444';
+      var badge=item.inscripciones_abiertas
+        ?'<span class="badge ok">✓ Abiertas</span>'
+        :'<span class="badge pend">Cerradas</span>';
+      return '<tr>'
+        +'<td><span style="font-size:10px;font-weight:700;background:#e8f0e8;padding:2px 7px;border-radius:10px;text-transform:uppercase;">'+escHtml(item.tipo)+'</span></td>'
+        +'<td style="font-weight:600;max-width:260px;">'+escHtml(item.titulo)+'</td>'
+        +'<td><span style="color:'+color+';font-weight:700;font-size:12px;">'+escHtml(item.estado)+'</span></td>'
+        +'<td style="text-align:center;">'+escHtml(item.vacantes||0)+'</td>'
+        +'<td style="text-align:center;"><strong style="color:#004d3d;">'+escHtml(item.total_inscritos||0)+'</strong>'
+        +(parseInt(item.total_inscritos||0)>0
+          ?'<br/><button class="btn-mini" style="margin-top:3px;" onclick="verInscritos('+item.id+',\''+escJs(item.titulo)+'\')"><i class="fas fa-users"></i> Ver</button>':'')
+        +'</td>'
+        +'<td style="text-align:center;">'+badge+'</td>'
+        +'<td><div style="display:flex;gap:5px;flex-wrap:wrap;">'
+        +'<button class="btn-mini" onclick="abrirModalItem('+item.id+')"><i class="fas fa-edit"></i> Editar</button>'
+        +'<button class="btn-mini" onclick="verInscritos('+item.id+',\''+escJs(item.titulo)+'\')"><i class="fas fa-users"></i> Inscritos</button>'
+        +'<button class="btn-mini btn-mini-danger" onclick="eliminarItem('+item.id+')"><i class="fas fa-trash"></i></button>'
+        +'</div></td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table>';
+}
+
+function mostrarAlertaItems(texto,tipo){
+  var el=document.getElementById('items-alerta');
+  if(!el)return;
+  el.textContent=texto; el.style.display='block';
+  el.className='alerta '+(tipo==='ok'?'alerta-exito':'alerta-error')+' visible';
+  setTimeout(function(){el.style.display='none';},5000);
+}
+
+function abrirModalItem(id){
+  document.getElementById('mi-id').value='';
+  document.getElementById('mi-tipo').value=document.getElementById('items-filtro-tipo').value||'curso';
+  document.getElementById('mi-titulo-val').value='';
+  document.getElementById('mi-descripcion').value='';
+  document.getElementById('mi-estado').value='DISPONIBLE';
+  document.getElementById('mi-icono').value='fa-graduation-cap';
+  document.getElementById('mi-color').value='#004d3d';
+  document.getElementById('mi-vacantes').value=0;
+  document.getElementById('mi-fecha-inicio').value='';
+  document.getElementById('mi-duracion').value='';
+  document.getElementById('mi-horario').value='';
+  document.getElementById('mi-lugar').value='';
+  document.getElementById('mi-observaciones').value='';
+  document.getElementById('mi-requisitos').value='';
+  document.getElementById('mi-formulario-url').value='';
+  document.getElementById('mi-inscripciones-abiertas').checked=false;
+  document.getElementById('mi-visible').checked=true;
+  document.getElementById('mi-orden').value=0;
+  document.getElementById('mi-titulo').textContent='Nueva convocatoria';
+
+  if(!id){
+    document.getElementById('modal-item').classList.add('open');
+    return;
+  }
+  // Buscar en caché o hacer fetch individual
+  var cached=ITEMS_CACHE.find(function(i){return i.id===id;});
+  if(cached && cached.requisitos !== undefined){
+    poblarModalItem(cached);
+    return;
+  }
+  fetch(API+'/admin/items',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+    var item=(d.items||[]).find(function(i){return i.id===id;});
+    if(item){poblarModalItem(item);}
+    else{alert('No se pudo cargar el item.');}
+  });
+}
+
+function poblarModalItem(item){
+  document.getElementById('mi-id').value=item.id;
+  document.getElementById('mi-tipo').value=item.tipo||'curso';
+  document.getElementById('mi-titulo-val').value=item.titulo||'';
+  document.getElementById('mi-descripcion').value=item.descripcion||'';
+  document.getElementById('mi-estado').value=item.estado||'DISPONIBLE';
+  document.getElementById('mi-icono').value=item.icono||'fa-graduation-cap';
+  document.getElementById('mi-color').value=item.color||'#004d3d';
+  document.getElementById('mi-vacantes').value=item.vacantes||0;
+  document.getElementById('mi-fecha-inicio').value=item.fecha_inicio||'';
+  document.getElementById('mi-duracion').value=item.duracion||'';
+  document.getElementById('mi-horario').value=item.horario||'';
+  document.getElementById('mi-lugar').value=item.lugar||'';
+  document.getElementById('mi-observaciones').value=item.observaciones||'';
+  var reqs=Array.isArray(item.requisitos)?item.requisitos:[];
+  document.getElementById('mi-requisitos').value=reqs.join('\n');
+  document.getElementById('mi-formulario-url').value=item.formulario_url||'';
+  document.getElementById('mi-inscripciones-abiertas').checked=!!item.inscripciones_abiertas;
+  document.getElementById('mi-visible').checked=item.visible!==false;
+  document.getElementById('mi-orden').value=item.orden||0;
+  document.getElementById('mi-titulo').textContent='Editar: '+item.titulo;
+  document.getElementById('modal-item').classList.add('open');
+}
+
+function guardarItem(){
+  var id=val('mi-id'), tipo=val('mi-tipo');
+  var titulo=val('mi-titulo-val').trim();
+  if(!titulo){alert('El título es obligatorio.');return;}
+  var reqText=document.getElementById('mi-requisitos').value;
+  var requisitos=reqText.split('\n').map(function(r){return r.trim();}).filter(Boolean);
+  var body={
+    tipo:tipo, titulo:titulo.toUpperCase(),
+    descripcion:val('mi-descripcion'),
+    estado:val('mi-estado')||'DISPONIBLE',
+    icono:val('mi-icono')||'fa-graduation-cap',
+    color:val('mi-color')||'#004d3d',
+    requisitos:requisitos,
+    horario:val('mi-horario'),
+    vacantes:parseInt(val('mi-vacantes'))||0,
+    fecha_inicio:val('mi-fecha-inicio'),
+    duracion:val('mi-duracion'),
+    lugar:val('mi-lugar'),
+    observaciones:val('mi-observaciones'),
+    formulario_url:val('mi-formulario-url'),
+    inscripciones_abiertas:document.getElementById('mi-inscripciones-abiertas').checked,
+    visible:document.getElementById('mi-visible').checked,
+    orden:parseInt(val('mi-orden'))||0
+  };
+  var url=id?API+'/admin/items/'+id:API+'/admin/items';
+  var method=id?'PUT':'POST';
+  fetch(url,{method:method,headers:hdr(),body:JSON.stringify(body)})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.ok){
+        cerrarModal('modal-item');
+        cargarItems(tipo);
+        mostrarAlertaItems((id?'Convocatoria actualizada':'Convocatoria creada')+' correctamente.','ok');
+      } else { alert('Error: '+(d.error||'')); }
+    });
+}
+
+function eliminarItem(id){
+  if(!confirm('¿Eliminar esta convocatoria y todas sus inscripciones?')) return;
+  fetch(API+'/admin/items/'+id,{method:'DELETE',headers:hdr()})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.ok){ cargarItems(); mostrarAlertaItems('Convocatoria eliminada.','ok'); }
+      else alert('Error: '+(d.error||''));
+    });
+}
+
+// ── INSCRITOS ─────────────────────────────────────────────────────────────────
+function verInscritos(itemId, titulo){
+  ITEM_ACTIVO_ID=itemId;
+  ir('inscritos',null);
+  document.getElementById('inscritos-titulo').innerHTML='<i class="fas fa-users"></i> Inscritos — '+escHtml(titulo);
+  document.getElementById('inscritos-buscar').value='';
+  document.getElementById('inscritos-filtro-estado').value='';
+  document.getElementById('inscritos-tabla').innerHTML='<p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i></p>';
+  fetch(API+'/admin/items/'+itemId+'/inscritos',{headers:hdr()})
+    .then(function(r){return r.json();}).then(function(d){
+      if(!d.ok){document.getElementById('inscritos-tabla').innerHTML='<p style="color:#c00;padding:16px;">'+escHtml(d.error||'Error')+'</p>';return;}
+      INSCRITOS_CACHE=d.inscritos||[];
+      renderInscritos(INSCRITOS_CACHE);
+    });
+}
+
+function filtrarInscritos(){
+  var txt=(document.getElementById('inscritos-buscar').value||'').toLowerCase();
+  var est=document.getElementById('inscritos-filtro-estado').value;
+  var filtrados=INSCRITOS_CACHE.filter(function(i){
+    var matchTxt=!txt||(i.cip||'').toLowerCase().includes(txt)||(i.nombres||'').toLowerCase().includes(txt);
+    var matchEst=!est||i.estado===est;
+    return matchTxt&&matchEst;
+  });
+  renderInscritos(filtrados);
+}
+
+function renderInscritos(list){
+  var total=INSCRITOS_CACHE.length;
+  var pend=INSCRITOS_CACHE.filter(function(i){return i.estado==='pendiente';}).length;
+  var acept=INSCRITOS_CACHE.filter(function(i){return i.estado==='aceptado';}).length;
+  var rech=INSCRITOS_CACHE.filter(function(i){return i.estado==='rechazado';}).length;
+  document.getElementById('inscritos-stats').innerHTML=
+    '<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:8px;">'
+    +'<div class="stat"><div class="n">'+total+'</div><div class="l">Total</div></div>'
+    +'<div class="stat" style="border-color:#ffe082;"><div class="n" style="color:#856404;">'+pend+'</div><div class="l">Pendientes</div></div>'
+    +'<div class="stat" style="border-color:#a5d6a7;"><div class="n" style="color:#1a7a3a;">'+acept+'</div><div class="l">Aceptados</div></div>'
+    +'<div class="stat" style="border-color:#f5c2c7;"><div class="n" style="color:#c0392b;">'+rech+'</div><div class="l">Rechazados</div></div>'
+    +'</div>';
+  if(!list.length){
+    document.getElementById('inscritos-tabla').innerHTML='<p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">Sin inscripciones registradas.</p>';
+    return;
+  }
+  var colorEst={pendiente:'#856404',aceptado:'#1a7a3a',rechazado:'#c0392b'};
+  var bgEst={pendiente:'#fff3cd',aceptado:'#d4edda',rechazado:'#f8d7da'};
+  document.getElementById('inscritos-tabla').innerHTML='<table class="t"><thead><tr>'
+    +'<th>#</th><th>CIP</th><th>Nombres</th><th>Unidad</th><th>Cargo</th><th>Teléfono</th><th>Estado</th><th>Fecha</th><th>Acción</th>'
+    +'</tr></thead><tbody>'
+    +list.map(function(ins,idx){
+      var c=colorEst[ins.estado]||'#444';
+      var bg=bgEst[ins.estado]||'#fff';
+      var fecha=ins.fecha?new Date(ins.fecha).toLocaleDateString('es-PE'):'';
+      return '<tr>'
+        +'<td style="color:#aaa;font-size:11px;">'+(idx+1)+'</td>'
+        +'<td style="font-weight:700;">'+escHtml(ins.cip||'')+'</td>'
+        +'<td>'+escHtml(ins.nombres||'')+'</td>'
+        +'<td style="font-size:11.5px;">'+escHtml(ins.unidad||'')+'</td>'
+        +'<td style="font-size:11.5px;">'+escHtml(ins.cargo||'')+'</td>'
+        +'<td>'+escHtml(ins.telefono||'')+'</td>'
+        +'<td><span class="badge" style="background:'+bg+';color:'+c+';">'+escHtml(ins.estado)+'</span></td>'
+        +'<td style="font-size:11px;color:#888;">'+fecha+'</td>'
+        +'<td><button class="btn-mini" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i></button></td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table>';
+}
+
+function abrirModalInscripcion(id){
+  var ins=INSCRITOS_CACHE.find(function(i){return i.id===id;});
+  if(!ins)return;
+  document.getElementById('mins-id').value=id;
+  document.getElementById('mins-info').innerHTML=
+    '<strong>'+escHtml(ins.nombres||'')+'</strong> — CIP: '+escHtml(ins.cip||'')+'<br/>'
+    +'Unidad: '+escHtml(ins.unidad||'')+'<br/>'
+    +(ins.cargo?'Cargo: '+escHtml(ins.cargo)+'<br/>':'')
+    +(ins.telefono?'Tel: '+escHtml(ins.telefono)+'<br/>':'')
+    +(ins.email?'Email: '+escHtml(ins.email):'');
+  document.getElementById('mins-estado').value=ins.estado||'pendiente';
+  document.getElementById('mins-observacion').value=ins.observacion||'';
+  document.getElementById('modal-inscripcion').classList.add('open');
+}
+
+function guardarEstadoInscripcion(){
+  var id=val('mins-id');
+  var body={estado:val('mins-estado'),observacion:val('mins-observacion')};
+  fetch(API+'/admin/inscripciones/'+id,{method:'PUT',headers:hdr(),body:JSON.stringify(body)})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.ok){
+        cerrarModal('modal-inscripcion');
+        verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/^[^—]+— /,''));
+      } else alert('Error: '+(d.error||''));
+    });
+}
+
+function eliminarInscripcion(){
+  if(!confirm('¿Eliminar esta inscripción permanentemente?')) return;
+  var id=val('mins-id');
+  fetch(API+'/admin/inscripciones/'+id,{method:'DELETE',headers:hdr()})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.ok){
+        cerrarModal('modal-inscripcion');
+        verInscritos(ITEM_ACTIVO_ID, '');
+      } else alert('Error: '+(d.error||''));
+    });
+}
+
+function exportarInscritos(){
+  if(!INSCRITOS_CACHE.length){alert('No hay inscritos para exportar.');return;}
+  var rows=[['CIP','Nombres','Unidad','Cargo','Teléfono','Email','Estado','Observación','Fecha']];
+  INSCRITOS_CACHE.forEach(function(i){
+    rows.push([i.cip,i.nombres,i.unidad,i.cargo,i.telefono,i.email,i.estado,i.observacion,
+      i.fecha?new Date(i.fecha).toLocaleDateString('es-PE'):'']);
+  });
+  var csv=rows.map(function(r){return r.map(function(c){return '"'+(c||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='inscritos_'+ITEM_ACTIVO_ID+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────

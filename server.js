@@ -110,6 +110,46 @@ async function initDB() {
       valor       TEXT,
       actualizado TIMESTAMP DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS items_portal (
+      id              SERIAL PRIMARY KEY,
+      tipo            VARCHAR(20) NOT NULL,
+      titulo          VARCHAR(200) NOT NULL,
+      descripcion     TEXT DEFAULT '',
+      estado          VARCHAR(30) DEFAULT 'DISPONIBLE',
+      icono           VARCHAR(60) DEFAULT 'fa-file',
+      color           VARCHAR(20) DEFAULT '#004d3d',
+      requisitos      JSONB DEFAULT '[]',
+      horario         VARCHAR(200) DEFAULT '',
+      vacantes        INTEGER DEFAULT 0,
+      fecha_inicio    VARCHAR(100) DEFAULT '',
+      duracion        VARCHAR(100) DEFAULT '',
+      lugar           VARCHAR(200) DEFAULT '',
+      observaciones   TEXT DEFAULT '',
+      formulario_url  VARCHAR(500) DEFAULT '',
+      inscripciones_abiertas BOOLEAN DEFAULT FALSE,
+      visible         BOOLEAN DEFAULT TRUE,
+      orden           INTEGER DEFAULT 0,
+      creado          TIMESTAMP DEFAULT NOW(),
+      actualizado     TIMESTAMP DEFAULT NOW()
+    );
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS formulario_url VARCHAR(500) DEFAULT '';
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS inscripciones_abiertas BOOLEAN DEFAULT FALSE;
+
+    CREATE TABLE IF NOT EXISTS inscripciones (
+      id          SERIAL PRIMARY KEY,
+      item_id     INTEGER REFERENCES items_portal(id) ON DELETE CASCADE,
+      cip         VARCHAR(20),
+      nombres     VARCHAR(200),
+      unidad      VARCHAR(150),
+      cargo       VARCHAR(80),
+      telefono    VARCHAR(30),
+      email       VARCHAR(100),
+      estado      VARCHAR(20) DEFAULT 'pendiente',
+      observacion TEXT DEFAULT '',
+      fecha       TIMESTAMP DEFAULT NOW()
+    );
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS observacion TEXT DEFAULT '';
   `);
 
   // Admins por defecto
@@ -1037,6 +1077,188 @@ app.delete('/admin/unidades/:id', requireAuth, async (req, res) => {
   if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
   await pool.query('DELETE FROM unidades_pol WHERE id=$1', [req.params.id]);
   res.json({ ok: true });
+});
+
+// ── Helpers de permisos para items ────────────────────────────────────────────
+function puedeGestionarItem(admin, tipo) {
+  if (admin.rol === 'unitic') return true;
+  const perms = normalizarPermisos(admin.permisos);
+  if (tipo === 'convenio') return perms.includes('cms_convenios');
+  if (tipo === 'curso')    return perms.includes('cms_cursos');
+  return false;
+}
+
+// ── GET /portal/items — público ───────────────────────────────────────────────
+app.get('/portal/items', async (req, res) => {
+  try {
+    const tipo = req.query.tipo || null;
+    let q = 'SELECT id,tipo,titulo,descripcion,estado,icono,color,vacantes,fecha_inicio,duracion,inscripciones_abiertas,orden FROM items_portal WHERE visible=TRUE';
+    const args = [];
+    if (tipo) { q += ' AND tipo=$1'; args.push(tipo); }
+    q += ' ORDER BY orden,id';
+    const r = await pool.query(q, args);
+    res.json({ ok: true, items: r.rows });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── GET /portal/items/:id — público (detalle completo) ────────────────────────
+app.get('/portal/items/:id', async (req, res) => {
+  try {
+    const r = await pool.query(
+      'SELECT * FROM items_portal WHERE id=$1 AND visible=TRUE', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ ok: false, error: 'No encontrado' });
+    res.json({ ok: true, item: r.rows[0] });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── POST /portal/items/:id/inscribir — público ────────────────────────────────
+app.post('/portal/items/:id/inscribir', async (req, res) => {
+  try {
+    const item = await pool.query(
+      'SELECT id,titulo,inscripciones_abiertas,vacantes FROM items_portal WHERE id=$1 AND visible=TRUE',
+      [req.params.id]);
+    if (!item.rows.length) return res.json({ ok: false, error: 'Item no encontrado' });
+    if (!item.rows[0].inscripciones_abiertas)
+      return res.json({ ok: false, error: 'Las inscripciones no están abiertas para esta convocatoria.' });
+    const { cip, nombres, unidad, cargo, telefono, email } = req.body;
+    if (!cip || !nombres) return res.json({ ok: false, error: 'CIP y nombres son obligatorios.' });
+    const dup = await pool.query(
+      'SELECT id FROM inscripciones WHERE item_id=$1 AND cip=$2', [req.params.id, cip]);
+    if (dup.rows.length)
+      return res.json({ ok: false, error: 'Ya existe una inscripción con ese CIP para esta convocatoria.' });
+    await pool.query(
+      'INSERT INTO inscripciones(item_id,cip,nombres,unidad,cargo,telefono,email) VALUES($1,$2,$3,$4,$5,$6,$7)',
+      [req.params.id, cip, nombres, unidad||'', cargo||'', telefono||'', email||'']);
+    res.json({ ok: true, mensaje: 'Inscripción registrada correctamente.' });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── GET /admin/items ──────────────────────────────────────────────────────────
+app.get('/admin/items', requireAuth, async (req, res) => {
+  try {
+    const { tipo } = req.query;
+    if (tipo && !puedeGestionarItem(req.admin, tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    let q = 'SELECT i.*, (SELECT COUNT(*) FROM inscripciones n WHERE n.item_id=i.id) AS total_inscritos FROM items_portal i WHERE 1=1';
+    const args = [];
+    if (req.admin.rol !== 'unitic') {
+      const perms = normalizarPermisos(req.admin.permisos);
+      const tipos = [];
+      if (perms.includes('cms_cursos'))     tipos.push('curso');
+      if (perms.includes('cms_convenios'))  tipos.push('convenio');
+      if (!tipos.length) return res.json({ ok: true, items: [] });
+      q += ` AND i.tipo = ANY($${args.length+1}::text[])`;
+      args.push(tipos);
+    } else if (tipo) {
+      q += ` AND i.tipo=$${args.length+1}`;
+      args.push(tipo);
+    }
+    q += ' ORDER BY i.tipo,i.orden,i.id';
+    const r = await pool.query(q, args);
+    res.json({ ok: true, items: r.rows });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── POST /admin/items ──────────────────────────────────────────────────────────
+app.post('/admin/items', requireAuth, async (req, res) => {
+  try {
+    const { tipo, titulo, descripcion, estado, icono, color, requisitos, horario,
+            vacantes, fecha_inicio, duracion, lugar, observaciones,
+            formulario_url, inscripciones_abiertas, visible, orden } = req.body;
+    if (!puedeGestionarItem(req.admin, tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    if (!titulo) return res.json({ ok: false, error: 'El título es obligatorio.' });
+    const r = await pool.query(
+      `INSERT INTO items_portal(tipo,titulo,descripcion,estado,icono,color,requisitos,horario,
+        vacantes,fecha_inicio,duracion,lugar,observaciones,formulario_url,inscripciones_abiertas,visible,orden)
+       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id`,
+      [tipo, titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
+       JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
+       horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
+       lugar||'', observaciones||'', formulario_url||'',
+       !!inscripciones_abiertas, visible!==false, parseInt(orden)||0]);
+    res.json({ ok: true, id: r.rows[0].id });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── PUT /admin/items/:id ───────────────────────────────────────────────────────
+app.put('/admin/items/:id', requireAuth, async (req, res) => {
+  try {
+    const cur = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [req.params.id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const { titulo, descripcion, estado, icono, color, requisitos, horario,
+            vacantes, fecha_inicio, duracion, lugar, observaciones,
+            formulario_url, inscripciones_abiertas, visible, orden } = req.body;
+    await pool.query(
+      `UPDATE items_portal SET titulo=$1,descripcion=$2,estado=$3,icono=$4,color=$5,
+        requisitos=$6::jsonb,horario=$7,vacantes=$8,fecha_inicio=$9,duracion=$10,
+        lugar=$11,observaciones=$12,formulario_url=$13,inscripciones_abiertas=$14,
+        visible=$15,orden=$16,actualizado=NOW() WHERE id=$17`,
+      [titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
+       JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
+       horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
+       lugar||'', observaciones||'', formulario_url||'',
+       !!inscripciones_abiertas, visible!==false, parseInt(orden)||0, req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── DELETE /admin/items/:id ────────────────────────────────────────────────────
+app.delete('/admin/items/:id', requireAuth, async (req, res) => {
+  try {
+    const cur = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [req.params.id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    await pool.query('DELETE FROM items_portal WHERE id=$1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── GET /admin/items/:id/inscritos ─────────────────────────────────────────────
+app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
+  try {
+    const cur = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [req.params.id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const r = await pool.query(
+      'SELECT * FROM inscripciones WHERE item_id=$1 ORDER BY fecha DESC', [req.params.id]);
+    res.json({ ok: true, inscritos: r.rows });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── PUT /admin/inscripciones/:id ───────────────────────────────────────────────
+app.put('/admin/inscripciones/:id', requireAuth, async (req, res) => {
+  try {
+    const cur = await pool.query(
+      'SELECT n.item_id, i.tipo FROM inscripciones n JOIN items_portal i ON i.id=n.item_id WHERE n.id=$1',
+      [req.params.id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const { estado, observacion } = req.body;
+    await pool.query(
+      'UPDATE inscripciones SET estado=$1,observacion=$2 WHERE id=$3',
+      [estado||'pendiente', observacion||'', req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── DELETE /admin/inscripciones/:id ───────────────────────────────────────────
+app.delete('/admin/inscripciones/:id', requireAuth, async (req, res) => {
+  try {
+    const cur = await pool.query(
+      'SELECT n.item_id, i.tipo FROM inscripciones n JOIN items_portal i ON i.id=n.item_id WHERE n.id=$1',
+      [req.params.id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    await pool.query('DELETE FROM inscripciones WHERE id=$1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
 // ── Iniciar ────────────────────────────────────────────────────────────────────

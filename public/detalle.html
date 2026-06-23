@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle — REGPOL Callao</title>
+  <link rel="stylesheet" href="style.css?v=14">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    .grid-detalles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;margin:24px 0;}
+    .card-detalle{background:#fff;border-radius:12px;border:1.5px solid #c8e6c9;padding:28px 24px;text-align:center;}
+    .card-detalle.highlight-card{border-color:#c8a94a;}
+    .icon-circle{width:64px;height:64px;background:#004d3d;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:24px;color:#fff;}
+    .icon-circle.gold{background:#c8a94a;}
+    .card-detalle h3{color:#004d3d;font-size:14px;font-weight:800;letter-spacing:.5px;margin-bottom:14px;text-transform:uppercase;}
+    .card-detalle ul{list-style:none;padding:0;text-align:left;}
+    .card-detalle ul li{padding:6px 0;font-size:13.5px;color:#555;border-bottom:1px solid #f0f0f0;display:flex;align-items:flex-start;gap:8px;}
+    .card-detalle ul li:last-child{border:none;}
+    .card-detalle ul li i{color:#004d3d;margin-top:2px;flex-shrink:0;}
+    .info-item{text-align:left;margin-bottom:10px;}
+    .info-item span{font-size:11px;font-weight:800;color:#004d3d;letter-spacing:.5px;display:block;text-transform:uppercase;}
+    .info-item p{font-size:14px;color:#444;margin:2px 0 0;}
+    .price{font-size:26px;font-weight:900;color:#c8a94a;margin:8px 0 4px;}
+    .registro-section{background:#fff;border-radius:12px;border:2px dashed #c8e6c9;padding:28px 24px;text-align:center;margin:20px 0;}
+    .registro-section h2{color:#004d3d;font-size:16px;margin-bottom:8px;}
+    .registro-section p{color:#666;font-size:13.5px;margin-bottom:16px;}
+    .btn-registro-grande{background:#004d3d;color:#fff;padding:14px 28px;border-radius:8px;font-size:14px;font-weight:700;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:none;text-decoration:none;}
+    .btn-registro-grande:hover{background:#006b55;}
+    .btn-volver{background:#004d3d;color:#fff;padding:9px 18px;border-radius:7px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:none;text-decoration:none;margin-top:8px;}
+    .btn-volver:hover{background:#006b55;}
+    /* Formulario de inscripción */
+    .form-inscripcion{background:#f7faf7;border-radius:10px;border:1.5px solid #c8e6c9;padding:24px;margin-top:8px;text-align:left;}
+    .form-inscripcion h3{color:#004d3d;font-size:15px;margin:0 0 16px;border-bottom:2px solid #c8a94a;padding-bottom:8px;}
+    .fi-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media(max-width:600px){.fi-grid{grid-template-columns:1fr;}}
+    .fi-group{margin-bottom:0;}
+    .fi-group label{font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:4px;}
+    .fi-group input,.fi-group select{width:100%;padding:9px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit;}
+    .fi-group input:focus,.fi-group select:focus{border-color:#004d3d;outline:none;}
+    .fi-full{grid-column:1/-1;}
+    .fi-alerta{padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600;margin-bottom:12px;display:none;}
+    .fi-alerta.ok{background:#d4edda;color:#1a7a3a;display:block;}
+    .fi-alerta.error{background:#f8d7da;color:#842029;display:block;}
+    .estado-badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:12px;font-weight:700;}
+    .estado-DISPONIBLE{background:#d4edda;color:#1a7a3a;}
+    .estado-EN-PROCESO,.estado-EN_PROCESO{background:#fff3cd;color:#856404;}
+    .estado-CERRADO{background:#f8d7da;color:#842029;}
+    .inscripciones-cerradas{background:#fff3cd;border:1.5px solid #ffe082;border-radius:8px;padding:14px 18px;color:#856404;font-size:13.5px;font-weight:600;text-align:center;margin-top:8px;}
+    #cuerpo-detalle{min-height:300px;}
+    .loading-msg{text-align:center;padding:48px;color:#bbb;font-size:14px;}
+  </style>
+</head>
+<body class="body-cursos">
+
+<div class="header-social-portal">
+  <div class="container portal-flex">
+    <a href="panel-admin.html" target="_blank" rel="noopener noreferrer" class="btn-pnp-social ingresar"
+       onclick="window.open('panel-admin.html','regpol_panel_unitic','noopener,noreferrer');return false;">
+      <i class="fas fa-sign-in-alt"></i> INGRESAR
+    </a>
+    <div class="social-buttons-group">
+      <a href="https://www.facebook.com/region.policial.callao.2025" target="_blank" class="btn-pnp-social fb"><i class="fab fa-facebook"></i> Facebook</a>
+      <a href="https://www.tiktok.com/@regionpolicialcallao" target="_blank" class="btn-pnp-social tk"><i class="fab fa-tiktok"></i> TikTok</a>
+      <a href="https://wa.me/51927577686" target="_blank" class="btn-pnp-social wa"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+    </div>
+  </div>
+</div>
+
+<header class="main-header">
+  <div class="container header-flex">
+    <div class="logo-container">
+      <img src="img/regpol%20callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90">
+    </div>
+    <div class="title-text">
+      <h1>REGIÓN POLICIAL CALLAO</h1>
+      <p>UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p>
+    </div>
+  </div>
+</header>
+
+<nav class="nav-main"><div class="container"><ul></ul></div></nav>
+
+<main class="container content-area">
+  <div id="cuerpo-detalle"><p class="loading-msg"><i class="fas fa-spinner fa-spin"></i> Cargando información...</p></div>
+</main>
+
+<footer class="portal-footer">
+  <p>&copy; 2026 Región Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
+</footer>
+
+<script src="portal.js?v=6"></script>
+<script>
+var ITEM_ID = null;
+var ITEM_TIPO = null;
+var ITEM_DATA = null;
+var DIVISIONES_PUBL = [];
+
+function escHtmlD(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function getParam(k){return new URLSearchParams(window.location.search).get(k);}
+
+function estadoBadge(estado){
+  var cls='estado-'+(estado||'DISPONIBLE').replace(/\s/g,'-');
+  return '<span class="estado-badge '+escHtmlD(cls)+'">'+escHtmlD(estado)+'</span>';
+}
+
+function renderDetalle(item){
+  ITEM_DATA = item;
+  var reqs = Array.isArray(item.requisitos) ? item.requisitos : [];
+  var tipoLabel = item.tipo==='curso' ? 'CURSOS' : 'CONVENIOS';
+  var tipoHref  = item.tipo==='curso' ? 'cursos.html' : 'convenios.html';
+
+  var reqHtml = reqs.length
+    ? reqs.map(function(r){return '<li><i class="fas fa-check-circle"></i>'+escHtmlD(r)+'</li>';}).join('')
+    : '<li><i class="fas fa-info-circle"></i> Sin requisitos especificados.</li>';
+
+  var horarioHtml = '';
+  if(item.horario) horarioHtml += '<div class="info-item"><span>HORARIO:</span><p>'+escHtmlD(item.horario)+'</p></div>';
+  if(item.vacantes) horarioHtml += '<div class="info-item"><span>VACANTES:</span><p>'+escHtmlD(item.vacantes)+' efectivos</p></div>';
+  if(item.lugar) horarioHtml += '<div class="info-item"><span>LUGAR:</span><p>'+escHtmlD(item.lugar)+'</p></div>';
+
+  var fechaHtml = '';
+  if(item.fecha_inicio) fechaHtml += '<p class="price">'+escHtmlD(item.fecha_inicio)+'</p>';
+  if(item.duracion)     fechaHtml += '<p>'+escHtmlD(item.duracion)+'</p>';
+  if(item.observaciones) fechaHtml += '<small>*'+escHtmlD(item.observaciones)+'</small>';
+
+  var accionHtml = '';
+  if(item.inscripciones_abiertas){
+    accionHtml = '<div class="registro-section">'
+      +'<div class="registro-box">'
+      +'<h2>¿Deseas postular?</h2>'
+      +'<p>Completa el formulario de inscripción a continuación.</p>'
+      +'</div>'
+      +renderFormInscripcion(item)
+      +'</div>';
+  } else if(item.formulario_url && item.formulario_url !== '#'){
+    accionHtml = '<div class="registro-section"><div class="registro-box">'
+      +'<h2>¿Deseas postular a esta convocatoria?</h2>'
+      +'<p>Puedes registrar tu inscripción mediante el formulario externo.</p>'
+      +'<a href="'+escHtmlD(item.formulario_url)+'" target="_blank" class="btn-registro-grande">'
+      +'<i class="fas fa-edit"></i> REGISTRAR MI INSCRIPCIÓN</a>'
+      +'</div></div>';
+  } else {
+    accionHtml = '<div class="inscripciones-cerradas"><i class="fas fa-lock"></i> Las inscripciones no están habilitadas en este momento.</div>';
+  }
+
+  document.title = escHtmlD(item.titulo) + ' — REGPOL Callao';
+  document.getElementById('cuerpo-detalle').innerHTML =
+    '<div class="page-intro">'
+    +'<h2>'+escHtmlD(item.titulo)+'</h2>'
+    +'<p>'+escHtmlD(item.descripcion || (item.tipo==='curso'?'DETALLES DEL CURSO':'DETALLES DEL CONVENIO'))+'</p>'
+    +estadoBadge(item.estado)
+    +'<br/><a href="'+tipoHref+'" class="btn-volver" style="margin-top:12px;">'
+    +'<i class="fas fa-chevron-left"></i> VOLVER A '+tipoLabel+'</a>'
+    +'</div>'
+    +'<div class="grid-detalles">'
+    +'<div class="card-detalle"><div class="icon-circle"><i class="fas fa-list-ul"></i></div>'
+    +'<h3>REQUISITOS</h3><ul>'+reqHtml+'</ul></div>'
+    +(horarioHtml?'<div class="card-detalle"><div class="icon-circle"><i class="fas fa-clock"></i></div>'
+      +'<h3>HORARIOS Y VACANTES</h3>'+horarioHtml+'</div>':'')
+    +(fechaHtml?'<div class="card-detalle highlight-card"><div class="icon-circle gold"><i class="fas fa-calendar-alt"></i></div>'
+      +'<h3>FECHA DE INICIO</h3>'+fechaHtml+'</div>':'')
+    +'</div>'
+    +accionHtml;
+
+  cargarDivisionesPublico();
+}
+
+function renderFormInscripcion(item){
+  return '<form class="form-inscripcion" id="form-inscripcion" onsubmit="enviarInscripcion(event)">'
+    +'<h3><i class="fas fa-edit"></i> Formulario de Inscripción</h3>'
+    +'<div id="fi-alerta" class="fi-alerta"></div>'
+    +'<div class="fi-grid">'
+    +'<div class="fi-group"><label>CIP *</label><input type="text" id="fi-cip" maxlength="20" placeholder="Ingrese su CIP" required/></div>'
+    +'<div class="fi-group"><label>Nombres y Apellidos *</label><input type="text" id="fi-nombres" maxlength="200" placeholder="Nombre completo" required/></div>'
+    +'<div class="fi-group"><label>Unidad/Dependencia *</label>'
+    +'<select id="fi-unidad" required><option value="">— Seleccionar —</option></select></div>'
+    +'<div class="fi-group"><label>Cargo</label><input type="text" id="fi-cargo" maxlength="80" placeholder="Ej: Técnico PNP"/></div>'
+    +'<div class="fi-group"><label>Teléfono</label><input type="tel" id="fi-telefono" maxlength="30" placeholder="Ej: 987654321"/></div>'
+    +'<div class="fi-group"><label>Correo electrónico</label><input type="email" id="fi-email" maxlength="100" placeholder="correo@pnp.gob.pe"/></div>'
+    +'</div>'
+    +'<div style="margin-top:14px;text-align:center;">'
+    +'<button type="submit" class="btn-registro-grande"><i class="fas fa-paper-plane"></i> ENVIAR INSCRIPCIÓN</button>'
+    +'</div>'
+    +'</form>';
+}
+
+function cargarDivisionesPublico(){
+  fetch('/config').then(function(r){return r.json();}).then(function(d){
+    if(!d.ok||!d.divisiones) return;
+    DIVISIONES_PUBL = d.divisiones;
+    var sel = document.getElementById('fi-unidad');
+    if(!sel) return;
+    (d.divisiones||[]).forEach(function(div){
+      var og = document.createElement('optgroup');
+      og.label = div.nombre;
+      (div.unidades||[]).forEach(function(u){
+        var o = document.createElement('option');
+        o.value = u.nombre;
+        o.textContent = u.nombre;
+        og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+  });
+}
+
+function enviarInscripcion(e){
+  e.preventDefault();
+  var alerta = document.getElementById('fi-alerta');
+  alerta.className='fi-alerta';
+  var cip     = document.getElementById('fi-cip').value.trim();
+  var nombres = document.getElementById('fi-nombres').value.trim();
+  var unidad  = document.getElementById('fi-unidad').value;
+  var cargo   = document.getElementById('fi-cargo').value.trim();
+  var tel     = document.getElementById('fi-telefono').value.trim();
+  var email   = document.getElementById('fi-email').value.trim();
+  if(!cip||!nombres||!unidad){
+    alerta.textContent='Complete los campos obligatorios (*).';
+    alerta.className='fi-alerta error';return;
+  }
+  var btn = document.querySelector('#form-inscripcion button[type="submit"]');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Enviando...';}
+  fetch('/portal/items/'+ITEM_ID+'/inscribir',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({cip:cip,nombres:nombres,unidad:unidad,cargo:cargo,telefono:tel,email:email})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){
+      alerta.textContent='¡Inscripción registrada correctamente! En breve recibirá confirmación.';
+      alerta.className='fi-alerta ok';
+      document.getElementById('form-inscripcion').reset();
+    } else {
+      alerta.textContent=d.error||'Error al procesar la inscripción.';
+      alerta.className='fi-alerta error';
+    }
+  }).catch(function(){
+    alerta.textContent='Error de conexión. Intente nuevamente.';
+    alerta.className='fi-alerta error';
+  }).finally(function(){
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane"></i> ENVIAR INSCRIPCIÓN';}
+  });
+}
+
+function cargarDetalle(){
+  ITEM_ID = getParam('id');
+  ITEM_TIPO = getParam('tipo') || 'curso';
+  if(!ITEM_ID){
+    document.getElementById('cuerpo-detalle').innerHTML='<p class="loading-msg">No se especificó el item. <a href="cursos.html">Volver a cursos</a></p>';
+    return;
+  }
+  fetch('/portal/items/'+ITEM_ID)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok||!d.item){
+        document.getElementById('cuerpo-detalle').innerHTML='<p class="loading-msg">Convocatoria no encontrada. <a href="cursos.html">Volver</a></p>';
+        return;
+      }
+      renderDetalle(d.item);
+    })
+    .catch(function(){
+      document.getElementById('cuerpo-detalle').innerHTML='<p class="loading-msg">Error de conexión.</p>';
+    });
+}
+
+initPortalPagina({ activeNav: ITEM_TIPO || 'cursos', showPageHero: false });
+cargarDetalle();
+</script>
+</body>
+</html>

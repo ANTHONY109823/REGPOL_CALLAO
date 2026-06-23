@@ -73,11 +73,21 @@
 var API = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
   : ((location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '');
 
-// Redirección según rol
-var RUTAS = {
-  unitic:  'panel-admin.html',
-  default: 'panel-usuario.html'   // todos los demás roles
-};
+// Permisos que dan acceso a panel-admin
+var PERMS_PANEL_ADMIN = ['cms_cursos','cms_convenios','evaluaciones','descargas'];
+
+function rutaSegunSesion(rol, permisos){
+  if(rol==='unitic') return 'panel-admin.html';
+  var perms=permisos||[];
+  for(var i=0;i<PERMS_PANEL_ADMIN.length;i++){
+    if(perms.indexOf(PERMS_PANEL_ADMIN[i])!==-1) return 'panel-admin.html';
+  }
+  return 'panel-usuario.html';
+}
+
+function redirigirSesion(s){
+  window.location.href = rutaSegunSesion(s.rol, s.permisos);
+}
 
 document.addEventListener('keydown', function(e){ if(e.key==='Enter') ingresar(); });
 
@@ -89,7 +99,7 @@ window.addEventListener('DOMContentLoaded', function(){
     fetch(API+'/stats', { headers: {'x-admin-token': saved.token} })
       .then(function(r){ return r.json(); })
       .then(function(d){
-        if (d.ok !== false) redirigir(saved.rol);
+        if (d.ok !== false) redirigirSesion(saved);
         else localStorage.removeItem('regpol_session');
       })
       .catch(function(){});
@@ -133,7 +143,7 @@ function ingresar() {
     if (d.rol === 'unitic')    localStorage.setItem('uniticToken',   d.token);
     if (d.rol === 'bienestar') localStorage.setItem('bienToken',     d.token);
 
-    redirigir(d.rol);
+    redirigirSesion({ rol: d.rol, permisos: d.permisos || [] });
   })
   .catch(function(){
     msg.textContent = 'Error de conexión. Intente nuevamente.';
@@ -142,10 +152,6 @@ function ingresar() {
   });
 }
 
-function redirigir(rol) {
-  var ruta = RUTAS[rol] || RUTAS['default'];
-  window.location.href = ruta;
-}
 </script>
 </body>
 </html>
