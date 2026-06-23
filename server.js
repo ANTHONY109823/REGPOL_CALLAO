@@ -332,21 +332,22 @@ async function seedContactoComisarias() {
 
 // ── Middlewares ────────────────────────────────────────────────────────────────
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+app.get('/health', function(req, res) {
+  res.status(200).type('text/plain').send('ok');
+});
+
 app.use(cors());
 app.use(express.json({ limit: '4mb' }));
 app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: process.env.NODE_ENV === 'production' ? '3600' : 0,
-  etag: true,
-  setHeaders: function(res, filePath) {
-    if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css; charset=UTF-8');
-    else if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
-    else if (/\.(jpg|jpeg|png|webp|gif)$/i.test(filePath)) {
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-    }
-  }
+  etag: false,
+  lastModified: true,
+  maxAge: '1h',
+  index: 'index.html'
 }));
 
-app.get('/img/regpol callao.jpg', function(req, res) {
+app.get('/img/regpol%20callao.jpg', function(req, res) {
   res.redirect(301, '/img/regpol-callao.jpg');
 });
 
@@ -1506,9 +1507,22 @@ app.delete('/admin/inscripciones/:id', requireAuth, async (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── Iniciar ────────────────────────────────────────────────────────────────────
-initDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`\n=== REGPOL Callao — Puerto ${PORT} ===`);
-  });
-}).catch(e => { console.error('DB error:', e.message); process.exit(1); });
+// ── Iniciar (servidor primero, BD en segundo plano — evita HTTP/2 timeout en Railway) ─
+let dbListo = false;
+
+function iniciarDB() {
+  return initDB()
+    .then(function() {
+      dbListo = true;
+      console.log('PostgreSQL listo.');
+    })
+    .catch(function(e) {
+      console.error('Error init DB (reintento en 15s):', e.message);
+      setTimeout(iniciarDB, 15000);
+    });
+}
+
+app.listen(PORT, '0.0.0.0', function() {
+  console.log('\n=== REGPOL Callao — Puerto ' + PORT + ' ===');
+  iniciarDB();
+});
