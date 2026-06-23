@@ -6,6 +6,7 @@
 const express  = require('express');
 const cors     = require('cors');
 const path     = require('path');
+const fs       = require('fs');
 const crypto   = require('crypto');
 const { Pool } = require('pg');
 const { generarPDFIndividual, generarPDFComisaria } = require('./pdf_gen');
@@ -330,6 +331,47 @@ async function seedContactoComisarias() {
   console.log('Contacto de comisarías actualizado.');
 }
 
+// ── Estáticos con buffer completo (evita ERR_HTTP2_PROTOCOL_ERROR en Railway) ───
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const MIME_TYPES = {
+  '.html': 'text/html; charset=UTF-8',
+  '.css':  'text/css; charset=UTF-8',
+  '.js':   'application/javascript; charset=UTF-8',
+  '.json': 'application/json; charset=UTF-8',
+  '.jpg':  'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png':  'image/png',
+  '.webp': 'image/webp',
+  '.gif':  'image/gif',
+  '.ico':  'image/x-icon',
+  '.svg':  'image/svg+xml',
+  '.woff2':'font/woff2',
+};
+
+function staticBufferado(req, res, next) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  var urlPath = (req.path || '/').split('?')[0];
+  if (urlPath === '/') urlPath = '/index.html';
+  var rel = urlPath.replace(/^\//, '').replace(/\.\./g, '');
+  var filePath = path.join(PUBLIC_DIR, rel);
+  var rootResolved = path.resolve(PUBLIC_DIR);
+  if (!path.resolve(filePath).startsWith(rootResolved)) return next();
+
+  fs.stat(filePath, function(err, stat) {
+    if (err || !stat.isFile()) return next();
+    fs.readFile(filePath, function(readErr, data) {
+      if (readErr) return next();
+      var ext = path.extname(filePath).toLowerCase();
+      res.status(200);
+      res.setHeader('Content-Type', MIME_TYPES[ext] || 'application/octet-stream');
+      res.setHeader('Content-Length', String(data.length));
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      if (req.method === 'HEAD') return res.end();
+      res.end(data);
+    });
+  });
+}
+
 // ── Middlewares ────────────────────────────────────────────────────────────────
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
@@ -340,12 +382,7 @@ app.get('/health', function(req, res) {
 
 app.use(cors());
 app.use(express.json({ limit: '4mb' }));
-app.use(express.static(path.join(__dirname, 'public'), {
-  etag: false,
-  lastModified: true,
-  maxAge: '1h',
-  index: 'index.html'
-}));
+app.use(staticBufferado);
 
 app.get('/img/regpol%20callao.jpg', function(req, res) {
   res.redirect(301, '/img/regpol-callao.jpg');
