@@ -24,7 +24,7 @@ var PORTAL_HERO = {
   subtitulo: 'Compromiso, Honor y Servicio en la Provincia Constitucional'
 };
 
-var REGPOL_NAV = [
+var REGPOL_NAV_FALLBACK = [
   { id: 'inicio',    href: 'index.html',            label: 'INICIO',             icon: 'fa-home' },
   { id: 'novedades', href: 'novedades.html',         label: 'NOVEDADES' },
   { id: 'convenios', href: 'convenios.html',         label: 'CONVENIOS' },
@@ -34,6 +34,13 @@ var REGPOL_NAV = [
   { id: 'labor',     href: 'nuestra-labor.html',     label: 'NUESTRA LABOR' },
   { id: 'unidades',  href: 'unidades.html',          label: 'NUESTRAS UNIDADES', icon: 'fa-map-marker-alt' }
 ];
+
+var portalActiveNavId = '';
+
+function obtenerPortalNav() {
+  if (window.REGPOL_NAV && window.REGPOL_NAV.length) return window.REGPOL_NAV;
+  return REGPOL_NAV_FALLBACK;
+}
 
 function escHtml(str) {
   return String(str || '')
@@ -180,6 +187,7 @@ function aplicarPortalConfig(config, data) {
   if (config.renderCursosPdf) renderPdfList(data.cursosPdf, config.renderCursosPdf);
   if (config.actualizarFecha) actualizarFechaPortal(data);
   if (config.actualizarCarrusel) actualizarCarrusel(data);
+  initPortalNav((config && config.activeNav) || portalActiveNavId);
   if (data.navOcultos && data.navOcultos.length) aplicarNavOcultos(data.navOcultos);
 }
 
@@ -268,10 +276,13 @@ function aplicarHeroMarca(heroT) {
 }
 
 function initPortalNav(activeId) {
+  if (activeId) portalActiveNavId = activeId;
+  else activeId = portalActiveNavId;
   aplicarEncabezadoMarca();
   var ul = document.querySelector('.nav-main ul');
   if (!ul) return;
-  ul.innerHTML = REGPOL_NAV.map(function(item) {
+  var navItems = obtenerPortalNav();
+  ul.innerHTML = navItems.map(function(item) {
     var cls = item.id === activeId ? ' class="activo"' : '';
     var icon = item.icon ? '<i class="fas ' + item.icon + '"></i> ' : '';
     return '<li><a href="' + item.href + '" data-nav="' + item.id + '"' + cls + '>' + icon + item.label + '</a></li>';
@@ -433,7 +444,7 @@ function initPortalPageHero(activeId) {
   if (document.querySelector('.portal-page-hero') || document.querySelector('.presentation-slider')) return;
   var nav = document.querySelector('.nav-main');
   if (!nav) return;
-  var item = REGPOL_NAV.filter(function(i) { return i.id === activeId; })[0];
+  var item = obtenerPortalNav().filter(function(i) { return i.id === activeId; })[0];
   if (!item) return;
   var hero = document.createElement('section');
   hero.className = 'portal-page-hero';
@@ -512,7 +523,7 @@ function aplicarNavOcultos(ocultos) {
       el.style.display = 'none';
     }
   });
-  REGPOL_NAV.forEach(function(item) {
+  obtenerPortalNav().forEach(function(item) {
     if (ocultos.indexOf(item.id) !== -1) {
       var link = document.querySelector('a[href="' + item.href + '"]');
       if (link && link.closest('li')) link.closest('li').style.display = 'none';

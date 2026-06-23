@@ -207,7 +207,7 @@ function renderEditorMenu() {
   var el = document.getElementById('editor-menu');
   if (!el) return;
   var ocultos = cmsDataActual.navOcultos || [];
-  var nav = (typeof REGPOL_NAV !== 'undefined') ? REGPOL_NAV : [];
+  var nav = (window.REGPOL_NAV && window.REGPOL_NAV.length) ? window.REGPOL_NAV : [];
 
   var html = '<p style="font-size:12px;color:#666;margin-bottom:14px;">Activa o desactiva elementos del menú de navegación del portal. Los cambios aplican al publicar.</p>';
   html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">';

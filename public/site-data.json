@@ -1,5 +1,9 @@
 {
   "actualizacion": "20 DE JUNIO 2026",
+  "heroTexto": {
+    "titulo": "REGIÓN POLICIAL CALLAO",
+    "subtitulo": "Compromiso, Honor y Servicio en la Provincia Constitucional"
+  },
   "resenaHistorica": {
     "titulo": "Reseña Histórica",
     "intro": "La Región Policial Callao es la entidad encargada de garantizar la seguridad ciudadana en la Provincia Constitucional del Callao, articulando el trabajo de comisarías, unidades especializadas y programas institucionales al servicio de la población.",
