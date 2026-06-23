@@ -19,7 +19,7 @@
       .portal-viewport-wrap{min-height:100vh;min-height:100dvh;width:100%;display:flex;flex-direction:column}
       .presentation-slider{flex:1;width:100%;min-height:280px}
     </style>
-    <link rel="stylesheet" href="style.css?v=28">
+    <link rel="stylesheet" href="style.css?v=29">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="body-portal portal-home">
@@ -58,10 +58,10 @@
                 <img src="img/Imagen1.jpg" alt="" class="slide-img slide-img-imagen1" width="1920" height="1080" decoding="async" fetchpriority="high">
             </div>
             <div class="slide">
-                <img src="img/lunespatriotico.jpg" alt="" class="slide-img slide-img-lunes" width="1920" height="1080" loading="lazy" decoding="async">
+                <img src="img/lunespatriotico.jpg" alt="" class="slide-img slide-img-lunes" width="1920" height="1080" decoding="async">
             </div>
             <div class="slide">
-                <img src="img/saludo.jpg" alt="" class="slide-img slide-img-saludo" width="1920" height="1080" loading="lazy" decoding="async">
+                <img src="img/saludo.jpg" alt="" class="slide-img slide-img-saludo" width="1920" height="1080" decoding="async">
             </div>
         </div>
 
@@ -153,15 +153,28 @@
         var current = 0;
         var timer;
 
+        var FADE_MS = 1000;
+
         function changeSlide(index) {
             if (!slides.length) return;
-            current = index;
-            for (var i = 0; i < slides.length; i++) {
-                slides[i].classList.remove('active');
-                if (dots[i]) dots[i].classList.remove('active');
-            }
-            slides[index].classList.add('active');
+            if (index === current) return;
+            var prev = slides[current];
+            var next = slides[index];
+
+            slides.forEach(function(s) {
+                s.classList.remove('active', 'was-active');
+            });
+            dots.forEach(function(d) { d.classList.remove('active'); });
+
+            if (prev && prev !== next) prev.classList.add('was-active');
+            next.classList.add('active');
             if (dots[index]) dots[index].classList.add('active');
+
+            setTimeout(function() {
+                slides.forEach(function(s) { s.classList.remove('was-active'); });
+            }, FADE_MS + 50);
+
+            current = index;
         }
 
         function next() {

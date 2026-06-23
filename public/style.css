@@ -216,20 +216,28 @@ img {
     height: 100%;
     min-width: 100%;
     min-height: 100%;
-    transform: scale(1);
+    transform: scale(1.08);
+    transform-origin: center center;
+    backface-visibility: hidden;
 }
 
-.portal-home .slide:not(.active) .slide-img {
-    transform: scale(1);
+.portal-home .slide:not(.active):not(.was-active) .slide-img {
+    animation: none;
+    transform: scale(1.08);
 }
 
 .portal-home .slide.active .slide-img {
     animation: slideZoomHome 8s ease-out forwards;
 }
 
+.portal-home .slide.was-active .slide-img {
+    animation: none;
+    transform: scale(1.08);
+}
+
 @keyframes slideZoomHome {
-    from { transform: scale(1); }
-    to   { transform: scale(1.06); }
+    from { transform: scale(1.08); }
+    to   { transform: scale(1.14); }
 }
 
 .portal-home-content {
@@ -339,14 +347,21 @@ img {
     flex-shrink: 0;
 }
 
-.slides { position: absolute; inset: 0; }
+.slides {
+    position: absolute;
+    inset: 0;
+    background-color: #0a2818;
+}
 
 .slide {
     position: absolute;
     inset: 0;
     opacity: 0;
+    z-index: 0;
     overflow: hidden;
-    transition: opacity 1.2s ease-in-out;
+    transition: opacity 1s ease-in-out;
+    pointer-events: none;
+    background-color: #0a2818;
 }
 
 .slide-img {
@@ -355,22 +370,29 @@ img {
     object-fit: cover;
     object-position: center center;
     display: block;
-    transform: scale(1.02);
+    transform: scale(1.08);
     transform-origin: center center;
+    backface-visibility: hidden;
+    will-change: transform;
 }
 
-.slide:not(.active) .slide-img {
+.slide:not(.active):not(.was-active) .slide-img {
     animation: none;
-    transform: scale(1.02);
+    transform: scale(1.08);
 }
 
 .slide.active .slide-img {
     animation: slideZoom 7s ease-out forwards;
 }
 
+.slide.was-active .slide-img {
+    animation: none;
+    transform: scale(1.08);
+}
+
 @keyframes slideZoom {
-    from { transform: scale(1.02); }
-    to   { transform: scale(1.1); }
+    from { transform: scale(1.08); }
+    to   { transform: scale(1.14); }
 }
 
 .slide-img-imagen1 { object-position: center 40%; }
@@ -390,7 +412,15 @@ img {
     pointer-events: none;
 }
 
-.slide.active { opacity: 1 !important; z-index: 1; }
+.slide.active {
+    opacity: 1 !important;
+    z-index: 2;
+}
+
+.slide.was-active {
+    opacity: 1 !important;
+    z-index: 1;
+}
 
 .hero-overlay {
     position: absolute;
