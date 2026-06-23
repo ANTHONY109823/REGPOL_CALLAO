@@ -1,4 +1,4 @@
-/* portal.js — Datos y renderizado compartido del portal REGPOL Callao */
+/* portal.js \u2014 Datos y renderizado compartido del portal REGPOL Callao */
 (function() {
   if (window.REGPOL_API_BASE != null) return;
   var h = location.hostname;
@@ -15,13 +15,13 @@ var REGPOL_WEB_APP = 'https://script.google.com/macros/s/AKfycbzHHCUjXQVNtgVTERG
 var REGPOL_SITE_KEY = 'regpolSiteData_v1';
 
 var PORTAL_MARCA = {
-  titulo: 'REGIÓN POLICIAL CALLAO',
+  titulo: 'REGI\u00d3N POLICIAL CALLAO',
   subtitulo: 'UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES'
 };
 
 var PORTAL_HERO = {
-  titulo: 'REGIÓN POLICIAL CALLAO',
-  lema: 'AL SERVICIO DE LA CIUDADANÍA',
+  titulo: 'REGI\u00d3N POLICIAL CALLAO',
+  lema: 'AL SERVICIO DE LA CIUDADAN\u00cdA',
   eslogan: 'Compromiso, Honor y Servicio en la Provincia Constitucional'
 };
 
@@ -31,7 +31,7 @@ var REGPOL_NAV_FALLBACK = [
   { id: 'convenios', href: 'convenios.html',         label: 'CONVENIOS' },
   { id: 'cursos',    href: 'cursos.html',            label: 'CURSOS' },
   { id: 'bienestar', href: 'evaluacion.html',        label: 'BIENESTAR',          icon: 'fa-heart' },
-  { id: 'resena',    href: 'resena-historica.html',  label: 'RESEÑA HISTÓRICA' },
+  { id: 'resena',    href: 'resena-historica.html',  label: 'RESE\u00d1A HIST\u00d3RICA' },
   { id: 'labor',     href: 'nuestra-labor.html',     label: 'NUESTRA LABOR' },
   { id: 'unidades',  href: 'unidades.html',          label: 'NUESTRAS UNIDADES', icon: 'fa-map-marker-alt' }
 ];
@@ -62,7 +62,7 @@ function htmlTarjetaPortalItem(item) {
   var colorEstado = item.estado === 'DISPONIBLE' ? 'green'
     : item.estado === 'CERRADO' ? '#c0392b' : '#856404';
   var inscBadge = item.inscripciones_abiertas
-    ? '<span style="display:inline-block;background:#d4edda;color:#1a7a3a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:4px;">✓ Inscripciones abiertas</span>'
+    ? '<span style="display:inline-block;background:#d4edda;color:#1a7a3a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:4px;">\u2713 Inscripciones abiertas</span>'
     : '';
   var tipo = item.tipo || 'convenio';
   var icono = item.icono || (tipo === 'curso' ? 'fa-graduation-cap' : 'fa-handshake');
@@ -457,107 +457,6 @@ function cerrarNovedadModal() {
   if (modal) { modal.classList.remove('visible'); document.body.style.overflow = ''; }
 }
 
-function renderResenaHistorica(data, containerId) {
-  var el = document.getElementById(containerId);
-  var sec = data.resenaHistorica;
-  if (!el || !sec) return;
-  var html = '<article class="institucional-page institucional-resena">';
-  html += '<div class="institucional-cabecera">';
-  html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
-  html += '</div>';
-  html += '<div class="institucional-cuerpo">';
-  (sec.parrafos || []).forEach(function(p, i) {
-    html += '<div class="institucional-bloque">' +
-      '<span class="institucional-num" aria-hidden="true">' + String(i + 1).padStart(2, '0') + '</span>' +
-      '<p>' + escHtml(p) + '</p></div>';
-  });
-  html += '</div></article>';
-  el.innerHTML = html;
-}
-
-function renderNuestraLabor(data, containerId) {
-  var el = document.getElementById(containerId);
-  var sec = data.nuestraLabor;
-  if (!el || !sec) return;
-  var html = '<article class="institucional-page institucional-labor">';
-  html += '<div class="institucional-cabecera">';
-  html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
-  html += '</div>';
-  html += '<div class="pilares-grid-v2">';
-  (sec.pilares || []).forEach(function(p) {
-    html += '<div class="card-pilar-v2">' +
-      '<div class="card-pilar-v2-icono"><i class="fas ' + escHtml(p.icono || 'fa-star') + '"></i></div>' +
-      '<h4>' + escHtml(p.titulo) + '</h4>' +
-      '<p>' + escHtml(p.texto) + '</p></div>';
-  });
-  html += '</div></article>';
-  el.innerHTML = html;
-}
-
-var _novedadesCache = [];
-
-function renderNovedades(data, containerId, limite) {
-  var el = document.getElementById(containerId);
-  if (!el) return;
-  var items = (data.novedades || []).slice();
-  _novedadesCache = items;
-  if (limite) items = items.slice(0, limite);
-  if (!items.length) { el.innerHTML = '<p class="texto-vacio">Sin novedades publicadas.</p>'; return; }
-  if (limite) {
-    el.innerHTML = '<div class="novedades-portada-lista">' + items.map(function(n) {
-      return '<article class="noticia-card" onclick="abrirNovedadDetalle('' + escHtml(n.id) + ''')" style="cursor:pointer;">'
-        + '<div class="noticia-contenido">'
-        + '<div class="noticia-meta"><span class="noticia-cat">' + escHtml(n.categoria) + '</span>'
-        + '<span class="noticia-fecha">' + escHtml(n.fecha) + '</span></div>'
-        + '<h3>' + escHtml(n.titulo) + '</h3>'
-        + '<p>' + escHtml(n.resumen) + '</p>'
-        + '</div></article>';
-    }).join('') + '</div>';
-  } else {
-    el.innerHTML = '<div class="novedades-grid">' + items.map(function(n) {
-      var bgStyle = n.imagen
-        ? 'background-image:url("' + n.imagen + '");background-size:cover;background-position:center;'
-        : 'background:linear-gradient(135deg,#002d24,#004d3d);';
-      return '<article class="nov-card" onclick="abrirNovedadDetalle('' + escHtml(n.id) + ''')">'
-        + '<div class="nov-card-img" style="' + bgStyle + '">'
-        + '<div class="nov-card-img-overlay"></div>'
-        + '<span class="nov-card-cat">' + escHtml(n.categoria) + '</span>'
-        + '</div>'
-        + '<div class="nov-card-body">'
-        + '<div class="nov-card-fecha"><i class="fas fa-calendar-alt"></i> ' + escHtml(n.fecha) + '</div>'
-        + '<h3 class="nov-card-titulo">' + escHtml(n.titulo) + '</h3>'
-        + '<p class="nov-card-resumen">' + escHtml(n.resumen) + '</p>'
-        + '<span class="nov-card-link"><i class="fas fa-arrow-right"></i> Leer más</span>'
-        + '</div></article>';
-    }).join('') + '</div>';
-  }
-}
-
-function abrirNovedadDetalle(id) {
-  var n = _novedadesCache.filter(function(x){ return String(x.id) === String(id); })[0];
-  if (!n) return;
-  var inner = document.getElementById('modal-nov-inner');
-  if (!inner) return;
-  var heroHtml = n.imagen
-    ? '<div class="modal-nov-hero"><img src="' + escHtml(n.imagen) + '" alt="' + escHtml(n.titulo) + '"/></div>'
-    : '';
-  inner.innerHTML = heroHtml
-    + '<div class="modal-nov-header">'
-    + '<span class="noticia-cat">' + escHtml(n.categoria) + '</span>'
-    + '<span class="modal-nov-fecha">' + escHtml(n.fecha) + '</span>'
-    + '</div>'
-    + '<h2 class="modal-nov-titulo">' + escHtml(n.titulo) + '</h2>'
-    + '<div class="modal-nov-cuerpo"><p>' + escHtml(n.contenido || n.resumen) + '</p></div>';
-  var modal = document.getElementById('modal-novedad');
-  if (modal) { modal.classList.add('visible'); document.body.style.overflow = 'hidden'; }
-}
-
-function cerrarNovedadModal() {
-  var modal = document.getElementById('modal-novedad');
-  if (modal) { modal.classList.remove('visible'); document.body.style.overflow = ''; }
-}
-
-
 function actualizarCarrusel(data) {
   var slides = data.carrusel || [];
   var heroT  = data.heroTexto || {};
@@ -599,7 +498,7 @@ function actualizarCarrusel(data) {
 
 function actualizarFechaPortal(data) {
   var el = document.getElementById('fecha-actualizacion-portal');
-  if (el && data.actualizacion) el.textContent = 'ÚLTIMA ACTUALIZACIÓN: ' + data.actualizacion;
+  if (el && data.actualizacion) el.textContent = '\u00daLTIMA ACTUALIZACI\u00d3N: ' + data.actualizacion;
 }
 
 function initPortalPagina(config) {
@@ -619,7 +518,7 @@ function renderUnidadesPublico(data) {
   var msg  = document.getElementById('msg-cargando');
   if (!cont || !msg) return;
   if (!data || !data.ok || !data.divisiones || !data.divisiones.length) {
-    msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> No se pudo cargar la información de las unidades.';
+    msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> No se pudo cargar la informaci\u00f3n de las unidades.';
     return;
   }
   msg.style.display = 'none';
@@ -630,10 +529,10 @@ function renderUnidadesPublico(data) {
     div.unidades.forEach(function(u) {
       var dirHtml = u.direccion
         ? '<div class="unidad-dato"><i class="fas fa-map-marker-alt"></i><span>' + escHtml(u.direccion) + '</span></div>'
-        : '<div class="unidad-dato unidad-sin-dato"><i class="fas fa-map-marker-alt"></i><span>Dirección no disponible</span></div>';
+        : '<div class="unidad-dato unidad-sin-dato"><i class="fas fa-map-marker-alt"></i><span>Direcci\u00f3n no disponible</span></div>';
       var telHtml = u.telefono
         ? '<div class="unidad-dato"><i class="fas fa-phone"></i><span><a href="tel:' + escHtml(u.telefono) + '" style="color:inherit;text-decoration:none;">' + escHtml(u.telefono) + '</a></span></div>'
-        : '<div class="unidad-dato unidad-sin-dato"><i class="fas fa-phone"></i><span>Teléfono no disponible</span></div>';
+        : '<div class="unidad-dato unidad-sin-dato"><i class="fas fa-phone"></i><span>Tel\u00e9fono no disponible</span></div>';
       html += '<div class="unidad-card"><h4>' + escHtml(u.nombre) + '</h4>' + dirHtml + telHtml + '</div>';
     });
     html += '</div></div>';
