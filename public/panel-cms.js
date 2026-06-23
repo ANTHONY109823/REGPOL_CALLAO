@@ -32,8 +32,8 @@ function initCMS() {
     if (!cmsDataActual.cursos)    cmsDataActual.cursos    = [];
     if (!cmsDataActual.heroTexto) cmsDataActual.heroTexto = {
       titulo:    'REGIÓN POLICIAL CALLAO',
-      subtitulo: 'Compromiso, Honor y Servicio en la Provincia Constitucional',
-      parrafo:   ''
+      subtitulo: 'AL SERVICIO DE LA CIUDADANÍA',
+      parrafo:   'Compromiso, Honor y Servicio en la Provincia Constitucional'
     };
     poblarFormulariosCMS();
     renderListasCMS();
@@ -120,9 +120,9 @@ function renderEditorCarrusel() {
     + '<strong style="color:#004d3d;font-size:13px;display:block;margin-bottom:10px;"><i class="fas fa-heading"></i> Texto del banner central (solo inicio)</strong>'
     + '<div class="cms-modal-campo"><label class="cms-label">Título principal</label>'
     + '<input type="text" id="cms-hero-titulo" class="cms-input" value="' + escHtml(heroT.titulo || '') + '"/></div>'
-    + '<div class="cms-modal-campo"><label class="cms-label">Subtítulo</label>'
+    + '<div class="cms-modal-campo"><label class="cms-label">Lema (línea 2)</label>'
     + '<input type="text" id="cms-hero-subtitulo" class="cms-input" value="' + escHtml(heroT.subtitulo || '') + '"/></div>'
-    + '<div class="cms-modal-campo"><label class="cms-label">Párrafo descriptivo</label>'
+    + '<div class="cms-modal-campo"><label class="cms-label">Eslogan (línea 3)</label>'
     + '<textarea id="cms-hero-parrafo" class="cms-textarea" rows="2">' + safeTextareaContent(heroT.parrafo) + '</textarea></div>'
     + '<button class="btn btn-v" onclick="guardarHeroTexto()"><i class="fas fa-save"></i> Guardar textos del hero</button>';
 

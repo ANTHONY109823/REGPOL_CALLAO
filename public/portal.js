@@ -21,7 +21,8 @@ var PORTAL_MARCA = {
 
 var PORTAL_HERO = {
   titulo: 'REGIÓN POLICIAL CALLAO',
-  subtitulo: 'Compromiso, Honor y Servicio en la Provincia Constitucional'
+  lema: 'AL SERVICIO DE LA CIUDADANÍA',
+  eslogan: 'Compromiso, Honor y Servicio en la Provincia Constitucional'
 };
 
 var REGPOL_NAV_FALLBACK = [
@@ -244,16 +245,26 @@ function marcarNavActivo(activeId) {
 
 function normalizarHeroTexto(heroT) {
   heroT = heroT || {};
-  var subtitulo = String(heroT.subtitulo || '').trim();
-  var titulo = String(heroT.titulo || '').trim();
-  if (!titulo) titulo = PORTAL_HERO.titulo;
-  if (!subtitulo
-    || subtitulo === PORTAL_MARCA.subtitulo
-    || subtitulo === 'UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES'
-    || subtitulo === 'AL SERVICIO DE LA CIUDADANÍA') {
-    subtitulo = PORTAL_HERO.subtitulo;
+  var titulo = (heroT.titulo || PORTAL_HERO.titulo).trim();
+  var lema = (heroT.lema || '').trim();
+  var subtitulo = (heroT.subtitulo || '').trim();
+  var eslogan = (heroT.eslogan || heroT.parrafo || '').trim();
+
+  if (!lema) {
+    if (subtitulo === PORTAL_HERO.eslogan || subtitulo === 'Compromiso, Honor y Servicio en la Provincia Constitucional') {
+      eslogan = eslogan || subtitulo;
+      lema = PORTAL_HERO.lema;
+    } else if (subtitulo === PORTAL_MARCA.subtitulo || subtitulo.indexOf('TECNOLOG') !== -1) {
+      lema = PORTAL_HERO.lema;
+      eslogan = eslogan || PORTAL_HERO.eslogan;
+    } else if (subtitulo) {
+      lema = subtitulo;
+    } else {
+      lema = PORTAL_HERO.lema;
+    }
   }
-  return { titulo: titulo, subtitulo: subtitulo };
+  if (!eslogan) eslogan = PORTAL_HERO.eslogan;
+  return { titulo: titulo, lema: lema, eslogan: eslogan };
 }
 
 function aplicarEncabezadoMarca() {
@@ -267,11 +278,14 @@ function aplicarEncabezadoMarca() {
 
 function aplicarHeroMarca(heroT) {
   var hero = normalizarHeroTexto(heroT);
-  document.querySelectorAll('.hero-overlay .portal-eslogan').forEach(function(el) {
+  document.querySelectorAll('.hero-overlay .portal-hero-titulo').forEach(function(el) {
     el.textContent = hero.titulo;
   });
-  document.querySelectorAll('.hero-overlay .portal-subtitulo').forEach(function(el) {
-    el.textContent = hero.subtitulo;
+  document.querySelectorAll('.hero-overlay .portal-hero-lema').forEach(function(el) {
+    el.textContent = hero.lema;
+  });
+  document.querySelectorAll('.hero-overlay .portal-hero-eslogan').forEach(function(el) {
+    el.textContent = hero.eslogan;
   });
 }
 
@@ -401,7 +415,7 @@ function actualizarCarrusel(data) {
   var slider = document.querySelector('.presentation-slider');
   if (!slider) return;
 
-  aplicarHeroMarca(heroT.titulo || heroT.subtitulo ? heroT : null);
+  aplicarHeroMarca(heroT);
 
   if (!slides.length) return;
 
