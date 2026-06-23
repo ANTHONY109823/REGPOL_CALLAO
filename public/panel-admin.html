@@ -282,6 +282,12 @@
           <div class="sb-item" data-page="items-conv" data-perm-convenios onclick="ir('items',this);cargarItems('convenio')">
             <i class="fas fa-handshake"></i> Convenios
           </div>
+          <div class="sb-item" data-page="sorteos" data-perm-cursos onclick="ir('sorteos',this)">
+            <i class="fas fa-trophy"></i> Sorteos / Resultados
+          </div>
+          <div class="sb-item" data-page="sorteos" data-perm-convenios onclick="ir('sorteos',this)" style="display:none;">
+            <i class="fas fa-trophy"></i> Sorteos / Resultados
+          </div>
         </div>
       </div>
     </div>
@@ -615,6 +621,19 @@
       </div>
     </div>
 
+    <!-- SORTEOS / RESULTADOS -->
+    <div id="page-sorteos" class="page">
+      <div class="card">
+        <h3><i class="fas fa-trophy" style="color:#c8a94a;"></i> Sorteos y Publicación de Resultados</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+          <button class="btn btn-o" onclick="abrirModalSorteo(null,'proximo')"><i class="fas fa-bullhorn"></i> Nuevo flyer / Próximo sorteo</button>
+          <button class="btn btn-v" onclick="abrirModalSorteo(null,'resultado')"><i class="fas fa-trophy"></i> Publicar resultados</button>
+        </div>
+        <div id="sorteos-alerta" class="alerta" style="display:none;"></div>
+        <div id="sorteos-tabla"><p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i></p></div>
+      </div>
+    </div>
+
     <!-- MODAL CMS -->
     <div id="cms-modal" class="cms-modal" role="dialog" aria-modal="true" aria-hidden="true">
       <div class="cms-modal-backdrop" onclick="cerrarCmsModal()"></div>
@@ -725,9 +744,83 @@
       </div>
     </div>
 
+    <!-- PLANTILLA DESCARGABLE -->
+    <hr style="margin:16px 0;border:none;border-top:1.5px solid #e0e8e0;"/>
+    <div style="background:#fffdf5;border:2px dashed #c8a94a;border-radius:9px;padding:14px;">
+      <div style="font-size:13px;font-weight:800;color:#c8a94a;margin-bottom:8px;display:flex;align-items:center;gap:7px;">
+        <i class="fas fa-file-pdf"></i> PLANTILLA / FORMULARIO DESCARGABLE
+      </div>
+      <p style="font-size:12px;color:#666;margin-bottom:10px;">
+        Suba el formulario modelo (PDF) que los usuarios deberán descargar, completar, firmar y adjuntar al inscribirse.<br/>
+        <strong style="color:#c0392b;">Máx. 10 MB. Solo PDF.</strong>
+      </p>
+      <div id="mi-plantilla-actual" style="display:none;margin-bottom:8px;background:#f0f7f0;border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-file-pdf" style="color:#e74c3c;font-size:18px;"></i>
+        <span id="mi-plantilla-nombre" style="font-size:12px;font-weight:600;flex:1;"></span>
+        <button type="button" class="btn-mini btn-mini-danger" onclick="quitarPlantillaItem()"><i class="fas fa-trash"></i> Quitar</button>
+      </div>
+      <label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:4px;">
+        <span id="mi-plantilla-label">Seleccionar plantilla PDF</span>
+      </label>
+      <input type="file" id="mi-plantilla-file" accept="application/pdf" onchange="cargarPlantillaItem(this)"
+             style="width:100%;padding:7px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;"/>
+      <input type="hidden" id="mi-plantilla-data"/>
+    </div>
+
     <div class="modal-footer" style="margin-top:16px;">
       <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-item')">Cancelar</button>
       <button class="btn btn-v" onclick="guardarItem()"><i class="fas fa-save"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Sorteo -->
+<div id="modal-sorteo" class="modal">
+  <div class="modal-box" style="width:620px;max-height:90vh;overflow-y:auto;">
+    <h3><i class="fas fa-trophy"></i> <span id="ms-titulo">Nuevo sorteo</span></h3>
+    <input type="hidden" id="ms-id"/>
+    <input type="hidden" id="ms-tipo"/>
+
+    <label>Título *</label>
+    <input type="text" id="ms-titulo-val" placeholder="Ej: SORTEO PLAN CELADOR — JULIO 2026" maxlength="200"/>
+
+    <label>Descripción / Detalle</label>
+    <textarea id="ms-descripcion" rows="3" placeholder="Convocatoria para servicio policial voluntario remunerado..."></textarea>
+
+    <label>Fecha del sorteo / publicación</label>
+    <input type="text" id="ms-fecha" placeholder="Ej: 15 DE JULIO 2026, 10:00 HRS"/>
+
+    <label>Imagen de portada del flyer (JPG/PNG — máx 1.5 MB)</label>
+    <input type="file" id="ms-img-file" accept="image/jpeg,image/png,image/webp" onchange="previewImgSorteo(this)"/>
+    <img id="ms-img-preview" src="" style="max-width:100%;max-height:140px;border-radius:8px;margin:6px 0;display:none;" alt=""/>
+    <input type="hidden" id="ms-img-data"/>
+
+    <div style="display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px;background:#f0f7f0;border-radius:7px;">
+      <input type="checkbox" id="ms-publicado" checked style="width:16px;height:16px;accent-color:#004d3d;"/>
+      <label for="ms-publicado" style="margin:0;font-size:13px;color:#555;cursor:pointer;">Publicado (visible en el portal)</label>
+    </div>
+
+    <!-- Sección resultados (solo tipo resultado) -->
+    <div id="ms-resultados-section" style="display:none;">
+      <hr style="margin:14px 0;border:none;border-top:1.5px solid #e0e8e0;"/>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <strong style="color:#004d3d;font-size:13px;"><i class="fas fa-users"></i> Lista de seleccionados</strong>
+        <div style="display:flex;gap:6px;">
+          <select id="ms-import-item" style="padding:5px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;min-width:180px;">
+            <option value="">— Importar desde item —</option>
+          </select>
+          <button class="btn-mini" onclick="importarInscritos()"><i class="fas fa-download"></i> Importar aceptados</button>
+          <button class="btn-mini" onclick="agregarFilaResultado()"><i class="fas fa-plus"></i> Agregar</button>
+        </div>
+      </div>
+      <div id="ms-resultados-lista" style="max-height:320px;overflow-y:auto;">
+        <p style="color:#bbb;font-size:12px;text-align:center;padding:14px;">Sin resultados. Importe desde un ítem o agregue manualmente.</p>
+      </div>
+    </div>
+
+    <div class="modal-footer" style="margin-top:16px;">
+      <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-sorteo')">Cancelar</button>
+      <button class="btn btn-v" onclick="guardarSorteo()"><i class="fas fa-save"></i> Guardar y publicar</button>
     </div>
   </div>
 </div>
@@ -955,6 +1048,7 @@ function ir(page, el){
   if(page==='dashboard')    cargarStats();
   if(page==='divisiones')   cargarDivisiones();
   if(page==='items')        cargarItems();
+  if(page==='sorteos')      cargarSorteos();
 }
 
 function irCMS(tab, el){
@@ -1512,6 +1606,242 @@ function cargarFiltrosDescarga(){
   });
 }
 
+// ── SORTEOS Y RESULTADOS ──────────────────────────────────────────────────────
+var SORTEOS_CACHE = [], RESULTADOS_EDIT = [];
+
+function cargarSorteos(){
+  document.getElementById('sorteos-tabla').innerHTML='<p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>';
+  fetch(API+'/admin/sorteos',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){ mostrarAlertaSorteos('Error: '+(d.error||''),'error'); return; }
+    SORTEOS_CACHE = d.sorteos||[];
+    renderTablaSorteos(SORTEOS_CACHE);
+  });
+}
+
+function renderTablaSorteos(list){
+  var el = document.getElementById('sorteos-tabla');
+  if(!list.length){
+    el.innerHTML='<p style="color:#bbb;text-align:center;padding:24px;">No hay sorteos. Cree uno con los botones de arriba.</p>';
+    return;
+  }
+  el.innerHTML = '<table class="t"><thead><tr><th>Tipo</th><th>Título</th><th>Fecha</th><th>Publicado</th><th>Seleccionados</th><th>Acciones</th></tr></thead><tbody>'
+    + list.map(function(s){
+        var tipoBadge = s.tipo==='proximo'
+          ? '<span class="badge" style="background:#fff3cd;color:#856404;">📢 PRÓXIMO</span>'
+          : '<span class="badge ok">🏆 RESULTADO</span>';
+        return '<tr>'
+          +'<td>'+tipoBadge+'</td>'
+          +'<td style="font-weight:600;max-width:220px;">'+escHtml(s.titulo)+'</td>'
+          +'<td style="font-size:11.5px;">'+escHtml(s.fecha_sorteo||'—')+'</td>'
+          +'<td>'+(s.publicado?'<span class="badge ok">✓ Sí</span>':'<span class="badge pend">No</span>')+'</td>'
+          +'<td style="text-align:center;font-weight:700;color:#004d3d;">'+(s.resultados&&s.resultados.length?s.resultados.length:'—')+'</td>'
+          +'<td><div style="display:flex;gap:5px;">'
+          +'<button class="btn-mini" onclick="abrirModalSorteo('+s.id+')"><i class="fas fa-edit"></i> Editar</button>'
+          +'<button class="btn-mini btn-mini-danger" onclick="eliminarSorteo('+s.id+')"><i class="fas fa-trash"></i></button>'
+          +'</div></td>'
+          +'</tr>';
+      }).join('')
+    +'</tbody></table>';
+}
+
+function mostrarAlertaSorteos(texto,tipo){
+  var el=document.getElementById('sorteos-alerta');
+  if(!el)return;
+  el.textContent=texto; el.style.display='block';
+  el.className='alerta '+(tipo==='ok'?'alerta-exito':'alerta-error')+' visible';
+  setTimeout(function(){el.style.display='none';},5000);
+}
+
+function abrirModalSorteo(id, tipoForzado){
+  RESULTADOS_EDIT=[];
+  document.getElementById('ms-id').value='';
+  document.getElementById('ms-tipo').value=tipoForzado||'proximo';
+  document.getElementById('ms-titulo-val').value='';
+  document.getElementById('ms-descripcion').value='';
+  document.getElementById('ms-fecha').value='';
+  document.getElementById('ms-img-preview').style.display='none';
+  document.getElementById('ms-img-preview').src='';
+  document.getElementById('ms-img-data').value='';
+  document.getElementById('ms-img-file').value='';
+  document.getElementById('ms-publicado').checked=true;
+  document.getElementById('ms-titulo').textContent=tipoForzado==='resultado'?'Publicar resultados':'Nuevo flyer / Próximo sorteo';
+  document.getElementById('ms-resultados-section').style.display=tipoForzado==='resultado'?'':'none';
+
+  // Cargar items en select de importación
+  cargarSelectItems();
+
+  if(id){
+    var s=SORTEOS_CACHE.find(function(x){return x.id===id;});
+    if(s){
+      document.getElementById('ms-id').value=s.id;
+      document.getElementById('ms-tipo').value=s.tipo;
+      document.getElementById('ms-titulo-val').value=s.titulo||'';
+      document.getElementById('ms-descripcion').value=s.descripcion||'';
+      document.getElementById('ms-fecha').value=s.fecha_sorteo||'';
+      document.getElementById('ms-publicado').checked=!!s.publicado;
+      document.getElementById('ms-titulo').textContent='Editar: '+s.titulo;
+      if(s.imagen){
+        document.getElementById('ms-img-preview').src=s.imagen;
+        document.getElementById('ms-img-preview').style.display='block';
+        document.getElementById('ms-img-data').value=s.imagen;
+      }
+      if(s.tipo==='resultado'){
+        document.getElementById('ms-resultados-section').style.display='';
+        RESULTADOS_EDIT=(s.resultados||[]).map(function(r){return Object.assign({},r);});
+        renderFilasResultado();
+      }
+    }
+  }
+  document.getElementById('modal-sorteo').classList.add('open');
+}
+
+function previewImgSorteo(input){
+  var file=input.files&&input.files[0];
+  if(!file)return;
+  if(file.size>1.5*1024*1024){alert('La imagen no debe superar 1.5 MB.');input.value='';return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    document.getElementById('ms-img-data').value=e.target.result;
+    var prev=document.getElementById('ms-img-preview');
+    prev.src=e.target.result; prev.style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function cargarSelectItems(){
+  var sel=document.getElementById('ms-import-item');
+  sel.innerHTML='<option value="">— Importar desde item —</option>';
+  fetch(API+'/admin/items',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+    (d.items||[]).forEach(function(i){
+      var o=document.createElement('option');
+      o.value=i.id;
+      o.textContent='['+i.tipo.toUpperCase()+'] '+i.titulo;
+      sel.appendChild(o);
+    });
+  });
+}
+
+function importarInscritos(){
+  var itemId=document.getElementById('ms-import-item').value;
+  if(!itemId){alert('Seleccione un ítem para importar los aceptados.');return;}
+  var sorteoId=val('ms-id');
+  if(!sorteoId){alert('Guarde primero el sorteo antes de importar.');return;}
+  fetch(API+'/admin/sorteos/'+sorteoId+'/importar-inscritos',{
+    method:'POST',headers:hdr(),body:JSON.stringify({item_id:parseInt(itemId)})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){alert('Error: '+(d.error||''));return;}
+    alert('Se importaron '+d.importados+' seleccionados.');
+    // Recargar sorteo para actualizar resultados
+    fetch(API+'/admin/sorteos',{headers:hdr()}).then(function(r){return r.json();}).then(function(dd){
+      SORTEOS_CACHE=dd.sorteos||[];
+      var s=SORTEOS_CACHE.find(function(x){return x.id==sorteoId;});
+      if(s){RESULTADOS_EDIT=(s.resultados||[]).slice();renderFilasResultado();}
+    });
+  });
+}
+
+function agregarFilaResultado(){
+  RESULTADOS_EDIT.push({cip:'',nombres:'',unidad:'',cargo:''});
+  renderFilasResultado();
+}
+
+function renderFilasResultado(){
+  var el=document.getElementById('ms-resultados-lista');
+  if(!RESULTADOS_EDIT.length){
+    el.innerHTML='<p style="color:#bbb;font-size:12px;text-align:center;padding:14px;">Sin resultados. Importe desde un ítem o agregue manualmente.</p>';
+    return;
+  }
+  el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+    +'<thead><tr style="background:#004d3d;color:#fff;">'
+    +'<th style="padding:6px 8px;">#</th><th style="padding:6px 8px;">CIP</th>'
+    +'<th style="padding:6px 8px;">Nombres</th><th style="padding:6px 8px;">Unidad</th>'
+    +'<th style="padding:6px 8px;">Cargo</th><th style="padding:6px 4px;"></th>'
+    +'</tr></thead><tbody>'
+    +RESULTADOS_EDIT.map(function(r,i){
+      return '<tr style="border-bottom:1px solid #eee;">'
+        +'<td style="padding:4px 8px;font-weight:700;color:#c8a94a;">'+(i+1)+'</td>'
+        +'<td style="padding:4px 4px;"><input style="width:80px;padding:3px 5px;border:1px solid #ccc;border-radius:4px;font-size:11.5px;" value="'+escHtml(r.cip||'')+'" oninput="RESULTADOS_EDIT['+i+'].cip=this.value"/></td>'
+        +'<td style="padding:4px 4px;"><input style="width:160px;padding:3px 5px;border:1px solid #ccc;border-radius:4px;font-size:11.5px;" value="'+escHtml(r.nombres||'')+'" oninput="RESULTADOS_EDIT['+i+'].nombres=this.value" placeholder="APELLIDOS Y NOMBRES"/></td>'
+        +'<td style="padding:4px 4px;"><input style="width:120px;padding:3px 5px;border:1px solid #ccc;border-radius:4px;font-size:11.5px;" value="'+escHtml(r.unidad||'')+'" oninput="RESULTADOS_EDIT['+i+'].unidad=this.value"/></td>'
+        +'<td style="padding:4px 4px;"><input style="width:80px;padding:3px 5px;border:1px solid #ccc;border-radius:4px;font-size:11.5px;" value="'+escHtml(r.cargo||'')+'" oninput="RESULTADOS_EDIT['+i+'].cargo=this.value"/></td>'
+        +'<td style="padding:4px 4px;"><button class="btn-mini btn-mini-danger" onclick="eliminarFilaResultado('+i+')">✕</button></td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table>';
+}
+
+function eliminarFilaResultado(i){
+  RESULTADOS_EDIT.splice(i,1);
+  renderFilasResultado();
+}
+
+function guardarSorteo(){
+  var id=val('ms-id'), tipo=val('ms-tipo');
+  var titulo=val('ms-titulo-val').trim();
+  if(!titulo){alert('El título es obligatorio.');return;}
+  var body={
+    tipo:tipo, titulo:titulo.toUpperCase(),
+    descripcion:val('ms-descripcion'),
+    fecha_sorteo:val('ms-fecha'),
+    imagen:document.getElementById('ms-img-data').value||'',
+    publicado:document.getElementById('ms-publicado').checked,
+    orden:0
+  };
+  var url=id?API+'/admin/sorteos/'+id:API+'/admin/sorteos';
+  var method=id?'PUT':'POST';
+  fetch(url,{method:method,headers:hdr(),body:JSON.stringify(body)})
+    .then(function(r){return r.json();}).then(function(d){
+      if(!d.ok){alert('Error: '+(d.error||''));return;}
+      var sorteoId=id||d.id;
+      // Guardar resultados si es tipo resultado
+      if(tipo==='resultado' && RESULTADOS_EDIT.length){
+        return fetch(API+'/admin/sorteos/'+sorteoId+'/resultados',{
+          method:'POST',headers:hdr(),
+          body:JSON.stringify({resultados:RESULTADOS_EDIT})
+        }).then(function(r){return r.json();}).then(function(dr){
+          cerrarModal('modal-sorteo');
+          cargarSorteos();
+          mostrarAlertaSorteos('Sorteo guardado y resultados publicados.','ok');
+        });
+      }
+      cerrarModal('modal-sorteo');
+      cargarSorteos();
+      mostrarAlertaSorteos('Sorteo guardado correctamente.','ok');
+    });
+}
+
+function eliminarSorteo(id){
+  if(!confirm('¿Eliminar este sorteo y sus resultados?'))return;
+  fetch(API+'/admin/sorteos/'+id,{method:'DELETE',headers:hdr()})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.ok){cargarSorteos();mostrarAlertaSorteos('Sorteo eliminado.','ok');}
+      else alert('Error: '+(d.error||''));
+    });
+}
+
+// ── PLANTILLA DE ITEMS ────────────────────────────────────────────────────────
+function cargarPlantillaItem(input){
+  var file=input.files&&input.files[0];
+  if(!file)return;
+  if(file.size>10*1024*1024){alert('El PDF no debe superar 10 MB.');input.value='';return;}
+  if(file.type!=='application/pdf'){alert('Solo se aceptan archivos PDF.');input.value='';return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    document.getElementById('mi-plantilla-data').value=e.target.result;
+    document.getElementById('mi-plantilla-nombre').textContent=file.name+' ('+Math.round(file.size/1024)+' KB)';
+    document.getElementById('mi-plantilla-actual').style.display='flex';
+    document.getElementById('mi-plantilla-label').textContent='Reemplazar plantilla';
+  };
+  reader.readAsDataURL(file);
+}
+
+function quitarPlantillaItem(){
+  document.getElementById('mi-plantilla-data').value='__QUITAR__';
+  document.getElementById('mi-plantilla-file').value='';
+  document.getElementById('mi-plantilla-actual').style.display='none';
+  document.getElementById('mi-plantilla-label').textContent='Seleccionar plantilla PDF';
+}
+
 // ── GESTIÓN ITEMS (CURSOS / CONVENIOS) ────────────────────────────────────────
 var INSCRITOS_CACHE = [];
 
@@ -1637,6 +1967,17 @@ function poblarModalItem(item){
   document.getElementById('mi-visible').checked=item.visible!==false;
   document.getElementById('mi-orden').value=item.orden||0;
   document.getElementById('mi-titulo').textContent='Editar: '+item.titulo;
+  // Plantilla
+  document.getElementById('mi-plantilla-data').value='';
+  document.getElementById('mi-plantilla-file').value='';
+  if(item.plantilla_nombre){
+    document.getElementById('mi-plantilla-nombre').textContent=item.plantilla_nombre;
+    document.getElementById('mi-plantilla-actual').style.display='flex';
+    document.getElementById('mi-plantilla-label').textContent='Reemplazar plantilla';
+  } else {
+    document.getElementById('mi-plantilla-actual').style.display='none';
+    document.getElementById('mi-plantilla-label').textContent='Seleccionar plantilla PDF';
+  }
   document.getElementById('modal-item').classList.add('open');
 }
 
@@ -1668,11 +2009,23 @@ function guardarItem(){
   var method=id?'PUT':'POST';
   fetch(url,{method:method,headers:hdr(),body:JSON.stringify(body)})
     .then(function(r){return r.json();}).then(function(d){
-      if(d.ok){
-        cerrarModal('modal-item');
-        cargarItems(tipo);
-        mostrarAlertaItems((id?'Convocatoria actualizada':'Convocatoria creada')+' correctamente.','ok');
-      } else { alert('Error: '+(d.error||'')); }
+      if(!d.ok){ alert('Error: '+(d.error||'')); return; }
+      var itemId=id||d.id;
+      // Subir plantilla si hay nueva
+      var pdfData=document.getElementById('mi-plantilla-data').value;
+      if(pdfData==='__QUITAR__'){
+        return fetch(API+'/admin/items/'+itemId+'/plantilla',{
+          method:'PUT',headers:hdr(),body:JSON.stringify({plantilla_pdf:'',plantilla_nombre:''})
+        }).then(function(){cerrarModal('modal-item');cargarItems(tipo);mostrarAlertaItems('Convocatoria actualizada.','ok');});
+      } else if(pdfData){
+        var pdfNombre=(document.getElementById('mi-plantilla-file').files[0]||{}).name||'plantilla.pdf';
+        return fetch(API+'/admin/items/'+itemId+'/plantilla',{
+          method:'PUT',headers:hdr(),body:JSON.stringify({plantilla_pdf:pdfData,plantilla_nombre:pdfNombre})
+        }).then(function(){cerrarModal('modal-item');cargarItems(tipo);mostrarAlertaItems('Convocatoria y plantilla guardadas.','ok');});
+      }
+      cerrarModal('modal-item');
+      cargarItems(tipo);
+      mostrarAlertaItems((id?'Convocatoria actualizada':'Convocatoria creada')+' correctamente.','ok');
     });
 }
 
@@ -1746,7 +2099,9 @@ function renderInscritos(list){
         +'<td>'+escHtml(ins.telefono||'')+'</td>'
         +'<td><span class="badge" style="background:'+bg+';color:'+c+';">'+escHtml(ins.estado)+'</span></td>'
         +'<td style="font-size:11px;color:#888;">'+fecha+'</td>'
-        +'<td><button class="btn-mini" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i></button></td>'
+        +'<td style="white-space:nowrap;"><button class="btn-mini" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i></button>'
+        +(ins.pdf_requisitos?'<button class="btn-mini" style="background:#e74c3c;color:#fff;margin-left:3px;" title="Ver PDF de requisitos" onclick="verPdfInscripcion('+ins.id+')"><i class="fas fa-file-pdf"></i></button>':'')
+        +'</td>'
         +'</tr>';
     }).join('')
     +'</tbody></table>';
@@ -1765,6 +2120,19 @@ function abrirModalInscripcion(id){
   document.getElementById('mins-estado').value=ins.estado||'pendiente';
   document.getElementById('mins-observacion').value=ins.observacion||'';
   document.getElementById('modal-inscripcion').classList.add('open');
+}
+
+function verPdfInscripcion(id){
+  fetch(API+'/admin/inscripciones/'+id+'/pdf',{headers:hdr()})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok){alert('No hay PDF adjunto o error: '+(d.error||''));return;}
+      var byteStr=atob(d.pdf.split(',').pop());
+      var buf=new Uint8Array(byteStr.length);
+      for(var i=0;i<byteStr.length;i++) buf[i]=byteStr.charCodeAt(i);
+      var blob=new Blob([buf],{type:'application/pdf'});
+      window.open(URL.createObjectURL(blob),'_blank');
+    });
 }
 
 function guardarEstadoInscripcion(){

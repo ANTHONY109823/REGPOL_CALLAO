@@ -150,6 +150,35 @@ async function initDB() {
       fecha       TIMESTAMP DEFAULT NOW()
     );
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS observacion TEXT DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS pdf_requisitos TEXT DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS pdf_nombre VARCHAR(200) DEFAULT '';
+
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS plantilla_pdf TEXT DEFAULT '';
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS plantilla_nombre VARCHAR(200) DEFAULT '';
+
+    CREATE TABLE IF NOT EXISTS sorteos_portal (
+      id           SERIAL PRIMARY KEY,
+      tipo         VARCHAR(20) NOT NULL DEFAULT 'proximo',
+      titulo       VARCHAR(200) NOT NULL,
+      descripcion  TEXT DEFAULT '',
+      fecha_sorteo VARCHAR(100) DEFAULT '',
+      imagen       TEXT DEFAULT '',
+      item_id      INTEGER REFERENCES items_portal(id) ON DELETE SET NULL,
+      publicado    BOOLEAN DEFAULT TRUE,
+      orden        INTEGER DEFAULT 0,
+      creado       TIMESTAMP DEFAULT NOW()
+    );
+    ALTER TABLE sorteos_portal ADD COLUMN IF NOT EXISTS orden INTEGER DEFAULT 0;
+
+    CREATE TABLE IF NOT EXISTS resultados_sorteo (
+      id        SERIAL PRIMARY KEY,
+      sorteo_id INTEGER REFERENCES sorteos_portal(id) ON DELETE CASCADE,
+      cip       VARCHAR(20) DEFAULT '',
+      nombres   VARCHAR(200) NOT NULL,
+      unidad    VARCHAR(150) DEFAULT '',
+      cargo     VARCHAR(80) DEFAULT '',
+      orden     SMALLINT DEFAULT 0
+    );
   `);
 
   // Admins por defecto
@@ -1079,6 +1108,158 @@ app.delete('/admin/unidades/:id', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// ── GET /portal/sorteos — público ─────────────────────────────────────────────
+app.get('/portal/sorteos', async (req, res) => {
+  try {
+    const tipo = req.query.tipo || null;
+    let q = 'SELECT s.*, i.titulo AS item_titulo FROM sorteos_portal s LEFT JOIN items_portal i ON i.id=s.item_id WHERE s.publicado=TRUE';
+    const args = [];
+    if (tipo) { q += ' AND s.tipo=$1'; args.push(tipo); }
+    q += ' ORDER BY s.orden, s.id DESC';
+    const sorteos = await pool.query(q, args);
+    const result  = [];
+    for (const s of sorteos.rows) {
+      const row = { ...s };
+      if (s.tipo === 'resultado') {
+        const r = await pool.query('SELECT * FROM resultados_sorteo WHERE sorteo_id=$1 ORDER BY orden,id', [s.id]);
+        row.resultados = r.rows;
+      }
+      result.push(row);
+    }
+    res.json({ ok: true, sorteos: result });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── GET /portal/items/:id/plantilla — público ─────────────────────────────────
+app.get('/portal/items/:id/plantilla', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT plantilla_pdf,plantilla_nombre FROM items_portal WHERE id=$1 AND visible=TRUE', [req.params.id]);
+    if (!r.rows.length || !r.rows[0].plantilla_pdf)
+      return res.status(404).json({ ok: false, error: 'Sin plantilla' });
+    res.json({ ok: true, pdf: r.rows[0].plantilla_pdf, nombre: r.rows[0].plantilla_nombre || 'plantilla.pdf' });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── GET /admin/sorteos ─────────────────────────────────────────────────────────
+app.get('/admin/sorteos', requireAuth, async (req, res) => {
+  try {
+    const r = await pool.query(
+      'SELECT s.*, i.titulo AS item_titulo FROM sorteos_portal s LEFT JOIN items_portal i ON i.id=s.item_id ORDER BY s.orden,s.id DESC');
+    const result = [];
+    for (const s of r.rows) {
+      const row = { ...s };
+      const resList = await pool.query('SELECT * FROM resultados_sorteo WHERE sorteo_id=$1 ORDER BY orden,id', [s.id]);
+      row.resultados = resList.rows;
+      result.push(row);
+    }
+    res.json({ ok: true, sorteos: result });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── POST /admin/sorteos ────────────────────────────────────────────────────────
+app.post('/admin/sorteos', requireAuth, async (req, res) => {
+  try {
+    if (req.admin.rol !== 'unitic' && !normalizarPermisos(req.admin.permisos).some(p => ['cms_cursos','cms_convenios'].includes(p)))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const { tipo, titulo, descripcion, fecha_sorteo, imagen, item_id, publicado, orden } = req.body;
+    if (!titulo) return res.json({ ok: false, error: 'Título obligatorio' });
+    const r = await pool.query(
+      `INSERT INTO sorteos_portal(tipo,titulo,descripcion,fecha_sorteo,imagen,item_id,publicado,orden)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+      [tipo||'proximo', titulo, descripcion||'', fecha_sorteo||'', imagen||'',
+       item_id||null, publicado!==false, parseInt(orden)||0]);
+    res.json({ ok: true, id: r.rows[0].id });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── PUT /admin/sorteos/:id ─────────────────────────────────────────────────────
+app.put('/admin/sorteos/:id', requireAuth, async (req, res) => {
+  try {
+    const { tipo, titulo, descripcion, fecha_sorteo, imagen, item_id, publicado, orden } = req.body;
+    await pool.query(
+      `UPDATE sorteos_portal SET tipo=$1,titulo=$2,descripcion=$3,fecha_sorteo=$4,
+        imagen=CASE WHEN $5='' THEN imagen ELSE $5 END,
+        item_id=$6,publicado=$7,orden=$8 WHERE id=$9`,
+      [tipo||'proximo', titulo, descripcion||'', fecha_sorteo||'', imagen||'',
+       item_id||null, publicado!==false, parseInt(orden)||0, req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── DELETE /admin/sorteos/:id ──────────────────────────────────────────────────
+app.delete('/admin/sorteos/:id', requireAuth, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM sorteos_portal WHERE id=$1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── POST /admin/sorteos/:id/resultados — guardar lista de resultados ───────────
+app.post('/admin/sorteos/:id/resultados', requireAuth, async (req, res) => {
+  try {
+    const { resultados } = req.body;
+    await pool.query('DELETE FROM resultados_sorteo WHERE sorteo_id=$1', [req.params.id]);
+    if (Array.isArray(resultados) && resultados.length) {
+      for (let i = 0; i < resultados.length; i++) {
+        const r = resultados[i];
+        await pool.query(
+          'INSERT INTO resultados_sorteo(sorteo_id,cip,nombres,unidad,cargo,orden) VALUES($1,$2,$3,$4,$5,$6)',
+          [req.params.id, r.cip||'', r.nombres||'', r.unidad||'', r.cargo||'', i]);
+      }
+    }
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── POST /admin/sorteos/:id/importar-inscritos — importar aceptados ───────────
+app.post('/admin/sorteos/:id/importar-inscritos', requireAuth, async (req, res) => {
+  try {
+    const { item_id } = req.body;
+    if (!item_id) return res.json({ ok: false, error: 'item_id requerido' });
+    const insc = await pool.query(
+      'SELECT cip,nombres,unidad,cargo FROM inscripciones WHERE item_id=$1 AND estado=$2 ORDER BY fecha',
+      [item_id, 'aceptado']);
+    await pool.query('DELETE FROM resultados_sorteo WHERE sorteo_id=$1', [req.params.id]);
+    for (let i = 0; i < insc.rows.length; i++) {
+      const r = insc.rows[i];
+      await pool.query(
+        'INSERT INTO resultados_sorteo(sorteo_id,cip,nombres,unidad,cargo,orden) VALUES($1,$2,$3,$4,$5,$6)',
+        [req.params.id, r.cip, r.nombres, r.unidad, r.cargo, i]);
+    }
+    res.json({ ok: true, importados: insc.rows.length });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── PUT /admin/items/:id/plantilla — subir plantilla PDF ───────────────────────
+app.put('/admin/items/:id/plantilla', requireAuth, async (req, res) => {
+  try {
+    const cur = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [req.params.id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const { plantilla_pdf, plantilla_nombre } = req.body;
+    await pool.query(
+      'UPDATE items_portal SET plantilla_pdf=$1,plantilla_nombre=$2 WHERE id=$3',
+      [plantilla_pdf||'', plantilla_nombre||'plantilla.pdf', req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── GET /admin/inscripciones/:id/pdf — ver PDF de inscrito (admin) ─────────────
+app.get('/admin/inscripciones/:id/pdf', requireAuth, async (req, res) => {
+  try {
+    const r = await pool.query(
+      'SELECT n.pdf_requisitos, n.pdf_nombre, i.tipo FROM inscripciones n JOIN items_portal i ON i.id=n.item_id WHERE n.id=$1',
+      [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ ok: false, error: 'No encontrado' });
+    if (!puedeGestionarItem(req.admin, r.rows[0].tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    if (!r.rows[0].pdf_requisitos)
+      return res.json({ ok: false, error: 'Este inscrito no adjuntó PDF' });
+    res.json({ ok: true, pdf: r.rows[0].pdf_requisitos, nombre: r.rows[0].pdf_nombre || 'requisitos.pdf' });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 // ── Helpers de permisos para items ────────────────────────────────────────────
 function puedeGestionarItem(admin, tipo) {
   if (admin.rol === 'unitic') return true;
@@ -1120,15 +1301,18 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
     if (!item.rows.length) return res.json({ ok: false, error: 'Item no encontrado' });
     if (!item.rows[0].inscripciones_abiertas)
       return res.json({ ok: false, error: 'Las inscripciones no están abiertas para esta convocatoria.' });
-    const { cip, nombres, unidad, cargo, telefono, email } = req.body;
+    const { cip, nombres, unidad, cargo, telefono, email, pdf_requisitos, pdf_nombre } = req.body;
     if (!cip || !nombres) return res.json({ ok: false, error: 'CIP y nombres son obligatorios.' });
     const dup = await pool.query(
       'SELECT id FROM inscripciones WHERE item_id=$1 AND cip=$2', [req.params.id, cip]);
     if (dup.rows.length)
       return res.json({ ok: false, error: 'Ya existe una inscripción con ese CIP para esta convocatoria.' });
+    const pdfBase64 = pdf_requisitos || '';
+    if (pdfBase64 && pdfBase64.length > 7 * 1024 * 1024)
+      return res.json({ ok: false, error: 'El PDF no debe superar 5 MB.' });
     await pool.query(
-      'INSERT INTO inscripciones(item_id,cip,nombres,unidad,cargo,telefono,email) VALUES($1,$2,$3,$4,$5,$6,$7)',
-      [req.params.id, cip, nombres, unidad||'', cargo||'', telefono||'', email||'']);
+      'INSERT INTO inscripciones(item_id,cip,nombres,unidad,cargo,telefono,email,pdf_requisitos,pdf_nombre) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+      [req.params.id, cip, nombres, unidad||'', cargo||'', telefono||'', email||'', pdfBase64, pdf_nombre||'requisitos.pdf']);
     res.json({ ok: true, mensaje: 'Inscripción registrada correctamente.' });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
