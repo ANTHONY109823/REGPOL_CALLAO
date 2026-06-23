@@ -54,6 +54,17 @@ function appendPortalItems(tipo, containerId) {
   if (!el) return Promise.resolve();
   var base = apiBasePortal();
   if (base === null || base === undefined) base = '';
+  var cacheKey = 'portal_items_' + tipo;
+  try {
+    var raw = sessionStorage.getItem(cacheKey);
+    if (raw) {
+      var c = JSON.parse(raw);
+      if (c.exp > Date.now() && c.items && c.items.length) {
+        el.innerHTML = (el.innerHTML || '') + c.items.map(htmlTarjetaPortalItem).join('');
+        return Promise.resolve();
+      }
+    }
+  } catch (e) {}
   var url = base + '/portal/items?tipo=' + encodeURIComponent(tipo);
   return fetch(url)
     .then(function(r) { return r.json(); })
@@ -64,8 +75,10 @@ function appendPortalItems(tipo, containerId) {
         }
         return;
       }
-      var htmlDb = d.items.map(htmlTarjetaPortalItem).join('');
-      el.innerHTML = (el.innerHTML || '') + htmlDb;
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify({ items: d.items, exp: Date.now() + 180000 }));
+      } catch (e) {}
+      el.innerHTML = (el.innerHTML || '') + d.items.map(htmlTarjetaPortalItem).join('');
     })
     .catch(function() {
       if (!el.innerHTML.trim()) {
@@ -104,7 +117,7 @@ function fetchSiteDataFromServer() {
 }
 
 function fetchSiteDataDefault() {
-  return fetch('site-data.json?v=' + Date.now())
+  return fetch('site-data.json?v=2')
     .then(function(r) { if (!r.ok) throw new Error('site-data'); return r.json(); })
     .catch(function() { return null; });
 }
@@ -115,9 +128,9 @@ function cargarSiteData() {
   var usarJsonLocal = h.indexOf('railway.app') !== -1 || h.indexOf('github.io') !== -1;
 
   if (usarJsonLocal) {
+    if (local) return Promise.resolve(local);
     return fetchSiteDataDefault().then(function(data) {
       if (data) { saveSiteDataToStorage(data); return data; }
-      if (local) return local;
       return null;
     });
   }

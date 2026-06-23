@@ -16,8 +16,14 @@ const PORT = process.env.PORT || 3000;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+  max: 12,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000
 });
+
+const authCache = new Map();
+const AUTH_CACHE_TTL = 5 * 60 * 1000;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const sha256 = s => crypto.createHash('sha256').update(s).digest('hex');
@@ -206,12 +212,13 @@ async function initDB() {
     );
   }
 
-  // Seed divisiones y unidades (primera vez)
+  // Seed divisiones solo la primera vez (evita 40+ queries en cada reinicio)
   const { rows: divRows } = await pool.query('SELECT COUNT(*) AS t FROM divisiones');
   if (parseInt(divRows[0].t) === 0) {
-    console.log('Seed inicial: divisiones vacías.');
+    await sincronizarDivisionesUnidades();
+  } else {
+    console.log('Divisiones ya cargadas (' + divRows[0].t + '), sync omitido.');
   }
-  await sincronizarDivisionesUnidades();
 
   // Seed preguntas en lotes de 100 para no superar límite de parámetros
   const { rows } = await pool.query('SELECT COUNT(*) AS t FROM preguntas');
@@ -331,7 +338,7 @@ async function seedContactoComisarias() {
   console.log('Contacto de comisarías actualizado.');
 }
 
-// ── Estáticos con buffer completo (evita ERR_HTTP2_PROTOCOL_ERROR en Railway) ───
+// ── Estáticos en memoria (rápido + sin ERR_HTTP2 en Railway) ───────────────────
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const MIME_TYPES = {
   '.html': 'text/html; charset=UTF-8',
@@ -348,28 +355,40 @@ const MIME_TYPES = {
   '.woff2':'font/woff2',
 };
 
+const staticCache = new Map();
+
+function preloadStaticCache(dir) {
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, ent.name);
+    if (ent.isDirectory()) {
+      preloadStaticCache(full);
+      continue;
+    }
+    const rel = path.relative(PUBLIC_DIR, full).replace(/\\/g, '/');
+    const data = fs.readFileSync(full);
+    const entry = { data, ext: path.extname(full).toLowerCase() };
+    staticCache.set(rel, entry);
+    staticCache.set(rel.toLowerCase(), entry);
+  }
+}
+
+function enviarEstatico(res, entry, method) {
+  res.status(200);
+  res.setHeader('Content-Type', MIME_TYPES[entry.ext] || 'application/octet-stream');
+  res.setHeader('Content-Length', String(entry.data.length));
+  res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+  if (method === 'HEAD') return res.end();
+  res.end(entry.data);
+}
+
 function staticBufferado(req, res, next) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   var urlPath = (req.path || '/').split('?')[0];
   if (urlPath === '/') urlPath = '/index.html';
   var rel = urlPath.replace(/^\//, '').replace(/\.\./g, '');
-  var filePath = path.join(PUBLIC_DIR, rel);
-  var rootResolved = path.resolve(PUBLIC_DIR);
-  if (!path.resolve(filePath).startsWith(rootResolved)) return next();
-
-  fs.stat(filePath, function(err, stat) {
-    if (err || !stat.isFile()) return next();
-    fs.readFile(filePath, function(readErr, data) {
-      if (readErr) return next();
-      var ext = path.extname(filePath).toLowerCase();
-      res.status(200);
-      res.setHeader('Content-Type', MIME_TYPES[ext] || 'application/octet-stream');
-      res.setHeader('Content-Length', String(data.length));
-      res.setHeader('Cache-Control', 'public, max-age=3600');
-      if (req.method === 'HEAD') return res.end();
-      res.end(data);
-    });
-  });
+  var entry = staticCache.get(rel) || staticCache.get(rel.toLowerCase());
+  if (entry) return enviarEstatico(res, entry, req.method);
+  return next();
 }
 
 // ── Middlewares ────────────────────────────────────────────────────────────────
@@ -393,6 +412,11 @@ async function requireAuth(req, res, next) {
   try {
     const token = req.headers['x-admin-token'] || req.query.token || '';
     if (!token) return res.status(401).json({ ok: false, error: 'Sin token' });
+    const cached = authCache.get(token);
+    if (cached && cached.exp > Date.now()) {
+      req.admin = cached.admin;
+      return next();
+    }
     const decoded = Buffer.from(token, 'base64').toString();
     const colon   = decoded.indexOf(':');
     const usuario = decoded.substring(0, colon);
@@ -400,6 +424,7 @@ async function requireAuth(req, res, next) {
     const r = await pool.query('SELECT * FROM admins WHERE usuario=$1 AND passhash=$2', [usuario, sha256(pass)]);
     if (!r.rows.length) return res.status(403).json({ ok: false, error: 'Credenciales inválidas' });
     req.admin = r.rows[0];
+    authCache.set(token, { admin: r.rows[0], exp: Date.now() + AUTH_CACHE_TTL });
     next();
   } catch(e) {
     res.status(401).json({ ok: false, error: 'Token inválido' });
@@ -456,16 +481,32 @@ async function leerUnidadesActivas() {
   return unidades.map(u => String(u).trim().toUpperCase()).filter(Boolean);
 }
 
+let configCache = null;
+let configCacheExp = 0;
+const CONFIG_CACHE_MS = 120000;
+
+let preguntasCache = null;
+let preguntasCacheExp = 0;
+const PREGUNTAS_CACHE_MS = 300000;
+
+const portalItemsCache = new Map();
+const PORTAL_ITEMS_CACHE_MS = 120000;
+
 app.get('/config', async (req, res) => {
   try {
+    if (configCache && configCacheExp > Date.now()) {
+      return res.json(configCache);
+    }
     const unidadesActivas = await leerUnidadesActivas();
     const divisiones = await obtenerDivisionesAgrupadas();
-    res.json({
+    configCache = {
       ok: true,
       unidadesActivas,
       comisariaActiva: unidadesActivas[0] || '',
       divisiones
-    });
+    };
+    configCacheExp = Date.now() + CONFIG_CACHE_MS;
+    res.json(configCache);
   } catch (e) {
     res.json({ ok: false, error: e.message });
   }
@@ -489,6 +530,7 @@ app.put('/config', requireAuth, async (req, res) => {
     }
     await setConfig('unidades_activas', JSON.stringify(unidades));
     await setConfig('comisaria_activa', unidades[0]);
+    configCache = null;
     res.json({ ok: true, unidadesActivas: unidades, comisariaActiva: unidades[0] });
   } catch (e) {
     res.json({ ok: false, error: e.message });
@@ -526,8 +568,13 @@ app.get('/admin/perfil', requireAuth, async (req, res) => {
 // ── GET /preguntas (público — para el formulario) ─────────────────────────────
 app.get('/preguntas', async (req, res) => {
   try {
+    if (preguntasCache && preguntasCacheExp > Date.now()) {
+      return res.json(preguntasCache);
+    }
     const r = await pool.query('SELECT numero AS id, texto FROM preguntas WHERE activa=TRUE ORDER BY orden,numero');
-    res.json({ ok: true, preguntas: r.rows });
+    preguntasCache = { ok: true, preguntas: r.rows };
+    preguntasCacheExp = Date.now() + PREGUNTAS_CACHE_MS;
+    res.json(preguntasCache);
   } catch (e) {
     res.json({ ok: false, error: e.message });
   }
@@ -549,6 +596,7 @@ app.put('/admin/preguntas/:id', requireAuth, async (req, res) => {
   if (!puedeGestionarPreguntas(req.admin)) return res.status(403).json({ ok: false, error: 'Sin acceso' });
   const { texto, activa } = req.body;
   await pool.query('UPDATE preguntas SET texto=$1,activa=$2 WHERE id=$3', [texto, activa, req.params.id]);
+  preguntasCache = null;
   res.json({ ok: true });
 });
 
@@ -558,12 +606,14 @@ app.post('/admin/preguntas', requireAuth, async (req, res) => {
   const r = await pool.query(
     'INSERT INTO preguntas (numero,texto,orden) VALUES ($1,$2,$3) RETURNING id',
     [numero, texto, numero]);
+  preguntasCache = null;
   res.json({ ok: true, id: r.rows[0].id });
 });
 
 app.delete('/admin/preguntas/:id', requireAuth, async (req, res) => {
   if (!puedeGestionarPreguntas(req.admin)) return res.status(403).json({ ok: false, error: 'Sin acceso' });
   await pool.query('UPDATE preguntas SET activa=FALSE WHERE id=$1', [req.params.id]);
+  preguntasCache = null;
   res.json({ ok: true });
 });
 
@@ -1339,15 +1389,26 @@ function puedeGestionarItem(admin, tipo) {
 // ── GET /portal/items — público ───────────────────────────────────────────────
 app.get('/portal/items', async (req, res) => {
   try {
-    const tipo = req.query.tipo || null;
+    const tipo = req.query.tipo || '';
+    const cacheKey = tipo || '__all__';
+    const cached = portalItemsCache.get(cacheKey);
+    if (cached && cached.exp > Date.now()) {
+      return res.json(cached.data);
+    }
     let q = 'SELECT id,tipo,titulo,descripcion,estado,icono,color,vacantes,fecha_inicio,duracion,inscripciones_abiertas,orden FROM items_portal WHERE visible=TRUE';
     const args = [];
     if (tipo) { q += ' AND tipo=$1'; args.push(tipo); }
     q += ' ORDER BY orden,id';
     const r = await pool.query(q, args);
-    res.json({ ok: true, items: r.rows });
+    const payload = { ok: true, items: r.rows };
+    portalItemsCache.set(cacheKey, { data: payload, exp: Date.now() + PORTAL_ITEMS_CACHE_MS });
+    res.json(payload);
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
+
+function invalidarPortalItemsCache() {
+  portalItemsCache.clear();
+}
 
 // ── GET /portal/items/:id — público (detalle completo) ────────────────────────
 app.get('/portal/items/:id', async (req, res) => {
@@ -1440,6 +1501,7 @@ app.post('/admin/items', requireAuth, async (req, res) => {
        horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
        lugar||'', observaciones||'', formulario_url||'',
        !!inscripciones_abiertas, visible!==false, parseInt(orden)||0]);
+    invalidarPortalItemsCache();
     res.json({ ok: true, id: r.rows[0].id });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
@@ -1464,6 +1526,7 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
        horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
        lugar||'', observaciones||'', formulario_url||'',
        !!inscripciones_abiertas, visible!==false, parseInt(orden)||0, req.params.id]);
+    invalidarPortalItemsCache();
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
@@ -1476,6 +1539,7 @@ app.delete('/admin/items/:id', requireAuth, async (req, res) => {
     if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     await pool.query('DELETE FROM items_portal WHERE id=$1', [req.params.id]);
+    invalidarPortalItemsCache();
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
@@ -1560,6 +1624,12 @@ function iniciarDB() {
 }
 
 app.listen(PORT, '0.0.0.0', function() {
+  try {
+    preloadStaticCache(PUBLIC_DIR);
+    console.log('Cache estáticos: ' + staticCache.size + ' entradas');
+  } catch (e) {
+    console.error('Error precargando estáticos:', e.message);
+  }
   console.log('\n=== REGPOL Callao — Puerto ' + PORT + ' ===');
   iniciarDB();
 });

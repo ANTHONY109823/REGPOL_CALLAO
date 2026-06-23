@@ -966,7 +966,7 @@
 </div>
 
 <script src="api-config.js?v=1"></script>
-<script src="portal.js?v=8"></script>
+<script src="portal.js?v=9"></script>
 <script src="divisiones-ui.js?v=1"></script>
 <script src="panel-cms.js?v=4"></script>
 <script>
@@ -1061,6 +1061,8 @@ function iniciarPanel(s){
 }
 
 // ── NAVEGACIÓN SIDEBAR ────────────────────────────────────────────────────────
+var panelPaginasCargadas = {};
+
 function ir(page, el){
   if(page==='preguntas'&&!puedeVerPreguntas()){alert('Sin acceso. Las preguntas solo las gestiona Psicología/Bienestar o Super Admin.');return;}
   if(page==='evaluaciones'&&!puedeVerEvaluaciones()){alert('Sin acceso a evaluaciones.');return;}
@@ -1072,14 +1074,19 @@ function ir(page, el){
   document.querySelectorAll('.sb-item').forEach(function(i){i.classList.remove('on');});
   if(el) el.classList.add('on');
   else { var found=document.querySelector('[data-page="'+page+'"]'); if(found) found.classList.add('on'); }
-  if(page==='evaluaciones'){ cargarConfigEvaluacion(); cargarTabla(1); }
-  if(page==='preguntas')    cargarPreguntas();
-  if(page==='usuarios')     cargarUsuarios();
-  if(page==='descargas')    cargarFiltrosDescarga();
-  if(page==='dashboard')    cargarStats();
-  if(page==='divisiones')   cargarDivisiones();
-  if(page==='items')        cargarItems();
-  if(page==='sorteos')      cargarSorteos();
+  var ya = panelPaginasCargadas[page];
+  if(page==='evaluaciones'){
+    if(!ya) cargarConfigEvaluacion();
+    cargarTabla(1);
+  }
+  if(page==='preguntas' && !ya)    cargarPreguntas();
+  if(page==='usuarios' && !ya)     cargarUsuarios();
+  if(page==='descargas' && !ya)    cargarFiltrosDescarga();
+  if(page==='dashboard' && !ya)    cargarStats();
+  if(page==='divisiones' && !ya)   cargarDivisiones();
+  if(page==='items' && !ya)        cargarItems();
+  if(page==='sorteos' && !ya)      cargarSorteos();
+  panelPaginasCargadas[page] = true;
 }
 
 function irCMS(tab, el){
