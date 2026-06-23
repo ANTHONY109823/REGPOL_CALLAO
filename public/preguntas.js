@@ -1,5 +1,5 @@
-/* preguntas.js - MMPI-2 Version Argentina - 566 items V/F */
-var PREGUNTAS = [
+/* preguntas.js - MMPI-2 Version Argentina - 566 items V/F (respaldo local) */
+var PREGUNTAS_LOCAL = [
   { id: 1, texto: 'Me gustan las revistas de mecánica.' },
   { id: 2, texto: 'Tengo buen apetito.' },
   { id: 3, texto: 'Casi siempre me levanto por las mañanas descansado y como nuevo.' },

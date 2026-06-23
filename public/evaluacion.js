@@ -41,71 +41,118 @@ document.addEventListener('DOMContentLoaded', function() {
   cargarPreguntas();
 });
 
+var EVAL_CACHE_CONFIG = 'regpol_eval_config_v1';
+var EVAL_CACHE_PREG = 'regpol_eval_preguntas_v1';
+var EVAL_CACHE_TTL = 30 * 60 * 1000;
+
+function leerCacheEval(clave) {
+  try {
+    var raw = sessionStorage.getItem(clave);
+    if (!raw) return null;
+    var c = JSON.parse(raw);
+    if (c.exp > Date.now()) return c.data;
+  } catch (e) {}
+  return null;
+}
+
+function guardarCacheEval(clave, data) {
+  try {
+    sessionStorage.setItem(clave, JSON.stringify({ data: data, exp: Date.now() + EVAL_CACHE_TTL }));
+  } catch (e) {}
+}
+
+function aplicarConfigUnidad(sel, data) {
+  var activas = [];
+  if (data.ok && data.unidadesActivas && data.unidadesActivas.length) {
+    activas = data.unidadesActivas;
+  } else if (data.ok && data.comisariaActiva) {
+    activas = [data.comisariaActiva];
+  }
+  var divisiones = (data.ok && data.divisiones) ? data.divisiones : [];
+  var total = poblarSelectEvaluacionDivisiones(sel, divisiones, activas);
+  if (!total) {
+    sel.disabled = true;
+    mostrarAlerta('El cuestionario no está habilitado para su dependencia en este momento. Contacte a la Oficina de Psicología.', 'error');
+    return;
+  }
+  if (total === 1 && sel.options.length === 2) {
+    sel.selectedIndex = 1;
+    sel.disabled = true;
+  } else {
+    sel.disabled = false;
+  }
+  ocultarAlerta();
+}
+
+function configBuiltinEvaluacion() {
+  if (typeof REGPOL_UNIDADES_BUILTIN === 'undefined' || !REGPOL_UNIDADES_BUILTIN.divisiones) return null;
+  var activas = [];
+  REGPOL_UNIDADES_BUILTIN.divisiones.forEach(function(div) {
+    (div.unidades || []).forEach(function(u) {
+      if (u.nombre) activas.push(u.nombre);
+    });
+  });
+  return { ok: true, unidadesActivas: activas, divisiones: REGPOL_UNIDADES_BUILTIN.divisiones };
+}
+
 function cargarConfigUnidad() {
   var sel = document.getElementById('f-unidad');
   if (!sel) return;
 
+  var cached = leerCacheEval(EVAL_CACHE_CONFIG);
+  if (cached) aplicarConfigUnidad(sel, cached);
+  else {
+    var builtin = configBuiltinEvaluacion();
+    if (builtin) aplicarConfigUnidad(sel, builtin);
+  }
+
   fetch(LOCAL_API + '/config')
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      var activas = [];
-      if (data.ok && data.unidadesActivas && data.unidadesActivas.length) {
-        activas = data.unidadesActivas;
-      } else if (data.ok && data.comisariaActiva) {
-        activas = [data.comisariaActiva];
-      }
-
-      var divisiones = (data.ok && data.divisiones) ? data.divisiones : [];
-      var total = poblarSelectEvaluacionDivisiones(sel, divisiones, activas);
-
-      if (!total) {
-        sel.disabled = true;
-        mostrarAlerta('El cuestionario no está habilitado para su dependencia en este momento. Contacte a la Oficina de Psicología.', 'error');
-        return;
-      }
-
-      if (total === 1 && sel.options.length === 2) {
-        sel.selectedIndex = 1;
-        sel.disabled = true;
-      } else {
-        sel.disabled = false;
-      }
-      ocultarAlerta();
+      if (!data || !data.ok) return;
+      guardarCacheEval(EVAL_CACHE_CONFIG, data);
+      aplicarConfigUnidad(sel, data);
     })
     .catch(function() {
-      if (sel) sel.disabled = false;
+      if (!cached && !configBuiltinEvaluacion()) sel.disabled = false;
+    });
+}
+
+function aplicarPreguntas(lista) {
+  if (!lista || !lista.length) return;
+  PREGUNTAS       = lista;
+  TOTAL_PREGUNTAS = PREGUNTAS.length;
+  TOTAL_BLOQUES   = Math.ceil(TOTAL_PREGUNTAS / PREG_POR_BLOQUE);
+  ocultarAlerta();
+  actualizarInfoBloque();
+}
+
+function cargarPreguntas() {
+  var cached = leerCacheEval(EVAL_CACHE_PREG);
+  if (cached && cached.length) aplicarPreguntas(cached);
+  else if (typeof PREGUNTAS_LOCAL !== 'undefined' && PREGUNTAS_LOCAL.length) aplicarPreguntas(PREGUNTAS_LOCAL);
+  else mostrarAlerta('Cargando cuestionario...', 'info');
+
+  fetch(LOCAL_API + '/preguntas')
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (!data.ok || !data.preguntas.length) throw new Error('Sin preguntas');
+      guardarCacheEval(EVAL_CACHE_PREG, data.preguntas);
+      aplicarPreguntas(data.preguntas);
+    })
+    .catch(function() {
+      if (PREGUNTAS.length) return;
+      if (typeof PREGUNTAS_LOCAL !== 'undefined' && PREGUNTAS_LOCAL.length) {
+        aplicarPreguntas(PREGUNTAS_LOCAL);
+      } else {
+        mostrarAlerta('Error cargando cuestionario. Recargue la página.', 'error');
+      }
     });
 }
 
 function obtenerComisariaEvaluacion() {
   var sel = document.getElementById('f-unidad');
   return sel ? sel.value.trim() : '';
-}
-
-function cargarPreguntas() {
-  mostrarAlerta('Cargando cuestionario...', 'info');
-  fetch(LOCAL_API + '/preguntas')
-    .then(function(r){ return r.json(); })
-    .then(function(data) {
-      if (!data.ok || !data.preguntas.length) throw new Error('Sin preguntas');
-      PREGUNTAS       = data.preguntas;
-      TOTAL_PREGUNTAS = PREGUNTAS.length;
-      TOTAL_BLOQUES   = Math.ceil(TOTAL_PREGUNTAS / PREG_POR_BLOQUE);
-      ocultarAlerta();
-      actualizarInfoBloque();
-    })
-    .catch(function() {
-      // Fallback: usar preguntas del archivo local si la API falla
-      if (typeof PREGUNTAS_LOCAL !== 'undefined' && PREGUNTAS_LOCAL.length) {
-        PREGUNTAS       = PREGUNTAS_LOCAL;
-        TOTAL_PREGUNTAS = PREGUNTAS.length;
-        TOTAL_BLOQUES   = Math.ceil(TOTAL_PREGUNTAS / PREG_POR_BLOQUE);
-        ocultarAlerta();
-        actualizarInfoBloque();
-      } else {
-        mostrarAlerta('Error cargando cuestionario. Recargue la página.', 'error');
-      }
-    });
 }
 
 /* ================================================================
