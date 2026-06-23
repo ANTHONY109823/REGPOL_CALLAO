@@ -331,9 +331,24 @@ async function seedContactoComisarias() {
 }
 
 // ── Middlewares ────────────────────────────────────────────────────────────────
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json({ limit: '4mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: process.env.NODE_ENV === 'production' ? '3600' : 0,
+  etag: true,
+  setHeaders: function(res, filePath) {
+    if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css; charset=UTF-8');
+    else if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
+    else if (/\.(jpg|jpeg|png|webp|gif)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+    }
+  }
+}));
+
+app.get('/img/regpol callao.jpg', function(req, res) {
+  res.redirect(301, '/img/regpol-callao.jpg');
+});
 
 // ── Auth middleware ────────────────────────────────────────────────────────────
 async function requireAuth(req, res, next) {

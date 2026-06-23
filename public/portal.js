@@ -53,13 +53,9 @@ function appendPortalItems(tipo, containerId) {
   var el = document.getElementById(containerId);
   if (!el) return Promise.resolve();
   var base = apiBasePortal();
-  if (!base) {
-    if (!el.innerHTML.trim()) {
-      el.innerHTML = '<p class="texto-vacio">No hay ' + tipo + 's publicados actualmente.</p>';
-    }
-    return Promise.resolve();
-  }
-  return fetch(base + '/portal/items?tipo=' + encodeURIComponent(tipo))
+  if (base === null || base === undefined) base = '';
+  var url = base + '/portal/items?tipo=' + encodeURIComponent(tipo);
+  return fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.ok || !d.items || !d.items.length) {
@@ -96,6 +92,10 @@ function saveSiteDataToStorage(data) {
 }
 
 function fetchSiteDataFromServer() {
+  var h = location.hostname;
+  if (h.indexOf('railway.app') !== -1 || h.indexOf('github.io') !== -1) {
+    return Promise.resolve(null);
+  }
   var url = (typeof WEB_APP_URL !== 'undefined' && WEB_APP_URL) ? WEB_APP_URL : REGPOL_WEB_APP;
   return fetch(url + '?action=get_site')
     .then(function(r) { return r.json(); })
@@ -105,12 +105,23 @@ function fetchSiteDataFromServer() {
 
 function fetchSiteDataDefault() {
   return fetch('site-data.json?v=' + Date.now())
-    .then(function(r) { return r.json(); })
+    .then(function(r) { if (!r.ok) throw new Error('site-data'); return r.json(); })
     .catch(function() { return null; });
 }
 
 function cargarSiteData() {
   var local = getSiteDataFromStorage();
+  var h = location.hostname;
+  var usarJsonLocal = h.indexOf('railway.app') !== -1 || h.indexOf('github.io') !== -1;
+
+  if (usarJsonLocal) {
+    return fetchSiteDataDefault().then(function(data) {
+      if (data) { saveSiteDataToStorage(data); return data; }
+      if (local) return local;
+      return null;
+    });
+  }
+
   return fetchSiteDataFromServer()
     .then(function(server) {
       if (server) {
