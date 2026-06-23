@@ -528,19 +528,26 @@ function renderUnidadesPublico(data) {
     html += '<div class="unidades-seccion">'
       + '<h3 class="unidades-seccion-titulo"><i class="fas fa-shield-alt"></i> ' + escHtml(div.nombre) + '</h3>'
       + '<div class="tabla-unidades-wrap"><table class="tabla-unidades">'
+      + '<colgroup>'
+      + '<col style="width:38px"/>'
+      + '<col style="width:22%"/>'
+      + '<col style="width:auto"/>'
+      + '<col style="width:130px"/>'
+      + '<col style="width:110px"/>'
+      + '</colgroup>'
       + '<thead><tr>'
-      + '<th>#</th>'
+      + '<th style="text-align:center;">#</th>'
       + '<th>Comisaria / Unidad</th>'
       + '<th>Direcci?n</th>'
-      + '<th>Tel?fono</th>'
-      + '<th>Mapa</th>'
+      + '<th style="text-align:center;">Tel?fono</th>'
+      + '<th style="text-align:center;">Mapa</th>'
       + '</tr></thead><tbody>';
     div.unidades.forEach(function(u, i) {
       var mapsUrl = u.direccion
         ? 'https://www.google.com/maps/search/' + encodeURIComponent(u.direccion + ', Callao, Peru')
         : '';
       var mapsBtn = mapsUrl
-        ? '<a href="' + mapsUrl + '" target="_blank" rel="noopener noreferrer" class="btn-mapa"><i class="fas fa-map-marker-alt"></i> Ver mapa</a>'
+        ? '<a href="' + mapsUrl + '" target="_blank" rel="noopener noreferrer" class="btn-mapa" title="Ver en Google Maps"><i class="fas fa-map-marker-alt"></i> Ver mapa</a>'
         : '<span class="sin-dato">-</span>';
       var tel = u.telefono
         ? '<a href="tel:' + escHtml(u.telefono) + '" class="tel-link">' + escHtml(u.telefono) + '</a>'
@@ -549,8 +556,8 @@ function renderUnidadesPublico(data) {
         + '<td class="td-num">' + (i + 1) + '</td>'
         + '<td class="td-nombre">' + escHtml(u.nombre) + '</td>'
         + '<td class="td-dir">' + (u.direccion ? escHtml(u.direccion) : '<span class="sin-dato">No disponible</span>') + '</td>'
-        + '<td class="td-tel">' + tel + '</td>'
-        + '<td class="td-mapa">' + mapsBtn + '</td>'
+        + '<td class="td-tel" style="text-align:center;">' + tel + '</td>'
+        + '<td class="td-mapa" style="text-align:center;">' + mapsBtn + '</td>'
         + '</tr>';
     });
     html += '</tbody></table></div></div>';

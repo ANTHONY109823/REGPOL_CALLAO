@@ -1394,45 +1394,52 @@ table.t { min-width: 600px; }
 }
 
 /* ── TABLA UNIDADES ─────────────────────────────────── */
-.unidades-seccion { margin-bottom: 38px; }
+.unidades-seccion { margin-bottom: 42px; }
 .unidades-seccion-titulo {
-  color: #004d3d; font-size: 15px; font-weight: 800; letter-spacing: .5px;
+  color: #004d3d; font-size: 14px; font-weight: 800; letter-spacing: .5px;
   text-transform: uppercase; border-bottom: 3px solid #c8a94a;
   padding-bottom: 10px; margin-bottom: 16px;
   display: flex; align-items: center; gap: 10px;
 }
 .unidades-seccion-titulo i { color: #c8a94a; }
-.tabla-unidades-wrap { overflow-x: auto; border-radius: 10px; box-shadow: 0 2px 14px rgba(0,77,61,.10); }
+.tabla-unidades-wrap {
+  overflow-x: auto; border-radius: 10px;
+  box-shadow: 0 2px 14px rgba(0,77,61,.10);
+  border: 1px solid #e0ece8;
+}
 .tabla-unidades {
   width: 100%; border-collapse: collapse; font-size: 13px;
-  background: #fff; min-width: 600px;
+  background: #fff; table-layout: fixed;
 }
 .tabla-unidades thead th {
   background: linear-gradient(90deg,#004d3d,#006b55);
   color: #fff; font-size: 11px; font-weight: 800;
   text-transform: uppercase; letter-spacing: .5px;
-  padding: 11px 14px; text-align: left;
+  padding: 12px 14px; text-align: left; white-space: nowrap;
 }
-.tabla-unidades thead th:first-child { border-radius: 10px 0 0 0; }
-.tabla-unidades thead th:last-child  { border-radius: 0 10px 0 0; }
-.tabla-unidades tbody tr { border-bottom: 1px solid #f0f0f0; transition: background .15s; }
+.tabla-unidades thead th:first-child { border-radius: 10px 0 0 0; width: 38px; text-align: center; }
+.tabla-unidades thead th:nth-child(2) { width: 22%; }
+.tabla-unidades thead th:nth-child(3) { }
+.tabla-unidades thead th:nth-child(4) { width: 125px; text-align: center; }
+.tabla-unidades thead th:last-child   { width: 105px; border-radius: 0 10px 0 0; text-align: center; }
+.tabla-unidades tbody tr { border-bottom: 1px solid #edf2ef; transition: background .12s; }
 .tabla-unidades tbody tr:last-child { border-bottom: none; }
 .tabla-unidades tbody tr:hover { background: #f0f7f4; }
 .tabla-unidades tbody tr:nth-child(even) { background: #f8faf8; }
 .tabla-unidades tbody tr:nth-child(even):hover { background: #e8f4f0; }
-.tabla-unidades td { padding: 10px 14px; vertical-align: middle; }
-.td-num { width: 36px; text-align: center; color: #c8a94a; font-weight: 900; font-size: 14px; }
-.td-nombre { font-weight: 700; color: #004d3d; }
-.td-dir { color: #555; font-size: 12.5px; }
-.td-tel { white-space: nowrap; }
-.td-mapa { white-space: nowrap; text-align: center; }
-.tel-link { color: #004d3d; text-decoration: none; font-weight: 600; }
+.tabla-unidades td { padding: 10px 14px; vertical-align: middle; word-break: break-word; }
+.td-num   { width: 38px; text-align: center; color: #c8a94a; font-weight: 900; font-size: 15px; padding: 10px 6px; }
+.td-nombre { font-weight: 700; color: #004d3d; font-size: 12.5px; }
+.td-dir   { color: #555; font-size: 12px; line-height: 1.45; }
+.td-tel   { text-align: center; white-space: nowrap; }
+.td-mapa  { text-align: center; white-space: nowrap; }
+.tel-link { color: #004d3d; text-decoration: none; font-weight: 600; font-size: 12px; }
 .tel-link:hover { text-decoration: underline; }
 .btn-mapa {
   display: inline-flex; align-items: center; gap: 5px;
   background: #1a73e8; color: #fff; font-size: 11px; font-weight: 700;
   padding: 5px 10px; border-radius: 6px; text-decoration: none;
-  transition: background .15s;
+  transition: background .15s; white-space: nowrap;
 }
-.btn-mapa:hover { background: #1557b0; }
+.btn-mapa:hover { background: #1557b0; color: #fff; }
 .sin-dato { color: #bbb; font-size: 12px; }
