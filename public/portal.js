@@ -356,27 +356,12 @@ function renderPdfList(items, containerId) {
   }).join('');
 }
 
-function renderHeroBanner(imagen, icono, titulo, subtitulo, gradienteClase) {
-  var imgTag = imagen
-    ? '<img src="' + escHtml(imagen) + '" alt="' + escHtml(titulo) + '" class="pagina-hero-img" loading="lazy"/>'
-    : '';
-  return '<div class="pagina-hero-banner ' + (gradienteClase || '') + '">'
-    + imgTag
-    + '<div class="pagina-hero-overlay"></div>'
-    + '<div class="pagina-hero-contenido">'
-    + '<div class="pagina-hero-icono"><i class="fas ' + escHtml(icono) + '"></i></div>'
-    + '<div class="pagina-hero-texto">'
-    + '<h2>' + escHtml(titulo) + '</h2>'
-    + (subtitulo ? '<p>' + escHtml(subtitulo) + '</p>' : '')
-    + '</div></div></div>';
-}
 
 function renderResenaHistorica(data, containerId) {
   var el = document.getElementById(containerId);
   var sec = data.resenaHistorica;
   if (!el || !sec) return;
   var html = '<article class="institucional-page institucional-resena">';
-  html += renderHeroBanner(sec.imagenBanner, 'fa-landmark', sec.titulo || 'Reseña Histórica', 'Provincia Constitucional del Callao', 'hero-resena');
   html += '<div class="institucional-cabecera">';
   html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
   html += '</div>';
@@ -395,7 +380,6 @@ function renderNuestraLabor(data, containerId) {
   var sec = data.nuestraLabor;
   if (!el || !sec) return;
   var html = '<article class="institucional-page institucional-labor">';
-  html += renderHeroBanner(sec.imagenBanner, 'fa-hands-helping', sec.titulo || 'Nuestra Labor', 'Seguridad, prevención y servicio ciudadano', 'hero-labor');
   html += '<div class="institucional-cabecera">';
   html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
   html += '</div>';
@@ -410,33 +394,69 @@ function renderNuestraLabor(data, containerId) {
   el.innerHTML = html;
 }
 
+var _novedadesCache = [];
+
 function renderNovedades(data, containerId, limite) {
   var el = document.getElementById(containerId);
   if (!el) return;
-  var banner = '';
-  if (!limite) {
-    banner = renderHeroBanner(data.imagenBannerNovedades || '', 'fa-newspaper', 'Novedades', 'Últimas noticias de la Región Policial Callao', 'hero-novedades');
-  }
   var items = (data.novedades || []).slice();
+  _novedadesCache = items;
   if (limite) items = items.slice(0, limite);
-  if (!items.length) {
-    el.innerHTML = banner + '<p class="texto-vacio">Sin novedades publicadas.</p>';
-    return;
+  if (!items.length) { el.innerHTML = '<p class="texto-vacio">Sin novedades publicadas.</p>'; return; }
+  if (limite) {
+    el.innerHTML = '<div class="novedades-portada-lista">' + items.map(function(n) {
+      return '<article class="noticia-card" onclick="abrirNovedadDetalle('' + escHtml(n.id) + ''')" style="cursor:pointer;">'
+        + '<div class="noticia-contenido">'
+        + '<div class="noticia-meta"><span class="noticia-cat">' + escHtml(n.categoria) + '</span>'
+        + '<span class="noticia-fecha">' + escHtml(n.fecha) + '</span></div>'
+        + '<h3>' + escHtml(n.titulo) + '</h3>'
+        + '<p>' + escHtml(n.resumen) + '</p>'
+        + '</div></article>';
+    }).join('') + '</div>';
+  } else {
+    el.innerHTML = '<div class="novedades-grid">' + items.map(function(n) {
+      var bgStyle = n.imagen
+        ? 'background-image:url("' + n.imagen + '");background-size:cover;background-position:center;'
+        : 'background:linear-gradient(135deg,#002d24,#004d3d);';
+      return '<article class="nov-card" onclick="abrirNovedadDetalle('' + escHtml(n.id) + ''')">'
+        + '<div class="nov-card-img" style="' + bgStyle + '">'
+        + '<div class="nov-card-img-overlay"></div>'
+        + '<span class="nov-card-cat">' + escHtml(n.categoria) + '</span>'
+        + '</div>'
+        + '<div class="nov-card-body">'
+        + '<div class="nov-card-fecha"><i class="fas fa-calendar-alt"></i> ' + escHtml(n.fecha) + '</div>'
+        + '<h3 class="nov-card-titulo">' + escHtml(n.titulo) + '</h3>'
+        + '<p class="nov-card-resumen">' + escHtml(n.resumen) + '</p>'
+        + '<span class="nov-card-link"><i class="fas fa-arrow-right"></i> Leer más</span>'
+        + '</div></article>';
+    }).join('') + '</div>';
   }
-  el.innerHTML = banner + items.map(function(n) {
-    var foto = n.imagen
-      ? '<div class="noticia-foto"><img src="' + n.imagen + '" alt="' + escHtml(n.titulo) + '" loading="lazy"/></div>'
-      : '';
-    return '<article class="noticia-card' + (n.imagen ? ' noticia-card-foto' : '') + '">'
-      + foto
-      + '<div class="noticia-contenido">'
-      + '<div class="noticia-meta"><span class="noticia-cat">' + escHtml(n.categoria) + '</span>'
-      + '<span class="noticia-fecha">' + escHtml(n.fecha) + '</span></div>'
-      + '<h3>' + escHtml(n.titulo) + '</h3>'
-      + '<p>' + escHtml(n.resumen) + '</p>'
-      + '</div></article>';
-  }).join('');
 }
+
+function abrirNovedadDetalle(id) {
+  var n = _novedadesCache.filter(function(x){ return String(x.id) === String(id); })[0];
+  if (!n) return;
+  var inner = document.getElementById('modal-nov-inner');
+  if (!inner) return;
+  var heroHtml = n.imagen
+    ? '<div class="modal-nov-hero"><img src="' + escHtml(n.imagen) + '" alt="' + escHtml(n.titulo) + '"/></div>'
+    : '';
+  inner.innerHTML = heroHtml
+    + '<div class="modal-nov-header">'
+    + '<span class="noticia-cat">' + escHtml(n.categoria) + '</span>'
+    + '<span class="modal-nov-fecha">' + escHtml(n.fecha) + '</span>'
+    + '</div>'
+    + '<h2 class="modal-nov-titulo">' + escHtml(n.titulo) + '</h2>'
+    + '<div class="modal-nov-cuerpo"><p>' + escHtml(n.contenido || n.resumen) + '</p></div>';
+  var modal = document.getElementById('modal-novedad');
+  if (modal) { modal.classList.add('visible'); document.body.style.overflow = 'hidden'; }
+}
+
+function cerrarNovedadModal() {
+  var modal = document.getElementById('modal-novedad');
+  if (modal) { modal.classList.remove('visible'); document.body.style.overflow = ''; }
+}
+
 
 function actualizarCarrusel(data) {
   var slides = data.carrusel || [];
