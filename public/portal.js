@@ -16,13 +16,13 @@ var REGPOL_SITE_KEY = 'regpolSiteData_v1';
 
 var REGPOL_NAV = [
   { id: 'inicio',    href: 'index.html',            label: 'INICIO',             icon: 'fa-home' },
+  { id: 'novedades', href: 'novedades.html',         label: 'NOVEDADES' },
+  { id: 'convenios', href: 'convenios.html',         label: 'CONVENIOS' },
+  { id: 'cursos',    href: 'cursos.html',            label: 'CURSOS' },
+  { id: 'bienestar', href: 'evaluacion.html',        label: 'BIENESTAR',          icon: 'fa-heart' },
   { id: 'resena',    href: 'resena-historica.html',  label: 'RESEÑA HISTÓRICA' },
   { id: 'labor',     href: 'nuestra-labor.html',     label: 'NUESTRA LABOR' },
-  { id: 'unidades',  href: 'unidades.html',          label: 'NUESTRAS UNIDADES', icon: 'fa-map-marker-alt' },
-  { id: 'convenios', href: 'convenios.html',         label: 'CONVENIOS' },
-  { id: 'cursos',    href: 'cursos.html',            label: 'CURSOS REGIONALES' },
-  { id: 'novedades', href: 'novedades.html',         label: 'NOVEDADES' },
-  { id: 'bienestar', href: 'evaluacion.html',        label: 'BIENESTAR',          icon: 'fa-heart' }
+  { id: 'unidades',  href: 'unidades.html',          label: 'NUESTRAS UNIDADES', icon: 'fa-map-marker-alt' }
 ];
 
 function escHtml(str) {
@@ -224,7 +224,25 @@ function marcarNavActivo(activeId) {
   });
 }
 
+function initPortalEncabezado() {
+  var box = document.querySelector('.main-header .title-text');
+  if (!box) return;
+  var h1 = box.querySelector('h1');
+  if (h1) h1.textContent = 'REGIÓN POLICIAL CALLAO';
+  if (box.querySelector('.portal-eslogan')) return;
+  box.querySelectorAll('p').forEach(function(p) { p.remove(); });
+  var eslogan = document.createElement('p');
+  eslogan.className = 'portal-eslogan';
+  eslogan.textContent = 'AL SERVICIO DE LA CIUDADANÍA';
+  var subtitulo = document.createElement('p');
+  subtitulo.className = 'portal-subtitulo';
+  subtitulo.textContent = 'Compromiso, Honor y Servicio en la Provincia Constitucional';
+  box.appendChild(eslogan);
+  box.appendChild(subtitulo);
+}
+
 function initPortalNav(activeId) {
+  initPortalEncabezado();
   var ul = document.querySelector('.nav-main ul');
   if (!ul) return;
   ul.innerHTML = REGPOL_NAV.map(function(item) {
