@@ -1,6 +1,6 @@
-﻿/* ================================================================
-   panel-admin.js â€” Panel de Control Operador UNITIC
-   REGPOL Callao â€” Ing. Anthony Ccayo â€” 2026
+?/* ================================================================
+   panel-admin.js — Panel de Control Operador UNITIC
+   REGPOL Callao — Ing. Anthony Ccayo — 2026
 ================================================================ */
 
 var WEB_APP_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '';
@@ -44,7 +44,7 @@ function cargarDashboardAdmin() {
       if (tbody) {
         var rows = data.ultimasEvaluaciones || [];
         if (!rows.length) {
-          tbody.innerHTML = '<tr><td colspan="3">Sin evaluaciones registradas aÃºn.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="3">Sin evaluaciones registradas aún.</td></tr>';
         } else {
           tbody.innerHTML = rows.map(function(r) {
             return '<tr><td>' + escDash(r.fecha) + '</td><td>' + escDash(r.comisaria) + '</td><td>' + escDash(r.nombres) + '</td></tr>';
@@ -169,14 +169,14 @@ function cargarComisariasDesdeSheet() {
     .catch(function() {
       if (ico) ico.classList.remove('fa-spin');
       select.disabled = false;
-      mostrarMsgDescarga('Lista de comisarÃ­as cargada. No se pudo conectar con la Web App.', 'error');
+      mostrarMsgDescarga('Lista de comisarías cargada. No se pudo conectar con la Web App.', 'error');
     });
 }
 
 function descargarPorComisaria() {
   var comisaria = document.getElementById('filtro-comisaria').value.trim();
   if (!comisaria) {
-    mostrarMsgDescarga('Selecciona una comisarÃ­a primero.', 'error');
+    mostrarMsgDescarga('Selecciona una comisaría primero.', 'error');
     return;
   }
   triggerDescarga(
@@ -193,7 +193,7 @@ function descargarTodas() {
 
 function descargarPDFComisaria() {
   var comisaria = document.getElementById('filtro-comisaria').value.trim();
-  if (!comisaria) { mostrarMsgDescarga('Selecciona una comisarÃ­a primero.', 'error'); return; }
+  if (!comisaria) { mostrarMsgDescarga('Selecciona una comisaría primero.', 'error'); return; }
   triggerDescarga(WEB_APP_URL + '/pdf/comisaria?comisaria=' + encodeURIComponent(comisaria),
     'MMPI2_' + comisaria.replace(/\s+/g,'_') + '.pdf');
   mostrarMsgDescarga('Generando PDF de: ' + comisaria + ' ...', 'ok');
@@ -207,8 +207,8 @@ function descargarPDFTodas() {
           'MMPI2_' + c.replace(/\s+/g,'_') + '.pdf');
       }, 800);
     });
-    mostrarMsgDescarga('Generando PDFs de ' + (data.comisarias||[]).length + ' comisarÃ­a(s)...', 'ok');
-  }).catch(function(){ mostrarMsgDescarga('Error al obtener comisarÃ­as.', 'error'); });
+    mostrarMsgDescarga('Generando PDFs de ' + (data.comisarias||[]).length + ' comisaría(s)...', 'ok');
+  }).catch(function(){ mostrarMsgDescarga('Error al obtener comisarías.', 'error'); });
 }
 
 function triggerDescarga(url, nombre) {
@@ -230,26 +230,26 @@ function mostrarMsgDescarga(texto, tipo) {
 }
 
 function mostrarInputWebApp() {
-  // Ya no se necesita â€” usamos servidor local
+  // Ya no se necesita — usamos servidor local
 }
 
 function guardarWebAppUrl() {}
 
-// â”€â”€ VER EVALUACIONES EN PANTALLA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── VER EVALUACIONES EN PANTALLA ──────────────────────────────────────────────
 function verDatos() {
   var panel = document.getElementById('panel-tabla-datos');
   if (!panel) return;
   panel.style.display = 'block';
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  // Poblar selector de comisarÃ­as del filtro
+  // Poblar selector de comisarías del filtro
   fetch(WEB_APP_URL + '/listar')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var sel = document.getElementById('filtro-tabla-comisaria');
       if (!sel || !data.ok) return;
       var actual = sel.value;
-      sel.innerHTML = '<option value="">-- Todas las comisarÃ­as --</option>';
+      sel.innerHTML = '<option value="">-- Todas las comisarías --</option>';
       (data.comisarias || []).forEach(function(c) {
         var opt = document.createElement('option');
         opt.value = c; opt.textContent = c;
@@ -277,7 +277,7 @@ function cargarTablaDatos(pagina) {
     })
     .catch(function() {
       document.getElementById('tabla-datos-body').innerHTML =
-        '<tr><td colspan="7" style="color:#f39c12;">Servidor no disponible. AsegÃºrate que node server.js estÃ© corriendo.</td></tr>';
+        '<tr><td colspan="7" style="color:#f39c12;">Servidor no disponible. Asegúrate que node server.js esté corriendo.</td></tr>';
     });
 }
 
@@ -287,7 +287,7 @@ function renderTabla(rows, total, pagina, paginas) {
   if (!tbody) return;
 
   if (!rows || !rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7">No hay evaluaciones registradas aÃºn.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7">No hay evaluaciones registradas aún.</td></tr>';
     if (info) info.textContent = 'Sin resultados.';
     return;
   }
@@ -311,17 +311,17 @@ function renderTabla(rows, total, pagina, paginas) {
       + '</tr>';
   }).join('');
 
-  if (info) info.textContent = 'Mostrando ' + rows.length + ' de ' + total + ' evaluaciones | PÃ¡gina ' + pagina + ' de ' + paginas;
+  if (info) info.textContent = 'Mostrando ' + rows.length + ' de ' + total + ' evaluaciones | Página ' + pagina + ' de ' + paginas;
 
-  // PaginaciÃ³n
+  // Paginación
   var paginacion = document.getElementById('tabla-paginacion');
   if (paginacion) {
     var btns = '';
-    if (pagina > 1) btns += '<button class="btn-pag" onclick="cargarTablaDatos(' + (pagina-1) + ')">â† Anterior</button>';
+    if (pagina > 1) btns += '<button class="btn-pag" onclick="cargarTablaDatos(' + (pagina-1) + ')">�? Anterior</button>';
     for (var p = Math.max(1, pagina-2); p <= Math.min(paginas, pagina+2); p++) {
       btns += '<button class="btn-pag' + (p===pagina?' btn-pag-activo':'') + '" onclick="cargarTablaDatos(' + p + ')">' + p + '</button>';
     }
-    if (pagina < paginas) btns += '<button class="btn-pag" onclick="cargarTablaDatos(' + (pagina+1) + ')">Siguiente â†’</button>';
+    if (pagina < paginas) btns += '<button class="btn-pag" onclick="cargarTablaDatos(' + (pagina+1) + ')">Siguiente →</button>';
     paginacion.innerHTML = btns;
   }
 }
