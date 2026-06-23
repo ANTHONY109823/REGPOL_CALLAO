@@ -99,6 +99,15 @@
           <span class="msg-error" id="msg-nacimiento">Use formato dd/mm/aaaa (ej: 15/03/1990).</span>
         </div>
         <div class="campo">
+          <label for="f-sexo">Sexo <span class="req">*</span></label>
+          <select id="f-sexo" class="select-eval">
+            <option value="">-- Seleccionar --</option>
+            <option value="MASCULINO">MASCULINO</option>
+            <option value="FEMENINO">FEMENINO</option>
+          </select>
+          <span class="msg-error">Seleccione el sexo.</span>
+        </div>
+        <div class="campo">
           <label for="f-cargo">Cargo <span class="req">*</span></label>
           <select id="f-cargo" class="select-eval">
             <option value="">-- Seleccionar cargo --</option>
@@ -108,6 +117,19 @@
             <option value="JEFE DE UNIDAD">JEFE DE UNIDAD</option>
           </select>
           <span class="msg-error">Seleccione su cargo.</span>
+        </div>
+        <div class="campo campo-full">
+          <label>Armamento</label>
+          <div class="check-group">
+            <label class="check-item">
+              <input type="checkbox" id="f-arm-particular" value="ARMAMENTO PARTICULAR" />
+              <span>Armamento Particular</span>
+            </label>
+            <label class="check-item">
+              <input type="checkbox" id="f-arm-estado" value="ARMAMENTO DEL ESTADO" />
+              <span>Armamento del Estado</span>
+            </label>
+          </div>
         </div>
         <div class="campo campo-full campo-foto">
           <label for="f-foto">Fotografía del efectivo <span class="req">*</span></label>

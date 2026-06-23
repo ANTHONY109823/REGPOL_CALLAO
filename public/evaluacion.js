@@ -212,6 +212,7 @@ function validarRegistro() {
     {id:'f-cip',     test:function(v){return /^\d{8}$/.test(v.trim());}, msg:'CIP: 8 dígitos.'},
     {id:'f-dni',     test:function(v){return /^\d{8}$/.test(v.trim());}, msg:'DNI: 8 dígitos.'},
     {id:'f-nacimiento',test:esFechaValida, msg:'Fecha de nacimiento inválida (18-80 años).'},
+    {id:'f-sexo',    test:function(v){return v.trim().length>0;},     msg:'Seleccione el sexo.'},
     {id:'f-cargo',   test:function(v){return v.trim().length>0;},     msg:'Seleccione su cargo.'}
   ];
   campos.forEach(function(c){
@@ -229,6 +230,15 @@ function validarRegistro() {
   return err;
 }
 
+function obtenerArmamento() {
+  var vals = [];
+  var chkP = document.getElementById('f-arm-particular');
+  var chkE = document.getElementById('f-arm-estado');
+  if (chkP && chkP.checked) vals.push(chkP.value);
+  if (chkE && chkE.checked) vals.push(chkE.value);
+  return vals;
+}
+
 function construirPayloadGuardar(completada) {
   return {
     comisaria: obtenerComisariaEvaluacion(),
@@ -238,7 +248,9 @@ function construirPayloadGuardar(completada) {
     dni:       document.getElementById('f-dni').value.trim(),
     fecha_nac: fechaNacParaEnvio(),
     edad:      obtenerEdadParaEnvio(),
+    sexo:      (document.getElementById('f-sexo')||{value:''}).value.trim(),
     cargo:     document.getElementById('f-cargo').value.trim(),
+    armamento: obtenerArmamento(),
     foto:      FOTO_BASE64 || '',
     respuestas: ESTADO.respuestas,
     completada: !!completada
@@ -408,7 +420,9 @@ function guardarBloqueEnServidor(callback) {
 
   var payload = {
     cip:cip, nombres:nombres, comisaria:comisaria, unidad:unidad,
+    sexo: (document.getElementById('f-sexo')||{value:''}).value||'',
     cargo: (document.getElementById('f-cargo')||{}).value||'',
+    armamento: obtenerArmamento(),
     foto: FOTO_BASE64 || '',
     bloque:ESTADO.bloqueActual, total:total, respuestas:ESTADO.respuestas
   };
@@ -451,6 +465,7 @@ function continuarConCIP() {
     }
     document.getElementById('f-cip').value = data.cip || cip;
     if (data.nombres) document.getElementById('f-nombres').value = data.nombres;
+    if (data.sexo) { var sel = document.getElementById('f-sexo'); if(sel) sel.value = data.sexo; }
     if (data.cargo) document.getElementById('f-cargo').value = data.cargo;
     if (data.foto) { FOTO_BASE64 = data.foto; actualizarPreviewFoto(data.foto); }
     seleccionarComisariaEnSelect('f-unidad', data.unidad || data.comisaria || '');
@@ -470,7 +485,9 @@ function autoGuardarProgreso() {
     nombres:   (document.getElementById('f-nombres')||{}).value||'',
     comisaria: obtenerComisariaEvaluacion(),
     unidad:    (document.getElementById('f-unidad')||{}).value||'',
+    sexo:      (document.getElementById('f-sexo')||{value:''}).value||'',
     cargo:     (document.getElementById('f-cargo')||{}).value||'',
+    armamento: obtenerArmamento(),
     foto:      FOTO_BASE64 || '',
     bloque:ESTADO.bloqueActual, total:Object.keys(ESTADO.respuestas).length,
     respuestas:ESTADO.respuestas
@@ -531,6 +548,7 @@ function restaurarProgreso() {
   if(!data) return;
   if(data.cip)     document.getElementById('f-cip').value    =data.cip;
   if(data.nombres) document.getElementById('f-nombres').value=data.nombres;
+  if(data.sexo){ var sel=document.getElementById('f-sexo'); if(sel) sel.value=data.sexo; }
   if(data.cargo) document.getElementById('f-cargo').value=data.cargo;
   if(data.foto) { FOTO_BASE64 = data.foto; actualizarPreviewFoto(data.foto); }
   seleccionarComisariaEnSelect('f-unidad', data.unidad || data.comisaria || '');
@@ -599,7 +617,9 @@ function enviarEvaluacion() {
 }
 
 function limpiarFormulario() {
-  ['f-unidad','f-nombres','f-cip','f-dni','f-nacimiento','f-cargo'].forEach(function(id){document.getElementById(id).value='';});
+  ['f-unidad','f-nombres','f-cip','f-dni','f-nacimiento','f-sexo','f-cargo'].forEach(function(id){var el=document.getElementById(id);if(el) el.value='';});
+  var chkP=document.getElementById('f-arm-particular'); if(chkP) chkP.checked=false;
+  var chkE=document.getElementById('f-arm-estado'); if(chkE) chkE.checked=false;
   FOTO_BASE64 = '';
   quitarFoto();
   ESTADO.respuestas={}; ESTADO.bloqueActual=1; ALERTA_FINAL_MOSTRADA=false;

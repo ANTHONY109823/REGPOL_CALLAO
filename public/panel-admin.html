@@ -599,6 +599,10 @@
     </select>
     <label>Orden</label>
     <input type="number" id="mu2-orden" value="99" min="1"/>
+    <label>Dirección</label>
+    <input type="text" id="mu2-direccion" placeholder="Ej: Jr. Constitución 123, Callao"/>
+    <label>Teléfono</label>
+    <input type="text" id="mu2-telefono" placeholder="Ej: 01-429-0000"/>
     <div class="modal-footer">
       <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-unidad')">Cancelar</button>
       <button class="btn btn-v" onclick="guardarUnidad()"><i class="fas fa-save"></i> Guardar</button>
@@ -1160,10 +1164,13 @@ function cargarDivisiones(){
       var unis = div.unidades.map(function(u,i){
         return '<div class="uni-row">'
           +'<span class="uni-num">'+(i+1)+'</span>'
-          +'<span class="uni-nom">'+escHtml(u.nombre)+'</span>'
+          +'<span class="uni-nom">'+escHtml(u.nombre)
+            +(u.direccion?'<br><small style="font-weight:400;color:#888;font-size:10px;"><i class="fas fa-map-marker-alt"></i> '+escHtml(u.direccion)+'</small>':'')
+            +(u.telefono?'<small style="font-weight:400;color:#888;font-size:10px;margin-left:8px;"><i class="fas fa-phone"></i> '+escHtml(u.telefono)+'</small>':'')
+          +'</span>'
           +'<span class="uni-tipo">'+(u.tipo==='especializada'?'Especializada':'CIA')+'</span>'
           +'<div style="display:flex;gap:4px;">'
-            +'<button class="btn-mini" onclick="editarUnidad('+u.id+','+div.id+',\''+escJs(u.nombre)+'\',\''+u.tipo+'\','+u.orden+')" title="Editar"><i class="fas fa-edit"></i></button>'
+            +'<button class="btn-mini" onclick="editarUnidad('+u.id+','+div.id+',\''+escJs(u.nombre)+'\',\''+u.tipo+'\','+u.orden+',\''+escJs(u.direccion||'')+'\',\''+escJs(u.telefono||'')+'\''+')" title="Editar"><i class="fas fa-edit"></i></button>'
             +'<button class="btn-mini btn-mini-danger" onclick="eliminarUnidad('+u.id+')" title="Eliminar"><i class="fas fa-trash"></i></button>'
           +'</div></div>';
       }).join('');
@@ -1224,25 +1231,30 @@ function abrirModalUnidad(divId){
   document.getElementById('mu2-nombre').value='';
   document.getElementById('mu2-tipo').value='comisaria';
   document.getElementById('mu2-orden').value='99';
+  document.getElementById('mu2-direccion').value='';
+  document.getElementById('mu2-telefono').value='';
   document.getElementById('mu2-titulo').textContent='Nueva unidad';
   document.getElementById('modal-unidad').classList.add('open');
 }
-function editarUnidad(id,divId,nombre,tipo,orden){
+function editarUnidad(id,divId,nombre,tipo,orden,direccion,telefono){
   document.getElementById('mu2-id').value=id;
   document.getElementById('mu2-div-id').value=divId;
-  document.getElementById('mu2-nombre').value=nombre;
-  document.getElementById('mu2-tipo').value=tipo;
-  document.getElementById('mu2-orden').value=orden;
+  document.getElementById('mu2-nombre').value=nombre||'';
+  document.getElementById('mu2-tipo').value=tipo||'comisaria';
+  document.getElementById('mu2-orden').value=orden||99;
+  document.getElementById('mu2-direccion').value=direccion||'';
+  document.getElementById('mu2-telefono').value=telefono||'';
   document.getElementById('mu2-titulo').textContent='Editar: '+nombre;
   document.getElementById('modal-unidad').classList.add('open');
 }
 function guardarUnidad(){
   var id=val('mu2-id'), divId=val('mu2-div-id');
   var nombre=val('mu2-nombre').trim(), tipo=val('mu2-tipo'), orden=parseInt(val('mu2-orden'))||99;
+  var direccion=val('mu2-direccion').trim(), telefono=val('mu2-telefono').trim();
   if(!nombre){alert('Ingrese el nombre.');return;}
   var url=id?API+'/admin/unidades/'+id:API+'/admin/unidades';
   var method=id?'PUT':'POST';
-  var body={nombre:nombre,division_id:parseInt(divId),tipo:tipo,orden:orden};
+  var body={nombre:nombre,division_id:parseInt(divId),tipo:tipo,orden:orden,direccion:direccion,telefono:telefono};
   fetch(url,{method:method,headers:hdr(),body:JSON.stringify(body)})
     .then(function(r){return r.json();}).then(function(d){
       if(d.ok){cerrarModal('modal-unidad');cargarDivisiones();}

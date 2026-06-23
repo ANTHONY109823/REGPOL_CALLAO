@@ -71,6 +71,8 @@ async function initDB() {
     ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS bloque_max SMALLINT DEFAULT 0;
     ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS cargo VARCHAR(80);
     ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS foto TEXT;
+    ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS sexo VARCHAR(20);
+    ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS armamento TEXT;
     CREATE INDEX IF NOT EXISTS idx_eval_comisaria ON evaluaciones(comisaria);
     CREATE INDEX IF NOT EXISTS idx_eval_unidad    ON evaluaciones(unidad);
 
@@ -100,6 +102,8 @@ async function initDB() {
       tipo        VARCHAR(30) DEFAULT 'comisaria',
       orden       SMALLINT DEFAULT 0
     );
+    ALTER TABLE unidades_pol ADD COLUMN IF NOT EXISTS direccion TEXT;
+    ALTER TABLE unidades_pol ADD COLUMN IF NOT EXISTS telefono VARCHAR(60);
 
     CREATE TABLE IF NOT EXISTS configuracion (
       clave       VARCHAR(60) PRIMARY KEY,
@@ -394,13 +398,14 @@ app.delete('/admin/preguntas/:id', requireAuth, async (req, res) => {
 // ── POST /guardar ─────────────────────────────────────────────────────────────
 app.post('/guardar', async (req, res) => {
   try {
-    const { comisaria, unidad, nombres, cip, dni, fecha_nac, edad, cargo, foto, respuestas, completada } = req.body;
+    const { comisaria, unidad, nombres, cip, dni, fecha_nac, edad, cargo, sexo, armamento, foto, respuestas, completada } = req.body;
     if (!nombres || !cip) return res.json({ ok: false, error: 'Faltan datos obligatorios' });
     const edadFinal = parseInt(edad) || calcularEdadDesdeISO(fecha_nac) || 0;
     const totalResp = Object.keys(respuestas || {}).filter(function(k) {
       const v = respuestas[k];
       return v === 'V' || v === 'F';
     }).length;
+    const armamentoStr = Array.isArray(armamento) ? armamento.join(', ') : (armamento || '');
 
     const exist = await pool.query(
       'SELECT id, completada FROM evaluaciones WHERE UPPER(TRIM(cip))=UPPER(TRIM($1)) ORDER BY fecha DESC LIMIT 1',
@@ -410,16 +415,19 @@ app.post('/guardar', async (req, res) => {
     if (exist.rows.length) {
       await pool.query(
         `UPDATE evaluaciones SET comisaria=$1, unidad=$2, nombres=$3, dni=$4, fecha_nac=$5, edad=$6,
-         cargo=$7, foto=COALESCE(NULLIF($8,''), foto), respuestas=$9, completada=$10, bloque_max=$11, fecha=NOW() WHERE id=$12`,
+         cargo=$7, foto=COALESCE(NULLIF($8,''), foto), respuestas=$9, completada=$10, bloque_max=$11,
+         sexo=$12, armamento=$13, fecha=NOW() WHERE id=$14`,
         [comisaria || '', unidad || '', nombres || '', dni || '', fecha_nac || null,
-         edadFinal, cargo || '', foto || '', respuestas || {}, !!completada, totalResp, exist.rows[0].id]
+         edadFinal, cargo || '', foto || '', respuestas || {}, !!completada, totalResp,
+         sexo || '', armamentoStr, exist.rows[0].id]
       );
     } else {
       await pool.query(
-        `INSERT INTO evaluaciones (comisaria,unidad,nombres,cip,dni,fecha_nac,edad,cargo,foto,respuestas,completada,bloque_max)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+        `INSERT INTO evaluaciones (comisaria,unidad,nombres,cip,dni,fecha_nac,edad,cargo,sexo,armamento,foto,respuestas,completada,bloque_max)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
         [comisaria || '', unidad || '', nombres || '', cip || '', dni || '',
-         fecha_nac || null, edadFinal, cargo || '', foto || '', respuestas || {}, !!completada, totalResp]
+         fecha_nac || null, edadFinal, cargo || '', sexo || '', armamentoStr,
+         foto || '', respuestas || {}, !!completada, totalResp]
       );
     }
 
@@ -440,8 +448,14 @@ app.post('/guardar', async (req, res) => {
 // ── POST /progreso (guardar bloque parcial) ────────────────────────────────────
 app.post('/progreso', async (req, res) => {
   try {
-    const { cip, nombres, comisaria, unidad, bloque, total, respuestas } = req.body;
+    const { cip, nombres, comisaria, unidad, cargo, sexo, armamento, foto, bloque, total, respuestas } = req.body;
     const clave = (cip || 'anonimo').toLowerCase().trim();
+    const armamentoStr = Array.isArray(armamento) ? armamento.join(', ') : (armamento || '');
+    // Agregar columnas cargo/sexo/armamento/foto a progresos si no existen
+    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS cargo VARCHAR(80)`).catch(()=>{});
+    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS sexo VARCHAR(20)`).catch(()=>{});
+    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS armamento TEXT`).catch(()=>{});
+    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS foto TEXT`).catch(()=>{});
     await pool.query(
       `INSERT INTO progresos (clave,cip,nombres,comisaria,unidad,bloque_max,total_resp,respuestas,actualizado)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
@@ -450,6 +464,11 @@ app.post('/progreso', async (req, res) => {
          total_resp=$7, respuestas=$8, actualizado=NOW()`,
       [clave, cip||'', nombres||'', comisaria||'', unidad||'', bloque||0, total||0, respuestas||{}]
     );
+    // Actualizar campos extra por separado para compatibilidad con esquema dinámico
+    await pool.query(
+      `UPDATE progresos SET cargo=$2, sexo=$3, armamento=$4, foto=COALESCE(NULLIF($5,''),foto) WHERE clave=$1`,
+      [clave, cargo||'', sexo||'', armamentoStr, foto||'']
+    ).catch(()=>{});
     res.json({ ok: true });
   } catch (e) {
     res.json({ ok: false, error: e.message });
@@ -906,10 +925,28 @@ app.delete('/admin/usuarios/:id', requireAuth, async (req, res) => {
 });
 
 // ── GET /admin/divisiones ─────────────────────────────────────────────────────
+// ── GET /unidades-publico (sin auth — para la página pública) ────────────────
+app.get('/unidades-publico', async (req, res) => {
+  try {
+    const divs  = await pool.query('SELECT id,nombre,orden FROM divisiones ORDER BY orden,nombre');
+    const upols = await pool.query(
+      "SELECT id,nombre,division_id,tipo,orden,direccion,telefono FROM unidades_pol WHERE tipo='comisaria' ORDER BY division_id,orden,nombre"
+    );
+    const result = divs.rows
+      .filter(d => upols.rows.some(u => u.division_id === d.id))
+      .map(d => ({
+        id: d.id, nombre: d.nombre,
+        unidades: upols.rows.filter(u => u.division_id === d.id)
+          .map(u => ({ id: u.id, nombre: u.nombre, direccion: u.direccion||'', telefono: u.telefono||'' }))
+      }));
+    res.json({ ok: true, divisiones: result });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 app.get('/admin/divisiones', requireAuth, async (req, res) => {
   try {
     const divs  = await pool.query('SELECT id,nombre,orden FROM divisiones ORDER BY orden,nombre');
-    const upols = await pool.query('SELECT id,nombre,division_id,tipo,orden FROM unidades_pol ORDER BY division_id,orden,nombre');
+    const upols = await pool.query('SELECT id,nombre,division_id,tipo,orden,direccion,telefono FROM unidades_pol ORDER BY division_id,orden,nombre');
     const result = divs.rows.map(d => ({
       id: d.id, nombre: d.nombre, orden: d.orden,
       unidades: upols.rows.filter(u => u.division_id === d.id)
@@ -942,20 +979,21 @@ app.delete('/admin/divisiones/:id', requireAuth, async (req, res) => {
 
 app.post('/admin/unidades', requireAuth, async (req, res) => {
   if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
-  const { nombre, division_id, tipo, orden } = req.body;
+  const { nombre, division_id, tipo, orden, direccion, telefono } = req.body;
   try {
     const r = await pool.query(
-      'INSERT INTO unidades_pol (nombre,division_id,tipo,orden) VALUES ($1,$2,$3,$4) RETURNING id',
-      [nombre, division_id||null, tipo||'comisaria', orden||0]);
+      'INSERT INTO unidades_pol (nombre,division_id,tipo,orden,direccion,telefono) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+      [nombre, division_id||null, tipo||'comisaria', orden||0, direccion||'', telefono||'']);
     res.json({ ok: true, id: r.rows[0].id });
   } catch (e) { res.json({ ok: false, error: 'Unidad ya existe' }); }
 });
 
 app.put('/admin/unidades/:id', requireAuth, async (req, res) => {
   if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
-  const { nombre, division_id, tipo, orden } = req.body;
-  await pool.query('UPDATE unidades_pol SET nombre=$1,division_id=$2,tipo=$3,orden=$4 WHERE id=$5',
-    [nombre, division_id||null, tipo||'comisaria', orden||0, req.params.id]);
+  const { nombre, division_id, tipo, orden, direccion, telefono } = req.body;
+  await pool.query(
+    'UPDATE unidades_pol SET nombre=$1,division_id=$2,tipo=$3,orden=$4,direccion=$5,telefono=$6 WHERE id=$7',
+    [nombre, division_id||null, tipo||'comisaria', orden||0, direccion||'', telefono||'', req.params.id]);
   res.json({ ok: true });
 });
 

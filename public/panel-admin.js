@@ -4,7 +4,7 @@
 ================================================================ */
 
 var WEB_APP_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '';
-var ADMIN_PASS  = 'AdminUNITIC2026';
+var ADMIN_PASS  = '';
 var vistaAdminActual = 'dashboard';
 
 function cambiarVistaAdmin(vista) {

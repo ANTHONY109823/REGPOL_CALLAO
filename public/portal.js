@@ -3,13 +3,14 @@ var REGPOL_WEB_APP = 'https://script.google.com/macros/s/AKfycbzHHCUjXQVNtgVTERG
 var REGPOL_SITE_KEY = 'regpolSiteData_v1';
 
 var REGPOL_NAV = [
-  { id: 'inicio', href: 'index.html', label: 'INICIO', icon: 'fa-home' },
-  { id: 'resena', href: 'resena-historica.html', label: 'RESEÑA HISTÓRICA' },
-  { id: 'labor', href: 'nuestra-labor.html', label: 'NUESTRA LABOR' },
-  { id: 'convenios', href: 'convenios.html', label: 'CONVENIOS' },
-  { id: 'cursos', href: 'cursos.html', label: 'CURSOS REGIONALES' },
-  { id: 'novedades', href: 'novedades.html', label: 'NOVEDADES' },
-  { id: 'bienestar', href: 'evaluacion.html', label: 'BIENESTAR', icon: 'fa-heart' }
+  { id: 'inicio',    href: 'index.html',            label: 'INICIO',             icon: 'fa-home' },
+  { id: 'resena',    href: 'resena-historica.html',  label: 'RESEÑA HISTÓRICA' },
+  { id: 'labor',     href: 'nuestra-labor.html',     label: 'NUESTRA LABOR' },
+  { id: 'unidades',  href: 'unidades.html',          label: 'NUESTRAS UNIDADES', icon: 'fa-map-marker-alt' },
+  { id: 'convenios', href: 'convenios.html',         label: 'CONVENIOS' },
+  { id: 'cursos',    href: 'cursos.html',            label: 'CURSOS REGIONALES' },
+  { id: 'novedades', href: 'novedades.html',         label: 'NOVEDADES' },
+  { id: 'bienestar', href: 'evaluacion.html',        label: 'BIENESTAR',          icon: 'fa-heart' }
 ];
 
 function escHtml(str) {
@@ -76,7 +77,7 @@ function publicarSiteData(data) {
     method: 'POST',
     mode: 'no-cors',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'save_site', data: data, token: 'AdminUNITIC2026' })
+    body: JSON.stringify({ action: 'save_site', data: data })
   }).catch(function() {});
 }
 
