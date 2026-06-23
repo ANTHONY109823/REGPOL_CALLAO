@@ -528,27 +528,9 @@
 
         <!-- PANEL: Novedades -->
         <div id="cms-panel-novedades" class="cms-panel">
-          <div style="background:#f0f7f4;border:1.5px dashed #004d3d;border-radius:8px;padding:12px;margin-bottom:14px;">
-            <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Imagen del banner de la secciÃ³n Novedades</strong>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-              <label style="flex:1;min-width:180px;">
-                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Subir foto (JPG/PNG mÃ¡x 2MB)</span>
-                <input type="file" id="cms-novedades-img-file" accept="image/jpeg,image/png,image/webp" style="font-size:12px;width:100%;" onchange="previewBannerImg(this,'novedades')"/>
-              </label>
-              <label style="flex:1;min-width:180px;">
-                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">O pegar URL de imagen web</span>
-                <input type="text" id="cms-novedades-img-url" placeholder="https://..." style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;" oninput="previewBannerUrl(this,'novedades')"/>
-              </label>
-            </div>
-            <input type="hidden" id="cms-novedades-img-data"/>
-            <div id="cms-novedades-img-preview" style="margin-top:8px;display:none;">
-              <img id="cms-novedades-img-thumb" src="" style="max-height:90px;border-radius:6px;border:1.5px solid #ccc;" alt=""/>
-              <button type="button" onclick="quitarBannerImg('novedades')" style="margin-left:8px;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;"><i class="fas fa-times"></i> Quitar</button>
-            </div>
-          </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <strong style="color:#004d3d;">Novedades</strong>
-            <button class="btn btn-v" onclick="agregarNovedadCMS()"><i class="fas fa-plus"></i> Nueva</button>
+            <strong style="color:#004d3d;">Novedades institucionales</strong>
+            <button class="btn btn-v" onclick="agregarNovedadCMS()"><i class="fas fa-plus"></i> Nueva novedad</button>
           </div>
           <div id="cms-lista-novedades"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
           <button class="btn btn-v" onclick="guardarSitioWeb()" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar Novedades</button>

@@ -304,7 +304,8 @@ function abrirModalNovedad(idx) {
   var imgPreviewStyle = imgPreviewSrc ? 'display:block;' : 'display:none;';
 
   var body = cmsCampo('Título', 'm-titulo', item.titulo)
-    + cmsCampo('Resumen', 'm-resumen', item.resumen, 'textarea')
+    + cmsCampo('Resumen breve', 'm-resumen', item.resumen, 'textarea')
+    + cmsCampo('Contenido completo (aparece al abrir la noticia)', 'm-contenido', item.contenido || '', 'textarea')
     + cmsCampo('Categoría', 'm-cat', item.categoria, 'select',
         ['Operativo', 'Tránsito', 'Comunitario', 'Institucional', 'Prevención'])
     + cmsCampo('Fecha', 'm-fecha', item.fecha)
@@ -323,6 +324,7 @@ function abrirModalNovedad(idx) {
       id:        item.id || ('nov-' + Date.now()),
       titulo:    titulo,
       resumen:   leerModal('m-resumen'),
+      contenido: leerModal('m-contenido'),
       categoria: leerModal('m-cat') || 'Institucional',
       fecha:     leerModal('m-fecha'),
       imagen:    getVal('m-foto-data') || item.imagen || ''

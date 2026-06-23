@@ -1283,3 +1283,112 @@ table.t { min-width: 600px; }
   .pagina-hero-texto h2 { font-size: 1.15rem; }
   .pagina-hero-texto p { font-size: 0.8rem; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   GRID DE NOVEDADES 3x3
+═══════════════════════════════════════════════════════════ */
+.novedades-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  margin-bottom: 32px;
+}
+
+.nov-card {
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.09);
+  border: 1.5px solid #e8f0e8;
+  cursor: pointer;
+  transition: transform .18s, box-shadow .18s;
+  display: flex;
+  flex-direction: column;
+}
+.nov-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 32px rgba(0,77,61,0.18);
+  border-color: #004d3d;
+}
+
+.nov-card-img {
+  height: 170px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.nov-card-img-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 60%);
+}
+.nov-card-cat {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #c8a94a;
+  color: #002d24;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 10px;
+  z-index: 1;
+}
+
+.nov-card-body {
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.nov-card-fecha {
+  font-size: 11px;
+  color: #999;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.nov-card-fecha i { color: #c8a94a; margin-right: 4px; }
+.nov-card-titulo {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #004d3d;
+  line-height: 1.35;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.nov-card-resumen {
+  font-size: 12.5px;
+  color: #666;
+  line-height: 1.6;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.nov-card-link {
+  font-size: 12px;
+  font-weight: 700;
+  color: #004d3d;
+  letter-spacing: .3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+}
+.nov-card-link i { font-size: 11px; transition: transform .15s; }
+.nov-card:hover .nov-card-link i { transform: translateX(4px); }
+
+@media (max-width: 900px) {
+  .novedades-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .novedades-grid { grid-template-columns: 1fr; gap: 14px; }
+  .nov-card-img { height: 140px; }
+}
