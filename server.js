@@ -438,10 +438,11 @@ app.use(cors());
 app.use(express.json({ limit: '4mb' }));
 app.use(staticBufferado);
 app.use(express.static(PUBLIC_DIR, {
-  maxAge: '1d', etag: true, fallthrough: true,
+  maxAge: 0, etag: false, fallthrough: true,
   setHeaders: function(res, filePath) {
     if (/\.(js|json)$/.test(filePath)) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
     if (/\.json$/.test(filePath)) {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');

@@ -1,4 +1,4 @@
-﻿/* portal.js — Datos y renderizado compartido del portal REGPOL Callao */
+/* portal.js — Datos y renderizado compartido del portal REGPOL Callao */
 (function() {
   if (window.REGPOL_API_BASE != null) return;
   var h = location.hostname;
@@ -356,6 +356,106 @@ function renderPdfList(items, containerId) {
   }).join('');
 }
 
+
+function renderResenaHistorica(data, containerId) {
+  var el = document.getElementById(containerId);
+  var sec = data.resenaHistorica;
+  if (!el || !sec) return;
+  var html = '<article class="institucional-page institucional-resena">';
+  html += '<div class="institucional-cabecera">';
+  html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
+  html += '</div>';
+  html += '<div class="institucional-cuerpo">';
+  (sec.parrafos || []).forEach(function(p, i) {
+    html += '<div class="institucional-bloque">' +
+      '<span class="institucional-num" aria-hidden="true">' + String(i + 1).padStart(2, '0') + '</span>' +
+      '<p>' + escHtml(p) + '</p></div>';
+  });
+  html += '</div></article>';
+  el.innerHTML = html;
+}
+
+function renderNuestraLabor(data, containerId) {
+  var el = document.getElementById(containerId);
+  var sec = data.nuestraLabor;
+  if (!el || !sec) return;
+  var html = '<article class="institucional-page institucional-labor">';
+  html += '<div class="institucional-cabecera">';
+  html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
+  html += '</div>';
+  html += '<div class="pilares-grid-v2">';
+  (sec.pilares || []).forEach(function(p) {
+    html += '<div class="card-pilar-v2">' +
+      '<div class="card-pilar-v2-icono"><i class="fas ' + escHtml(p.icono || 'fa-star') + '"></i></div>' +
+      '<h4>' + escHtml(p.titulo) + '</h4>' +
+      '<p>' + escHtml(p.texto) + '</p></div>';
+  });
+  html += '</div></article>';
+  el.innerHTML = html;
+}
+
+var _novedadesCache = [];
+
+function renderNovedades(data, containerId, limite) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  var items = (data.novedades || []).slice();
+  _novedadesCache = items;
+  if (limite) items = items.slice(0, limite);
+  if (!items.length) { el.innerHTML = '<p class="texto-vacio">Sin novedades publicadas.</p>'; return; }
+  if (limite) {
+    el.innerHTML = '<div class="novedades-portada-lista">' + items.map(function(n, idx) {
+      return '<article class="noticia-card" onclick="abrirNovedadDetalle(' + idx + ')" style="cursor:pointer;">'
+        + '<div class="noticia-contenido">'
+        + '<div class="noticia-meta"><span class="noticia-cat">' + escHtml(n.categoria) + '</span>'
+        + '<span class="noticia-fecha">' + escHtml(n.fecha) + '</span></div>'
+        + '<h3>' + escHtml(n.titulo) + '</h3>'
+        + '<p>' + escHtml(n.resumen) + '</p>'
+        + '</div></article>';
+    }).join('') + '</div>';
+  } else {
+    el.innerHTML = '<div class="novedades-grid">' + items.map(function(n, idx) {
+      var bgStyle = n.imagen
+        ? 'background-image:url(' + JSON.stringify(n.imagen) + ');background-size:cover;background-position:center;'
+        : 'background:linear-gradient(135deg,#002d24,#004d3d);';
+      return '<article class="nov-card" onclick="abrirNovedadDetalle(' + idx + ')">'
+        + '<div class="nov-card-img" style="' + bgStyle + '">'
+        + '<div class="nov-card-img-overlay"></div>'
+        + '<span class="nov-card-cat">' + escHtml(n.categoria) + '</span>'
+        + '</div>'
+        + '<div class="nov-card-body">'
+        + '<div class="nov-card-fecha"><i class="fas fa-calendar-alt"></i> ' + escHtml(n.fecha) + '</div>'
+        + '<h3 class="nov-card-titulo">' + escHtml(n.titulo) + '</h3>'
+        + '<p class="nov-card-resumen">' + escHtml(n.resumen) + '</p>'
+        + '<span class="nov-card-link"><i class="fas fa-arrow-right"></i> Leer mas</span>'
+        + '</div></article>';
+    }).join('') + '</div>';
+  }
+}
+
+function abrirNovedadDetalle(idx) {
+  var n = _novedadesCache[idx];
+  if (!n) return;
+  var inner = document.getElementById('modal-nov-inner');
+  if (!inner) return;
+  var heroHtml = n.imagen
+    ? '<div class="modal-nov-hero"><img src="' + escHtml(n.imagen) + '" alt="' + escHtml(n.titulo) + '"/></div>'
+    : '';
+  inner.innerHTML = heroHtml
+    + '<div class="modal-nov-header">'
+    + '<span class="noticia-cat">' + escHtml(n.categoria) + '</span>'
+    + '<span class="modal-nov-fecha">' + escHtml(n.fecha) + '</span>'
+    + '</div>'
+    + '<h2 class="modal-nov-titulo">' + escHtml(n.titulo) + '</h2>'
+    + '<div class="modal-nov-cuerpo"><p>' + escHtml(n.contenido || n.resumen) + '</p></div>';
+  var modal = document.getElementById('modal-novedad');
+  if (modal) { modal.classList.add('visible'); document.body.style.overflow = 'hidden'; }
+}
+
+function cerrarNovedadModal() {
+  var modal = document.getElementById('modal-novedad');
+  if (modal) { modal.classList.remove('visible'); document.body.style.overflow = ''; }
+}
 
 function renderResenaHistorica(data, containerId) {
   var el = document.getElementById(containerId);
