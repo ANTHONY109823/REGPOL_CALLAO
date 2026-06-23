@@ -439,25 +439,10 @@ function actualizarFechaPortal(data) {
   if (el && data.actualizacion) el.textContent = 'ÚLTIMA ACTUALIZACIÓN: ' + data.actualizacion;
 }
 
-function initPortalPageHero(activeId) {
-  if (!activeId || activeId === 'inicio') return;
-  if (document.querySelector('.portal-page-hero') || document.querySelector('.presentation-slider')) return;
-  var nav = document.querySelector('.nav-main');
-  if (!nav) return;
-  var item = obtenerPortalNav().filter(function(i) { return i.id === activeId; })[0];
-  if (!item) return;
-  var hero = document.createElement('section');
-  hero.className = 'portal-page-hero';
-  hero.setAttribute('aria-label', 'Titulo de seccion');
-  hero.innerHTML = '<div class="container"><h2>' + escHtml(item.label) + '</h2></div>';
-  nav.insertAdjacentElement('afterend', hero);
-}
-
 function initPortalPagina(config) {
   config = config || {};
   initPortalNav(config.activeNav || '');
   aplicarHeroMarca();
-  if (config.showPageHero !== false) initPortalPageHero(config.activeNav || '');
   var data = obtenerSiteDataSync();
   if (data) aplicarPortalConfig(config, data);
   return cargarSiteData().then(function(fresh) {
@@ -495,7 +480,6 @@ function renderUnidadesPublico(data) {
 
 function initUnidadesPagina() {
   initPortalNav('unidades');
-  if (typeof initPortalPageHero === 'function') initPortalPageHero('unidades');
   var base = apiBasePortal();
   if (base === null || base === undefined) base = '';
   if (typeof REGPOL_UNIDADES_BUILTIN !== 'undefined' && REGPOL_UNIDADES_BUILTIN) {
