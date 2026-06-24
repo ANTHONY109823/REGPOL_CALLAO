@@ -240,96 +240,78 @@
   <!-- SIDEBAR -->
   <nav class="sidebar">
 
-    <div class="sb-section">
+    <div class="sb-section" id="sb-sec-general" data-rol-unitic>
       <div class="sb-section-label">General</div>
-      <div class="sb-item on" onclick="ir('dashboard',this)">
+      <div class="sb-item on" data-page="dashboard" onclick="ir('dashboard',this)">
         <i class="fas fa-chart-pie"></i> Dashboard
       </div>
     </div>
 
-    <!-- BIENESTAR / PSICOLOGÍA -->
-    <div class="sb-section" id="sb-sec-psico">
-      <div class="sb-section-label">Bienestar / Psicología</div>
-      <div class="sb-group">
+    <!-- GESTIÓN OPERATIVA (Psicología, Convenios, Educación) -->
+    <div class="sb-section" id="sb-sec-gestion">
+      <div class="sb-section-label">Gestión</div>
+
+      <div class="sb-group" id="sb-grp-psico">
         <div class="sb-group-header" onclick="toggleGrupo(this)">
-          <div class="gi"><i class="fas fa-brain" style="color:#8e44ad;font-size:13px;"></i> Evaluación MMPI-2</div>
+          <div class="gi"><i class="fas fa-brain" style="color:#8e44ad;font-size:13px;"></i> Psicología</div>
           <i class="fas fa-chevron-down"></i>
         </div>
         <div class="sb-group-body">
-          <div class="sb-item" data-perm-evaluaciones onclick="ir('evaluaciones',this)"><i class="fas fa-clipboard-list"></i> Evaluaciones</div>
-          <div class="sb-item" data-perm-preguntas onclick="ir('preguntas',this)"><i class="fas fa-question-circle"></i> Preguntas</div>
-          <div class="sb-item" data-perm-descargas onclick="ir('descargas',this)"><i class="fas fa-download"></i> Descargas</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- CONVOCATORIAS -->
-    <div class="sb-section" id="sb-sec-convocatorias">
-      <div class="sb-section-label">Convocatorias</div>
-
-      <!-- GRUPO: CURSOS -->
-      <div class="sb-group" id="sb-grp-cursos">
-        <div class="sb-group-header" onclick="toggleGrupo(this)">
-          <div class="gi"><i class="fas fa-graduation-cap" style="color:#2980b9;font-size:13px;"></i> Cursos</div>
-          <i class="fas fa-chevron-down"></i>
-        </div>
-        <div class="sb-group-body">
-          <div class="sb-item" onclick="ir('items',this);cargarItems('curso')">
-            <i class="fas fa-list-alt"></i> Convocatorias
-          </div>
-          <div class="sb-item" onclick="ir('sorteos',this)">
-            <i class="fas fa-trophy"></i> Inscritos / Aprobados
-          </div>
+          <div class="sb-item" data-perm-evaluaciones data-page="evaluaciones" onclick="ir('evaluaciones',this)"><i class="fas fa-clipboard-list"></i> Evaluaciones MMPI-2</div>
+          <div class="sb-item" data-perm-preguntas data-page="preguntas" onclick="ir('preguntas',this)"><i class="fas fa-question-circle"></i> Preguntas del test</div>
+          <div class="sb-item" data-perm-descargas data-page="descargas" onclick="ir('descargas',this)"><i class="fas fa-download"></i> Descargas PDF</div>
         </div>
       </div>
 
-      <!-- GRUPO: CONVENIOS -->
       <div class="sb-group" id="sb-grp-convenios" style="margin-top:4px;">
         <div class="sb-group-header" onclick="toggleGrupo(this)">
           <div class="gi"><i class="fas fa-handshake" style="color:#27ae60;font-size:13px;"></i> Convenios</div>
           <i class="fas fa-chevron-down"></i>
         </div>
         <div class="sb-group-body">
-          <div class="sb-item" onclick="ir('items',this);cargarItems('convenio')">
-            <i class="fas fa-list-alt"></i> Convocatorias
+          <div class="sb-item" data-page="items-convenio" onclick="irGestionItems('convenio',this)">
+            <i class="fas fa-list-alt"></i> Convocatorias e inscritos
           </div>
-          <div class="sb-item" onclick="ir('sorteos',this)">
-            <i class="fas fa-trophy"></i> Sorteos / Resultados
+          <div class="sb-item" data-page="sorteos" onclick="irGestionSorteos(this)">
+            <i class="fas fa-trophy"></i> Sorteos y resultados
           </div>
         </div>
       </div>
 
+      <div class="sb-group" id="sb-grp-cursos" style="margin-top:4px;">
+        <div class="sb-group-header" onclick="toggleGrupo(this)">
+          <div class="gi"><i class="fas fa-graduation-cap" style="color:#2980b9;font-size:13px;"></i> Educación (Cursos)</div>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="sb-group-body">
+          <div class="sb-item" data-page="items-curso" onclick="irGestionItems('curso',this)">
+            <i class="fas fa-list-alt"></i> Convocatorias e inscritos
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- ADMINISTRACIÁ“N (solo Super Admin) -->
+    <!-- ADMINISTRACIÓN (solo Super Admin) -->
     <div class="sb-section" data-rol-unitic>
       <div class="sb-section-label">Administración</div>
-      <div class="sb-item" onclick="ir('usuarios',this)">
+      <div class="sb-item" data-page="usuarios" onclick="ir('usuarios',this)">
         <i class="fas fa-users-cog"></i> Usuarios y permisos
       </div>
-      <div class="sb-item" onclick="ir('divisiones',this)">
+      <div class="sb-item" data-page="divisiones" onclick="ir('divisiones',this)">
         <i class="fas fa-sitemap"></i> Divisiones / Unidades
       </div>
     </div>
 
-    <!-- EDITAR PORTAL (permisos CMS) -->
-    <div class="sb-section" id="sb-sec-cms" style="display:none;">
+    <!-- PORTAL WEB (solo Super Admin — contenido visible en la página pública) -->
+    <div class="sb-section" id="sb-sec-portal" data-rol-unitic>
       <div class="sb-section-label">Portal Web</div>
-      <div class="sb-group">
-        <div class="sb-group-header" onclick="toggleGrupo(this)">
-          <div class="gi"><i class="fas fa-edit" style="color:#2980b9;font-size:13px;"></i> Editar Portal</div>
-          <i class="fas fa-chevron-down"></i>
-        </div>
-        <div class="sb-group-body">
-          <div class="sb-item" id="sb-cms-novedades" style="display:none;" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> Novedades</div>
-          <div class="sb-item" id="sb-cms-resena" style="display:none;" onclick="irCMS('resena',this)"><i class="fas fa-landmark"></i> Reseña Histórica</div>
-          <div class="sb-item" id="sb-cms-labor" style="display:none;" onclick="irCMS('labor',this)"><i class="fas fa-tasks"></i> Nuestra Labor</div>
-          <div class="sb-item" id="sb-cms-carrusel" style="display:none;" onclick="irCMS('carrusel',this)"><i class="fas fa-images"></i> Inicio / Carrusel</div>
-          <div class="sb-item" id="sb-cms-convenios" style="display:none;" onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> Convenios</div>
-          <div class="sb-item" id="sb-cms-cursos" style="display:none;" onclick="irCMS('cursos',this)"><i class="fas fa-graduation-cap"></i> Cursos</div>
-          <div class="sb-item" id="sb-cms-menu" data-rol-unitic style="display:none;" onclick="irCMS('menu',this)"><i class="fas fa-bars"></i> Menú</div>
-        </div>
-      </div>
+      <div class="sb-item" onclick="irCMS('carrusel',this)"><i class="fas fa-home"></i> Inicio / Carrusel</div>
+      <div class="sb-item" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> Novedades</div>
+      <div class="sb-item" onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> Convenios (web)</div>
+      <div class="sb-item" onclick="irCMS('cursos',this)"><i class="fas fa-graduation-cap"></i> Cursos (web)</div>
+      <div class="sb-item" onclick="irCMS('resena',this)"><i class="fas fa-landmark"></i> Reseña Histórica</div>
+      <div class="sb-item" onclick="irCMS('labor',this)"><i class="fas fa-tasks"></i> Nuestra Labor</div>
+      <div class="sb-item" onclick="irCMS('menu',this)"><i class="fas fa-bars"></i> Menú del sitio</div>
     </div>
 
   </nav>
@@ -517,7 +499,8 @@
     <!-- CMS PORTAL -->
     <div id="page-cms" class="page">
       <div class="card">
-        <h3><i class="fas fa-edit"></i> Editor del Portal Web</h3>
+        <h3><i class="fas fa-globe"></i> Portal Web — contenido público</h3>
+        <p style="font-size:12px;color:#666;margin:-8px 0 14px;">Solo Super Admin. Aquí se editan textos, imágenes y tarjetas visibles en la página institucional.</p>
 
         <!-- Alerta global CMS -->
         <div id="alerta-cms" class="alerta" style="display:none;"></div>
@@ -541,7 +524,7 @@
         <!-- PANEL: Convenios -->
         <div id="cms-panel-convenios" class="cms-panel">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <strong style="color:#004d3d;">Convenios</strong>
+            <strong style="color:#004d3d;">Convenios (tarjetas en la web)</strong>
             <button class="btn btn-v" onclick="agregarConvenioCMS()"><i class="fas fa-plus"></i> Nuevo</button>
           </div>
           <div id="cms-lista-convenios"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
@@ -550,7 +533,7 @@
         <!-- PANEL: Cursos -->
         <div id="cms-panel-cursos" class="cms-panel">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <strong style="color:#004d3d;">Cursos y capacitaciones</strong>
+            <strong style="color:#004d3d;">Cursos (tarjetas en la web)</strong>
             <button class="btn btn-v" onclick="agregarCursoCMS()"><i class="fas fa-plus"></i> Nuevo</button>
           </div>
           <div id="cms-lista-cursos"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
@@ -1007,28 +990,27 @@
     <input type="text" id="mu-nombre" placeholder="Ej: Oficina de Psicología"/>
     <label>Unidad asignada <span style="font-weight:400;color:#999;">(vacío = todas las unidades, ideal para Psicología)</span></label>
     <input type="text" id="mu-unidad" placeholder="Dejar vacío para acceso global"/>
-    <label style="margin-bottom:8px;">Secciones que puede gestionar</label>
+    <label style="margin-bottom:8px;">Área de gestión asignada</label>
     <div class="perm-grid">
       <div class="perm-box">
-        <div class="pb-title">Bienestar / Psicología</div>
-        <label><input type="checkbox" value="evaluaciones" class="perm-chk"> Ver evaluaciones</label>
-        <label><input type="checkbox" value="descargas" class="perm-chk"> Descargar PDF</label>
-        <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Gestionar preguntas MMPI-2: solo Super Admin o usuario con «Ver evaluaciones».</p>
+        <div class="pb-title">Psicología / Bienestar</div>
+        <label><input type="checkbox" value="evaluaciones" class="perm-chk"> Evaluaciones MMPI-2</label>
+        <label><input type="checkbox" value="descargas" class="perm-chk"> Descargas PDF</label>
+        <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Gestiona evaluaciones recibidas de personal. Las preguntas del test las edita Super Admin o quien tenga evaluaciones.</p>
       </div>
       <div class="perm-box">
         <div class="pb-title">Convenios</div>
-        <label><input type="checkbox" value="cms_convenios" class="perm-chk"> Editar Convenios</label>
+        <label><input type="checkbox" value="cms_convenios" class="perm-chk"> Gestionar convocatorias, inscritos y sorteos</label>
+        <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Solo operaciones de convenios. No edita el portal web.</p>
       </div>
       <div class="perm-box">
-        <div class="pb-title">Educación</div>
-        <label><input type="checkbox" value="cms_cursos" class="perm-chk"> Editar Cursos</label>
+        <div class="pb-title">Educación (Cursos)</div>
+        <label><input type="checkbox" value="cms_cursos" class="perm-chk"> Gestionar cursos e inscripciones</label>
+        <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Solo operaciones de cursos. No edita el portal web.</p>
       </div>
-      <div class="perm-box">
-        <div class="pb-title">Imagen</div>
-        <label><input type="checkbox" value="cms_inicio" class="perm-chk"> Inicio / Carrusel</label>
-        <label><input type="checkbox" value="cms_resena" class="perm-chk"> Reseña Histórica</label>
-        <label><input type="checkbox" value="cms_labor" class="perm-chk"> Nuestra Labor</label>
-        <label><input type="checkbox" value="cms_novedades" class="perm-chk"> Novedades</label>
+      <div class="perm-box" style="background:#fff8e6;border-color:#f0d78c;">
+        <div class="pb-title">Portal Web</div>
+        <p style="font-size:11px;color:#666;margin:0;line-height:1.45;">El contenido público del sitio (novedades, carrusel, tarjetas, menú) lo gestiona únicamente el <strong>Super Admin</strong>.</p>
       </div>
     </div>
     <div class="modal-footer">
@@ -1057,10 +1039,10 @@ var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[], SESION=null;
 var ITEMS_CACHE=[], ITEM_ACTIVO_ID=null;
 
 var ETIQUETAS_PERM={
-  evaluaciones:'Evaluaciones', descargas:'Descargas',
-  cms_convenios:'Convenios', cms_cursos:'Cursos',
-  cms_inicio:'Inicio', cms_resena:'Reseña Histórica',
-  cms_labor:'Nuestra Labor', cms_novedades:'Novedades'
+  evaluaciones:'Evaluaciones MMPI-2',
+  descargas:'Descargas PDF',
+  cms_convenios:'Gestión Convenios',
+  cms_cursos:'Gestión Cursos'
 };
 
 // ── SESIÓN ────────────────────────────────────────────────────────────────────
@@ -1072,10 +1054,6 @@ window.addEventListener('DOMContentLoaded',function(){
     s.rol==='bienestar'||
     perms.indexOf('cms_cursos')!==-1||
     perms.indexOf('cms_convenios')!==-1||
-    perms.indexOf('cms_novedades')!==-1||
-    perms.indexOf('cms_resena')!==-1||
-    perms.indexOf('cms_labor')!==-1||
-    perms.indexOf('cms_inicio')!==-1||
     perms.indexOf('evaluaciones')!==-1||
     perms.indexOf('descargas')!==-1
   );
@@ -1111,6 +1089,12 @@ function puedeVerPreguntas(){ return esUnitic()||tienePermiso('evaluaciones'); }
 function puedeVerEvaluaciones(){ return esUnitic()||tienePermiso('evaluaciones'); }
 function puedeVerDescargas(){ return esUnitic()||tienePermiso('descargas'); }
 
+function puedeGestionPsicologia(){
+  return esUnitic()||(SESION&&SESION.rol==='bienestar')||tienePermiso('evaluaciones')||tienePermiso('descargas');
+}
+function puedeGestionConvenios(){ return esUnitic()||tienePermiso('cms_convenios'); }
+function puedeGestionCursos(){ return esUnitic()||tienePermiso('cms_cursos'); }
+
 function aplicarPermisosSidebar(s){
   var perms=s.permisos||[], rol=s.rol;
   var esU=(rol==='unitic');
@@ -1118,12 +1102,8 @@ function aplicarPermisosSidebar(s){
   var tieneConvenios = esU || perms.indexOf('cms_convenios') !== -1;
   var tieneEval      = esU || perms.indexOf('evaluaciones')  !== -1;
   var tieneDesc      = esU || perms.indexOf('descargas')     !== -1;
-  var tieneNovedades = esU || perms.indexOf('cms_novedades') !== -1;
-  var tieneResena    = esU || perms.indexOf('cms_resena')    !== -1;
-  var tieneLabor     = esU || perms.indexOf('cms_labor')     !== -1;
-  var tieneInicio    = esU || perms.indexOf('cms_inicio')    !== -1;
-  var tienePsico     = esU || (rol === 'bienestar');
-  var tieneAlgunCMS  = esU || tieneCursos || tieneConvenios || tieneNovedades || tieneResena || tieneLabor || tieneInicio;
+  var tienePsico     = esU || (rol === 'bienestar') || tieneEval || tieneDesc;
+  var tieneGestion   = esU || tienePsico || tieneCursos || tieneConvenios;
 
   document.querySelectorAll('[data-rol-unitic]').forEach(function(el){ el.style.display = esU ? '' : 'none'; });
   document.querySelectorAll('[data-perm-evaluaciones]').forEach(function(el){ el.style.display = tieneEval ? '' : 'none'; });
@@ -1134,47 +1114,88 @@ function aplicarPermisosSidebar(s){
   if (grpCursos) grpCursos.style.display = tieneCursos ? '' : 'none';
   var grpConvenios = document.getElementById('sb-grp-convenios');
   if (grpConvenios) grpConvenios.style.display = tieneConvenios ? '' : 'none';
-  var secPsico = document.getElementById('sb-sec-psico');
-  if (secPsico) secPsico.style.display = tienePsico ? '' : 'none';
-  var secConv = document.getElementById('sb-sec-convocatorias');
-  if (secConv) secConv.style.display = (tieneCursos || tieneConvenios) ? '' : 'none';
-
-  var secCms = document.getElementById('sb-sec-cms');
-  if (secCms) secCms.style.display = tieneAlgunCMS ? '' : 'none';
-  var show = function(id, ok) { var el = document.getElementById(id); if (el) el.style.display = ok ? '' : 'none'; };
-  show('sb-cms-novedades', tieneNovedades);
-  show('sb-cms-resena',    tieneResena);
-  show('sb-cms-labor',     tieneLabor);
-  show('sb-cms-carrusel',  tieneInicio);
-  show('sb-cms-convenios', tieneConvenios);
-  show('sb-cms-cursos',    tieneCursos);
-  show('sb-cms-menu',      esU);
+  var grpPsico = document.getElementById('sb-grp-psico');
+  if (grpPsico) grpPsico.style.display = tienePsico ? '' : 'none';
+  var secGestion = document.getElementById('sb-sec-gestion');
+  if (secGestion) secGestion.style.display = tieneGestion ? '' : 'none';
 
   var badge = document.querySelector('.super-badge');
   if (badge) {
     if (esU)                               badge.textContent = 'SUPER ADMIN';
-    else if (tieneCursos && tieneConvenios) badge.textContent = 'CONVENIOS + EDUCACION';
-    else if (tieneCursos)                  badge.textContent = 'EDUCACION';
+    else if (tieneCursos && tieneConvenios) badge.textContent = 'CONVENIOS + EDUCACIÓN';
+    else if (tieneCursos)                  badge.textContent = 'EDUCACIÓN';
     else if (tieneConvenios)               badge.textContent = 'CONVENIOS';
-    else if (tienePsico)                   badge.textContent = 'PSICOLOGIA';
-    else if (tieneAlgunCMS)                badge.textContent = 'EDITOR WEB';
+    else if (tienePsico)                   badge.textContent = 'PSICOLOGÍA';
     else                                   badge.textContent = 'USUARIO';
   }
+}
+
+function aplicarRestriccionFiltroItems(){
+  var sel = document.getElementById('items-filtro-tipo');
+  if (!sel) return;
+  if (esUnitic()) {
+    sel.disabled = false;
+    return;
+  }
+  if (puedeGestionConvenios() && !puedeGestionCursos()) {
+    sel.value = 'convenio';
+    sel.disabled = true;
+  } else if (puedeGestionCursos() && !puedeGestionConvenios()) {
+    sel.value = 'curso';
+    sel.disabled = true;
+  } else {
+    sel.disabled = false;
+  }
+}
+
+function irGestionItems(tipo, el){
+  if (tipo === 'convenio' && !puedeGestionConvenios()) { alert('Sin acceso a gestión de convenios.'); return; }
+  if (tipo === 'curso' && !puedeGestionCursos()) { alert('Sin acceso a gestión de cursos.'); return; }
+  ir('items', el);
+  cargarItems(tipo);
+}
+
+function irGestionSorteos(el){
+  if (!puedeGestionConvenios()) { alert('Los sorteos corresponden a la gestión de convenios.'); return; }
+  ir('sorteos', el);
 }
 
 function iniciarPanel(s){
   s=s||SESION;
   var esU=s&&s.rol==='unitic';
   var perms=s&&s.permisos?s.permisos:[];
-  var tienePsico=esU||perms.indexOf('evaluaciones')!==-1||perms.indexOf('descargas')!==-1;
+  var tienePsico=esU||s.rol==='bienestar'||perms.indexOf('evaluaciones')!==-1||perms.indexOf('descargas')!==-1;
   var tieneCursos=esU||perms.indexOf('cms_cursos')!==-1;
   var tieneConvenios=esU||perms.indexOf('cms_convenios')!==-1;
-  if(esU||tienePsico){ cargarStats(); cargarFiltrosTabla(); }
-  // Si solo tiene cursos/convenios, ir directo a items
-  if(!esU&&!tienePsico&&(tieneCursos||tieneConvenios)){
-    var tipo=tieneConvenios&&!tieneCursos?'convenio':tieneCursos&&!tieneConvenios?'curso':'';
-    ir('items', document.querySelector('[data-page="items"]'));
-    if(tipo) cargarItems(tipo);
+
+  if (esU) {
+    cargarStats();
+    cargarFiltrosTabla();
+    return;
+  }
+
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('on'); });
+
+  if (tienePsico && !tieneCursos && !tieneConvenios) {
+    var ev = document.querySelector('[data-page="evaluaciones"]');
+    ir('evaluaciones', ev);
+    return;
+  }
+  if (tieneConvenios && !tieneCursos && !tienePsico) {
+    irGestionItems('convenio', document.querySelector('[data-page="items-convenio"]'));
+    return;
+  }
+  if (tieneCursos && !tieneConvenios && !tienePsico) {
+    irGestionItems('curso', document.querySelector('[data-page="items-curso"]'));
+    return;
+  }
+  if (tieneConvenios) {
+    irGestionItems('convenio', document.querySelector('[data-page="items-convenio"]'));
+  } else if (tieneCursos) {
+    irGestionItems('curso', document.querySelector('[data-page="items-curso"]'));
+  } else if (tienePsico) {
+    ir('evaluaciones', document.querySelector('[data-page="evaluaciones"]'));
   }
 }
 
@@ -1182,9 +1203,13 @@ function iniciarPanel(s){
 var panelPaginasCargadas = {};
 
 function ir(page, el){
+  if(page==='dashboard'&&!esUnitic()){alert('El dashboard global es solo para Super Admin.');return;}
   if(page==='preguntas'&&!puedeVerPreguntas()){alert('Sin acceso. Las preguntas solo las gestiona Psicología/Bienestar o Super Admin.');return;}
   if(page==='evaluaciones'&&!puedeVerEvaluaciones()){alert('Sin acceso a evaluaciones.');return;}
   if(page==='descargas'&&!puedeVerDescargas()){alert('Sin acceso a descargas.');return;}
+  if(page==='items'&&!puedeGestionConvenios()&&!puedeGestionCursos()){alert('Sin acceso a convocatorias.');return;}
+  if(page==='sorteos'&&!puedeGestionConvenios()){alert('Sin acceso a sorteos de convenios.');return;}
+  if(page==='inscritos'&&!puedeGestionConvenios()&&!puedeGestionCursos()){alert('Sin acceso a inscripciones.');return;}
   if((page==='usuarios'||page==='divisiones')&&!esUnitic()){alert('Solo el Super Admin puede acceder a esta sección.');return;}
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
   var pg=document.getElementById('page-'+page);
@@ -1202,12 +1227,13 @@ function ir(page, el){
   if(page==='descargas' && !ya)    cargarFiltrosDescarga();
   if(page==='dashboard' && !ya)    cargarStats();
   if(page==='divisiones' && !ya)   cargarDivisiones();
-  if(page==='items' && !ya)        cargarItems();
+  if(page==='items' && !ya)        { aplicarRestriccionFiltroItems(); cargarItems(); }
   if(page==='sorteos')             cargarSorteos();
   panelPaginasCargadas[page] = true;
 }
 
 function irCMS(tab, el){
+  if(!esUnitic()){alert('Solo el Super Admin puede editar el portal web.');return;}
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
   document.getElementById('page-cms').classList.add('on');
   document.querySelectorAll('.sb-item').forEach(function(i){i.classList.remove('on');});
@@ -2123,10 +2149,11 @@ function quitarPlantillaItem(){
 var INSCRITOS_CACHE = [];
 
 function cargarItems(tipo){
+  aplicarRestriccionFiltroItems();
   if(tipo) document.getElementById('items-filtro-tipo').value=tipo;
   else tipo=document.getElementById('items-filtro-tipo').value||'';
-  var tipoLabel = tipo==='curso'?'Cursos':tipo==='convenio'?'Convenios':'Convocatorias';
-  document.getElementById('items-titulo').innerHTML='<i class="fas fa-clipboard-list"></i> '+tipoLabel;
+  var tipoLabel = tipo==='curso'?'Educación — Cursos':tipo==='convenio'?'Convenios':'Convocatorias';
+  document.getElementById('items-titulo').innerHTML='<i class="fas fa-clipboard-list"></i> Gestión: '+tipoLabel;
   var url=API+'/admin/items'+(tipo?'?tipo='+tipo:'');
   document.getElementById('items-tabla').innerHTML='<p style="color:#bbb;font-size:13px;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>';
   fetch(url,{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
