@@ -344,6 +344,25 @@ function fechaNacParaEnvio() {
 /* ================================================================
    REGISTRO Y CUESTIONARIO
 ================================================================ */
+function contarRespuestasEnData(data) {
+  if (!data) return 0;
+  var r = data.respuestas;
+  if (typeof r === 'string') {
+    try { r = JSON.parse(r); } catch (e) { r = {}; }
+  }
+  r = r || {};
+  return Object.keys(r).filter(function(k) { return r[k] === 'V' || r[k] === 'F'; }).length;
+}
+
+function normalizarDataProgreso(data) {
+  if (!data) return null;
+  var n = contarRespuestasEnData(data);
+  var total = Math.max(parseInt(data.total, 10) || 0, n);
+  if (total <= 0) return null;
+  data.total = total;
+  return data;
+}
+
 function validarRegistro() {
   var err='', campos=[
     {id:'f-unidad',  test:function(v){return v.trim().length>0;},      msg:'Seleccione su comisaría.'},
@@ -357,6 +376,7 @@ function validarRegistro() {
   ];
   campos.forEach(function(c){
     var el=document.getElementById(c.id);
+    if (!el) return;
     el.classList.remove('invalido','valido');
     if (!c.test(el.value)){el.classList.add('invalido'); if(!err) err=c.msg;}
     else el.classList.add('valido');
@@ -485,23 +505,29 @@ function continuarAlCuestionario() {
   if (err) { mostrarAlerta(err,'error'); document.getElementById('card-registro').scrollIntoView({behavior:'smooth'}); return; }
   ocultarAlerta();
 
-  // Verificar progreso guardado
   var cip = document.getElementById('f-cip').value.trim();
+  var btn = document.querySelector('.btn-registro-continuar');
+  if (btn) btn.disabled = true;
+
   verificarProgresoGuardado(cip, function(data) {
-    if (data && data.total > 0) {
-      aplicarDatosProgresoAlEstado(data);
-      mostrarBannerProgreso(data);
-      guardarRegistroEnServidor();
-    } else {
-      guardarRegistroEnServidor(function(ok) {
-        activarCuestionario(true);
-        guardarBloqueEnServidor();
-        mostrarAlerta(ok
+    if (data) aplicarDatosProgresoAlEstado(data);
+    var banner = document.getElementById('banner-progreso');
+    if (banner) banner.style.display = 'none';
+
+    guardarRegistroEnServidor(function(ok) {
+      if (btn) btn.disabled = false;
+      activarCuestionario(true);
+      guardarBloqueEnServidor();
+      var nResp = contarRespuestasEnData({ respuestas: ESTADO.respuestas });
+      var msg = nResp > 0
+        ? 'Registro actualizado. Continúe desde el bloque ' + ESTADO.bloqueActual
+          + ' (' + nResp + '/' + TOTAL_PREGUNTAS + ' respondidas).'
+        : (ok
           ? 'Registro guardado. Cuestionario iniciado — puede continuar después con su CIP.'
-          : 'Cuestionario iniciado. Guarde su avance con el botón inferior.','exito');
-        setTimeout(ocultarAlerta, 4000);
-      });
-    }
+          : 'Cuestionario iniciado. Guarde su avance con el botón inferior.');
+      mostrarAlerta(msg, 'exito');
+      setTimeout(ocultarAlerta, 4500);
+    });
   });
 }
 
@@ -736,22 +762,32 @@ function autoGuardarProgreso() {
 function verificarProgresoGuardado(cip, callback) {
   if (!cip) { if(callback) callback(null); return; }
 
-  // Primero buscar en servidor
   fetch(LOCAL_API+'/progreso?cip='+encodeURIComponent(cip))
     .then(function(r){return r.json();})
     .then(function(data){
-      if(data.ok && data.encontrado && data.total>0) { if(callback) callback(data); }
-      else {
-        // Buscar en localStorage
-        var local = localStorage.getItem('progreso_'+cip);
-        if(local){try{var d=JSON.parse(local);if(d.total>0){if(callback)callback(d);}else if(callback)callback(null);}catch(e){if(callback)callback(null);}}
-        else if(callback) callback(null);
+      if(data.ok && data.encontrado) {
+        var norm = normalizarDataProgreso(data);
+        if (norm) { if(callback) callback(norm); return; }
       }
+      var local = localStorage.getItem('progreso_'+cip);
+      if (local) {
+        try {
+          var d = normalizarDataProgreso(JSON.parse(local));
+          if (d) { if(callback) callback(d); return; }
+        } catch (e) { /* ignorar */ }
+      }
+      if (callback) callback(null);
     })
     .catch(function(){
       var local=localStorage.getItem('progreso_'+cip);
-      if(local){try{var d=JSON.parse(local);if(callback)callback(d.total>0?d:null);}catch(e){if(callback)callback(null);}}
-      else if(callback) callback(null);
+      if (local) {
+        try {
+          var d = normalizarDataProgreso(JSON.parse(local));
+          if (callback) callback(d);
+          return;
+        } catch (e) { /* ignorar */ }
+      }
+      if (callback) callback(null);
     });
 }
 
