@@ -428,16 +428,18 @@
         </div>
         <div class="filtros">
           <select id="f-div" onchange="onFiltroDivisionAdmin()"><option value="">Todas las divisiones</option></select>
-          <select id="f-uni" onchange="cargarTabla(1)"><option value="">Todas las unidades</option></select>
+          <select id="f-uni" onchange="actualizarBotonesEliminarEval();cargarTabla(1)"><option value="">Todas las unidades</option></select>
           <input  id="f-bus" type="text" placeholder="Nombre / CIP / DNI..." oninput="cargarTabla(1)"/>
           <button class="btn btn-v" onclick="cargarTabla(1)"><i class="fas fa-sync"></i></button>
+          <button class="btn btn-r" id="btn-del-unidad" style="display:none;" onclick="eliminarEvaluacionesUnidad()" title="Eliminar registros del filtro seleccionado"><i class="fas fa-trash-alt"></i> Eliminar por unidad</button>
+          <button class="btn btn-r" id="btn-del-todos" style="display:none;" onclick="limpiarTodosRegistrosEval()" title="Solo Super Admin"><i class="fas fa-broom"></i> Limpiar todos</button>
         </div>
         <div class="tinfo" id="tabla-info"></div>
         <div style="overflow-x:auto;">
           <table class="t">
             <thead><tr>
               <th>Nombres</th><th>CIP</th><th>DNI</th><th>Dependencia</th>
-              <th>Fecha</th><th>Edad</th><th>Estado</th><th>PDF</th>
+              <th>Fecha</th><th>Edad</th><th>Estado</th><th>PDF</th><th></th>
             </tr></thead>
             <tbody id="tabla-body"></tbody>
           </table>
@@ -1246,8 +1248,75 @@ function btnAccionesEval(r) {
   return html || '<span style="color:#bbb;font-size:10px;">—</span>';
 }
 
-function btnPdfEfectivo(r, label) {
-  return btnAccionesEval(r);
+function btnEliminarEval(r) {
+  if (!puedeVerEvaluaciones()) return '';
+  var nom = escJs(r.nombres || '');
+  if (r.solo_progreso && r.cip) {
+    return '<button type="button" class="btn btn-r" style="font-size:11px;padding:3px 7px;" onclick="eliminarRegistroEval(null,\'' + escJs(r.cip) + '\',true,\'' + nom + '\')"><i class="fas fa-trash-alt"></i></button>';
+  }
+  if (r.id) {
+    return '<button type="button" class="btn btn-r" style="font-size:11px;padding:3px 7px;" onclick="eliminarRegistroEval(' + r.id + ',\'' + escJs(r.cip || '') + '\',false,\'' + nom + '\')"><i class="fas fa-trash-alt"></i></button>';
+  }
+  return '';
+}
+
+function actualizarBotonesEliminarEval() {
+  var btnU = document.getElementById('btn-del-unidad');
+  var btnT = document.getElementById('btn-del-todos');
+  if (btnU) btnU.style.display = (val('f-uni') || val('f-div')) ? '' : 'none';
+  if (btnT) btnT.style.display = esUnitic() ? '' : 'none';
+}
+
+function eliminarRegistroEval(id, cip, soloProgreso, nombre) {
+  var msg = soloProgreso
+    ? '¿Eliminar el avance guardado de ' + nombre + ' (CIP ' + cip + ')? Se borrará de la base de datos.'
+    : '¿Eliminar la evaluación de ' + nombre + ' (CIP ' + cip + ')? Se borrará de la base de datos.';
+  if (!confirm(msg)) return;
+  var url = soloProgreso
+    ? API + '/admin/progresos?cip=' + encodeURIComponent(cip)
+    : API + '/admin/evaluaciones/' + id;
+  fetch(url, { method: 'DELETE', headers: hdr() })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) cargarTabla(window._tablaPaginaActual || 1);
+      else alert(d.error || 'No se pudo eliminar.');
+    })
+    .catch(function() { alert('Error de conexión.'); });
+}
+
+function eliminarEvaluacionesUnidad() {
+  var uni = val('f-uni');
+  var div = val('f-div');
+  if (!uni && !div) { alert('Seleccione una división o unidad en el filtro.'); return; }
+  var etiqueta = uni || div;
+  if (!confirm('¿Eliminar TODAS las evaluaciones y avances de: ' + etiqueta + '?\nSe borrarán de la base de datos.')) return;
+  if (!confirm('Confirme de nuevo: se eliminarán todos los registros de "' + etiqueta + '".')) return;
+  var q = 'unidad=' + encodeURIComponent(uni) + '&division=' + encodeURIComponent(div);
+  fetch(API + '/admin/evaluaciones-lote?' + q, { method: 'DELETE', headers: hdr() })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        alert('Eliminados: ' + (d.eliminados_eval || 0) + ' evaluaciones y ' + (d.eliminados_prog || 0) + ' avances.');
+        cargarTabla(1);
+      } else alert(d.error || 'No se pudo eliminar.');
+    })
+    .catch(function() { alert('Error de conexión.'); });
+}
+
+function limpiarTodosRegistrosEval() {
+  if (!esUnitic()) return;
+  if (!confirm('¿Eliminar TODOS los registros de evaluaciones y avances del sistema?\nEsta acción no se puede deshacer.')) return;
+  var txt = prompt('Escriba ELIMINAR para confirmar la limpieza total:');
+  if (txt !== 'ELIMINAR') return;
+  fetch(API + '/admin/evaluaciones-lote?todos=true&confirmar=ELIMINAR', { method: 'DELETE', headers: hdr() })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        alert('Limpieza completada: ' + (d.eliminados_eval || 0) + ' evaluaciones y ' + (d.eliminados_prog || 0) + ' avances eliminados.');
+        cargarTabla(1);
+      } else alert(d.error || 'No se pudo limpiar.');
+    })
+    .catch(function() { alert('Error de conexión.'); });
 }
 
 function colorInterpT(t) {
@@ -1525,6 +1594,8 @@ function ir(page, el){
   var ya = panelPaginasCargadas[page];
   if(page==='evaluaciones'){
     if(!ya) cargarConfigEvaluacion();
+    if(!ya) cargarFiltrosTabla();
+    actualizarBotonesEliminarEval();
     cargarTabla(1);
   }
   if(page==='preguntas' && !ya)    cargarPreguntas();
@@ -1645,51 +1716,6 @@ function cargarStatsSistema(){
   });
 }
 
-function cargarStats(){
-  fetchAdminJson('/stats').then(function(d){
-    if(!d || !d.ok) {
-      mostrarErrorDashboard('unitic', (d && d.error) ? d.error : 'No se pudo cargar el dashboard');
-      return;
-    }
-    var t=d.totalEvaluaciones||0,c=d.totalCompletas||0;
-    set('s-total',t);set('s-completas',c);set('s-pendientes',Math.max(0,t-c));
-    set('s-comisarias',(d.porComisaria||[]).length);
-    set('s-unidades',(d.porUnidad||[]).length);
-
-    document.getElementById('bd-comisaria').innerHTML=(d.porComisaria||[]).length
-      ?(d.porComisaria||[]).map(function(c){
-          var pct=t>0?Math.round(parseInt(c.total)/t*100):0;
-          return '<tr><td style="padding:5px 12px;font-size:12px;">'+c.nombre+'</td>'
-            +'<td class="bl-num" style="padding:5px 12px;font-size:12px;">'+c.total
-            +' <span style="color:#bbb;font-weight:400;font-size:10px;">('+pct+'%)</span></td></tr>';
-        }).join('')
-      :'<tr><td colspan="2" style="color:#bbb;padding:10px;text-align:center;">Sin datos</td></tr>';
-
-    document.getElementById('bd-unidad').innerHTML=(d.porUnidad||[]).length
-      ?(d.porUnidad||[]).map(function(u){
-          return '<tr><td style="padding:5px 12px;font-size:11.5px;">'+u.nombre+'</td>'
-            +'<td class="bl-num" style="padding:5px 12px;font-size:12px;">'+u.total+'</td></tr>';
-        }).join('')
-      :'<tr><td colspan="2" style="color:#bbb;padding:10px;text-align:center;">Sin datos</td></tr>';
-
-    document.getElementById('ult-lista').innerHTML=(d.ultimasEvaluaciones||[]).length
-      ?(d.ultimasEvaluaciones||[]).map(function(e){
-          var badge=e.completada
-            ?'<span class="badge ok">✓ Completo</span>'
-            :(e.solo_progreso?'<span class="badge" style="background:#fff3cd;color:#856404;">Avance</span>':'<span class="badge pend">Parcial</span>');
-          return '<div class="ult-item">'
-            +'<div><span class="ult-nom">'+escHtml(e.nombres)+'</span>'
-            +'<span class="ult-meta"> — '+escHtml(e.comisaria||e.unidad||'')+'</span></div>'
-            +'<div style="display:flex;align-items:center;gap:8px;">'
-            +btnAccionesEval(e)
-            +badge+'<span style="color:#bbb;font-size:10.5px;">'+escHtml(e.fecha)+'</span></div></div>';
-        }).join('')
-      :'<div style="color:#bbb;padding:12px;font-size:12px;text-align:center;">Sin evaluaciones aún.</div>';
-  }).catch(function(err) {
-    mostrarErrorDashboard('unitic', (err && err.name === 'AbortError') ? 'Tiempo de espera agotado al cargar estadísticas' : 'Error de conexión con el servidor');
-  });
-}
-
 function cargarStatsPsico(){
   fetchAdminJson('/stats').then(function(d){
     if(!d || !d.ok) {
@@ -1807,10 +1833,12 @@ function cargarFiltrosTabla(){
 }
 
 function onFiltroDivisionAdmin() {
-  onFiltroDivisionCambio('f-div', 'f-uni', window._divisionesData || [], function() { cargarTabla(1); });
+  onFiltroDivisionCambio('f-div', 'f-uni', window._divisionesData || [], function() { actualizarBotonesEliminarEval(); cargarTabla(1); });
 }
 
 function cargarTabla(pag){
+  window._tablaPaginaActual = pag;
+  actualizarBotonesEliminarEval();
   var div=encodeURIComponent(val('f-div')), uni=encodeURIComponent(val('f-uni')), bus=encodeURIComponent(val('f-bus'));
   fetch(API+'/evaluaciones?pagina='+pag+'&division='+div+'&unidad='+uni+'&busqueda='+bus,{headers:hdr()})
     .then(function(r){return r.json();}).then(function(d){
@@ -1831,7 +1859,7 @@ function cargarTabla(pag){
         return '<tr'+(r.solo_progreso?' style="background:#fffdf5;"':'')+'><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
           +'<td style="font-size:11px;">'+escHtml(r.unidad||r.comisaria||'—')+'</td>'
           +'<td style="font-size:11px;">'+escHtml(r.fecha)+'</td><td style="text-align:center;">'+(r.edad||'—')+'</td>'
-          +'<td>'+badge+'</td><td>'+pdf+'</td></tr>';
+          +'<td>'+badge+'</td><td>'+pdf+'</td><td>'+btnEliminarEval(r)+'</td></tr>';
       }).join('');
       var pags=document.getElementById('paginacion'); pags.innerHTML='';
       for(var p=1;p<=d.paginas;p++){

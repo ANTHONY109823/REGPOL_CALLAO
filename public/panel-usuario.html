@@ -381,13 +381,14 @@ function renderTabEvaluaciones() {
     +'<h3><i class="fas fa-search"></i> Listado de evaluaciones</h3>'
     +'<div class="filtros">'
     +'<select id="ev-division" onchange="onFiltroDivisionUsuario()"><option value="">Todas las divisiones</option></select>'
-    +'<select id="ev-unidad" onchange="cargarEval(1)"><option value="">Todas las unidades</option></select>'
+    +'<select id="ev-unidad" onchange="actualizarBotonesEliminarEvalUsuario();cargarEval(1)"><option value="">Todas las unidades</option></select>'
     +'<input id="ev-busq" type="text" placeholder="Nombre / CIP / DNI..." oninput="cargarEval(1)"/>'
     +'<button class="btn btn-v" onclick="cargarEval(1)"><i class="fas fa-sync"></i></button>'
+    +'<button class="btn btn-r" id="ev-btn-del-unidad" style="display:none;" onclick="eliminarEvaluacionesUnidadUsuario()"><i class="fas fa-trash-alt"></i> Eliminar por unidad</button>'
     +'</div>'
     +'<div id="ev-info" style="font-size:11.5px;color:#666;margin-bottom:6px;"></div>'
     +'<div style="overflow-x:auto;"><table class="t">'
-    +'<thead><tr><th>Nombres</th><th>CIP</th><th>DNI</th><th>Dependencia</th><th>Fecha</th><th>Estado</th><th>PDF</th></tr></thead>'
+    +'<thead><tr><th>Nombres</th><th>CIP</th><th>DNI</th><th>Dependencia</th><th>Fecha</th><th>Estado</th><th>PDF</th><th></th></tr></thead>'
     +'<tbody id="ev-body"></tbody>'
     +'</table></div>'
     +'<div id="ev-pag" style="margin-top:8px;"></div>'
@@ -447,10 +448,64 @@ function iniciarEvaluaciones() {
 }
 
 function onFiltroDivisionUsuario() {
-  onFiltroDivisionCambio('ev-division', 'ev-unidad', window._divisionesData || [], function() { cargarEval(1); });
+  onFiltroDivisionCambio('ev-division', 'ev-unidad', window._divisionesData || [], function() { actualizarBotonesEliminarEvalUsuario(); cargarEval(1); });
+}
+
+function actualizarBotonesEliminarEvalUsuario() {
+  var btn = document.getElementById('ev-btn-del-unidad');
+  if (btn) btn.style.display = (val('ev-unidad') || val('ev-division')) ? '' : 'none';
+}
+
+function eliminarRegistroEvalUsuario(id, cip, soloProgreso, nombre) {
+  var msg = soloProgreso
+    ? '¿Eliminar el avance guardado de ' + nombre + ' (CIP ' + cip + ')?'
+    : '¿Eliminar la evaluación de ' + nombre + ' (CIP ' + cip + ')?';
+  if (!confirm(msg)) return;
+  var url = soloProgreso
+    ? API + '/admin/progresos?cip=' + encodeURIComponent(cip)
+    : API + '/admin/evaluaciones/' + id;
+  fetch(url, { method: 'DELETE', headers: hdr() })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) cargarEval(window._evalPaginaActual || 1);
+      else alert(d.error || 'No se pudo eliminar.');
+    })
+    .catch(function() { alert('Error de conexión.'); });
+}
+
+function eliminarEvaluacionesUnidadUsuario() {
+  var uni = val('ev-unidad');
+  var div = val('ev-division');
+  if (!uni && !div) { alert('Seleccione una división o unidad.'); return; }
+  var etiqueta = uni || div;
+  if (!confirm('¿Eliminar TODAS las evaluaciones y avances de: ' + etiqueta + '?')) return;
+  if (!confirm('Confirme de nuevo: se eliminarán todos los registros de "' + etiqueta + '".')) return;
+  var q = 'unidad=' + encodeURIComponent(uni) + '&division=' + encodeURIComponent(div);
+  fetch(API + '/admin/evaluaciones-lote?' + q, { method: 'DELETE', headers: hdr() })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        alert('Eliminados: ' + (d.eliminados_eval || 0) + ' evaluaciones y ' + (d.eliminados_prog || 0) + ' avances.');
+        cargarEval(1);
+      } else alert(d.error || 'No se pudo eliminar.');
+    })
+    .catch(function() { alert('Error de conexión.'); });
+}
+
+function btnEliminarEvalUsuario(r) {
+  var nom = escJs(r.nombres || '');
+  if (r.solo_progreso && r.cip) {
+    return '<button type="button" class="btn btn-r" style="font-size:11px;padding:3px 7px;" onclick="eliminarRegistroEvalUsuario(null,\'' + escJs(r.cip) + '\',true,\'' + nom + '\')"><i class="fas fa-trash-alt"></i></button>';
+  }
+  if (r.id) {
+    return '<button type="button" class="btn btn-r" style="font-size:11px;padding:3px 7px;" onclick="eliminarRegistroEvalUsuario(' + r.id + ',\'' + escJs(r.cip || '') + '\',false,\'' + nom + '\')"><i class="fas fa-trash-alt"></i></button>';
+  }
+  return '';
 }
 
 function cargarEval(pag) {
+  window._evalPaginaActual = pag;
+  actualizarBotonesEliminarEvalUsuario();
   var div=encodeURIComponent(val('ev-division'));
   var uni=encodeURIComponent(val('ev-unidad'));
   var bus=encodeURIComponent(val('ev-busq'));
@@ -474,7 +529,7 @@ function cargarEval(pag) {
           :'<span style="color:#bbb;font-size:10px;">Sin PDF</span>';
         return '<tr'+(r.solo_progreso?' style="background:#fffdf5;"':'')+'><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
           +'<td style="font-size:11px;">'+escHtml(r.unidad||r.comisaria||'—')+'</td>'
-          +'<td style="font-size:11px;">'+escHtml(r.fecha)+'</td><td>'+badge+'</td><td>'+pdf+'</td></tr>';
+          +'<td style="font-size:11px;">'+escHtml(r.fecha)+'</td><td>'+badge+'</td><td>'+pdf+'</td><td>'+btnEliminarEvalUsuario(r)+'</td></tr>';
       }).join('');
       var pag=document.getElementById('ev-pag'); pag.innerHTML='';
       for(var p=1;p<=d.paginas;p++){

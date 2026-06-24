@@ -533,14 +533,30 @@ function debeFiltrarPorUnidadAsignada(admin) {
   return !normalizarPermisos(admin.permisos).includes('evaluaciones');
 }
 
+function puedeGestionarEvaluaciones(admin) {
+  if (!admin) return false;
+  if (admin.rol === 'unitic' || admin.rol === 'bienestar') return true;
+  return normalizarPermisos(admin.permisos).includes('evaluaciones');
+}
+
+function adminPuedeAccederRegistro(admin, unidad, comisaria) {
+  if (!debeFiltrarPorUnidadAsignada(admin)) return true;
+  const u = (admin.unidad || '').toUpperCase();
+  const uni = (unidad || '').toUpperCase();
+  const com = (comisaria || '').toUpperCase();
+  return uni.includes(u) || com.includes(u);
+}
+
+function invalidarStatsCache() {
+  statsCache = null;
+  statsCacheKey = '';
+  statsCacheExp = 0;
+}
+
 // Conteo seguro de respuestas JSONB (evita error si el valor no es objeto)
 function sqlContarRespuestas(col) {
   return `(CASE WHEN ${col} IS NOT NULL AND jsonb_typeof(${col}) = 'object'
     THEN (SELECT COUNT(*)::int FROM jsonb_object_keys(${col})) ELSE 0 END)`;
-}
-
-function sqlTieneRespuestas(col) {
-  return `${sqlContarRespuestas(col)} > 0`;
 }
 
 function sqlProgresoConRespuestas(alias) {
@@ -1296,6 +1312,124 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
   }
 });
 
+// ── DELETE /admin/evaluaciones/:id — eliminar evaluación individual ─────────────
+app.delete('/admin/evaluaciones/:id', requireAuth, async (req, res) => {
+  try {
+    if (!puedeGestionarEvaluaciones(req.admin)) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    }
+    const cur = await pool.query(
+      'SELECT id, cip, unidad, comisaria FROM evaluaciones WHERE id=$1',
+      [req.params.id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    const row = cur.rows[0];
+    if (!adminPuedeAccederRegistro(req.admin, row.unidad, row.comisaria)) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso para esta dependencia' });
+    }
+    await pool.query('DELETE FROM evaluaciones WHERE id=$1', [row.id]);
+    if (row.cip) {
+      await pool.query(
+        `DELETE FROM progresos WHERE UPPER(TRIM(cip))=UPPER(TRIM($1))
+         OR LOWER(TRIM(clave))=LOWER(TRIM($1))`,
+        [row.cip]);
+    }
+    invalidarStatsCache();
+    res.json({ ok: true });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── DELETE /admin/progresos?cip= — eliminar avance guardado (sin enviar) ───────
+app.delete('/admin/progresos', requireAuth, async (req, res) => {
+  try {
+    if (!puedeGestionarEvaluaciones(req.admin)) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    }
+    const cip = (req.query.cip || '').trim();
+    if (!cip) return res.json({ ok: false, error: 'CIP requerido' });
+    const cur = await pool.query(
+      `SELECT cip, unidad, comisaria FROM progresos
+       WHERE UPPER(TRIM(cip))=UPPER(TRIM($1)) OR LOWER(TRIM(clave))=LOWER(TRIM($1))
+       LIMIT 1`,
+      [cip]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    const row = cur.rows[0];
+    if (!adminPuedeAccederRegistro(req.admin, row.unidad, row.comisaria)) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso para esta dependencia' });
+    }
+    await pool.query(
+      `DELETE FROM progresos WHERE UPPER(TRIM(cip))=UPPER(TRIM($1))
+       OR LOWER(TRIM(clave))=LOWER(TRIM($1))`,
+      [cip]);
+    invalidarStatsCache();
+    res.json({ ok: true });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── DELETE /admin/evaluaciones-lote — por unidad/división o todos (Super Admin) ─
+app.delete('/admin/evaluaciones-lote', requireAuth, async (req, res) => {
+  try {
+    if (!puedeGestionarEvaluaciones(req.admin)) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    }
+
+    const todos = req.query.todos === 'true' || req.query.todos === '1';
+    if (todos) {
+      if (req.admin.rol !== 'unitic') {
+        return res.status(403).json({ ok: false, error: 'Solo Super Admin' });
+      }
+      if ((req.query.confirmar || '') !== 'ELIMINAR') {
+        return res.json({ ok: false, error: 'Confirme escribiendo ELIMINAR' });
+      }
+      const evR = await pool.query('DELETE FROM evaluaciones RETURNING id');
+      const prR = await pool.query('DELETE FROM progresos RETURNING clave');
+      invalidarStatsCache();
+      return res.json({
+        ok: true,
+        eliminados_eval: evR.rowCount,
+        eliminados_prog: prR.rowCount
+      });
+    }
+
+    const unidad = (req.query.unidad || '').trim();
+    const division = (req.query.division || '').trim();
+    const comisaria = (req.query.comisaria || '').trim();
+    if (!unidad && !division && !comisaria) {
+      return res.json({ ok: false, error: 'Seleccione división, comisaría o unidad' });
+    }
+
+    let baseWhere = 'WHERE 1=1';
+    const baseParams = [];
+    if (debeFiltrarPorUnidadAsignada(req.admin)) {
+      baseWhere += ' AND (UPPER(unidad) LIKE $1 OR UPPER(comisaria) LIKE $1)';
+      baseParams.push('%' + req.admin.unidad.toUpperCase() + '%');
+    }
+    const { where, params } = await buildWhere(req.query, baseWhere, baseParams);
+    const evR = await pool.query(`DELETE FROM evaluaciones ${where} RETURNING id`, params);
+
+    let pBase = 'WHERE 1=1';
+    const pParams = [];
+    if (debeFiltrarPorUnidadAsignada(req.admin)) {
+      pBase += ' AND (UPPER(p.unidad) LIKE $1 OR UPPER(p.comisaria) LIKE $1)';
+      pParams.push('%' + req.admin.unidad.toUpperCase() + '%');
+    }
+    const { where: pWhere, params: pPrms } = await buildWhereProgresos(req.query, pBase, pParams);
+    const prR = await pool.query(`DELETE FROM progresos p ${pWhere} RETURNING clave`, pPrms);
+
+    invalidarStatsCache();
+    res.json({
+      ok: true,
+      eliminados_eval: evR.rowCount,
+      eliminados_prog: prR.rowCount
+    });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 // ── Helper: construir WHERE por division/comisaria/unidad ─────────────────────
 async function buildWhere(query, baseWhere, baseParams) {
   let where = baseWhere || 'WHERE 1=1';
@@ -1327,6 +1461,40 @@ async function buildWhere(query, baseWhere, baseParams) {
   if (busqueda)  {
     where += ` AND (UPPER(nombres) LIKE $${pi} OR cip LIKE $${pi+1} OR dni LIKE $${pi+2})`;
     params.push('%'+busqueda+'%','%'+busqueda+'%','%'+busqueda+'%'); pi += 3;
+  }
+  return { where, params, pi };
+}
+
+async function buildWhereProgresos(query, baseWhere, baseParams) {
+  let where = baseWhere || 'WHERE 1=1';
+  const params = [...(baseParams || [])];
+  let pi = params.length + 1;
+
+  const division  = (query.division  || '').toUpperCase();
+  const comisaria = (query.comisaria || '').toUpperCase();
+  const unidad    = (query.unidad    || '').toUpperCase();
+  const busqueda  = (query.busqueda  || '').toUpperCase();
+
+  if (division) {
+    const du = await pool.query(
+      `SELECT UPPER(u.nombre) AS nombre FROM unidades_pol u JOIN divisiones d ON d.id=u.division_id WHERE UPPER(d.nombre)=$1`, [division]);
+    if (du.rows.length) {
+      const arr = du.rows.map(r => r.nombre);
+      where += ` AND (UPPER(p.comisaria) = ANY($${pi}::text[]) OR UPPER(p.unidad) = ANY($${pi}::text[]))`;
+      params.push(arr); pi++;
+    } else { where += ' AND 1=0'; }
+  }
+  if (comisaria) {
+    where += ` AND (UPPER(p.comisaria) LIKE $${pi} OR UPPER(p.unidad) LIKE $${pi})`;
+    params.push('%' + comisaria + '%'); pi++;
+  }
+  if (unidad) {
+    where += ` AND (UPPER(p.unidad) LIKE $${pi} OR UPPER(p.comisaria) LIKE $${pi})`;
+    params.push('%' + unidad + '%'); pi++;
+  }
+  if (busqueda) {
+    where += ` AND (UPPER(p.nombres) LIKE $${pi} OR p.cip LIKE $${pi + 1})`;
+    params.push('%' + busqueda + '%', '%' + busqueda + '%'); pi += 2;
   }
   return { where, params, pi };
 }
