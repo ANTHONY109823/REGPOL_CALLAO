@@ -412,8 +412,10 @@ function asegurarPanelFotosEncabezado() {
 }
 
 var FOTOS_ENCABEZADO_DEFAULT = ['img/Imagen1.jpg', 'img/saludo.jpg', 'img/lunespatriotico.jpg'];
-var HEADER_FOTOS_INTERVAL_MS = 3800;
+var HEADER_FOTOS_INTERVAL_MS = 6500;
+var HEADER_FOTOS_TRANSITION_MS = 750;
 var _headerFotosTimer = null;
+var _headerFotosResizeFn = null;
 
 function detenerHeaderFotosCarrusel() {
   if (_headerFotosTimer) {
@@ -424,6 +426,10 @@ function detenerHeaderFotosCarrusel() {
 
 function renderFotosEncabezado(data) {
   detenerHeaderFotosCarrusel();
+  if (_headerFotosResizeFn) {
+    window.removeEventListener('resize', _headerFotosResizeFn);
+    _headerFotosResizeFn = null;
+  }
 
   var panel = asegurarPanelFotosEncabezado();
   if (!panel) return;
@@ -432,46 +438,83 @@ function renderFotosEncabezado(data) {
   var fotos = raw.map(function(f) { return String(f || '').trim(); }).filter(Boolean);
   if (!fotos.length) fotos = FOTOS_ENCABEZADO_DEFAULT.slice();
 
+  var clones = fotos.slice(0, Math.min(3, fotos.length));
+  var todos = fotos.concat(clones);
+
   panel.innerHTML =
     '<div class="header-fotos-viewport">'
-    + '<div class="header-fotos-slots">'
-    + [0, 1, 2].map(function(i) {
-      return '<div class="header-foto-item"><img alt="REGPOL Callao foto ' + (i + 1) + '" decoding="async"'
-        + (i === 0 ? ' fetchpriority="high"' : '') + '/></div>';
+    + '<div class="header-fotos-track">'
+    + todos.map(function(src, i) {
+      return '<div class="header-foto-item"><img src="' + escHtml(src) + '" alt="REGPOL Callao foto ' + ((i % fotos.length) + 1) + '" decoding="async"'
+        + (i < 3 ? ' fetchpriority="high"' : ' loading="lazy"') + '/></div>';
     }).join('')
     + '</div></div>';
 
-  var slotsEl = panel.querySelector('.header-fotos-slots');
-  var imgs = panel.querySelectorAll('.header-foto-item img');
-  var startIdx = 0;
+  if (fotos.length <= 1) return;
 
-  function pintar() {
-    for (var s = 0; s < imgs.length; s++) {
-      imgs[s].src = fotos[(startIdx + s) % fotos.length];
-    }
+  var track = panel.querySelector('.header-fotos-track');
+  var viewport = panel.querySelector('.header-fotos-viewport');
+  if (!track || !viewport) return;
+
+  var offset = 0;
+  var animando = false;
+
+  function anchoItem() {
+    var gap = 8;
+    var vw = viewport.offsetWidth;
+    return Math.max(60, Math.round((vw - gap * 2) / 3));
   }
 
-  pintar();
+  function pasoPx() {
+    return anchoItem() + 8;
+  }
 
-  if (fotos.length <= 1 || !slotsEl) return;
+  function ajustarItems() {
+    var w = anchoItem();
+    Array.prototype.forEach.call(track.children, function(el) {
+      el.style.width = w + 'px';
+      el.style.flexBasis = w + 'px';
+    });
+    track.style.transform = 'translate3d(-' + Math.round(offset * pasoPx()) + 'px,0,0)';
+  }
 
-  function rotar() {
-    slotsEl.classList.add('header-fotos-rotando');
+  function avanzar() {
+    if (animando || !track.children.length) return;
+    animando = true;
+    offset++;
+    track.style.transform = 'translate3d(-' + Math.round(offset * pasoPx()) + 'px,0,0)';
     setTimeout(function() {
-      startIdx = (startIdx + 1) % fotos.length;
-      pintar();
-      slotsEl.classList.remove('header-fotos-rotando');
-    }, 380);
+      animando = false;
+      if (offset >= fotos.length) {
+        track.style.transition = 'none';
+        offset = 0;
+        track.style.transform = 'translate3d(0,0,0)';
+        void track.offsetHeight;
+        track.style.transition = '';
+      }
+    }, HEADER_FOTOS_TRANSITION_MS + 50);
   }
 
   function iniciarAuto() {
     detenerHeaderFotosCarrusel();
-    _headerFotosTimer = setInterval(rotar, HEADER_FOTOS_INTERVAL_MS);
+    _headerFotosTimer = setInterval(avanzar, HEADER_FOTOS_INTERVAL_MS);
   }
+
+  ajustarItems();
+  _headerFotosResizeFn = function() {
+    ajustarItems();
+    if (!animando) {
+      track.style.transition = 'none';
+      track.style.transform = 'translate3d(-' + Math.round(offset * pasoPx()) + 'px,0,0)';
+      void track.offsetHeight;
+      track.style.transition = '';
+    }
+  };
+  window.addEventListener('resize', _headerFotosResizeFn);
 
   panel.onmouseenter = detenerHeaderFotosCarrusel;
   panel.onmouseleave = iniciarAuto;
-  setTimeout(iniciarAuto, 600);
+  setTimeout(iniciarAuto, 800);
 }
 
 function aplicarHeroMarca(heroT) {
