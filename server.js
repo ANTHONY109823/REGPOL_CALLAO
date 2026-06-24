@@ -786,6 +786,9 @@ app.post('/progreso', async (req, res) => {
     const totalCalc = contarRespuestasObj(respuestas).total;
     const totalFinal = Math.max(parseInt(total, 10) || 0, totalCalc);
     const edadFinal = parseInt(edad, 10) || calcularEdadDesdeISO(fecha_nac) || null;
+    const merged = await mergeRespuestasEnProgreso(clave, respuestas, bloque);
+    const totalGuardar = Math.max(totalFinal, merged.total);
+    const bloqueGuardar = merged.bloque_max;
     // Agregar columnas extra a progresos si no existen (BD antiguas)
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS unidad VARCHAR(150)`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS cargo VARCHAR(80)`).catch(()=>{});
@@ -802,7 +805,7 @@ app.post('/progreso', async (req, res) => {
        ON CONFLICT (clave) DO UPDATE SET
          nombres=$3, comisaria=$4, unidad=$5, bloque_max=$6,
          total_resp=$7, respuestas=$8, actualizado=NOW()`,
-      [clave, cip||'', nombres||'', comisaria||'', unidad||'', bloque||0, totalFinal, respuestas||{}]
+      [clave, cip||'', nombres||'', comisaria||'', unidad||'', bloqueGuardar, totalGuardar, merged.respuestas]
     );
     await pool.query(
       `UPDATE progresos SET cargo=$2, sexo=$3, armamento=$4,
@@ -888,6 +891,7 @@ function contarRespuestasObj(respuestas) {
   if (typeof r === 'string') {
     try { r = JSON.parse(r); } catch (e) { r = {}; }
   }
+  if (!r || typeof r !== 'object' || Array.isArray(r)) r = {};
   const vals = Object.keys(r).filter(function(k) { return r[k] === 'V' || r[k] === 'F'; });
   return {
     total: vals.length,
@@ -895,6 +899,40 @@ function contarRespuestasObj(respuestas) {
     f: vals.filter(function(k) { return r[k] === 'F'; }).length,
     respuestas: r
   };
+}
+
+async function mergeRespuestasEnProgreso(clave, nuevas, bloque) {
+  const cur = await pool.query(
+    'SELECT respuestas, bloque_max FROM progresos WHERE clave=$1', [clave]
+  );
+  let exist = {};
+  let bloquePrev = 0;
+  if (cur.rows.length) {
+    exist = contarRespuestasObj(cur.rows[0].respuestas).respuestas;
+    bloquePrev = parseInt(cur.rows[0].bloque_max, 10) || 0;
+  }
+  const nuevasNorm = contarRespuestasObj(nuevas).respuestas;
+  const merged = Object.assign({}, exist, nuevasNorm);
+  const stats = contarRespuestasObj(merged);
+  return {
+    respuestas: stats.respuestas,
+    total: stats.total,
+    bloque_max: Math.max(bloquePrev, parseInt(bloque, 10) || 0)
+  };
+}
+
+async function cargarAvancePorCip(cip, admin) {
+  const prog = await obtenerProgresoParaPDF(cip, admin);
+  let evEval = null;
+  try {
+    evEval = await cargarEvaluacionAdmin({ cip }, admin);
+  } catch (e) { /* ignorar */ }
+  if (evEval && evaluacionEstaCompleta(evEval)) return null;
+  const totalP = prog ? contarRespuestas(prog).total : 0;
+  const totalE = evEval ? contarRespuestas(evEval).total : 0;
+  if (totalP >= totalE && prog) return prog;
+  if (evEval) return evEval;
+  return prog;
 }
 
 async function obtenerProgresoPorCip(cip) {
@@ -952,9 +990,9 @@ function mapearProgresoParaPDF(p) {
   if (typeof resp === 'string') {
     try { resp = JSON.parse(resp); } catch (e) { resp = {}; }
   }
+  const statsMerged = contarRespuestasObj(p.respuestas);
   const totalDb = p.total_resp != null ? parseInt(p.total_resp, 10) : 0;
-  const totalJson = Object.keys(resp).filter(function(k) { return resp[k] === 'V' || resp[k] === 'F'; }).length;
-  const totalResp = Math.max(totalDb || 0, totalJson);
+  const totalResp = Math.max(totalDb || 0, statsMerged.total);
   return {
     id: null,
     cip: p.cip || '',
@@ -970,7 +1008,7 @@ function mapearProgresoParaPDF(p) {
     edad: p.edad || null,
     bloque_max: p.bloque_max || 0,
     completada: false,
-    respuestas: resp,
+    respuestas: statsMerged.respuestas,
     fecha: p.fecha || (p.actualizado
       ? new Date(p.actualizado).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       : '—'),
@@ -1725,11 +1763,7 @@ app.get('/admin/preview-avance', requireAuth, async (req, res) => {
     const cip = (req.query.cip || '').trim();
     if (!cip) return res.json({ ok: false, error: 'CIP requerido' });
 
-    let ev = await obtenerProgresoParaPDF(cip, req.admin);
-    if (!ev) {
-      const parcial = await cargarEvaluacionAdmin({ cip }, req.admin);
-      if (parcial && !evaluacionEstaCompleta(parcial)) ev = parcial;
-    }
+    let ev = await cargarAvancePorCip(cip, req.admin);
     if (!ev) return res.json({ ok: false, error: 'No hay avance guardado para este CIP' });
     if (evaluacionEstaCompleta(ev)) {
       return res.json({ ok: false, error: 'Evaluación ya completada. Use Ver resultado.' });

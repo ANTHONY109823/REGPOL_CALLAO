@@ -416,7 +416,9 @@ function construirPayloadProgreso() {
     armamento: obtenerArmamento(),
     foto:      FOTO_BASE64 || '',
     bloque:    ESTADO.bloqueActual || 1,
-    total:     Object.keys(ESTADO.respuestas).length,
+    total:     Object.keys(ESTADO.respuestas).filter(function(k) {
+      return ESTADO.respuestas[k] === 'V' || ESTADO.respuestas[k] === 'F';
+    }).length,
     respuestas: ESTADO.respuestas
   };
 }
@@ -470,6 +472,13 @@ function activarCuestionario(scroll) {
   renderizarBloque(ESTADO.bloqueActual, !!scroll);
 }
 
+function aplicarDatosProgresoAlEstado(data) {
+  if (!data) return;
+  ESTADO.respuestas = typeof data.respuestas === 'string'
+    ? JSON.parse(data.respuestas) : (data.respuestas || {});
+  ESTADO.bloqueActual = parseInt(data.bloque, 10) || 1;
+}
+
 function continuarAlCuestionario() {
   if (!PREGUNTAS.length) { mostrarAlerta('Espere a que cargue el cuestionario.','error'); return; }
   var err = validarRegistro();
@@ -480,8 +489,9 @@ function continuarAlCuestionario() {
   var cip = document.getElementById('f-cip').value.trim();
   verificarProgresoGuardado(cip, function(data) {
     if (data && data.total > 0) {
-      guardarRegistroEnServidor();
+      aplicarDatosProgresoAlEstado(data);
       mostrarBannerProgreso(data);
+      guardarRegistroEnServidor();
     } else {
       guardarRegistroEnServidor(function(ok) {
         activarCuestionario(true);
@@ -703,16 +713,21 @@ function continuarConCIP() {
   });
 }
 
-// Auto-guardar cada 5 respuestas (silencioso)
-var AUTO_SAVE_COUNTER = 0;
+// Auto-guardar cada respuesta (con pequeña espera para no saturar)
+var _saveTimer = null;
 function autoGuardarProgreso() {
-  AUTO_SAVE_COUNTER++;
-  if (AUTO_SAVE_COUNTER % 5 !== 0) return;
-  var payload = construirPayloadProgreso();
-  if (!payload.cip) return;
-  localStorage.setItem('progreso_'+payload.cip, JSON.stringify(payload));
-  fetch(LOCAL_API+'/progreso',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).catch(function(){});
-  mostrarIndicadorGuardado();
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(function() {
+    var payload = construirPayloadProgreso();
+    if (!payload.cip) return;
+    localStorage.setItem('progreso_' + payload.cip, JSON.stringify(payload));
+    fetch(LOCAL_API + '/progreso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(function() {});
+    mostrarIndicadorGuardado();
+  }, 350);
 }
 
 /* ================================================================
