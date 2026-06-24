@@ -470,56 +470,29 @@
     <div id="page-descargas" class="page">
       <div class="card">
         <h3><i class="fas fa-list-alt"></i> RESPUESTAS</h3>
-        <div style="overflow-x:auto;margin-bottom:14px;">
-          <table class="t">
-            <thead>
-              <tr>
-                <th>División</th>
-                <th>Unidad</th>
-                <th>Búsqueda (CIP / DNI / nombre)</th>
-                <th>Acciones masivas</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style="min-width:150px;">
-                  <select id="f-div" onchange="onFiltroDivisionAdmin()"><option value="">Todas las divisiones</option></select>
-                </td>
-                <td style="min-width:150px;">
-                  <select id="f-uni" onchange="onFiltroRespuestasChange()"><option value="">Todas las unidades</option></select>
-                </td>
-                <td style="min-width:200px;">
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                    <input id="f-bus" type="text" placeholder="CIP / DNI / Nombres..." style="flex:1;min-width:140px;"
-                      onkeydown="if(event.key==='Enter'){event.preventDefault();cargarTabla(1);}"/>
-                    <button class="btn btn-v" type="button" onclick="cargarTabla(1)"><i class="fas fa-search"></i> Buscar</button>
-                    <button class="btn btn-v" type="button" onclick="cargarTabla(window._tablaPaginaActual||1)" title="Actualizar"><i class="fas fa-sync"></i></button>
-                  </div>
-                </td>
-                <td>
-                  <div class="btn-acciones-celda">
-                    <button class="btn btn-r" id="btn-pdf-unidad" style="display:none;" type="button" onclick="descargarPdfRespuestas('unidad')"><i class="fas fa-file-pdf"></i> PDF unidad</button>
-                    <button class="btn btn-r" id="btn-pdf-division" style="display:none;" type="button" onclick="descargarPdfRespuestas('division')"><i class="fas fa-file-pdf"></i> PDF división</button>
-                    <button class="btn btn-r" id="btn-pdf-todas" type="button" onclick="descargarPdfRespuestas('todas')"><i class="fas fa-file-pdf"></i> PDF todas</button>
-                    <button class="btn btn-r" id="btn-del-unidad" style="display:none;" type="button" onclick="eliminarEvaluacionesUnidad()"><i class="fas fa-trash-alt"></i> Eliminar unidad</button>
-                    <button class="btn btn-r" id="btn-del-todos" style="display:none;" type="button" onclick="limpiarTodosRegistrosEval()"><i class="fas fa-broom"></i> Limpiar todos</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="filtros" style="flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;">
+          <select id="f-div" onchange="onFiltroDivisionAdmin()"><option value="">Todas las divisiones</option></select>
+          <select id="f-uni" onchange="onFiltroRespuestasChange()"><option value="">Todas las unidades</option></select>
+          <input id="f-bus" type="text" placeholder="CIP / DNI / Nombres..." style="min-width:200px;flex:1;"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();cargarTabla(1);}"/>
+          <button class="btn btn-v" type="button" onclick="cargarTabla(1)"><i class="fas fa-search"></i> Buscar</button>
+          <button class="btn btn-v" type="button" onclick="cargarTabla(1)" title="Actualizar"><i class="fas fa-sync"></i></button>
+          <button class="btn btn-r" id="btn-pdf-unidad" style="display:none;" type="button" onclick="descargarPdfRespuestas('unidad')"><i class="fas fa-file-pdf"></i> PDF unidad</button>
+          <button class="btn btn-r" id="btn-pdf-division" style="display:none;" type="button" onclick="descargarPdfRespuestas('division')"><i class="fas fa-file-pdf"></i> PDF división</button>
+          <button class="btn btn-r" id="btn-pdf-todas" type="button" onclick="descargarPdfRespuestas('todas')"><i class="fas fa-file-pdf"></i> PDF todas</button>
+          <button class="btn btn-r" id="btn-del-unidad" style="display:none;" type="button" onclick="eliminarEvaluacionesUnidad()"><i class="fas fa-trash-alt"></i> Eliminar unidad</button>
+          <button class="btn btn-r" id="btn-del-todos" style="display:none;" type="button" onclick="limpiarTodosRegistrosEval()"><i class="fas fa-broom"></i> Limpiar todos</button>
         </div>
         <div class="tinfo" id="tabla-info"></div>
-        <div style="overflow-x:auto;">
-          <table class="t">
+        <div style="overflow-x:auto;max-height:68vh;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">
+          <table class="t" style="margin:0;">
             <thead><tr>
-              <th>Nombres</th><th>CIP</th><th>DNI</th><th>Dependencia</th>
+              <th>División</th><th>Dependencia</th><th>Nombres</th><th>CIP</th><th>DNI</th>
               <th>Fecha</th><th>Edad</th><th>Estado</th><th>Ver / PDF</th><th>Eliminar</th>
             </tr></thead>
-            <tbody id="tabla-body"></tbody>
+            <tbody id="tabla-body"><tr><td colspan="10" style="text-align:center;color:#bbb;padding:18px;">Cargando...</td></tr></tbody>
           </table>
         </div>
-        <div id="paginacion" style="margin-top:8px;"></div>
       </div>
     </div>
 
@@ -1836,38 +1809,117 @@ function onFiltroDivisionAdmin() {
   onFiltroDivisionCambio('f-div', 'f-uni', window._divisionesData || [], function() { actualizarBotonesRespuestas(); cargarTabla(1); });
 }
 
+function normUniResp(n) {
+  return String(n || '').trim().toUpperCase();
+}
+
+function mapaUnidadADivision(divisiones) {
+  var map = {};
+  (divisiones || []).forEach(function(div) {
+    (div.unidades || []).forEach(function(u) {
+      var nom = typeof u === 'string' ? u : (u.nombre || '');
+      if (nom) map[normUniResp(nom)] = div.nombre;
+    });
+  });
+  return map;
+}
+
+function badgeEstadoRegistro(r) {
+  var total = parseInt(r.total_resp, 10) || 0;
+  var comp = total >= 566 && !r.solo_progreso && !!r.completada;
+  if (r.solo_progreso) {
+    return total >= 566
+      ? '<span class="badge" style="background:#fff3cd;color:#856404;">566/566 — sin enviar</span>'
+      : '<span class="badge pend">' + total + '/566 guardado</span>';
+  }
+  return comp
+    ? '<span class="badge ok">Completo</span>'
+    : '<span class="badge pend">' + total + '/566</span>';
+}
+
+function filaRegistroRespuesta(r, divNombre) {
+  var uni = r.unidad || r.comisaria || '—';
+  return '<tr' + (r.solo_progreso ? ' style="background:#fffdf5;"' : '') + '>'
+    + '<td style="font-size:11px;color:#666;">' + escHtml(divNombre) + '</td>'
+    + '<td style="font-size:11px;"><strong>' + escHtml(uni) + '</strong></td>'
+    + '<td><strong>' + escHtml(r.nombres) + '</strong></td>'
+    + '<td>' + escHtml(r.cip) + '</td>'
+    + '<td>' + escHtml(r.dni || '—') + '</td>'
+    + '<td style="font-size:11px;">' + escHtml(r.fecha) + '</td>'
+    + '<td style="text-align:center;">' + (r.edad || '—') + '</td>'
+    + '<td>' + badgeEstadoRegistro(r) + '</td>'
+    + '<td>' + btnAccionesEval(r) + '</td>'
+    + '<td>' + btnEliminarEval(r) + '</td>'
+    + '</tr>';
+}
+
+function renderTablaRespuestasPorDivision(rows) {
+  var divisiones = window._divisionesData || DIVISIONES_DATA || [];
+  var map = mapaUnidadADivision(divisiones);
+  var filtroDiv = val('f-div');
+  var grupos = {};
+  var sinDiv = 'OTROS / SIN DIVISIÓN';
+
+  (rows || []).forEach(function(r) {
+    var uni = r.unidad || r.comisaria || '';
+    var div = map[normUniResp(uni)] || sinDiv;
+    if (!grupos[div]) grupos[div] = [];
+    grupos[div].push(r);
+  });
+
+  var orden = divisiones.map(function(d) { return d.nombre; });
+  if (grupos[sinDiv] && grupos[sinDiv].length) orden.push(sinDiv);
+  if (filtroDiv) orden = orden.filter(function(n) { return n === filtroDiv; });
+
+  var html = '';
+  var totalMostrado = 0;
+  orden.forEach(function(divNombre) {
+    var regs = grupos[divNombre];
+    if (!regs || !regs.length) return;
+    regs.sort(function(a, b) {
+      var ua = normUniResp(a.unidad || a.comisaria);
+      var ub = normUniResp(b.unidad || b.comisaria);
+      if (ua !== ub) return ua.localeCompare(ub, 'es');
+      return String(a.nombres || '').localeCompare(String(b.nombres || ''), 'es');
+    });
+    totalMostrado += regs.length;
+    html += '<tr class="fila-division">'
+      + '<td colspan="10" style="background:#004d3d;color:#fff;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.35px;">'
+      + '<i class="fas fa-sitemap" style="margin-right:6px;"></i>' + escHtml(divNombre)
+      + ' <span style="font-weight:500;opacity:.9;">(' + regs.length + ' registro' + (regs.length === 1 ? '' : 's') + ')</span>'
+      + '</td></tr>';
+    regs.forEach(function(r) { html += filaRegistroRespuesta(r, divNombre); });
+  });
+
+  if (!html) {
+    return { html: '<tr><td colspan="10" style="text-align:center;color:#bbb;padding:22px;">Sin registros para los filtros seleccionados.</td></tr>', total: 0 };
+  }
+  return { html: html, total: totalMostrado };
+}
+
 function cargarTabla(pag){
-  window._tablaPaginaActual = pag;
+  window._tablaPaginaActual = 1;
   actualizarBotonesEliminarEval();
-  var div=encodeURIComponent(val('f-div')), uni=encodeURIComponent(val('f-uni')), bus=encodeURIComponent(val('f-bus'));
-  fetch(API+'/evaluaciones?pagina='+pag+'&division='+div+'&unidad='+uni+'&busqueda='+bus,{headers:hdr()})
-    .then(function(r){return r.json();}).then(function(d){
-      if(!d.ok) return;
-      set('tabla-info',d.rows.length+' de '+d.total+' — Página '+d.pagina+' / '+d.paginas);
-      document.getElementById('tabla-body').innerHTML=d.rows.map(function(r){
-        var total=parseInt(r.total_resp,10)||0;
-        var comp=total>=566 && !r.solo_progreso && !!r.completada;
-        var badge;
-        if(r.solo_progreso){
-          badge=total>=566
-            ?'<span class="badge" style="background:#fff3cd;color:#856404;">566/566 — sin enviar</span>'
-            :'<span class="badge pend">'+total+'/566 guardado</span>';
-        } else {
-          badge=comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+total+'/566</span>';
-        }
-        var pdf = btnAccionesEval(r);
-        return '<tr'+(r.solo_progreso?' style="background:#fffdf5;"':'')+'><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
-          +'<td style="font-size:11px;">'+escHtml(r.unidad||r.comisaria||'—')+'</td>'
-          +'<td style="font-size:11px;">'+escHtml(r.fecha)+'</td><td style="text-align:center;">'+(r.edad||'—')+'</td>'
-          +'<td>'+badge+'</td><td>'+pdf+'</td><td>'+btnEliminarEval(r)+'</td></tr>';
-      }).join('');
-      var pags=document.getElementById('paginacion'); pags.innerHTML='';
-      for(var p=1;p<=d.paginas;p++){
-        var b=document.createElement('button');
-        b.className='pag-btn'+(p===d.pagina?' on':''); b.textContent=p;
-        (function(pp){b.onclick=function(){cargarTabla(pp);};})(p);
-        pags.appendChild(b);
+  var body = document.getElementById('tabla-body');
+  if (body) body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#bbb;padding:18px;">Cargando...</td></tr>';
+  var div = encodeURIComponent(val('f-div'));
+  var uni = encodeURIComponent(val('f-uni'));
+  var bus = encodeURIComponent(val('f-bus'));
+  fetch(API + '/evaluaciones?pagina=1&por_pagina=500&division=' + div + '&unidad=' + uni + '&busqueda=' + bus, { headers: hdr() })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) {
+        if (body) body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#c0392b;padding:18px;">' + escHtml(d.error || 'Error al cargar') + '</td></tr>';
+        return;
       }
+      var rendered = renderTablaRespuestasPorDivision(d.rows || []);
+      if (body) body.innerHTML = rendered.html;
+      set('tabla-info', rendered.total + ' registro' + (rendered.total === 1 ? '' : 's') + ' — vista por divisiones');
+      var pags = document.getElementById('paginacion');
+      if (pags) pags.innerHTML = '';
+    })
+    .catch(function() {
+      if (body) body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#c0392b;padding:18px;">Error de conexión.</td></tr>';
     });
 }
 

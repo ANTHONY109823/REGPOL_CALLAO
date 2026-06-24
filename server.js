@@ -1402,7 +1402,7 @@ app.get('/listar', requireAuth, async (req, res) => {
 app.get('/evaluaciones', requireAuth, async (req, res) => {
   try {
     const pagina    = Math.max(1, parseInt(req.query.pagina) || 1);
-    const porPagina = 20;
+    const porPagina = Math.min(1000, Math.max(1, parseInt(req.query.por_pagina, 10) || 20));
     const offset    = (pagina - 1) * porPagina;
 
     let baseWhere = 'WHERE 1=1', baseParams = [];
