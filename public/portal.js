@@ -397,8 +397,6 @@ function aplicarEncabezadoMarca(data) {
   if (data) renderFotosEncabezado(data);
 }
 
-var FOTOS_ENCABEZADO_DEFAULT = ['img/Imagen1.jpg', 'img/saludo.jpg', 'img/lunespatriotico.jpg'];
-
 function asegurarPanelFotosEncabezado() {
   var flex = document.querySelector('.main-header .header-flex');
   if (!flex) return null;
@@ -407,26 +405,112 @@ function asegurarPanelFotosEncabezado() {
     panel = document.createElement('div');
     panel.id = 'header-fotos-panel';
     panel.className = 'header-fotos-panel';
-    panel.setAttribute('aria-label', 'Galería institucional del encabezado');
+    panel.setAttribute('aria-label', 'Carrusel de fotos del encabezado');
     flex.appendChild(panel);
   }
   return panel;
 }
 
+var FOTOS_ENCABEZADO_DEFAULT = ['img/Imagen1.jpg', 'img/saludo.jpg', 'img/lunespatriotico.jpg'];
+var HEADER_FOTOS_INTERVAL_MS = 3800;
+var _headerFotosTimer = null;
+var _headerFotosResizeFn = null;
+
+function detenerHeaderFotosCarrusel() {
+  if (_headerFotosTimer) {
+    clearInterval(_headerFotosTimer);
+    _headerFotosTimer = null;
+  }
+}
+
 function renderFotosEncabezado(data) {
+  detenerHeaderFotosCarrusel();
+  if (_headerFotosResizeFn) {
+    window.removeEventListener('resize', _headerFotosResizeFn);
+    _headerFotosResizeFn = null;
+  }
+
   var panel = asegurarPanelFotosEncabezado();
   if (!panel) return;
-  var fotos = (data && data.fotosEncabezado) ? data.fotosEncabezado.slice(0, 3) : [];
-  while (fotos.length < 3) fotos.push('');
-  var usarDefault = !fotos.some(function(f) { return !!(f && String(f).trim()); });
-  if (usarDefault) fotos = FOTOS_ENCABEZADO_DEFAULT.slice();
-  panel.innerHTML = fotos.map(function(src, i) {
-    var url = String(src || '').trim();
-    if (!url) {
-      return '<div class="header-foto-item header-foto-vacio"><i class="fas fa-image"></i></div>';
-    }
-    return '<div class="header-foto-item"><img src="' + escHtml(url) + '" alt="REGPOL Callao foto ' + (i + 1) + '" loading="lazy" decoding="async"/></div>';
-  }).join('');
+
+  var raw = (data && data.fotosEncabezado) ? data.fotosEncabezado : [];
+  var fotos = raw.map(function(f) { return String(f || '').trim(); }).filter(Boolean);
+  if (!fotos.length) fotos = FOTOS_ENCABEZADO_DEFAULT.slice();
+
+  var clones = fotos.slice(0, Math.min(3, fotos.length));
+  var todos = fotos.concat(clones);
+
+  panel.innerHTML =
+    '<div class="header-fotos-viewport" aria-label="Carrusel de fotos institucionales">'
+    + '<div class="header-fotos-track">'
+    + todos.map(function(src, i) {
+      return '<div class="header-foto-item"><img src="' + escHtml(src) + '" alt="REGPOL Callao foto ' + ((i % fotos.length) + 1) + '" '
+        + (i < 4 ? 'decoding="async"' : 'loading="lazy" decoding="async"') + '/></div>';
+    }).join('')
+    + '</div></div>';
+
+  if (fotos.length <= 1) return;
+
+  var track = panel.querySelector('.header-fotos-track');
+  var viewport = panel.querySelector('.header-fotos-viewport');
+  if (!track || !viewport) return;
+
+  var offset = 0;
+  var animando = false;
+
+  function anchoPaso() {
+    var gap = 8;
+    var vw = viewport.offsetWidth;
+    return (vw - gap * 2) / 3 + gap;
+  }
+
+  function ajustarAnchoItems() {
+    var gap = 8;
+    var vw = viewport.offsetWidth;
+    var w = Math.max(60, (vw - gap * 2) / 3);
+    Array.prototype.forEach.call(track.children, function(el) {
+      el.style.width = w + 'px';
+      el.style.flexBasis = w + 'px';
+    });
+  }
+
+  function paso() {
+    if (animando || !track.children.length) return;
+    animando = true;
+    offset++;
+    track.style.transform = 'translateX(-' + (offset * anchoPaso()) + 'px)';
+    setTimeout(function() {
+      animando = false;
+      if (offset >= fotos.length) {
+        track.style.transition = 'none';
+        offset = 0;
+        track.style.transform = 'translateX(0)';
+        void track.offsetHeight;
+        track.style.transition = '';
+      }
+    }, 640);
+  }
+
+  function iniciarAuto() {
+    detenerHeaderFotosCarrusel();
+    _headerFotosTimer = setInterval(paso, HEADER_FOTOS_INTERVAL_MS);
+  }
+
+  ajustarAnchoItems();
+  _headerFotosResizeFn = function() {
+    ajustarAnchoItems();
+    track.style.transition = 'none';
+    offset = 0;
+    track.style.transform = 'translateX(0)';
+    void track.offsetHeight;
+    track.style.transition = '';
+  };
+  window.addEventListener('resize', _headerFotosResizeFn);
+
+  panel.onmouseenter = detenerHeaderFotosCarrusel;
+  panel.onmouseleave = iniciarAuto;
+
+  setTimeout(iniciarAuto, 600);
 }
 
 function aplicarHeroMarca(heroT) {

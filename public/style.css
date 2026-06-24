@@ -193,16 +193,27 @@ img {
 }
 
 .header-fotos-panel {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
     flex: 0 1 380px;
     width: min(42vw, 380px);
     max-width: 100%;
     margin-left: auto;
+    overflow: hidden;
+}
+
+.header-fotos-viewport {
+    overflow: hidden;
+    width: 100%;
+}
+
+.header-fotos-track {
+    display: flex;
+    gap: 8px;
+    transition: transform 0.62s ease-in-out;
+    will-change: transform;
 }
 
 .header-foto-item {
+    flex: 0 0 auto;
     aspect-ratio: 4 / 3;
     border-radius: 8px;
     overflow: hidden;

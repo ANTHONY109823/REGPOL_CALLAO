@@ -28,7 +28,7 @@ function initCMS() {
   var iniciar = function(data) {
     cmsDataActual = data || {};
     if (!cmsDataActual.carrusel)  cmsDataActual.carrusel  = [];
-    if (!cmsDataActual.fotosEncabezado) cmsDataActual.fotosEncabezado = ['', '', ''];
+    if (!cmsDataActual.fotosEncabezado) cmsDataActual.fotosEncabezado = [];
     if (!cmsDataActual.novedades) cmsDataActual.novedades = [];
     if (!cmsDataActual.convenios) cmsDataActual.convenios = [];
     if (!cmsDataActual.cursos)    cmsDataActual.cursos    = [];
@@ -122,50 +122,75 @@ function safeTextareaContent(str) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// FOTOS ENCABEZADO (3 imágenes junto al logo)
+// FOTOS ENCABEZADO — carrusel animado (múltiples imágenes)
 // ═══════════════════════════════════════════════════════════════
 function renderEditorFotosEncabezado() {
   var el = document.getElementById('editor-fotos-encabezado');
   if (!el) return;
-  if (!cmsDataActual.fotosEncabezado) cmsDataActual.fotosEncabezado = ['', '', ''];
+  if (!cmsDataActual.fotosEncabezado) cmsDataActual.fotosEncabezado = [];
+
   var fotos = cmsDataActual.fotosEncabezado;
-  while (fotos.length < 3) fotos.push('');
+  if (!fotos.length) fotos.push('');
 
   var html = '<div style="background:#f0f7f4;border:1.5px dashed #c8a94a;border-radius:10px;padding:14px;margin-bottom:20px;">'
-    + '<strong style="color:#004d3d;font-size:13px;display:block;margin-bottom:6px;"><i class="fas fa-th-large"></i> Panel de 3 fotos del encabezado</strong>'
-    + '<p style="font-size:11px;color:#666;margin:0 0 12px;">Se muestran a la derecha del logo y título en la página principal. JPG/PNG, máx. 1.5 MB cada una.</p>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'
+    + '<strong style="color:#004d3d;font-size:13px;"><i class="fas fa-images"></i> Carrusel de fotos del encabezado</strong>'
+    + '<button type="button" class="btn btn-v btn-sm" onclick="agregarFotoEncabezadoCMS()"><i class="fas fa-plus"></i> Añadir imagen</button>'
+    + '</div>'
+    + '<p style="font-size:11px;color:#666;margin:0 0 12px;">Se muestran a la derecha del logo en la página principal. Rotan automáticamente de cuadro en cuadro. JPG/PNG/WEBP, máx. 1.5 MB cada una.</p>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:12px;">';
-  for (var i = 0; i < 3; i++) {
+  for (var i = 0; i < fotos.length; i++) {
     html += renderSlotFotoEncabezado(i);
   }
   html += '</div>'
-    + '<button class="btn btn-v btn-sm" onclick="guardarFotosEncabezado()"><i class="fas fa-save"></i> Guardar fotos del encabezado</button>'
+    + '<button class="btn btn-v btn-sm" onclick="guardarFotosEncabezado()"><i class="fas fa-save"></i> Guardar y publicar fotos</button>'
     + '</div>';
   el.innerHTML = html;
 
-  for (var j = 0; j < 3; j++) {
+  for (var j = 0; j < fotos.length; j++) {
     inicializarBannerImg('encabezado' + j, fotos[j] || '');
   }
+}
+
+function agregarFotoEncabezadoCMS() {
+  cmsDataActual.fotosEncabezado = leerFotosEncabezado();
+  if (cmsDataActual.fotosEncabezado.length >= 20) {
+    mostrarAlertaCMS('Máximo 20 imágenes en el carrusel del encabezado.', 'error');
+    return;
+  }
+  cmsDataActual.fotosEncabezado.push('');
+  renderEditorFotosEncabezado();
+}
+
+function eliminarFotoEncabezadoCMS(idx) {
+  cmsDataActual.fotosEncabezado = leerFotosEncabezado();
+  cmsDataActual.fotosEncabezado.splice(idx, 1);
+  renderEditorFotosEncabezado();
 }
 
 function renderSlotFotoEncabezado(idx) {
   var sec = 'encabezado' + idx;
   return '<div style="border:1.5px solid #e0e8e0;border-radius:8px;padding:10px;background:#fff;">'
-    + '<p style="font-size:11px;font-weight:700;color:#004d3d;margin:0 0 8px;">Foto ' + (idx + 1) + '</p>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+    + '<p style="font-size:11px;font-weight:700;color:#004d3d;margin:0;">Imagen ' + (idx + 1) + '</p>'
+    + '<button type="button" class="btn-mini btn-mini-danger" onclick="eliminarFotoEncabezadoCMS(' + idx + ')" title="Quitar"><i class="fas fa-trash"></i></button>'
+    + '</div>'
     + '<input type="hidden" id="cms-' + sec + '-img-data" />'
     + '<input type="file" id="cms-' + sec + '-img-file" accept="image/jpeg,image/png,image/webp" onchange="previewBannerImg(this,\'' + sec + '\')" style="font-size:10px;width:100%;margin-bottom:6px;"/>'
     + '<input type="text" id="cms-' + sec + '-img-url" placeholder="URL de imagen (opcional)" class="cms-input" style="font-size:10px;margin-bottom:6px;" onchange="previewBannerUrl(this,\'' + sec + '\')"/>'
     + '<div id="cms-' + sec + '-img-preview" style="display:none;margin-bottom:6px;">'
     + '<img id="cms-' + sec + '-img-thumb" style="width:100%;height:80px;object-fit:cover;border-radius:6px;" alt=""/>'
     + '</div>'
-    + '<button type="button" class="btn-mini btn-mini-danger" onclick="quitarBannerImg(\'' + sec + '\')"><i class="fas fa-trash"></i> Quitar</button>'
+    + '<button type="button" class="btn-mini btn-mini-danger" onclick="quitarBannerImg(\'' + sec + '\')"><i class="fas fa-times"></i> Limpiar</button>'
     + '</div>';
 }
 
 function leerFotosEncabezado() {
+  var n = (cmsDataActual.fotosEncabezado || []).length;
   var arr = [];
-  for (var i = 0; i < 3; i++) {
-    arr.push(leerBannerImg('encabezado' + i));
+  for (var i = 0; i < n; i++) {
+    var v = leerBannerImg('encabezado' + i);
+    if (v) arr.push(v);
   }
   return arr;
 }
@@ -648,10 +673,10 @@ function recolectarDatosCMS() {
   data.nuestraLabor.imagenBanner = leerBannerImg('labor');
   if (!data.nuestraLabor.pilares) data.nuestraLabor.pilares = (cmsDataActual.nuestraLabor || {}).pilares || [];
   data.imagenBannerNovedades = leerBannerImg('novedades');
-  if (document.getElementById('cms-encabezado0-img-data')) {
+  if (document.getElementById('editor-fotos-encabezado')) {
     data.fotosEncabezado = leerFotosEncabezado();
   } else if (cmsDataActual.fotosEncabezado) {
-    data.fotosEncabezado = cmsDataActual.fotosEncabezado.slice(0, 3);
+    data.fotosEncabezado = cmsDataActual.fotosEncabezado.filter(function(f) { return !!(f && String(f).trim()); });
   }
   return data;
 }
