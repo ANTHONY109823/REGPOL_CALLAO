@@ -96,6 +96,12 @@ async function initDB() {
       respuestas  JSONB,
       actualizado TIMESTAMP DEFAULT NOW()
     );
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS unidad VARCHAR(150);
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS cargo VARCHAR(80);
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS sexo VARCHAR(20);
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS armamento TEXT;
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS foto TEXT;
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS grado VARCHAR(80);
 
     CREATE TABLE IF NOT EXISTS divisiones (
       id     SERIAL PRIMARY KEY,
@@ -755,7 +761,8 @@ app.post('/progreso', async (req, res) => {
     const { cip, nombres, comisaria, unidad, cargo, grado, sexo, armamento, foto, bloque, total, respuestas } = req.body;
     const clave = (cip || 'anonimo').toLowerCase().trim();
     const armamentoStr = Array.isArray(armamento) ? armamento.join(', ') : (armamento || '');
-    // Agregar columnas cargo/sexo/armamento/foto a progresos si no existen
+    // Agregar columnas extra a progresos si no existen (BD antiguas)
+    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS unidad VARCHAR(150)`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS cargo VARCHAR(80)`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS sexo VARCHAR(20)`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS armamento TEXT`).catch(()=>{});
@@ -1100,6 +1107,107 @@ app.get('/stats', requireAuth, async (req, res) => {
     statsCacheKey = cacheKey;
     statsCacheExp = Date.now() + STATS_CACHE_MS;
     res.json(payload);
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── GET /admin/stats-sistema — resumen general (solo Super Admin) ───────────────
+app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
+  try {
+    if (req.admin.rol !== 'unitic') {
+      return res.status(403).json({ ok: false, error: 'Solo Super Admin' });
+    }
+
+    const adminsR = await pool.query('SELECT COUNT(*)::int AS t FROM admins');
+    const divsR   = await pool.query('SELECT COUNT(*)::int AS t FROM divisiones');
+    const unisR   = await pool.query('SELECT COUNT(*)::int AS t FROM unidades_pol');
+    const evalTot = await pool.query('SELECT COUNT(*)::int AS t FROM evaluaciones');
+    const evalComp = await pool.query('SELECT COUNT(*)::int AS t FROM evaluaciones WHERE completada=TRUE');
+    const progWhere = `WHERE ${sqlProgresoConRespuestas('p')} AND NOT EXISTS (
+      SELECT 1 FROM evaluaciones e WHERE UPPER(TRIM(e.cip))=UPPER(TRIM(p.cip)) AND e.completada=TRUE)`;
+    const progR   = await pool.query(`SELECT COUNT(*)::int AS t FROM progresos p ${progWhere}`);
+
+    const convItems = await pool.query(
+      `SELECT COUNT(*)::int AS convocatorias,
+        SUM(CASE WHEN inscripciones_abiertas THEN 1 ELSE 0 END)::int AS abiertas
+       FROM items_portal WHERE tipo='convenio'`);
+    const cursoItems = await pool.query(
+      `SELECT COUNT(*)::int AS convocatorias,
+        SUM(CASE WHEN inscripciones_abiertas THEN 1 ELSE 0 END)::int AS abiertas
+       FROM items_portal WHERE tipo='curso'`);
+    const inscConv = await pool.query(
+      `SELECT COUNT(n.id)::int AS total,
+        SUM(CASE WHEN n.estado='pendiente' THEN 1 ELSE 0 END)::int AS pendientes,
+        SUM(CASE WHEN n.estado='ganador' THEN 1 ELSE 0 END)::int AS ganadores
+       FROM inscripciones n JOIN items_portal i ON i.id=n.item_id WHERE i.tipo='convenio'`);
+    const inscCurso = await pool.query(
+      `SELECT COUNT(n.id)::int AS total,
+        SUM(CASE WHEN n.estado='pendiente' THEN 1 ELSE 0 END)::int AS pendientes,
+        SUM(CASE WHEN n.estado='ganador' THEN 1 ELSE 0 END)::int AS ganadores
+       FROM inscripciones n JOIN items_portal i ON i.id=n.item_id WHERE i.tipo='curso'`);
+    const sorteosR = await pool.query(
+      `SELECT COUNT(*)::int AS publicados FROM sorteos_portal WHERE publicado=TRUE`);
+    const cmsR = await pool.query(
+      'SELECT updated_at, data_json FROM portal_configuracion WHERE id=1');
+
+    let portalActualizacion = '—';
+    let novedadesCount = 0;
+    if (cmsR.rows.length && cmsR.rows[0].data_json) {
+      try {
+        const cms = typeof cmsR.rows[0].data_json === 'string'
+          ? JSON.parse(cmsR.rows[0].data_json) : cmsR.rows[0].data_json;
+        portalActualizacion = cms.actualizacion || new Date(cmsR.rows[0].updated_at).toLocaleDateString('es-PE');
+        novedadesCount = (cms.novedades || []).length;
+      } catch (e) { /* ignorar */ }
+    }
+
+    const ultEvalR = await pool.query(
+      `SELECT 'evaluacion' AS tipo, nombres AS titulo,
+        COALESCE(unidad, comisaria, '') AS detalle,
+        TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha,
+        completada::text AS estado
+       FROM evaluaciones ORDER BY fecha DESC LIMIT 6`);
+    const ultInscR = await pool.query(
+      `SELECT 'inscripcion' AS tipo, n.nombres AS titulo, i.titulo AS detalle,
+        TO_CHAR(n.fecha,'DD/MM/YYYY HH24:MI') AS fecha, n.estado
+       FROM inscripciones n JOIN items_portal i ON i.id=n.item_id
+       ORDER BY n.fecha DESC LIMIT 6`);
+
+    const actividad = ultEvalR.rows.concat(ultInscR.rows)
+      .sort(function(a, b) {
+        const fa = (a.fecha || '').split(/[/ :]/).reverse().join('');
+        const fb = (b.fecha || '').split(/[/ :]/).reverse().join('');
+        return fb.localeCompare(fa);
+      })
+      .slice(0, 10);
+
+    res.json({
+      ok: true,
+      resumen: {
+        admins: adminsR.rows[0].t,
+        divisiones: divsR.rows[0].t,
+        unidades: unisR.rows[0].t,
+        evaluaciones_total: evalTot.rows[0].t,
+        evaluaciones_completas: evalComp.rows[0].t,
+        evaluaciones_en_curso: progR.rows[0].t,
+        convenios_convocatorias: convItems.rows[0].convocatorias || 0,
+        convenios_inscripciones_abiertas: convItems.rows[0].abiertas || 0,
+        convenios_inscritos: inscConv.rows[0].total || 0,
+        convenios_pendientes: inscConv.rows[0].pendientes || 0,
+        convenios_ganadores: inscConv.rows[0].ganadores || 0,
+        cursos_convocatorias: cursoItems.rows[0].convocatorias || 0,
+        cursos_inscripciones_abiertas: cursoItems.rows[0].abiertas || 0,
+        cursos_inscritos: inscCurso.rows[0].total || 0,
+        cursos_pendientes: inscCurso.rows[0].pendientes || 0,
+        cursos_ganadores: inscCurso.rows[0].ganadores || 0,
+        sorteos_publicados: sorteosR.rows[0].publicados || 0,
+        portal_actualizacion: portalActualizacion,
+        portal_novedades: novedadesCount,
+        inscripciones_total: (inscConv.rows[0].total || 0) + (inscCurso.rows[0].total || 0)
+      },
+      actividad
+    });
   } catch (e) {
     res.json({ ok: false, error: e.message });
   }

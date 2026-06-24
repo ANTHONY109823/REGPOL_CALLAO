@@ -73,6 +73,14 @@
     .stat{background:#f0f7f0;border-radius:8px;padding:14px;text-align:center;border:1.5px solid #c8e6c9;}
     .stat .n{font-size:26px;font-weight:800;color:#004d3d;}
     .stat .l{font-size:11px;color:#666;margin-top:3px;}
+    .sys-mod-body{font-size:12px;color:#333;line-height:1.7;padding:10px 12px 14px;}
+    .sys-mod-body ul{margin:0;padding:0 0 0 16px;}
+    .sys-mod-body li{margin:4px 0;}
+    .sys-mod-kpi{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid #eef4f1;}
+    .sys-mod-kpi:last-child{border-bottom:none;}
+    .sys-act-item{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid #eef4f1;font-size:12px;}
+    .sys-act-item:last-child{border-bottom:none;}
+    .sys-act-tipo{font-size:10px;font-weight:700;text-transform:uppercase;color:#004d3d;letter-spacing:.4px;}
     .breakdown-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;}
     .bl-box{border:1.5px solid #e0e8e0;border-radius:8px;overflow:hidden;}
     .bl-head{background:#004d3d;color:#fff;padding:7px 12px;font-size:12px;font-weight:700;}
@@ -328,28 +336,39 @@
     <!-- DASHBOARD -->
     <div id="page-dashboard" class="page on">
       <div id="dash-panel-unitic" class="card" style="display:none;">
-        <h3><i class="fas fa-chart-bar"></i> Dashboard — Super Admin</h3>
+        <h3><i class="fas fa-tachometer-alt"></i> Dashboard — Super Admin <span style="font-size:12px;font-weight:500;color:#666;">Resumen general del sistema</span></h3>
         <div class="stats-grid">
-          <div class="stat"><div class="n" id="s-total">—</div><div class="l">Total evaluaciones</div></div>
-          <div class="stat" style="border-color:#a5d6a7;"><div class="n" id="s-completas" style="color:#1a7a3a;">—</div><div class="l">Completas</div></div>
-          <div class="stat" style="border-color:#ffe082;"><div class="n" id="s-pendientes" style="color:#856404;">—</div><div class="l">Parciales</div></div>
-          <div class="stat"><div class="n" id="s-comisarias">—</div><div class="l">Comisarías</div></div>
-          <div class="stat"><div class="n" id="s-unidades">—</div><div class="l">Unidades</div></div>
+          <div class="stat"><div class="n" id="sys-admins">—</div><div class="l">Usuarios admin</div></div>
+          <div class="stat"><div class="n" id="sys-divisiones">—</div><div class="l">Divisiones</div></div>
+          <div class="stat"><div class="n" id="sys-unidades">—</div><div class="l">Unidades</div></div>
+          <div class="stat" style="border-color:#c8e6e8;"><div class="n" id="sys-convenios" style="color:#004d3d;">—</div><div class="l">Convocatorias convenios</div></div>
+          <div class="stat" style="border-color:#c8e6e8;"><div class="n" id="sys-cursos" style="color:#004d3d;">—</div><div class="l">Convocatorias cursos</div></div>
+          <div class="stat" style="border-color:#ffe082;"><div class="n" id="sys-inscritos" style="color:#856404;">—</div><div class="l">Inscripciones totales</div></div>
         </div>
         <div class="breakdown-grid">
           <div class="bl-box">
-            <div class="bl-head"><i class="fas fa-building"></i> Por comisaría</div>
-            <table><tbody id="bd-comisaria"><tr><td colspan="2" style="color:#bbb;padding:10px;text-align:center;">Cargando...</td></tr></tbody></table>
+            <div class="bl-head"><i class="fas fa-brain"></i> Psicología / Evaluaciones MMPI-2</div>
+            <div id="sys-mod-psico" class="sys-mod-body"><p style="color:#bbb;padding:12px;text-align:center;">Cargando...</p></div>
           </div>
           <div class="bl-box">
-            <div class="bl-head"><i class="fas fa-users"></i> Por unidad</div>
-            <table><tbody id="bd-unidad"><tr><td colspan="2" style="color:#bbb;padding:10px;text-align:center;">Cargando...</td></tr></tbody></table>
+            <div class="bl-head"><i class="fas fa-handshake"></i> Convenios</div>
+            <div id="sys-mod-convenios" class="sys-mod-body"><p style="color:#bbb;padding:12px;text-align:center;">Cargando...</p></div>
+          </div>
+        </div>
+        <div class="breakdown-grid" style="margin-top:14px;">
+          <div class="bl-box">
+            <div class="bl-head"><i class="fas fa-graduation-cap"></i> Educación / Cursos</div>
+            <div id="sys-mod-cursos" class="sys-mod-body"><p style="color:#bbb;padding:12px;text-align:center;">Cargando...</p></div>
+          </div>
+          <div class="bl-box">
+            <div class="bl-head"><i class="fas fa-globe"></i> Portal Web</div>
+            <div id="sys-mod-portal" class="sys-mod-body"><p style="color:#bbb;padding:12px;text-align:center;">Cargando...</p></div>
           </div>
         </div>
         <div style="margin-top:14px;">
           <div class="bl-box">
-            <div class="bl-head"><i class="fas fa-clock"></i> Últimas 10 evaluaciones</div>
-            <div id="ult-lista" style="padding:0 12px;"></div>
+            <div class="bl-head"><i class="fas fa-stream"></i> Actividad reciente del sistema</div>
+            <div id="sys-actividad" style="padding:0 12px;"><p style="color:#bbb;padding:12px;text-align:center;">Cargando...</p></div>
           </div>
         </div>
       </div>
@@ -1166,12 +1185,10 @@ function fetchAdminJson(path, timeoutMs) {
 function mostrarErrorDashboard(modo, msg) {
   var html = '<p style="color:#c0392b;padding:12px;text-align:center;font-size:12px;">' + escHtml(msg) + ' <button type="button" class="btn btn-o" style="margin-left:8px;font-size:11px;" onclick="cargarDashboard(true)"><i class="fas fa-sync"></i> Reintentar</button></p>';
   if (modo === 'unitic') {
-    var bc = document.getElementById('bd-comisaria');
-    var bu = document.getElementById('bd-unidad');
-    if (bc) bc.innerHTML = '<tr><td colspan="2">' + html + '</td></tr>';
-    if (bu) bu.innerHTML = '<tr><td colspan="2">' + html + '</td></tr>';
-    var ul = document.getElementById('ult-lista');
-    if (ul) ul.innerHTML = html;
+    ['sys-mod-psico', 'sys-mod-convenios', 'sys-mod-cursos', 'sys-mod-portal', 'sys-actividad'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = html;
+    });
   } else if (modo === 'psico') {
     var lp = document.getElementById('dp-ult-lista');
     if (lp) lp.innerHTML = html;
@@ -1556,9 +1573,76 @@ function cargarDashboard(force){
   if (u) u.style.display = modo === 'unitic' ? '' : 'none';
   if (p) p.style.display = modo === 'psico' ? '' : 'none';
   if (g) g.style.display = (modo === 'convenios' || modo === 'cursos') ? '' : 'none';
-  if (modo === 'unitic') cargarStats(force);
+  if (modo === 'unitic') cargarStatsSistema(force);
   else if (modo === 'psico') cargarStatsPsico(force);
   else cargarStatsGestion(modo === 'convenios' ? 'convenio' : 'curso', force);
+}
+
+function sysModKpi(label, val) {
+  return '<div class="sys-mod-kpi"><span>' + escHtml(label) + '</span><strong>' + escHtml(String(val)) + '</strong></div>';
+}
+
+function cargarStatsSistema(){
+  fetchAdminJson('/admin/stats-sistema').then(function(d){
+    if(!d || !d.ok) {
+      mostrarErrorDashboard('unitic', (d && d.error) ? d.error : 'No se pudo cargar el resumen del sistema');
+      return;
+    }
+    var r = d.resumen || {};
+    set('sys-admins', r.admins || 0);
+    set('sys-divisiones', r.divisiones || 0);
+    set('sys-unidades', r.unidades || 0);
+    set('sys-convenios', r.convenios_convocatorias || 0);
+    set('sys-cursos', r.cursos_convocatorias || 0);
+    set('sys-inscritos', r.inscripciones_total || 0);
+
+    var psico = document.getElementById('sys-mod-psico');
+    if (psico) {
+      psico.innerHTML = sysModKpi('Evaluaciones registradas', r.evaluaciones_total || 0)
+        + sysModKpi('Completas al 100%', r.evaluaciones_completas || 0)
+        + sysModKpi('En curso (sin enviar)', r.evaluaciones_en_curso || 0)
+        + '<p style="margin:10px 0 0;font-size:11px;color:#666;">Gestión detallada en <strong>Evaluaciones MMPI-2</strong> y <strong>Descargas PDF</strong>.</p>';
+    }
+    var conv = document.getElementById('sys-mod-convenios');
+    if (conv) {
+      conv.innerHTML = sysModKpi('Convocatorias', r.convenios_convocatorias || 0)
+        + sysModKpi('Inscripciones abiertas', r.convenios_inscripciones_abiertas || 0)
+        + sysModKpi('Total inscritos', r.convenios_inscritos || 0)
+        + sysModKpi('Pendientes de revisión', r.convenios_pendientes || 0)
+        + sysModKpi('Ganadores registrados', r.convenios_ganadores || 0)
+        + sysModKpi('Resultados publicados en web', r.sorteos_publicados || 0);
+    }
+    var cursos = document.getElementById('sys-mod-cursos');
+    if (cursos) {
+      cursos.innerHTML = sysModKpi('Convocatorias', r.cursos_convocatorias || 0)
+        + sysModKpi('Inscripciones abiertas', r.cursos_inscripciones_abiertas || 0)
+        + sysModKpi('Total inscritos', r.cursos_inscritos || 0)
+        + sysModKpi('Pendientes de revisión', r.cursos_pendientes || 0)
+        + sysModKpi('Ganadores registrados', r.cursos_ganadores || 0);
+    }
+    var portal = document.getElementById('sys-mod-portal');
+    if (portal) {
+      portal.innerHTML = sysModKpi('Última publicación CMS', r.portal_actualizacion || '—')
+        + sysModKpi('Novedades en portal', r.portal_novedades || 0)
+        + '<p style="margin:10px 0 0;font-size:11px;color:#666;">Edite contenido en <strong>Portal Web</strong> (carrusel, novedades, reseña).</p>';
+    }
+    var act = document.getElementById('sys-actividad');
+    if (act) {
+      act.innerHTML = (d.actividad || []).length
+        ? (d.actividad || []).map(function(a) {
+            var tipo = a.tipo === 'inscripcion' ? 'Inscripción' : 'Evaluación';
+            var icon = a.tipo === 'inscripcion' ? 'fa-user-plus' : 'fa-clipboard-check';
+            return '<div class="sys-act-item"><div>'
+              + '<div class="sys-act-tipo"><i class="fas ' + icon + '"></i> ' + tipo + '</div>'
+              + '<strong>' + escHtml(a.titulo || '—') + '</strong>'
+              + '<div style="color:#666;font-size:11px;">' + escHtml(a.detalle || '') + '</div></div>'
+              + '<span style="color:#bbb;font-size:10.5px;white-space:nowrap;">' + escHtml(a.fecha || '') + '</span></div>';
+          }).join('')
+        : '<p style="color:#bbb;padding:12px;text-align:center;">Sin actividad reciente.</p>';
+    }
+  }).catch(function(err) {
+    mostrarErrorDashboard('unitic', (err && err.name === 'AbortError') ? 'Tiempo de espera agotado' : 'Error de conexión con el servidor');
+  });
 }
 
 function cargarStats(){
