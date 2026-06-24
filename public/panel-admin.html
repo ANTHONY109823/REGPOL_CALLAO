@@ -1237,10 +1237,12 @@ function urlPdfEfectivo(r) {
 function btnAccionesEval(r) {
   if (!r) return '<span style="color:#bbb;font-size:10px;">—</span>';
   var html = '';
-  if (r.id) {
+  if (esEvalCompleta(r) && r.id) {
     html += '<button type="button" class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="verResultadoEval(' + r.id + ')"><i class="fas fa-eye"></i> Ver</button>';
-  } else if (r.cip && r.solo_progreso) {
+  } else if (r.cip) {
     html += '<button type="button" class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="verAvance(\'' + escJs(r.cip) + '\')"><i class="fas fa-eye"></i> Ver</button>';
+  } else if (r.id) {
+    html += '<button type="button" class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="verResultadoEval(' + r.id + ')"><i class="fas fa-eye"></i> Ver</button>';
   }
   if (esEvalCompleta(r)) {
     html += ' <a href="' + urlPdfEfectivo(r) + '" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;"><i class="fas fa-file-pdf"></i> PDF</a>';

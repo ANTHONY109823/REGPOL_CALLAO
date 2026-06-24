@@ -449,12 +449,8 @@ function continuarAlCuestionario() {
     if (data && data.total > 0) {
       mostrarBannerProgreso(data);
     } else {
-      fetch(LOCAL_API + '/guardar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(construirPayloadGuardar(false))
-      }).catch(function() {});
       activarCuestionario(true);
+      guardarBloqueEnServidor();
       mostrarAlerta('Cuestionario iniciado. Puede guardar y continuar en otra sesión.','exito');
       setTimeout(ocultarAlerta, 3500);
     }
@@ -607,10 +603,43 @@ function guardarBloqueEnServidor(callback) {
     });
 }
 
-// Botón "Guardar y salir" — guarda y vuelve al inicio del portal
+// Botón "Guardar y salir" — guarda y vuelve al panel de registro (misma página)
+function volverAlPanelRegistro() {
+  ESTADO.registroCompleto = false;
+  var cuest = document.getElementById('card-cuestionario');
+  if (cuest) cuest.classList.add('seccion-bloqueada');
+  var reg = document.getElementById('card-registro');
+  if (reg) {
+    reg.style.display = '';
+    reg.classList.remove('card-registro-bloqueado');
+  }
+  var cont = document.getElementById('card-continuar-cip');
+  if (cont) cont.style.display = '';
+  var cip = document.getElementById('f-cip');
+  var cipCont = document.getElementById('f-cip-continuar');
+  if (cip && cipCont && cip.value.trim()) cipCont.value = cip.value.trim();
+  var total = Object.keys(ESTADO.respuestas).length;
+  if (total > 0) {
+    mostrarBannerProgreso({
+      cip: (cip && cip.value.trim()) || '',
+      total: total,
+      bloque: ESTADO.bloqueActual
+    });
+  }
+  ocultarAlerta();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function guardarYSalir() {
-  guardarBloqueEnServidor(function(){
-    window.location.href = 'index.html';
+  if (!ESTADO.registroCompleto) return;
+  var btn = document.getElementById('btn-guardar-bloque');
+  if (btn) btn.disabled = true;
+  guardarBloqueEnServidor(function() {
+    mostrarIndicadorGuardado('Progreso guardado. Puede continuar con su CIP.');
+    setTimeout(function() {
+      volverAlPanelRegistro();
+      if (btn) btn.disabled = false;
+    }, 500);
   });
 }
 

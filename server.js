@@ -727,10 +727,13 @@ app.post('/guardar', async (req, res) => {
     const { comisaria, unidad, nombres, cip, dni, fecha_nac, edad, cargo, grado, sexo, armamento, foto, respuestas, completada } = req.body;
     if (!nombres || !cip) return res.json({ ok: false, error: 'Faltan datos obligatorios' });
     const edadFinal = parseInt(edad) || calcularEdadDesdeISO(fecha_nac) || 0;
-    const totalResp = Object.keys(respuestas || {}).filter(function(k) {
-      const v = respuestas[k];
-      return v === 'V' || v === 'F';
-    }).length;
+    const totalResp = contarRespuestasObj(respuestas).total;
+
+    // No crear fila vacía en evaluaciones: el avance vive en progresos hasta Finalizar y Enviar
+    if (!completada && totalResp === 0) {
+      return res.json({ ok: true, totalResp: 0, soloProgreso: true });
+    }
+
     const armamentoStr = Array.isArray(armamento) ? armamento.join(', ') : (armamento || '');
 
     const exist = await pool.query(
@@ -777,6 +780,8 @@ app.post('/progreso', async (req, res) => {
     const { cip, nombres, comisaria, unidad, cargo, grado, sexo, armamento, foto, bloque, total, respuestas } = req.body;
     const clave = (cip || 'anonimo').toLowerCase().trim();
     const armamentoStr = Array.isArray(armamento) ? armamento.join(', ') : (armamento || '');
+    const totalCalc = contarRespuestasObj(respuestas).total;
+    const totalFinal = Math.max(parseInt(total, 10) || 0, totalCalc);
     // Agregar columnas extra a progresos si no existen (BD antiguas)
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS unidad VARCHAR(150)`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS cargo VARCHAR(80)`).catch(()=>{});
@@ -790,7 +795,7 @@ app.post('/progreso', async (req, res) => {
        ON CONFLICT (clave) DO UPDATE SET
          nombres=$3, comisaria=$4, unidad=$5, bloque_max=$6,
          total_resp=$7, respuestas=$8, actualizado=NOW()`,
-      [clave, cip||'', nombres||'', comisaria||'', unidad||'', bloque||0, total||0, respuestas||{}]
+      [clave, cip||'', nombres||'', comisaria||'', unidad||'', bloque||0, totalFinal, respuestas||{}]
     );
     // Actualizar campos extra por separado para compatibilidad con esquema dinámico
     await pool.query(
@@ -856,6 +861,69 @@ app.get('/admin/avances', requireAuth, async (req, res) => {
     res.json({ ok: false, error: e.message });
   }
 });
+
+function contarRespuestasObj(respuestas) {
+  let r = respuestas || {};
+  if (typeof r === 'string') {
+    try { r = JSON.parse(r); } catch (e) { r = {}; }
+  }
+  const vals = Object.keys(r).filter(function(k) { return r[k] === 'V' || r[k] === 'F'; });
+  return {
+    total: vals.length,
+    v: vals.filter(function(k) { return r[k] === 'V'; }).length,
+    f: vals.filter(function(k) { return r[k] === 'F'; }).length,
+    respuestas: r
+  };
+}
+
+async function obtenerProgresoPorCip(cip) {
+  if (!cip) return null;
+  const r = await pool.query(
+    `SELECT * FROM progresos
+     WHERE UPPER(TRIM(cip))=UPPER(TRIM($1)) OR LOWER(TRIM(clave))=LOWER(TRIM($1))
+     LIMIT 1`,
+    [cip]
+  );
+  return r.rows[0] || null;
+}
+
+async function fusionarProgresoEnEvaluacion(ev) {
+  if (!ev || ev.completada) return ev;
+  const prog = await obtenerProgresoPorCip(ev.cip);
+  if (!prog) return ev;
+  const statsE = contarRespuestasObj(ev.respuestas);
+  const statsP = contarRespuestasObj(prog.respuestas);
+  const totalP = parseInt(prog.total_resp, 10) || statsP.total;
+  const totalE = statsE.total;
+  if (totalP > totalE) {
+    return Object.assign({}, ev, {
+      respuestas: prog.respuestas || statsP.respuestas,
+      bloque_max: prog.bloque_max || ev.bloque_max,
+      total_resp: totalP,
+      grado: prog.grado || ev.grado,
+      cargo: prog.cargo || ev.cargo,
+      sexo: prog.sexo || ev.sexo,
+      armamento: prog.armamento || ev.armamento,
+      foto: prog.foto || ev.foto
+    });
+  }
+  return ev;
+}
+
+async function fusionarFilaListadoEval(row) {
+  if (row.completada) return row;
+  const prog = await obtenerProgresoPorCip(row.cip);
+  if (!prog) return row;
+  const totalP = parseInt(prog.total_resp, 10) || contarRespuestasObj(prog.respuestas).total;
+  const totalE = parseInt(row.total_resp, 10) || contarRespuestasObj(row.respuestas).total;
+  if (totalP > totalE) {
+    return Object.assign({}, row, {
+      total_resp: totalP,
+      solo_progreso: true
+    });
+  }
+  return row;
+}
 
 // ── Helper: formato evaluación desde progreso (PDF / listados) ────────────────
 function mapearProgresoParaPDF(p) {
@@ -1291,6 +1359,11 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
       [...params, porPagina, offset]
     );
 
+    const rowsEnriquecidas = [];
+    for (const row of rows.rows) {
+      rowsEnriquecidas.push(await fusionarFilaListadoEval(row));
+    }
+
     // Incluir progresos no enviados (misma búsqueda / filtros)
     let progresosRows = [];
     if (pagina === 1 || (req.query.busqueda || '').trim()) {
@@ -1301,8 +1374,8 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
       }
     }
 
-    const cipsEval = new Set(rows.rows.map(function(r) { return (r.cip || '').toUpperCase(); }));
-    const merged = rows.rows.concat(
+    const cipsEval = new Set(rowsEnriquecidas.map(function(r) { return (r.cip || '').toUpperCase(); }));
+    const merged = rowsEnriquecidas.concat(
       progresosRows.filter(function(p) { return !cipsEval.has((p.cip || '').toUpperCase()); })
     );
 
@@ -1576,7 +1649,7 @@ async function cargarEvaluacionAdmin({ id, cip }, admin) {
     const com = (ev.comisaria || '').toUpperCase();
     if (!uni.includes(u) && !com.includes(u)) return null;
   }
-  return ev;
+  return await fusionarProgresoEnEvaluacion(ev);
 }
 
 // ── GET /admin/preview-resultado?id= | ?cip= — vista previa MMPI-2 ─────────────
