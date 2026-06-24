@@ -218,6 +218,20 @@ async function initDB() {
     );
   }
 
+  // Seed portal CMS desde site-data.json si la BD está vacía
+  const { rows: cfgRows } = await pool.query('SELECT COUNT(*) AS t FROM portal_configuracion');
+  if (parseInt(cfgRows[0].t, 10) === 0) {
+    const sitePath = path.join(__dirname, 'public', 'site-data.json');
+    if (fs.existsSync(sitePath)) {
+      const siteJson = fs.readFileSync(sitePath, 'utf8');
+      await pool.query(
+        'INSERT INTO portal_configuracion(id, data_json, updated_at) VALUES(1, $1, NOW())',
+        [siteJson]
+      );
+      console.log('portal_configuracion inicializada desde site-data.json');
+    }
+  }
+
   // Seed divisiones solo la primera vez (evita 40+ queries en cada reinicio)
   const { rows: divRows } = await pool.query('SELECT COUNT(*) AS t FROM divisiones');
   if (parseInt(divRows[0].t) === 0) {
@@ -1299,10 +1313,16 @@ app.get('/portal/configuracion', async (req, res) => {
     const r = await pool.query('SELECT data_json FROM portal_configuracion WHERE id=1');
     if (r.rows.length && r.rows[0].data_json) {
       res.set('Content-Type', 'application/json; charset=utf-8');
-      res.send(r.rows[0].data_json);
-    } else {
-      res.status(404).json({ ok: false, error: 'Sin datos' });
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      return res.send(r.rows[0].data_json);
     }
+    const sitePath = path.join(__dirname, 'public', 'site-data.json');
+    if (fs.existsSync(sitePath)) {
+      res.set('Content-Type', 'application/json; charset=utf-8');
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      return res.sendFile(sitePath);
+    }
+    res.status(404).json({ ok: false, error: 'Sin datos' });
   } catch (e) {
     res.status(500).json({ ok: false, error: 'Error al leer configuración' });
   }

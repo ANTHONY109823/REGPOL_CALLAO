@@ -163,7 +163,7 @@ function esHostEstaticoPortal() {
 
 function fetchSiteDataDefault() {
   var cargarJsonLocal = function() {
-    return fetchConTimeout('site-data.json?v=3', 4000)
+    return fetchConTimeout('site-data.json?v=4', 4000)
       .then(function(r) { if (!r.ok) throw new Error('site-data'); return r.json(); })
       .catch(function() {
         if (typeof REGPOL_SITE_DATA_BUILTIN !== 'undefined' && REGPOL_SITE_DATA_BUILTIN) {
@@ -172,11 +172,17 @@ function fetchSiteDataDefault() {
         return null;
       });
   };
-  if (esHostEstaticoPortal()) return cargarJsonLocal();
   var base = apiBasePortal();
-  return fetchConTimeout((base || '') + '/portal/configuracion', 6000)
-    .then(function(r) { if (!r.ok) throw new Error('no-config'); return r.json(); })
-    .catch(cargarJsonLocal);
+  if (base) {
+    return fetchConTimeout(base + '/portal/configuracion', 8000)
+      .then(function(r) { if (!r.ok) throw new Error('no-config'); return r.json(); })
+      .then(function(data) {
+        if (!data || data.ok === false) throw new Error('no-config');
+        return data;
+      })
+      .catch(cargarJsonLocal);
+  }
+  return cargarJsonLocal();
 }
 
 function obtenerSiteDataSync() {
@@ -210,7 +216,6 @@ function aplicarPortalConfig(config, data) {
 }
 
 function refrescarSiteDataEnFondo(config) {
-  if (esHostEstaticoPortal() && obtenerSiteDataSync()) return Promise.resolve(null);
   return fetchSiteDataDefault().then(function(fresh) {
     if (!fresh) return null;
     saveSiteDataToStorage(fresh);
@@ -220,28 +225,10 @@ function refrescarSiteDataEnFondo(config) {
 }
 
 function cargarSiteData() {
-  var sync = obtenerSiteDataSync();
-  if (sync) {
-    refrescarSiteDataEnFondo(null);
-    return Promise.resolve(sync);
-  }
-  var h = location.hostname;
-  var usarJsonLocal = h.indexOf('railway.app') !== -1 || h.indexOf('github.io') !== -1;
-  if (usarJsonLocal) {
-    return fetchSiteDataDefault().then(function(data) {
-      if (data) { saveSiteDataToStorage(data); return data; }
-      return obtenerSiteDataSync();
-    });
-  }
-  return fetchSiteDataFromServer()
-    .then(function(server) {
-      if (server) { saveSiteDataToStorage(server); return server; }
-      return fetchSiteDataDefault();
-    })
-    .then(function(data) {
-      if (data) { saveSiteDataToStorage(data); return data; }
-      return obtenerSiteDataSync();
-    });
+  return fetchSiteDataDefault().then(function(data) {
+    if (data) { saveSiteDataToStorage(data); return data; }
+    return obtenerSiteDataSync();
+  });
 }
 
 function publicarSiteData(data) {
