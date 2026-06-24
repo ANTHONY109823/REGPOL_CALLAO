@@ -26,17 +26,18 @@ var PORTAL_HERO = {
 };
 
 var REGPOL_NAV_FALLBACK = [
-  { id: 'inicio',    href: 'index.html',            label: 'INICIO',             icon: 'fa-home' },
-  { id: 'novedades', href: 'novedades.html',         label: 'NOVEDADES' },
-  { id: 'convenios', href: 'convenios.html',         label: 'CONVENIOS' },
-  { id: 'cursos',    href: 'cursos.html',            label: 'CURSOS' },
-  { id: 'bienestar', href: 'evaluacion.html',        label: 'BIENESTAR',          icon: 'fa-heart' },
-  { id: 'resena',    href: 'resena-historica.html',  label: 'RESE\u00d1A HIST\u00d3RICA' },
-  { id: 'labor',     href: 'nuestra-labor.html',     label: 'NUESTRA LABOR' },
-  { id: 'unidades',  href: 'unidades.html',          label: 'NUESTRAS UNIDADES', icon: 'fa-map-marker-alt' }
+  { id: 'inicio',    href: 'index.html#inicio',    label: 'INICIO',             icon: 'fa-home' },
+  { id: 'novedades', href: 'index.html#novedades', label: 'NOVEDADES' },
+  { id: 'convenios', href: 'index.html#convenios', label: 'CONVENIOS' },
+  { id: 'cursos',    href: 'index.html#cursos',    label: 'CURSOS' },
+  { id: 'bienestar', href: 'index.html#bienestar', label: 'BIENESTAR',          icon: 'fa-heart' },
+  { id: 'resena',    href: 'index.html#resena',    label: 'RESE\u00d1A HIST\u00d3RICA' },
+  { id: 'labor',     href: 'index.html#labor',    label: 'NUESTRA LABOR' },
+  { id: 'unidades',  href: 'index.html#unidades', label: 'NUESTRAS UNIDADES', icon: 'fa-map-marker-alt' }
 ];
 
 var portalActiveNavId = '';
+var _scrollNavListo = false;
 
 function obtenerPortalNav() {
   if (window.REGPOL_NAV && window.REGPOL_NAV.length) return window.REGPOL_NAV;
@@ -252,10 +253,79 @@ function publicarSiteData(data) {
   }).catch(function() {});
 }
 
+function esPaginaInicio() {
+  var p = (location.pathname || '').split('/').pop() || '';
+  return !p || p === 'index.html';
+}
+
 function marcarNavActivo(activeId) {
   document.querySelectorAll('.nav-main a[data-nav]').forEach(function(a) {
     a.classList.toggle('activo', a.getAttribute('data-nav') === activeId);
   });
+}
+
+function navDesdeHash() {
+  var h = (location.hash || '').replace('#', '').trim();
+  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'bienestar', 'resena', 'labor', 'unidades'];
+  return ids.indexOf(h) >= 0 ? h : '';
+}
+
+function scrollASeccion(id) {
+  if (!id) return;
+  var el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  marcarNavActivo(id);
+}
+
+function initPortalScrollNav() {
+  if (!esPaginaInicio() || _scrollNavListo) return;
+  _scrollNavListo = true;
+  var ul = document.querySelector('.nav-main ul');
+  if (ul) {
+    ul.addEventListener('click', function(e) {
+      var a = e.target.closest('a[data-nav]');
+      if (!a) return;
+      var href = a.getAttribute('href') || '';
+      var hash = href.indexOf('#') !== -1 ? href.split('#')[1] : '';
+      if (!hash) return;
+      e.preventDefault();
+      scrollASeccion(hash);
+      if (history.pushState) history.pushState(null, '', '#' + hash);
+    });
+  }
+  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'bienestar', 'resena', 'labor', 'unidades'];
+  var ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function() {
+      ticking = false;
+      var y = window.scrollY + 100;
+      var actual = 'inicio';
+      ids.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el && el.offsetTop <= y) actual = id;
+      });
+      marcarNavActivo(actual);
+    });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+}
+
+function initPortalNav(activeId) {
+  if (activeId) portalActiveNavId = activeId;
+  else activeId = portalActiveNavId;
+  aplicarEncabezadoMarca();
+  var ul = document.querySelector('.nav-main ul');
+  if (!ul) return;
+  var navItems = obtenerPortalNav();
+  ul.innerHTML = navItems.map(function(item) {
+    var cls = item.id === activeId ? ' class="activo"' : '';
+    var icon = item.icon ? '<i class="fas ' + item.icon + '"></i> ' : '';
+    return '<li><a href="' + item.href + '" data-nav="' + item.id + '"' + cls + '>' + icon + item.label + '</a></li>';
+  }).join('');
+  if (esPaginaInicio()) initPortalScrollNav();
 }
 
 function normalizarHeroTexto(heroT) {
@@ -302,20 +372,6 @@ function aplicarHeroMarca(heroT) {
   document.querySelectorAll('.hero-overlay .portal-hero-eslogan').forEach(function(el) {
     el.textContent = hero.eslogan;
   });
-}
-
-function initPortalNav(activeId) {
-  if (activeId) portalActiveNavId = activeId;
-  else activeId = portalActiveNavId;
-  aplicarEncabezadoMarca();
-  var ul = document.querySelector('.nav-main ul');
-  if (!ul) return;
-  var navItems = obtenerPortalNav();
-  ul.innerHTML = navItems.map(function(item) {
-    var cls = item.id === activeId ? ' class="activo"' : '';
-    var icon = item.icon ? '<i class="fas ' + item.icon + '"></i> ' : '';
-    return '<li><a href="' + item.href + '" data-nav="' + item.id + '"' + cls + '>' + icon + item.label + '</a></li>';
-  }).join('');
 }
 
 function renderTarjetas(items, containerId) {
@@ -518,13 +574,13 @@ function initPortalPagina(config) {
 
 function renderUnidadesPublico(data) {
   var cont = document.getElementById('contenedor-unidades');
-  var msg  = document.getElementById('msg-cargando');
-  if (!cont || !msg) return;
+  var msg  = document.getElementById('msg-cargando-unidades') || document.getElementById('msg-cargando');
+  if (!cont) return;
   if (!data || !data.ok || !data.divisiones || !data.divisiones.length) {
-    msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> No se pudo cargar la información.';
+    if (msg) msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> No se pudo cargar la información.';
     return;
   }
-  msg.style.display = 'none';
+  if (msg) msg.style.display = 'none';
   var html = '';
   data.divisiones.forEach(function(div) {
     if (!div.unidades || !div.unidades.length) return;
@@ -570,6 +626,14 @@ function renderUnidadesPublico(data) {
 
 function initUnidadesPagina() {
   initPortalNav('unidades');
+  cargarUnidadesPublico();
+}
+
+function cargarUnidadesPublico() {
+  var cont = document.getElementById('contenedor-unidades');
+  if (!cont) return;
+  var msg = document.getElementById('msg-cargando-unidades') || document.getElementById('msg-cargando');
+  if (msg) { msg.style.display = ''; msg.textContent = 'Cargando unidades...'; }
   var base = apiBasePortal();
   if (base === null || base === undefined) base = '';
   if (typeof REGPOL_UNIDADES_BUILTIN !== 'undefined' && REGPOL_UNIDADES_BUILTIN) {
@@ -588,6 +652,88 @@ function initUnidadesPagina() {
     })
     .catch(function() {})
     .finally(function() { clearTimeout(t); });
+}
+
+function cargarSorteosPortal() {
+  var base = apiBasePortal() || '';
+  fetch(base + '/portal/sorteos')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) return;
+      var proximos = (d.sorteos || []).filter(function(s) { return s.tipo === 'proximo'; });
+      var resultados = (d.sorteos || []).filter(function(s) { return s.tipo === 'resultado'; });
+      renderSorteosProximos(proximos);
+      renderSorteosResultados(resultados);
+    })
+    .catch(function() {});
+}
+
+function renderSorteosProximos(list) {
+  var sec = document.getElementById('seccion-proximos');
+  var grid = document.getElementById('grid-proximos');
+  if (!sec || !grid || !list.length) return;
+  sec.style.display = '';
+  grid.innerHTML = list.map(function(s) {
+    var imgHtml = s.imagen
+      ? '<img src="' + escHtml(s.imagen) + '" alt="' + escHtml(s.titulo) + '"/>'
+      : '<div class="sorteo-placeholder"><i class="fas fa-random"></i><span style="font-size:12px;font-weight:700;">PR\u00d3XIMO SORTEO</span></div>';
+    return '<div class="sorteo-flyer">'
+      + '<div class="sorteo-flyer-img">' + imgHtml
+      + '<span class="sorteo-flyer-badge">CONVOCATORIA</span></div>'
+      + '<div class="sorteo-flyer-body">'
+      + (s.fecha_sorteo ? '<div class="sorteo-flyer-fecha"><i class="fas fa-calendar-alt"></i> ' + escHtml(s.fecha_sorteo) + '</div>' : '')
+      + '<div class="sorteo-flyer-titulo">' + escHtml(s.titulo) + '</div>'
+      + (s.descripcion ? '<div class="sorteo-flyer-desc">' + escHtml(s.descripcion) + '</div>' : '')
+      + '</div></div>';
+  }).join('');
+}
+
+function renderSorteosResultados(list) {
+  var sec = document.getElementById('seccion-resultados');
+  var cont = document.getElementById('lista-resultados');
+  if (!sec || !cont || !list.length) return;
+  sec.style.display = '';
+  cont.innerHTML = list.map(function(s) {
+    var filas = (s.resultados || []).map(function(r, i) {
+      return '<tr><td style="text-align:center;"><span class="resultado-nro">' + (i + 1) + '</span></td>'
+        + '<td><div class="resultado-nombre">' + escHtml(r.nombres) + '</div></td>'
+        + '<td><div class="resultado-unidad">' + escHtml(r.unidad || '') + '</div></td></tr>';
+    }).join('');
+    return '<div class="resultado-card"><div class="resultado-header"><i class="fas fa-trophy"></i>'
+      + '<div class="resultado-header-info"><strong>' + escHtml(s.titulo) + '</strong></div></div>'
+      + '<table class="resultado-tabla"><thead><tr><th>#</th><th>Nombres</th><th>Unidad</th></tr></thead><tbody>'
+      + filas + '</tbody></table></div>';
+  }).join('');
+}
+
+function initPortalInicio() {
+  var navInicial = navDesdeHash() || 'inicio';
+  return initPortalPagina({
+    activeNav: navInicial,
+    renderNovedades: 'lista-novedades',
+    actualizarFecha: true,
+    actualizarCarrusel: true,
+    renderConvenios: 'grid-convenios',
+    renderCursos: 'grid-cursos',
+    renderConveniosPdf: 'lista-pdf-convenios',
+    renderCursosPdf: 'lista-pdf-cursos',
+    renderResena: 'contenido-resena',
+    renderLabor: 'contenido-labor'
+  }).then(function(data) {
+    if (data && data.conveniosPdf && data.conveniosPdf.length) {
+      var s = document.getElementById('section-pdf-convenios');
+      if (s) s.style.display = '';
+    }
+    if (data && data.cursosPdf && data.cursosPdf.length) {
+      var s2 = document.getElementById('section-pdf-cursos');
+      if (s2) s2.style.display = '';
+    }
+    cargarSorteosPortal();
+    cargarUnidadesPublico();
+    var hash = navDesdeHash();
+    if (hash) setTimeout(function() { scrollASeccion(hash); }, 300);
+    return data;
+  });
 }
 
 function aplicarNavOcultos(ocultos) {

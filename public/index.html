@@ -7,6 +7,7 @@
     <style>
       :root{--verde-pnp:#004d3d;--gris-fondo:#f4f4f4}
       *{margin:0;padding:0;box-sizing:border-box}
+      html{scroll-behavior:smooth}
       html,body{width:100%;min-height:100%}
       body{font-family:Segoe UI,Tahoma,sans-serif;line-height:1.6;background:#f4f4f4}
       .container{max-width:100%;margin:0 auto;padding:0 20px}
@@ -14,17 +15,53 @@
       .portal-flex{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
       .main-header{background:#fff;border-bottom:3px solid #004d3d}
       .header-flex{display:flex;align-items:center;gap:20px;padding:12px 0}
-      .nav-main{background:#004d3d}
+      .nav-main{background:#004d3d;position:sticky;top:0;z-index:500}
       .logo-pnp{height:90px;width:auto}
       .portal-viewport-wrap{min-height:100vh;min-height:100dvh;width:100%;display:flex;flex-direction:column}
       .presentation-slider{flex:1;width:100%;min-height:280px}
+      .portal-seccion{scroll-margin-top:72px;padding:44px 0 36px;border-bottom:1px solid #e5ebe8}
+      .portal-seccion:last-of-type{border-bottom:none}
+      .sorteos-section{margin:28px 0 0}
+      .sorteos-section-titulo{display:flex;align-items:center;gap:10px;color:#004d3d;font-size:15px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;border-bottom:3px solid #c8a94a;padding-bottom:10px;margin-bottom:18px}
+      .sorteos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
+      .sorteo-flyer{border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(0,77,61,.15);border:2px solid #c8a94a;background:#fff}
+      .sorteo-flyer-img{height:160px;background:linear-gradient(135deg,#002d24,#004d3d);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+      .sorteo-flyer-img img{width:100%;height:100%;object-fit:cover}
+      .sorteo-placeholder{text-align:center;color:rgba(255,255,255,.7)}
+      .sorteo-placeholder i{font-size:40px;display:block;margin-bottom:8px;color:#c8a94a}
+      .sorteo-flyer-badge{position:absolute;top:10px;right:10px;background:#c8a94a;color:#002d24;font-size:9px;font-weight:900;padding:3px 9px;border-radius:10px}
+      .sorteo-flyer-body{padding:14px 16px}
+      .sorteo-flyer-fecha{font-size:11px;font-weight:800;color:#c8a94a;margin-bottom:6px}
+      .sorteo-flyer-titulo{font-size:14px;font-weight:800;color:#004d3d}
+      .sorteo-flyer-desc{font-size:12px;color:#555;margin-top:6px;line-height:1.5}
+      .resultado-card{background:#fff;border-radius:12px;border:1.5px solid #c8e6c9;overflow:hidden;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,77,61,.08)}
+      .resultado-header{background:linear-gradient(90deg,#004d3d,#006b55);color:#fff;padding:12px 18px;display:flex;align-items:center;gap:12px}
+      .resultado-header i{color:#c8a94a;font-size:20px}
+      .resultado-tabla{width:100%;border-collapse:collapse;font-size:13px}
+      .resultado-tabla th{background:#f0f7f0;color:#004d3d;font-size:11px;padding:8px 14px;text-align:left}
+      .resultado-tabla td{padding:8px 14px;border-bottom:1px solid #f0f0f0}
+      .resultado-nro{width:32px;height:32px;background:#c8a94a;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:900;color:#002d24}
+      .resultado-nombre{font-weight:700;color:#004d3d}
+      .bienestar-home-card{background:#fff;border-radius:12px;border:2px solid #c8a94a;padding:32px 28px;text-align:center;max-width:640px;margin:0 auto}
+      .bienestar-home-card h4{color:#004d3d;font-size:18px;margin-bottom:10px}
+      .bienestar-home-card p{color:#555;font-size:14px;margin-bottom:20px;line-height:1.6}
+      .btn-bienestar{display:inline-flex;align-items:center;gap:8px;background:#004d3d;color:#fff;padding:14px 28px;border-radius:8px;font-weight:700;text-decoration:none;font-size:14px}
+      .btn-bienestar:hover{background:#006b55}
+      #modal-novedad{display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.65);align-items:center;justify-content:center;padding:16px}
+      #modal-novedad.visible{display:flex}
+      .modal-nov-box{background:#fff;border-radius:16px;width:100%;max-width:720px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+      .modal-nov-close{display:flex;justify-content:flex-end;padding:12px 14px 0}
+      .modal-nov-close button{background:#f0f0f0;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer}
+      #modal-nov-inner{padding:20px 28px 28px}
+      .modal-nov-titulo{font-size:1.35rem;font-weight:900;color:#004d3d;margin-bottom:14px}
+      .modal-nov-cuerpo{font-size:14.5px;color:#444;line-height:1.75}
     </style>
-    <link rel="stylesheet" href="style.css?v=30">
+    <link rel="stylesheet" href="style.css?v=31">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="body-portal portal-home">
 
-<div class="portal-viewport-wrap">
+<div id="inicio" class="portal-viewport-wrap">
     <div class="header-social-portal">
         <div class="container portal-flex">
             <a href="login.html" class="btn-pnp-social ingresar">
@@ -45,7 +82,7 @@
             </div>
             <div class="title-text">
                 <h1 class="portal-eslogan">REGIÓN POLICIAL CALLAO</h1>
-                <p class="portal-subtitulo">UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES</p>
+                <p class="portal-subtitulo">UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p>
             </div>
         </div>
     </header>
@@ -64,7 +101,6 @@
                 <img src="img/saludo.jpg" alt="" class="slide-img slide-img-saludo" width="1920" height="1080" decoding="async">
             </div>
         </div>
-
         <div class="hero-overlay">
             <div class="container">
                 <h1 class="portal-hero-titulo animate-text">REGIÓN POLICIAL CALLAO</h1>
@@ -72,7 +108,6 @@
                 <p class="portal-hero-eslogan animate-text">Compromiso, Honor y Servicio en la Provincia Constitucional</p>
             </div>
         </div>
-
         <div class="slider-dots">
             <span class="dot active" data-slide="0" aria-label="Imagen 1"></span>
             <span class="dot" data-slide="1" aria-label="Imagen 2"></span>
@@ -82,31 +117,78 @@
 </div>
 
 <main class="container content-area portal-home-content">
-    <div class="section-header">
-        <h3>NOVEDADES RECIENTES DEL CALLAO</h3>
-        <span id="fecha-actualizacion-portal">ÚLTIMA ACTUALIZACIÓN: 20 DE JUNIO 2026</span>
-    </div>
 
-    <div id="novedades-portal" class="lista-novedades lista-novedades-home"></div>
-
-    <div class="section-header" style="margin-top:40px;">
-        <h3>ACCESOS RÁPIDOS</h3>
-    </div>
-
-    <div class="grid-cards">
-        <div class="card">
-            <div class="card-icon"><i class="fas fa-file-contract"></i></div>
-            <h4>CONVENIOS DE TRABAJO</h4>
-            <p>Consulta las últimas convocatorias vigentes para el personal policial</p>
-            <a href="convenios.html" class="btn-card">VER DETALLES</a>
+    <section id="novedades" class="portal-seccion">
+        <div class="section-header">
+            <h3>NOVEDADES RECIENTES DEL CALLAO</h3>
+            <span id="fecha-actualizacion-portal">ÚLTIMA ACTUALIZACIÓN: —</span>
         </div>
-        <div class="card">
-            <div class="card-icon"><i class="fas fa-graduation-cap"></i></div>
-            <h4>CURSOS POLICIALES</h4>
-            <p>Nuevas vacantes y capacitaciones especializadas programadas para este mes</p>
-            <a href="cursos.html" class="btn-card">VER VACANTES</a>
+        <div id="seccion-proximos" class="sorteos-section" style="display:none;">
+            <div class="sorteos-section-titulo"><i class="fas fa-calendar-star"></i> PRÓXIMOS SORTEOS Y CONVOCATORIAS</div>
+            <div class="sorteos-grid" id="grid-proximos"></div>
         </div>
-    </div>
+        <div id="lista-novedades"></div>
+        <div id="seccion-resultados" class="sorteos-section" style="display:none;">
+            <div class="sorteos-section-titulo"><i class="fas fa-trophy"></i> RESULTADOS DE SORTEOS / SELECCIONADOS</div>
+            <div id="lista-resultados"></div>
+        </div>
+    </section>
+
+    <section id="convenios" class="portal-seccion">
+        <div class="section-header">
+            <h3>CONVENIOS DE TRABAJO</h3>
+            <p style="color:#666;font-size:13px;margin-top:6px;">Convocatorias vigentes para el personal policial</p>
+        </div>
+        <div class="grid-modern" id="grid-convenios"></div>
+        <div class="page-intro" id="section-pdf-convenios" style="display:none;margin-top:28px;"><h2>RELACIÓN DE SELECCIONADOS</h2></div>
+        <div id="lista-pdf-convenios"></div>
+    </section>
+
+    <section id="cursos" class="portal-seccion">
+        <div class="section-header">
+            <h3>CURSOS POLICIALES</h3>
+            <p style="color:#666;font-size:13px;margin-top:6px;">Vacantes y capacitaciones especializadas</p>
+        </div>
+        <div class="grid-modern" id="grid-cursos"></div>
+        <div class="page-intro" id="section-pdf-cursos" style="display:none;margin-top:28px;"><h2>RELACIÓN DE SELECCIONADOS</h2></div>
+        <div id="lista-pdf-cursos"></div>
+    </section>
+
+    <section id="bienestar" class="portal-seccion">
+        <div class="section-header">
+            <h3>BIENESTAR POLICIAL</h3>
+        </div>
+        <div class="bienestar-home-card">
+            <i class="fas fa-heart" style="font-size:36px;color:#c8a94a;margin-bottom:12px;"></i>
+            <h4>EVALUACIÓN PSICOLÓGICA — PROGRAMA DE BIENESTAR</h4>
+            <p>Acceda al cuestionario institucional (MMPI-2) y complete su registro de identificación para la Oficina de Psicología de la REGPOL Callao.</p>
+            <a href="evaluacion.html" class="btn-bienestar"><i class="fas fa-clipboard-check"></i> INICIAR EVALUACIÓN</a>
+        </div>
+    </section>
+
+    <section id="resena" class="portal-seccion">
+        <div class="section-header">
+            <h3>RESEÑA HISTÓRICA</h3>
+        </div>
+        <div id="contenido-resena"></div>
+    </section>
+
+    <section id="labor" class="portal-seccion">
+        <div class="section-header">
+            <h3>NUESTRA LABOR</h3>
+        </div>
+        <div id="contenido-labor"></div>
+    </section>
+
+    <section id="unidades" class="portal-seccion">
+        <div class="section-header">
+            <h3>NUESTRAS UNIDADES</h3>
+            <p style="color:#666;font-size:13px;margin-top:6px;">Dependencias policiales de la Provincia Constitucional del Callao</p>
+        </div>
+        <div id="msg-cargando-unidades" style="text-align:center;padding:24px;color:#888;">Cargando unidades...</div>
+        <div id="contenedor-unidades"></div>
+    </section>
+
 </main>
 
 <section class="emergency-bar">
@@ -129,6 +211,15 @@
     </div>
 </section>
 
+<div id="modal-novedad" onclick="if(event.target===this)cerrarNovedadModal()">
+    <div class="modal-nov-box">
+        <div class="modal-nov-close">
+            <button type="button" onclick="cerrarNovedadModal()" title="Cerrar"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="modal-nov-inner"></div>
+    </div>
+</div>
+
 <footer>
     <div class="container">
         <p>&copy; 2026 Región Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
@@ -136,17 +227,11 @@
 </footer>
 
 <script src="api-config.js?v=1"></script>
-<script src="portal-data.js?v=4"></script>
-<script src="portal.js?v=24"></script>
+<script src="portal-data.js?v=5"></script>
+<script src="portal.js?v=25"></script>
 <script>
-    initPortalPagina({
-        activeNav: 'inicio',
-        renderNovedades: 'novedades-portal',
-        limiteNovedades: 3,
-        actualizarFecha: true,
-        actualizarCarrusel: true,
-        showPageHero: false
-    });
+    initPortalInicio();
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') cerrarNovedadModal(); });
 </script>
 <script>
     (function() {
@@ -154,47 +239,27 @@
         var dots = document.querySelectorAll('.dot');
         var current = 0;
         var timer;
-
         var FADE_MS = 1000;
-
         function changeSlide(index) {
-            if (!slides.length) return;
-            if (index === current) return;
+            if (!slides.length || index === current) return;
             var prev = slides[current];
             var next = slides[index];
-
-            slides.forEach(function(s) {
-                s.classList.remove('active', 'was-active');
-            });
+            slides.forEach(function(s) { s.classList.remove('active', 'was-active'); });
             dots.forEach(function(d) { d.classList.remove('active'); });
-
             if (prev && prev !== next) prev.classList.add('was-active');
             next.classList.add('active');
             if (dots[index]) dots[index].classList.add('active');
-
-            setTimeout(function() {
-                slides.forEach(function(s) { s.classList.remove('was-active'); });
-            }, FADE_MS + 50);
-
+            setTimeout(function() { slides.forEach(function(s) { s.classList.remove('was-active'); }); }, FADE_MS + 50);
             current = index;
         }
-
-        function next() {
-            changeSlide((current + 1) % slides.length);
-        }
-
-        function startAuto() {
-            clearInterval(timer);
-            timer = setInterval(next, 5000);
-        }
-
+        function next() { changeSlide((current + 1) % slides.length); }
+        function startAuto() { clearInterval(timer); timer = setInterval(next, 5000); }
         dots.forEach(function(dot) {
             dot.addEventListener('click', function() {
                 changeSlide(parseInt(dot.getAttribute('data-slide'), 10) || 0);
                 startAuto();
             });
         });
-
         if (slides.length > 0) startAuto();
     })();
 </script>
