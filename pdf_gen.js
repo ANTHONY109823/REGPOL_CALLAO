@@ -108,7 +108,7 @@ function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   const fotoW = 56;
   const fotoH = 68;
   const pad = 8;
-  const bannerH = 78;
+  const bannerH = 88;
   const textoW = tieneFoto ? W - fotoW - pad * 3 : W - pad * 2;
 
   doc.rect(x0, y, W, bannerH).fill('#ececec').stroke('#c8c8c8');

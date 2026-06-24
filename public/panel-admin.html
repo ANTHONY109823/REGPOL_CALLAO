@@ -1607,7 +1607,7 @@ function cargarTabla(pag){
       set('tabla-info',d.rows.length+' de '+d.total+' — Página '+d.pagina+' / '+d.paginas);
       document.getElementById('tabla-body').innerHTML=d.rows.map(function(r){
         var total=parseInt(r.total_resp,10)||0;
-        var comp=total>=566 && !r.solo_progreso;
+        var comp=total>=566 && !r.solo_progreso && !!r.completada;
         var badge;
         if(r.solo_progreso){
           badge=total>=566
@@ -1780,11 +1780,12 @@ function vistaPreviaDescarga(filtro, selId, prefijo) {
       cipsListos[(r.cip || '').toLowerCase()] = true;
       var total = parseInt(r.total_resp, 10) || 0;
       var esAvance = !!r.solo_progreso;
-      var comp = total >= 566 && !esAvance;
+      var comp = total >= 566 && !esAvance && !!r.completada;
       var bloque = parseInt(r.bloque_max, 10) || Math.min(12, Math.ceil(total / 50) || 0);
       filas.push({
         nombres: r.nombres, cip: r.cip, dni: r.dni, fecha: r.fecha,
-        bloque: bloque, total: total, comp: comp, id: r.id,
+        bloque: bloque, total: total, total_resp: total, comp: comp, id: r.id,
+        completada: !!r.completada,
         solo_progreso: esAvance, enCurso: esAvance
       });
     });
@@ -1925,11 +1926,11 @@ function buscarPersona(){
           filas.push('<tr><td colspan="7" style="background:#fff8e1;padding:10px;font-size:12px;color:#7a5c00;"><strong>Diagnóstico:</strong> '+escHtml(d.diagnostico)+'</td></tr>');
         }
         (d.evaluaciones||[]).forEach(function(r){
-      var comp=parseInt(r.total_resp)>=566;
+          var comp = parseInt(r.total_resp,10) >= 566 && !!r.completada;
           filas.push('<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
             +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+escHtml(r.fecha)+'</td>'
             +'<td>'+(comp?'<span class="badge ok">Enviado</span>':'<span class="badge pend">'+r.total_resp+'/566</span>')+'</td>'
-            +'<td><a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;">PDF</a></td></tr>');
+            +'<td>'+btnAccionesEval(r)+'</td></tr>');
         });
         if(d.progreso && !(d.evaluaciones||[]).some(function(e){return e.completada;})){
           var p=d.progreso, pt=parseInt(p.total_resp,10)||0;
@@ -1956,7 +1957,7 @@ function buscarPersona(){
     if(!d.rows.length){tbody.innerHTML='<tr><td colspan="7" style="color:#bbb;padding:12px;text-align:center;">Sin resultados.</td></tr>';return;}
     tbody.innerHTML = d.rows.map(function(r){
       var total=parseInt(r.total_resp,10)||0;
-      var comp=total>=566 && !r.solo_progreso;
+      var comp=total>=566 && !r.solo_progreso && !!r.completada;
       var badge=r.solo_progreso
         ?'<span class="badge" style="background:#fff3cd;color:#856404;">'+total+'/566 sin enviar</span>'
         :(comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+total+'/566</span>');

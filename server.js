@@ -1034,12 +1034,14 @@ app.get('/stats', requireAuth, async (req, res) => {
 
     const ultimas  = await pool.query(
       `SELECT id, cip, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha, comisaria, unidad, nombres, completada,
+              ${sqlContarRespuestas('respuestas')} AS total_resp,
               FALSE AS solo_progreso
        FROM evaluaciones ${whereAdmin} ORDER BY fecha DESC LIMIT 10`, params);
 
     const ultimasProgR = await pool.query(
       `SELECT NULL::int AS id, p.cip, TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha,
-              p.comisaria, p.unidad, p.nombres, FALSE AS completada, TRUE AS solo_progreso
+              p.comisaria, p.unidad, p.nombres, FALSE AS completada, TRUE AS solo_progreso,
+              ${sqlContarRespuestas('p.respuestas')} AS total_resp
        FROM progresos p ${progWhere}
        ORDER BY p.actualizado DESC LIMIT 10`,
       progParams
