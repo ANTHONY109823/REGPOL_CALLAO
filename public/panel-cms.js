@@ -44,7 +44,7 @@ function initCMS() {
     fetch(base + '/portal/configuracion?t=' + Date.now(), { cache: 'no-store' })
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(server) {
-        if (server && server.novedades && server.ok !== false) {
+        if (server && (server.novedades || server.fotosEncabezado || server.carrusel) && server.ok !== false) {
           iniciar(server);
           saveSiteDataToStorage(server);
           return;

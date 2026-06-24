@@ -1095,9 +1095,9 @@
 
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=2"></script>
-<script src="portal.js?v=28"></script>
+<script src="portal.js?v=32"></script>
 <script src="divisiones-ui.js?v=1"></script>
-<script src="panel-cms.js?v=11"></script>
+<script src="panel-cms.js?v=12"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[], SESION=null;
@@ -1151,6 +1151,37 @@ function logout(){
   window.location.href='login.html';
 }
 function hdr(){return{'Content-Type':'application/json','x-admin-token':TOKEN};}
+
+function fetchAdminJson(path, timeoutMs) {
+  timeoutMs = timeoutMs || 28000;
+  var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, timeoutMs) : null;
+  var opts = { headers: hdr() };
+  if (ctrl) opts.signal = ctrl.signal;
+  return fetch(API + path, opts)
+    .then(function(r) { return r.json().catch(function() { return { ok: false, error: 'Respuesta inválida del servidor' }; }); })
+    .finally(function() { if (timer) clearTimeout(timer); });
+}
+
+function mostrarErrorDashboard(modo, msg) {
+  var html = '<p style="color:#c0392b;padding:12px;text-align:center;font-size:12px;">' + escHtml(msg) + ' <button type="button" class="btn btn-o" style="margin-left:8px;font-size:11px;" onclick="cargarDashboard(true)"><i class="fas fa-sync"></i> Reintentar</button></p>';
+  if (modo === 'unitic') {
+    var bc = document.getElementById('bd-comisaria');
+    var bu = document.getElementById('bd-unidad');
+    if (bc) bc.innerHTML = '<tr><td colspan="2">' + html + '</td></tr>';
+    if (bu) bu.innerHTML = '<tr><td colspan="2">' + html + '</td></tr>';
+    var ul = document.getElementById('ult-lista');
+    if (ul) ul.innerHTML = html;
+  } else if (modo === 'psico') {
+    var lp = document.getElementById('dp-ult-lista');
+    if (lp) lp.innerHTML = html;
+  } else {
+    var conv = document.getElementById('dg-convocatorias-lista');
+    var ins = document.getElementById('dg-ult-insc');
+    if (conv) conv.innerHTML = '<tr><td colspan="2">' + html + '</td></tr>';
+    if (ins) ins.innerHTML = html;
+  }
+}
 
 function tienePermiso(p){ return SESION&&(SESION.rol==='unitic'||(SESION.permisos||[]).indexOf(p)!==-1); }
 function esUnitic(){ return SESION&&SESION.rol==='unitic'; }
@@ -1452,7 +1483,7 @@ function irPublicarResultados(tipo, el){
 
 function iniciarPanel(s){
   s=s||SESION;
-  if (s && s.rol === 'unitic') cargarFiltrosTabla();
+  if (s && s.rol === 'unitic') setTimeout(cargarFiltrosTabla, 300);
   var dashEl = document.querySelector('[data-page="dashboard"]');
   ir('dashboard', dashEl);
 }
@@ -1482,7 +1513,7 @@ function ir(page, el){
   if(page==='preguntas' && !ya)    cargarPreguntas();
   if(page==='usuarios' && !ya)     cargarUsuarios();
   if(page==='descargas' && !ya)    cargarFiltrosDescarga();
-  if(page==='dashboard' && !ya)    cargarDashboard();
+  if(page==='dashboard')           cargarDashboard(!ya);
   if(page==='divisiones' && !ya)   cargarDivisiones();
   if(page==='items' && !ya)        { aplicarRestriccionFiltroItems(); cargarItems(); }
   if(page==='sorteos')             { aplicarModoSorteosUI(); cargarItemsSorteo(SORTEOS_TIPO_FILTRO||'convenio'); cargarSorteos(); }
@@ -1517,7 +1548,7 @@ function tipoDashboardLocal(){
   return 'unitic';
 }
 
-function cargarDashboard(){
+function cargarDashboard(force){
   var modo = tipoDashboardLocal();
   var u = document.getElementById('dash-panel-unitic');
   var p = document.getElementById('dash-panel-psico');
@@ -1525,14 +1556,17 @@ function cargarDashboard(){
   if (u) u.style.display = modo === 'unitic' ? '' : 'none';
   if (p) p.style.display = modo === 'psico' ? '' : 'none';
   if (g) g.style.display = (modo === 'convenios' || modo === 'cursos') ? '' : 'none';
-  if (modo === 'unitic') cargarStats();
-  else if (modo === 'psico') cargarStatsPsico();
-  else cargarStatsGestion(modo === 'convenios' ? 'convenio' : 'curso');
+  if (modo === 'unitic') cargarStats(force);
+  else if (modo === 'psico') cargarStatsPsico(force);
+  else cargarStatsGestion(modo === 'convenios' ? 'convenio' : 'curso', force);
 }
 
 function cargarStats(){
-  fetch(API+'/stats',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
-    if(!d.ok) return;
+  fetchAdminJson('/stats').then(function(d){
+    if(!d || !d.ok) {
+      mostrarErrorDashboard('unitic', (d && d.error) ? d.error : 'No se pudo cargar el dashboard');
+      return;
+    }
     var t=d.totalEvaluaciones||0,c=d.totalCompletas||0;
     set('s-total',t);set('s-completas',c);set('s-pendientes',Math.max(0,t-c));
     set('s-comisarias',(d.porComisaria||[]).length);
@@ -1567,12 +1601,17 @@ function cargarStats(){
             +badge+'<span style="color:#bbb;font-size:10.5px;">'+escHtml(e.fecha)+'</span></div></div>';
         }).join('')
       :'<div style="color:#bbb;padding:12px;font-size:12px;text-align:center;">Sin evaluaciones aún.</div>';
+  }).catch(function(err) {
+    mostrarErrorDashboard('unitic', (err && err.name === 'AbortError') ? 'Tiempo de espera agotado al cargar estadísticas' : 'Error de conexión con el servidor');
   });
 }
 
 function cargarStatsPsico(){
-  fetch(API+'/stats',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
-    if(!d.ok) return;
+  fetchAdminJson('/stats').then(function(d){
+    if(!d || !d.ok) {
+      mostrarErrorDashboard('psico', (d && d.error) ? d.error : 'No se pudo cargar el dashboard');
+      return;
+    }
     var t=d.totalEvaluaciones||0,c=d.totalCompletas||0;
     set('dp-total',t); set('dp-completas',c);
     set('dp-pendientes',Math.max(0,t-c));
@@ -1590,6 +1629,8 @@ function cargarStatsPsico(){
             +badge+'<span style="color:#bbb;font-size:10.5px;">'+escHtml(e.fecha)+'</span></div></div>';
         }).join('')
       : '<div style="color:#bbb;padding:12px;font-size:12px;text-align:center;">Sin evaluaciones registradas.</div>';
+  }).catch(function(err) {
+    mostrarErrorDashboard('psico', (err && err.name === 'AbortError') ? 'Tiempo de espera agotado' : 'Error de conexión');
   });
 }
 
@@ -1598,10 +1639,12 @@ function cargarStatsGestion(tipo){
   if (titulo) {
     titulo.innerHTML = '<i class="fas fa-clipboard-list"></i> Dashboard — ' + (tipo === 'curso' ? 'Educación (Cursos)' : 'Convenios');
   }
-  fetch(API+'/admin/stats-gestion?tipo='+encodeURIComponent(tipo),{headers:hdr()})
-    .then(function(r){return r.json();})
+  fetchAdminJson('/admin/stats-gestion?tipo='+encodeURIComponent(tipo))
     .then(function(d){
-      if(!d.ok) return;
+      if(!d || !d.ok) {
+        mostrarErrorDashboard(tipo === 'curso' ? 'cursos' : 'convenios', (d && d.error) ? d.error : 'No se pudo cargar el dashboard');
+        return;
+      }
       var r = d.resumen || {};
       set('dg-convocatorias', r.convocatorias||0);
       set('dg-inscritos', r.total_inscritos||0);
@@ -1627,6 +1670,8 @@ function cargarStatsGestion(tipo){
             }).join('')
           : '<div style="color:#bbb;padding:12px;font-size:12px;text-align:center;">Sin inscripciones recientes.</div>';
       }
+    }).catch(function(err) {
+      mostrarErrorDashboard(tipo === 'curso' ? 'cursos' : 'convenios', (err && err.name === 'AbortError') ? 'Tiempo de espera agotado' : 'Error de conexión');
     });
 }
 

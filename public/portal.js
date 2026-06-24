@@ -127,8 +127,43 @@ function getSiteDataFromStorage() {
   }
 }
 
+function siteDataParaCacheLocal(data) {
+  if (!data || typeof data !== 'object') return data;
+  var lite = Object.assign({}, data);
+  if (lite.fotosEncabezado) {
+    lite.fotosEncabezado = lite.fotosEncabezado.map(function(u) {
+      var s = String(u || '');
+      return s.indexOf('data:') === 0 ? '' : s;
+    }).filter(Boolean);
+  }
+  if (lite.carrusel) {
+    lite.carrusel = lite.carrusel.map(function(sl) {
+      var img = String((sl && sl.imagen) || '');
+      return Object.assign({}, sl, { imagen: img.indexOf('data:') === 0 ? '' : img });
+    });
+  }
+  ['resenaHistorica', 'nuestraLabor'].forEach(function(k) {
+    if (lite[k] && lite[k].imagenBanner && String(lite[k].imagenBanner).indexOf('data:') === 0) {
+      lite[k] = Object.assign({}, lite[k], { imagenBanner: '' });
+    }
+  });
+  if (lite.imagenBannerNovedades && String(lite.imagenBannerNovedades).indexOf('data:') === 0) {
+    lite.imagenBannerNovedades = '';
+  }
+  return lite;
+}
+
 function saveSiteDataToStorage(data) {
-  localStorage.setItem(REGPOL_SITE_KEY, JSON.stringify(data));
+  try {
+    var paraGuardar = siteDataParaCacheLocal(data);
+    var json = JSON.stringify(paraGuardar);
+    if (json.length > 2.5 * 1024 * 1024) {
+      return;
+    }
+    localStorage.setItem(REGPOL_SITE_KEY, json);
+  } catch (e) {
+    try { localStorage.removeItem(REGPOL_SITE_KEY); } catch (e2) {}
+  }
 }
 
 function fetchSiteDataFromServer() {

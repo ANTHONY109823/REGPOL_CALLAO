@@ -537,6 +537,16 @@ function sqlTieneRespuestas(col) {
   return `${sqlContarRespuestas(col)} > 0`;
 }
 
+function sqlProgresoConRespuestas(alias) {
+  const a = alias || 'p';
+  return `COALESCE(${a}.total_resp, 0) > 0`;
+}
+
+let statsCache = null;
+let statsCacheKey = '';
+let statsCacheExp = 0;
+const STATS_CACHE_MS = 45000;
+
 async function leerUnidadesActivas() {
   let unidades = [];
   const raw = await getConfig('unidades_activas');
@@ -798,7 +808,7 @@ app.get('/admin/avances', requireAuth, async (req, res) => {
     if (!comisaria && !unidad) {
       return res.json({ ok: false, error: 'comisaria o unidad requerido' });
     }
-    let where = `WHERE ${sqlTieneRespuestas('respuestas')}
+    let where = `WHERE COALESCE(total_resp, 0) > 0
       AND NOT EXISTS (
         SELECT 1 FROM evaluaciones e
         WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(progresos.cip)) AND e.completada = TRUE
@@ -813,7 +823,7 @@ app.get('/admin/avances', requireAuth, async (req, res) => {
     }
     const r = await pool.query(
       `SELECT cip, nombres, comisaria, unidad, bloque_max AS bloque,
-              ${sqlContarRespuestas('respuestas')} AS total,
+              COALESCE(total_resp, 0) AS total,
               TO_CHAR(actualizado,'DD/MM/YYYY HH24:MI') AS ultima
        FROM progresos ${where} ORDER BY actualizado DESC`,
       params
@@ -859,7 +869,7 @@ function mapearProgresoParaPDF(p) {
 async function obtenerProgresoParaPDF(cip, admin) {
   const r = await pool.query(
     `SELECT p.*, TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha,
-            ${sqlContarRespuestas('p.respuestas')} AS total_resp
+            COALESCE(p.total_resp, 0) AS total_resp
      FROM progresos p
      WHERE UPPER(TRIM(p.cip))=UPPER(TRIM($1)) OR LOWER(TRIM(p.clave))=LOWER(TRIM($1))
      LIMIT 1`,
@@ -878,7 +888,7 @@ async function obtenerProgresoParaPDF(cip, admin) {
 }
 
 async function consultarProgresosFiltrados(admin, query) {
-  let where = `WHERE ${sqlTieneRespuestas('p.respuestas')}
+  let where = `WHERE ${sqlProgresoConRespuestas('p')}
     AND NOT EXISTS (
       SELECT 1 FROM evaluaciones e
       WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(p.cip)) AND e.completada = TRUE
@@ -932,7 +942,7 @@ async function consultarProgresosPendientes(admin, query) {
   const r = await pool.query(
     `SELECT NULL::INTEGER AS id, p.cip, p.nombres, '' AS dni, p.comisaria, p.unidad,
             p.bloque_max, NULL::SMALLINT AS edad,
-            ${sqlContarRespuestas('p.respuestas')} AS total_resp,
+            COALESCE(p.total_resp, 0) AS total_resp,
             FALSE AS completada, TRUE AS solo_progreso,
             TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha
      FROM progresos p ${where}
@@ -946,7 +956,7 @@ async function consultarProgresosParaPDFGrupo(admin, query) {
   const { where, params } = await consultarProgresosFiltrados(admin, query);
   const r = await pool.query(
     `SELECT p.*, TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha,
-            ${sqlContarRespuestas('p.respuestas')} AS total_resp
+            COALESCE(p.total_resp, 0) AS total_resp
      FROM progresos p ${where}
      ORDER BY p.comisaria, p.nombres`,
     params
@@ -1009,6 +1019,11 @@ app.get('/admin/registro-cip', requireAuth, async (req, res) => {
 // ── GET /stats ─────────────────────────────────────────────────────────────────
 app.get('/stats', requireAuth, async (req, res) => {
   try {
+    const cacheKey = (req.admin.rol || '') + '|' + (req.admin.unidad || '');
+    if (statsCache && statsCacheKey === cacheKey && statsCacheExp > Date.now()) {
+      return res.json(statsCache);
+    }
+
     let whereAdmin = '';
     const params = [];
     if (debeFiltrarPorUnidadAsignada(req.admin)) {
@@ -1022,7 +1037,7 @@ app.get('/stats', requireAuth, async (req, res) => {
     const porUnidad= await pool.query(
       `SELECT unidad AS nombre, COUNT(*) AS total FROM evaluaciones ${whereAdmin} GROUP BY unidad ORDER BY unidad`, params);
 
-    let progWhere = `WHERE ${sqlTieneRespuestas('p.respuestas')} `
+    let progWhere = `WHERE ${sqlProgresoConRespuestas('p')} `
       + 'AND NOT EXISTS ('
       + 'SELECT 1 FROM evaluaciones e '
       + 'WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(p.cip)) AND e.completada = TRUE'
@@ -1042,7 +1057,7 @@ app.get('/stats', requireAuth, async (req, res) => {
     const ultimasProgR = await pool.query(
       `SELECT NULL::int AS id, p.cip, TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha,
               p.comisaria, p.unidad, p.nombres, FALSE AS completada, TRUE AS solo_progreso,
-              ${sqlContarRespuestas('p.respuestas')} AS total_resp
+              COALESCE(p.total_resp, 0) AS total_resp
        FROM progresos p ${progWhere}
        ORDER BY p.actualizado DESC LIMIT 10`,
       progParams
@@ -1071,7 +1086,7 @@ app.get('/stats', requireAuth, async (req, res) => {
       `SELECT COUNT(*)::int AS t FROM progresos p ${progWhere}`, progParams
     );
 
-    res.json({
+    const payload = {
       ok: true,
       totalEvaluaciones: parseInt(total.rows[0].t),
       totalCompletas:    parseInt(completas.rows[0].t),
@@ -1080,7 +1095,11 @@ app.get('/stats', requireAuth, async (req, res) => {
       porUnidad:         porUnidad.rows,
       porDivision:       porDivision.rows,
       ultimasEvaluaciones: ultimasMerged
-    });
+    };
+    statsCache = payload;
+    statsCacheKey = cacheKey;
+    statsCacheExp = Date.now() + STATS_CACHE_MS;
+    res.json(payload);
   } catch (e) {
     res.json({ ok: false, error: e.message });
   }
