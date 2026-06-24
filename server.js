@@ -827,6 +827,68 @@ app.post('/progreso', async (req, res) => {
   }
 });
 
+// ── GET /verificar-registro?cip=&dni= — sesión ya iniciada (público) ─────────
+app.get('/verificar-registro', async (req, res) => {
+  try {
+    const cip = (req.query.cip || '').trim();
+    const dni = (req.query.dni || '').trim();
+    if (!cip && !dni) return res.json({ ok: false, error: 'CIP requerido' });
+
+    const progR = await pool.query(
+      `SELECT cip, nombres, dni, bloque_max, COALESCE(total_resp, 0) AS total_resp, respuestas
+       FROM progresos
+       WHERE ($1 <> '' AND (UPPER(TRIM(cip)) = UPPER(TRIM($1)) OR LOWER(TRIM(clave)) = LOWER(TRIM($1))))
+          OR ($2 <> '' AND TRIM(dni) = TRIM($2))
+       ORDER BY actualizado DESC LIMIT 1`,
+      [cip, dni]
+    );
+    if (progR.rows.length) {
+      const row = progR.rows[0];
+      const total = Math.max(
+        parseInt(row.total_resp, 10) || 0,
+        contarRespuestasObj(row.respuestas).total
+      );
+      return res.json({
+        ok: true,
+        registrado: true,
+        fuente: 'progreso',
+        cip: row.cip,
+        nombres: row.nombres || '',
+        dni: row.dni || '',
+        total: total,
+        completada: false
+      });
+    }
+
+    const evR = await pool.query(
+      `SELECT id, cip, nombres, dni, completada,
+              ${sqlContarRespuestas('respuestas')} AS total_resp
+       FROM evaluaciones
+       WHERE ($1 <> '' AND UPPER(TRIM(cip)) = UPPER(TRIM($1)))
+          OR ($2 <> '' AND TRIM(dni) = TRIM($2))
+       ORDER BY fecha DESC LIMIT 1`,
+      [cip, dni]
+    );
+    if (evR.rows.length) {
+      const row = evR.rows[0];
+      return res.json({
+        ok: true,
+        registrado: true,
+        fuente: 'evaluacion',
+        cip: row.cip,
+        nombres: row.nombres || '',
+        dni: row.dni || '',
+        total: parseInt(row.total_resp, 10) || 0,
+        completada: !!row.completada
+      });
+    }
+
+    res.json({ ok: true, registrado: false });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 // ── GET /progreso?cip= ────────────────────────────────────────────────────────
 app.get('/progreso', async (req, res) => {
   try {

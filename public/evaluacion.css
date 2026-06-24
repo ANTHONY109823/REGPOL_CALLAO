@@ -328,6 +328,15 @@
   border-top: 3px solid var(--verde-pnp);
   box-shadow: 0 2px 8px rgba(0, 77, 61, 0.06);
 }
+.card-continuar-cip.continuar-cip-destacado {
+  outline: 3px solid #c8a94a;
+  box-shadow: 0 0 0 5px rgba(200, 169, 74, 0.35);
+  animation: pulso-cip 1.2s ease-in-out 3;
+}
+@keyframes pulso-cip {
+  0%, 100% { box-shadow: 0 0 0 5px rgba(200, 169, 74, 0.35); }
+  50% { box-shadow: 0 0 0 9px rgba(200, 169, 74, 0.2); }
+}
 .continuar-cip-compact {
   display: flex;
   flex-wrap: wrap;

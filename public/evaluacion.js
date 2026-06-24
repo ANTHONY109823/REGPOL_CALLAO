@@ -354,15 +354,6 @@ function contarRespuestasEnData(data) {
   return Object.keys(r).filter(function(k) { return r[k] === 'V' || r[k] === 'F'; }).length;
 }
 
-function normalizarDataProgreso(data) {
-  if (!data) return null;
-  var n = contarRespuestasEnData(data);
-  var total = Math.max(parseInt(data.total, 10) || 0, n);
-  if (total <= 0) return null;
-  data.total = total;
-  return data;
-}
-
 function validarRegistro() {
   var err='', campos=[
     {id:'f-unidad',  test:function(v){return v.trim().length>0;},      msg:'Seleccione su comisaría.'},
@@ -499,16 +490,48 @@ function aplicarDatosProgresoAlEstado(data) {
   ESTADO.bloqueActual = parseInt(data.bloque, 10) || 1;
 }
 
-function continuarAlCuestionario() {
-  if (!PREGUNTAS.length) { mostrarAlerta('Espere a que cargue el cuestionario.','error'); return; }
-  var err = validarRegistro();
-  if (err) { mostrarAlerta(err,'error'); document.getElementById('card-registro').scrollIntoView({behavior:'smooth'}); return; }
-  ocultarAlerta();
+function normalizarDataProgreso(data) {
+  if (!data) return null;
+  var n = contarRespuestasEnData(data);
+  var total = Math.max(parseInt(data.total, 10) || 0, n);
+  if (data.encontrado && (data.nombres || total > 0)) {
+    data.total = total;
+    return data;
+  }
+  if (total > 0) {
+    data.total = total;
+    return data;
+  }
+  return null;
+}
 
-  var cip = document.getElementById('f-cip').value.trim();
-  var btn = document.querySelector('.btn-registro-continuar');
+function notificarSesionExistente(cip, info) {
+  var msg;
+  if (info && info.completada) {
+    msg = 'El CIP ' + cip + ' ya tiene una evaluación enviada a Psicología. '
+      + 'No puede registrarse de nuevo. Si necesita ayuda, contacte a la Oficina de Psicología.';
+  } else {
+    msg = 'Ya tiene una sesión guardada'
+      + (info && info.nombres ? ' a nombre de ' + info.nombres : '')
+      + '. No complete el formulario otra vez: ingrese su CIP en el recuadro «¿Ya comenzó?» de arriba y pulse Continuar.';
+  }
+  mostrarAlerta(msg, 'error');
+
+  var card = document.getElementById('card-continuar-cip');
+  var inp = document.getElementById('f-cip-continuar');
+  if (inp) inp.value = cip;
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('continuar-cip-destacado');
+    setTimeout(function() { card.classList.remove('continuar-cip-destacado'); }, 8000);
+  }
+  if (inp) {
+    setTimeout(function() { inp.focus(); inp.select(); }, 400);
+  }
+}
+
+function procederRegistroNuevo(cip, btn) {
   if (btn) btn.disabled = true;
-
   verificarProgresoGuardado(cip, function(data) {
     if (data) aplicarDatosProgresoAlEstado(data);
     var banner = document.getElementById('banner-progreso');
@@ -529,6 +552,32 @@ function continuarAlCuestionario() {
       setTimeout(ocultarAlerta, 4500);
     });
   });
+}
+
+function continuarAlCuestionario() {
+  if (!PREGUNTAS.length) { mostrarAlerta('Espere a que cargue el cuestionario.','error'); return; }
+  var err = validarRegistro();
+  if (err) { mostrarAlerta(err,'error'); document.getElementById('card-registro').scrollIntoView({behavior:'smooth'}); return; }
+  ocultarAlerta();
+
+  var cip = document.getElementById('f-cip').value.trim();
+  var dni = document.getElementById('f-dni').value.trim();
+  var btn = document.querySelector('.btn-registro-continuar');
+  if (btn) btn.disabled = true;
+
+  fetch(LOCAL_API + '/verificar-registro?cip=' + encodeURIComponent(cip) + '&dni=' + encodeURIComponent(dni))
+    .then(function(r) { return r.json(); })
+    .then(function(v) {
+      if (v.ok && v.registrado) {
+        if (btn) btn.disabled = false;
+        notificarSesionExistente(v.cip || cip, v);
+        return;
+      }
+      procederRegistroNuevo(cip, btn);
+    })
+    .catch(function() {
+      procederRegistroNuevo(cip, btn);
+    });
 }
 
 /* ================================================================
@@ -714,8 +763,19 @@ function continuarConCIP() {
   if (!PREGUNTAS.length) { mostrarAlerta('Espere a que cargue el cuestionario.','error'); return; }
   ocultarAlerta();
   verificarProgresoGuardado(cip, function(data) {
-    if (!data || !data.total) {
-      mostrarAlerta('No hay progreso guardado para el CIP '+cip+'. Complete el Paso 1 si es su primera vez.','error');
+    if (!data) {
+      fetch(LOCAL_API + '/verificar-registro?cip=' + encodeURIComponent(cip))
+        .then(function(r) { return r.json(); })
+        .then(function(v) {
+          if (v.ok && v.registrado && !v.completada) {
+            notificarSesionExistente(v.cip || cip, v);
+          } else {
+            mostrarAlerta('No hay sesión guardada para el CIP ' + cip + '. Complete el Paso 1 si es su primera vez.', 'error');
+          }
+        })
+        .catch(function() {
+          mostrarAlerta('No hay sesión guardada para el CIP ' + cip + '. Complete el Paso 1 si es su primera vez.', 'error');
+        });
       return;
     }
     document.getElementById('f-cip').value = data.cip || cip;

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Panel UNITIC — REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <link rel="stylesheet" href="panel-admin.css?v=11"/>
+  <link rel="stylesheet" href="panel-admin.css?v=12"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{background:#f0f4f0;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;min-height:100vh;}
@@ -476,21 +476,19 @@
           <input id="f-bus" type="text" placeholder="CIP / DNI / Nombres..." style="min-width:200px;flex:1;"
             onkeydown="if(event.key==='Enter'){event.preventDefault();cargarTabla(1);}"/>
           <button class="btn btn-v" type="button" onclick="cargarTabla(1)"><i class="fas fa-search"></i> Buscar</button>
-          <button class="btn btn-v" type="button" onclick="cargarTabla(1)" title="Actualizar"><i class="fas fa-sync"></i></button>
-          <button class="btn btn-r" id="btn-pdf-unidad" style="display:none;" type="button" onclick="descargarPdfRespuestas('unidad')"><i class="fas fa-file-pdf"></i> PDF unidad</button>
-          <button class="btn btn-r" id="btn-pdf-division" style="display:none;" type="button" onclick="descargarPdfRespuestas('division')"><i class="fas fa-file-pdf"></i> PDF división</button>
-          <button class="btn btn-r" id="btn-pdf-todas" type="button" onclick="descargarPdfRespuestas('todas')"><i class="fas fa-file-pdf"></i> PDF todas</button>
-          <button class="btn btn-r" id="btn-del-unidad" style="display:none;" type="button" onclick="eliminarEvaluacionesUnidad()"><i class="fas fa-trash-alt"></i> Eliminar unidad</button>
-          <button class="btn btn-r" id="btn-del-todos" style="display:none;" type="button" onclick="limpiarTodosRegistrosEval()"><i class="fas fa-broom"></i> Limpiar todos</button>
+          <button class="btn btn-o" id="btn-pdf-unidad" style="display:none;" type="button" onclick="verPdfUnidadRespuestas()" title="Abrir vista previa del PDF de la unidad seleccionada">
+            <i class="fas fa-eye"></i> Ver PDF unidad
+          </button>
         </div>
+        <p style="font-size:12px;color:#666;margin:-4px 0 10px;">Seleccione división, unidad o busque por CIP / DNI / nombre. Los registros aparecen solo tras filtrar. Use <strong>Ver</strong> en cada fila; el PDF individual se descarga desde esa vista previa.</p>
         <div class="tinfo" id="tabla-info"></div>
         <div style="overflow-x:auto;max-height:68vh;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">
           <table class="t" style="margin:0;">
             <thead><tr>
               <th>División</th><th>Dependencia</th><th>Nombres</th><th>CIP</th><th>DNI</th>
-              <th>Fecha</th><th>Edad</th><th>Estado</th><th>Ver / PDF</th><th>Eliminar</th>
+              <th>Fecha</th><th>Edad</th><th>Estado</th><th>Ver</th><th>Eliminar</th>
             </tr></thead>
-            <tbody id="tabla-body"><tr><td colspan="10" style="text-align:center;color:#bbb;padding:18px;">Cargando...</td></tr></tbody>
+            <tbody id="tabla-body"><tr><td colspan="10" style="text-align:center;color:#888;padding:24px;font-size:13px;">Seleccione división, unidad o busque por CIP / DNI / nombre y pulse <strong>Buscar</strong>.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1171,18 +1169,16 @@ function urlPdfEfectivo(r) {
 
 function btnAccionesEval(r) {
   if (!r) return '<span style="color:#bbb;font-size:10px;">—</span>';
-  var html = '';
   if (esEvalCompleta(r) && r.id) {
-    html += '<button type="button" class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="verResultadoEval(' + r.id + ')"><i class="fas fa-eye"></i> Ver</button>';
-  } else if (r.cip) {
-    html += '<button type="button" class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="verAvance(\'' + escJs(r.cip) + '\')"><i class="fas fa-eye"></i> Ver</button>';
-  } else if (r.id) {
-    html += '<button type="button" class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="verResultadoEval(' + r.id + ')"><i class="fas fa-eye"></i> Ver</button>';
+    return '<button type="button" class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="verResultadoEval(' + r.id + ')"><i class="fas fa-eye"></i> Ver</button>';
   }
-  if (esEvalCompleta(r)) {
-    html += ' <a href="' + urlPdfEfectivo(r) + '" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;"><i class="fas fa-file-pdf"></i> PDF</a>';
+  if (r.cip) {
+    return '<button type="button" class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="verAvance(\'' + escJs(r.cip) + '\')"><i class="fas fa-eye"></i> Ver</button>';
   }
-  return html || '<span style="color:#bbb;font-size:10px;">—</span>';
+  if (r.id) {
+    return '<button type="button" class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="verResultadoEval(' + r.id + ')"><i class="fas fa-eye"></i> Ver</button>';
+  }
+  return '<span style="color:#bbb;font-size:10px;">—</span>';
 }
 
 function btnEliminarEval(r) {
@@ -1201,40 +1197,38 @@ function actualizarBotonesEliminarEval() {
   actualizarBotonesRespuestas();
 }
 
+function hayFiltroRespuestasActivos() {
+  return !!(val('f-uni') || val('f-div') || val('f-bus').trim());
+}
+
+function vaciarTablaRespuestas(msg) {
+  var body = document.getElementById('tabla-body');
+  var texto = msg || 'Seleccione división, unidad o busque por CIP / DNI / nombre y pulse Buscar.';
+  if (body) {
+    body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#888;padding:24px;font-size:13px;">'
+      + escHtml(texto) + '</td></tr>';
+  }
+  set('tabla-info', '');
+  var pags = document.getElementById('paginacion');
+  if (pags) pags.innerHTML = '';
+}
+
 function actualizarBotonesRespuestas() {
   var uni = val('f-uni');
-  var div = val('f-div');
-  var btnU = document.getElementById('btn-del-unidad');
-  var btnT = document.getElementById('btn-del-todos');
   var btnPdfU = document.getElementById('btn-pdf-unidad');
-  var btnPdfD = document.getElementById('btn-pdf-division');
-  if (btnU) btnU.style.display = (uni || div) ? '' : 'none';
-  if (btnT) btnT.style.display = esUnitic() ? '' : 'none';
   if (btnPdfU) btnPdfU.style.display = uni ? '' : 'none';
-  if (btnPdfD) btnPdfD.style.display = div ? '' : 'none';
 }
 
 function onFiltroRespuestasChange() {
   actualizarBotonesRespuestas();
-  cargarTabla(1);
+  if (hayFiltroRespuestasActivos()) cargarTabla(1);
+  else vaciarTablaRespuestas();
 }
 
-function descargarPdfRespuestas(tipo) {
-  if (tipo === 'todas') {
-    window.open(API + '/pdf/grupo?division=TODAS&token=' + encodeURIComponent(TOKEN), '_blank');
-    return;
-  }
-  if (tipo === 'unidad') {
-    var u = val('f-uni');
-    if (!u) { alert('Seleccione una unidad en el filtro.'); return; }
-    window.open(API + '/pdf/grupo?unidad=' + encodeURIComponent(u) + '&token=' + encodeURIComponent(TOKEN), '_blank');
-    return;
-  }
-  if (tipo === 'division') {
-    var d = val('f-div');
-    if (!d) { alert('Seleccione una división en el filtro.'); return; }
-    window.open(API + '/pdf/grupo?division=' + encodeURIComponent(d) + '&token=' + encodeURIComponent(TOKEN), '_blank');
-  }
+function verPdfUnidadRespuestas() {
+  var u = val('f-uni');
+  if (!u) { alert('Seleccione una unidad en el filtro.'); return; }
+  window.open(API + '/pdf/grupo?unidad=' + encodeURIComponent(u) + '&token=' + encodeURIComponent(TOKEN), '_blank');
 }
 
 function eliminarRegistroEval(id, cip, soloProgreso, nombre) {
@@ -1570,7 +1564,7 @@ function ir(page, el){
   if(page==='descargas'){
     if(!ya) cargarFiltrosTabla();
     actualizarBotonesRespuestas();
-    cargarTabla(1);
+    vaciarTablaRespuestas();
   }
   if(page==='dashboard')           cargarDashboard(!ya);
   if(page==='divisiones' && !ya)   cargarDivisiones();
@@ -1806,7 +1800,11 @@ function cargarFiltrosTabla(){
 }
 
 function onFiltroDivisionAdmin() {
-  onFiltroDivisionCambio('f-div', 'f-uni', window._divisionesData || [], function() { actualizarBotonesRespuestas(); cargarTabla(1); });
+  onFiltroDivisionCambio('f-div', 'f-uni', window._divisionesData || [], function() {
+    actualizarBotonesRespuestas();
+    if (hayFiltroRespuestasActivos()) cargarTabla(1);
+    else vaciarTablaRespuestas();
+  });
 }
 
 function normUniResp(n) {
@@ -1899,6 +1897,11 @@ function renderTablaRespuestasPorDivision(rows) {
 
 function cargarTabla(pag){
   window._tablaPaginaActual = 1;
+  if (!hayFiltroRespuestasActivos()) {
+    vaciarTablaRespuestas();
+    actualizarBotonesRespuestas();
+    return;
+  }
   actualizarBotonesEliminarEval();
   var body = document.getElementById('tabla-body');
   if (body) body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#bbb;padding:18px;">Cargando...</td></tr>';
