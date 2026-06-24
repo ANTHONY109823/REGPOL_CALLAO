@@ -781,19 +781,25 @@ app.get('/progreso', async (req, res) => {
 app.get('/admin/avances', requireAuth, async (req, res) => {
   try {
     const { comisaria, unidad } = req.query;
-    let where = 'WHERE total_resp > 0';
-    const params = [];
-    if (comisaria) {
-      params.push(comisaria);
-      where += ` AND (UPPER(comisaria)=UPPER($${params.length}) OR UPPER(unidad)=UPPER($${params.length}))`;
-    } else if (unidad) {
-      params.push(unidad);
-      where += ` AND UPPER(unidad)=UPPER($${params.length})`;
-    } else {
+    if (!comisaria && !unidad) {
       return res.json({ ok: false, error: 'comisaria o unidad requerido' });
     }
+    let where = `WHERE (SELECT COUNT(*) FROM jsonb_object_keys(respuestas)) > 0
+      AND NOT EXISTS (
+        SELECT 1 FROM evaluaciones e
+        WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(progresos.cip)) AND e.completada = TRUE
+      )`;
+    const params = [];
+    if (comisaria) {
+      params.push('%' + String(comisaria).toUpperCase() + '%');
+      where += ` AND (UPPER(comisaria) LIKE $${params.length} OR UPPER(unidad) LIKE $${params.length})`;
+    } else {
+      params.push('%' + String(unidad).toUpperCase() + '%');
+      where += ` AND (UPPER(unidad) LIKE $${params.length} OR UPPER(comisaria) LIKE $${params.length})`;
+    }
     const r = await pool.query(
-      `SELECT cip, nombres, comisaria, unidad, bloque_max AS bloque, total_resp AS total,
+      `SELECT cip, nombres, comisaria, unidad, bloque_max AS bloque,
+              (SELECT COUNT(*)::int FROM jsonb_object_keys(respuestas)) AS total,
               TO_CHAR(actualizado,'DD/MM/YYYY HH24:MI') AS ultima
        FROM progresos ${where} ORDER BY actualizado DESC`,
       params
@@ -804,8 +810,59 @@ app.get('/admin/avances', requireAuth, async (req, res) => {
   }
 });
 
-// ── Helper: progresos guardados sin enviar ─────────────────────────────────────
-async function consultarProgresosPendientes(admin, query) {
+// ── Helper: formato evaluación desde progreso (PDF / listados) ────────────────
+function mapearProgresoParaPDF(p) {
+  let resp = p.respuestas || {};
+  if (typeof resp === 'string') {
+    try { resp = JSON.parse(resp); } catch (e) { resp = {}; }
+  }
+  const totalResp = p.total_resp != null
+    ? parseInt(p.total_resp, 10)
+    : Object.keys(resp).filter(function(k) { return resp[k] === 'V' || resp[k] === 'F'; }).length;
+  return {
+    id: null,
+    cip: p.cip || '',
+    nombres: p.nombres || '',
+    dni: p.dni || '',
+    comisaria: p.comisaria || '',
+    unidad: p.unidad || '',
+    cargo: p.cargo || '',
+    sexo: p.sexo || '',
+    armamento: p.armamento || '',
+    foto: p.foto || '',
+    edad: p.edad || null,
+    bloque_max: p.bloque_max || 0,
+    completada: false,
+    respuestas: resp,
+    fecha: p.fecha || (p.actualizado
+      ? new Date(p.actualizado).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : '—'),
+    total_resp: totalResp
+  };
+}
+
+async function obtenerProgresoParaPDF(cip, admin) {
+  const r = await pool.query(
+    `SELECT p.*, TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha,
+            (SELECT COUNT(*)::int FROM jsonb_object_keys(p.respuestas)) AS total_resp
+     FROM progresos p
+     WHERE UPPER(TRIM(p.cip))=UPPER(TRIM($1)) OR LOWER(TRIM(p.clave))=LOWER(TRIM($1))
+     LIMIT 1`,
+    [cip]
+  );
+  if (!r.rows.length) return null;
+  const ev = mapearProgresoParaPDF(r.rows[0]);
+  if (!ev.total_resp) return null;
+  if (debeFiltrarPorUnidadAsignada(admin)) {
+    const u = (admin.unidad || '').toUpperCase();
+    const uni = (ev.unidad || '').toUpperCase();
+    const com = (ev.comisaria || '').toUpperCase();
+    if (!uni.includes(u) && !com.includes(u)) return null;
+  }
+  return ev;
+}
+
+async function consultarProgresosFiltrados(admin, query) {
   let where = `WHERE (SELECT COUNT(*) FROM jsonb_object_keys(p.respuestas)) > 0
     AND NOT EXISTS (
       SELECT 1 FROM evaluaciones e
@@ -820,10 +877,24 @@ async function consultarProgresosPendientes(admin, query) {
     pi++;
   }
 
+  const division  = ((query.division  || '') + '').toUpperCase();
   const comisaria = ((query.comisaria || '') + '').toUpperCase();
-  const unidad    = ((query.unidad || '') + '').toUpperCase();
-  const busqueda  = ((query.busqueda || '') + '').toUpperCase();
+  const unidad    = ((query.unidad    || '') + '').toUpperCase();
+  const busqueda  = ((query.busqueda  || '') + '').toUpperCase();
 
+  if (division && division !== 'TODAS') {
+    const du = await pool.query(
+      `SELECT UPPER(u.nombre) AS nombre FROM unidades_pol u JOIN divisiones d ON d.id=u.division_id WHERE UPPER(d.nombre)=$1`,
+      [division]
+    );
+    if (du.rows.length) {
+      const arr = du.rows.map(function(row) { return row.nombre; });
+      where += ` AND (UPPER(p.comisaria) = ANY($${pi}::text[]) OR UPPER(p.unidad) = ANY($${pi}::text[]))`;
+      params.push(arr); pi++;
+    } else {
+      where += ' AND 1=0';
+    }
+  }
   if (comisaria) {
     where += ` AND (UPPER(p.comisaria) LIKE $${pi} OR UPPER(p.unidad) LIKE $${pi})`;
     params.push('%' + comisaria + '%'); pi++;
@@ -837,6 +908,12 @@ async function consultarProgresosPendientes(admin, query) {
     params.push('%' + busqueda + '%', '%' + busqueda + '%');
   }
 
+  return { where, params };
+}
+
+// ── Helper: progresos guardados sin enviar ─────────────────────────────────────
+async function consultarProgresosPendientes(admin, query) {
+  const { where, params } = await consultarProgresosFiltrados(admin, query);
   const r = await pool.query(
     `SELECT NULL::INTEGER AS id, p.cip, p.nombres, '' AS dni, p.comisaria, p.unidad,
             p.bloque_max, NULL::SMALLINT AS edad,
@@ -848,6 +925,18 @@ async function consultarProgresosPendientes(admin, query) {
     params
   );
   return r.rows;
+}
+
+async function consultarProgresosParaPDFGrupo(admin, query) {
+  const { where, params } = await consultarProgresosFiltrados(admin, query);
+  const r = await pool.query(
+    `SELECT p.*, TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha,
+            (SELECT COUNT(*)::int FROM jsonb_object_keys(p.respuestas)) AS total_resp
+     FROM progresos p ${where}
+     ORDER BY p.comisaria, p.nombres`,
+    params
+  );
+  return r.rows.map(mapearProgresoParaPDF);
 }
 
 // ── GET /admin/progresos-pendientes (guardados pero no enviados) ────────────────
@@ -915,9 +1004,38 @@ app.get('/stats', requireAuth, async (req, res) => {
       `SELECT comisaria AS nombre, COUNT(*) AS total FROM evaluaciones ${whereAdmin} GROUP BY comisaria ORDER BY comisaria`, params);
     const porUnidad= await pool.query(
       `SELECT unidad AS nombre, COUNT(*) AS total FROM evaluaciones ${whereAdmin} GROUP BY unidad ORDER BY unidad`, params);
+
+    let progWhere = 'WHERE (SELECT COUNT(*) FROM jsonb_object_keys(p.respuestas)) > 0 '
+      + 'AND NOT EXISTS ('
+      + 'SELECT 1 FROM evaluaciones e '
+      + 'WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(p.cip)) AND e.completada = TRUE'
+      + ')';
+    const progParams = [];
+    if (debeFiltrarPorUnidadAsignada(req.admin)) {
+      progWhere += ' AND (UPPER(p.unidad) LIKE $1 OR UPPER(p.comisaria) LIKE $1)';
+      progParams.push('%' + req.admin.unidad.toUpperCase() + '%');
+    }
+
     const ultimas  = await pool.query(
-      `SELECT TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha, comisaria, unidad, nombres, completada
+      `SELECT id, cip, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha, comisaria, unidad, nombres, completada,
+              FALSE AS solo_progreso
        FROM evaluaciones ${whereAdmin} ORDER BY fecha DESC LIMIT 10`, params);
+
+    const ultimasProgR = await pool.query(
+      `SELECT NULL::int AS id, p.cip, TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha,
+              p.comisaria, p.unidad, p.nombres, FALSE AS completada, TRUE AS solo_progreso
+       FROM progresos p ${progWhere}
+       ORDER BY p.actualizado DESC LIMIT 10`,
+      progParams
+    );
+
+    const ultimasMerged = ultimas.rows.concat(ultimasProgR.rows)
+      .sort(function(a, b) {
+        const fa = (a.fecha || '').split(/[/ :]/).reverse().join('');
+        const fb = (b.fecha || '').split(/[/ :]/).reverse().join('');
+        return fb.localeCompare(fa);
+      })
+      .slice(0, 10);
 
     const porDivision = await pool.query(
       `SELECT d.nombre, d.orden, COUNT(e.id)::int AS total
@@ -930,16 +1048,6 @@ app.get('/stats', requireAuth, async (req, res) => {
        GROUP BY d.id, d.nombre, d.orden
        ORDER BY d.orden`, params.length ? [] : []);
 
-    let progWhere = 'WHERE (SELECT COUNT(*) FROM jsonb_object_keys(p.respuestas)) > 0 '
-      + 'AND NOT EXISTS ('
-      + 'SELECT 1 FROM evaluaciones e '
-      + 'WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(p.cip)) AND e.completada = TRUE'
-      + ')';
-    const progParams = [];
-    if (debeFiltrarPorUnidadAsignada(req.admin)) {
-      progWhere += ' AND (UPPER(p.unidad) LIKE $1 OR UPPER(p.comisaria) LIKE $1)';
-      progParams.push('%' + req.admin.unidad.toUpperCase() + '%');
-    }
     const enCursoR = await pool.query(
       `SELECT COUNT(*)::int AS t FROM progresos p ${progWhere}`, progParams
     );
@@ -952,7 +1060,7 @@ app.get('/stats', requireAuth, async (req, res) => {
       porComisaria:      porComis.rows,
       porUnidad:         porUnidad.rows,
       porDivision:       porDivision.rows,
-      ultimasEvaluaciones: ultimas.rows
+      ultimasEvaluaciones: ultimasMerged
     });
   } catch (e) {
     res.json({ ok: false, error: e.message });
@@ -1119,23 +1227,53 @@ app.get('/descargar', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /pdf/efectivo?id=N ─────────────────────────────────────────────────────
+// ── GET /pdf/efectivo?id=N | ?cip= ─────────────────────────────────────────────
 app.get('/pdf/efectivo', requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.query.id);
-    const r  = await pool.query(`SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha FROM evaluaciones WHERE id=$1`, [id]);
-    if (!r.rows.length) return res.status(404).json({ error: 'No encontrado' });
-    const ev  = r.rows[0];
-    if (debeFiltrarPorUnidadAsignada(req.admin) &&
-        !ev.unidad.toUpperCase().includes(req.admin.unidad.toUpperCase()))
-      return res.status(403).json({ error: 'Sin acceso' });
+    const id  = parseInt(req.query.id);
+    const cip = (req.query.cip || '').trim();
+    let ev = null;
 
-    // Obtener textos de preguntas desde BD
+    if (id) {
+      const r = await pool.query(
+        `SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha FROM evaluaciones WHERE id=$1`, [id]
+      );
+      if (!r.rows.length) return res.status(404).json({ error: 'No encontrado' });
+      ev = r.rows[0];
+      if (debeFiltrarPorUnidadAsignada(req.admin)) {
+        const u = (req.admin.unidad || '').toUpperCase();
+        const uni = (ev.unidad || '').toUpperCase();
+        const com = (ev.comisaria || '').toUpperCase();
+        if (!uni.includes(u) && !com.includes(u)) return res.status(403).json({ error: 'Sin acceso' });
+      }
+    } else if (cip) {
+      ev = await obtenerProgresoParaPDF(cip, req.admin);
+      if (!ev) {
+        const r = await pool.query(
+          `SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha
+           FROM evaluaciones WHERE UPPER(TRIM(cip))=UPPER(TRIM($1))
+           ORDER BY fecha DESC LIMIT 1`,
+          [cip]
+        );
+        if (!r.rows.length) return res.status(404).json({ error: 'No encontrado' });
+        ev = r.rows[0];
+        if (debeFiltrarPorUnidadAsignada(req.admin)) {
+          const u = (req.admin.unidad || '').toUpperCase();
+          const uni = (ev.unidad || '').toUpperCase();
+          const com = (ev.comisaria || '').toUpperCase();
+          if (!uni.includes(u) && !com.includes(u)) return res.status(403).json({ error: 'Sin acceso' });
+        }
+      }
+    } else {
+      return res.status(400).json({ error: 'id o cip requerido' });
+    }
+
     const pregsR = await pool.query('SELECT numero AS id, texto FROM preguntas WHERE activa=TRUE ORDER BY orden,numero');
     const buf = await generarPDFIndividual(ev, pregsR.rows);
     const nom = (ev.nombres||'efectivo').replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+    const suf = ev.completada ? '' : '_avance';
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${nom}_CuestPsicologico.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${nom}_CuestPsicologico${suf}.pdf"`);
     res.send(buf);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -1153,11 +1291,17 @@ app.get('/pdf/grupo', requireAuth, async (req, res) => {
     const { where, params } = await buildWhere(req.query, 'WHERE 1=1', []);
     const r = await pool.query(
       `SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha FROM evaluaciones ${where} ORDER BY comisaria,nombres`, params);
-    if (!r.rows.length) return res.status(404).json({ error: 'Sin evaluaciones para este filtro' });
+
+    const cipsEval = new Set(r.rows.map(function(row) { return (row.cip || '').toUpperCase(); }));
+    const progresos = await consultarProgresosParaPDFGrupo(req.admin, req.query);
+    const merged = r.rows.concat(
+      progresos.filter(function(p) { return !cipsEval.has((p.cip || '').toUpperCase()); })
+    );
+    if (!merged.length) return res.status(404).json({ error: 'Sin evaluaciones para este filtro' });
 
     const pregsR = await pool.query('SELECT numero AS id, texto FROM preguntas WHERE activa=TRUE ORDER BY orden,numero');
     const label  = division || comisaria || unidad;
-    const buf    = await generarPDFComisaria(label, r.rows, pregsR.rows);
+    const buf    = await generarPDFComisaria(label, merged, pregsR.rows);
     const nom    = 'Cuestionario_' + label.replace(/\s+/g,'_') + '.pdf';
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${nom}"`);
