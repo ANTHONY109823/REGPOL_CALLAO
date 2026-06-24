@@ -420,9 +420,7 @@
       <div class="card">
         <h3><i class="fas fa-clipboard-list"></i> EVALUACIONES — TODAS LAS DEPENDENCIAS</h3>
         <p style="font-size:12px;color:#666;margin:-6px 0 12px;">Marque las dependencias habilitadas (DIVOPUS 1, 2, 3 y DIVUES).</p>
-        <div style="overflow-x:auto;max-height:560px;overflow-y:auto;margin-bottom:12px;">
-          <div id="cfg-unidades-list"></div>
-        </div>
+        <div id="cfg-unidades-list" style="margin-bottom:12px;"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
           <button class="btn btn-v" onclick="guardarActivacionUnidades()"><i class="fas fa-save"></i> Guardar activación</button>
           <button class="btn" style="background:#888;color:#fff;" onclick="marcarTodasUnidades(true)">Marcar todas</button>
@@ -1033,6 +1031,19 @@
   </div>
 </div>
 
+<!-- Modal vista previa PDF de unidad -->
+<div class="modal" id="modal-pdf-grupo">
+  <div class="modal-box" style="width:min(980px,96vw);max-height:94vh;display:flex;flex-direction:column;padding-bottom:12px;">
+    <h3 id="modal-pdf-grupo-titulo"><i class="fas fa-file-pdf"></i> PDF de unidad</h3>
+    <p id="pdf-grupo-loading" style="font-size:12px;color:#666;margin:-6px 0 10px;">Cargando vista previa...</p>
+    <iframe id="pdf-grupo-iframe" title="Vista previa PDF" style="flex:1;width:100%;min-height:68vh;border:1.5px solid #dde8e5;border-radius:8px;background:#f4f4f4;"></iframe>
+    <div class="modal-footer" style="margin-top:12px;">
+      <button class="btn" style="background:#999;color:#fff;" type="button" onclick="cerrarModalPdfGrupo()">Cerrar</button>
+      <a id="pdf-grupo-descargar" href="#" class="btn btn-r" style="display:none;text-decoration:none;" download><i class="fas fa-download"></i> Descargar PDF</a>
+    </div>
+  </div>
+</div>
+
 <!-- Modal vista previa resultado MMPI-2 -->
 <div class="modal" id="modal-resultado">
   <div class="modal-box" style="width:min(920px,96vw);max-height:92vh;overflow:auto;">
@@ -1049,7 +1060,7 @@
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=2"></script>
 <script src="portal.js?v=32"></script>
-<script src="divisiones-ui.js?v=2"></script>
+<script src="divisiones-ui.js?v=3"></script>
 <script src="panel-cms.js?v=12"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
@@ -1225,10 +1236,59 @@ function onFiltroRespuestasChange() {
   else vaciarTablaRespuestas();
 }
 
+var _pdfGrupoBlobUrl = null;
+
+function cerrarModalPdfGrupo() {
+  var iframe = document.getElementById('pdf-grupo-iframe');
+  if (iframe) iframe.src = 'about:blank';
+  if (_pdfGrupoBlobUrl) {
+    URL.revokeObjectURL(_pdfGrupoBlobUrl);
+    _pdfGrupoBlobUrl = null;
+  }
+  cerrarModal('modal-pdf-grupo');
+}
+
 function verPdfUnidadRespuestas() {
   var u = val('f-uni');
   if (!u) { alert('Seleccione una unidad en el filtro.'); return; }
-  window.open(API + '/pdf/grupo?unidad=' + encodeURIComponent(u) + '&token=' + encodeURIComponent(TOKEN), '_blank');
+
+  var modal = document.getElementById('modal-pdf-grupo');
+  var iframe = document.getElementById('pdf-grupo-iframe');
+  var titulo = document.getElementById('modal-pdf-grupo-titulo');
+  var loading = document.getElementById('pdf-grupo-loading');
+  var btnDl = document.getElementById('pdf-grupo-descargar');
+
+  if (titulo) titulo.innerHTML = '<i class="fas fa-file-pdf"></i> ' + escHtml(u);
+  if (iframe) iframe.src = 'about:blank';
+  if (loading) { loading.style.display = ''; loading.textContent = 'Cargando vista previa...'; }
+  if (btnDl) { btnDl.style.display = 'none'; btnDl.removeAttribute('href'); }
+  if (_pdfGrupoBlobUrl) { URL.revokeObjectURL(_pdfGrupoBlobUrl); _pdfGrupoBlobUrl = null; }
+  if (modal) modal.classList.add('open');
+
+  fetch(API + '/pdf/grupo?unidad=' + encodeURIComponent(u) + '&inline=1', { headers: hdr() })
+    .then(function(r) {
+      if (!r.ok) {
+        return r.json().catch(function() { return {}; }).then(function(j) {
+          throw new Error((j && j.error) || 'No hay evaluaciones para esta unidad.');
+        });
+      }
+      return r.blob();
+    })
+    .then(function(blob) {
+      if (loading) loading.style.display = 'none';
+      _pdfGrupoBlobUrl = URL.createObjectURL(blob);
+      if (iframe) iframe.src = _pdfGrupoBlobUrl;
+      if (btnDl) {
+        btnDl.href = _pdfGrupoBlobUrl;
+        btnDl.download = 'Cuestionario_' + u.replace(/\s+/g, '_') + '.pdf';
+        btnDl.style.display = '';
+      }
+    })
+    .catch(function(e) {
+      if (loading) loading.textContent = '';
+      alert(e.message || 'No se pudo cargar el PDF.');
+      cerrarModalPdfGrupo();
+    });
 }
 
 function eliminarRegistroEval(id, cip, soloProgreso, nombre) {

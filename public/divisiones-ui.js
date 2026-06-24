@@ -1,5 +1,25 @@
 /* divisiones-ui.js — UI compartida: 4 divisiones REGPOL Callao */
 
+(function injectDivisionesUiStyles() {
+  if (document.getElementById('divisiones-ui-styles')) return;
+  var s = document.createElement('style');
+  s.id = 'divisiones-ui-styles';
+  s.textContent = [
+    '.uni-grid-activacion{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:start;}',
+    '@media(max-width:1200px){.uni-grid-activacion{grid-template-columns:repeat(2,minmax(0,1fr));}}',
+    '@media(max-width:640px){.uni-grid-activacion{grid-template-columns:1fr;}}',
+    '.uni-div-col{border:1.5px solid #c8e6c9;border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 1px 4px rgba(0,77,61,.06);}',
+    '.uni-div-head{background:#004d3d;color:#fff;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.35px;padding:7px 9px;line-height:1.3;}',
+    '.uni-div-head small{font-weight:500;opacity:.85;text-transform:none;}',
+    '.uni-div-list{padding:6px 8px 8px;display:flex;flex-direction:column;gap:1px;max-height:none;}',
+    '.uni-chk-item{display:flex;align-items:flex-start;gap:7px;font-size:11px;padding:4px 5px;border-radius:5px;cursor:pointer;line-height:1.3;}',
+    '.uni-chk-item:hover{background:#f0f8f4;}',
+    '.uni-chk-item input{margin-top:2px;flex-shrink:0;}',
+    '.uni-chk-item span{flex:1;min-width:0;}'
+  ].join('');
+  document.head.appendChild(s);
+})();
+
 function normalizarNombreUnidad(n) {
   return String(n || '').trim().toUpperCase();
 }
@@ -22,37 +42,28 @@ function renderCheckboxesPorDivision(contId, divisiones, activas, chkClass) {
     return;
   }
 
-  var filas = [];
-  divisiones.forEach(function(div) {
+  var cols = divisiones.map(function(div) {
     var units = div.unidades || [];
-    filas.push(
-      '<tr class="fila-division">'
-        + '<td colspan="3" style="background:#004d3d;color:#fff;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.35px;">'
-        + '<i class="fas fa-sitemap" style="margin-right:6px;"></i>' + escHtmlDiv(div.nombre)
-        + ' <span style="font-weight:500;opacity:.85;">(' + units.length + ' unidades)</span></td>'
-      + '</tr>'
-    );
-    units.forEach(function(u) {
+    var items = units.map(function(u) {
       var nom = typeof u === 'string' ? u : (u.nombre || '');
-      if (!nom) return;
+      if (!nom) return '';
       var isOn = activas && activas.length
         ? activas.some(function(a) { return normalizarNombreUnidad(a) === normalizarNombreUnidad(nom); })
         : false;
-      filas.push(
-        '<tr>'
-          + '<td style="width:28%;font-size:11px;color:#666;">' + escHtmlDiv(div.nombre) + '</td>'
-          + '<td><strong>' + escHtmlDiv(nom) + '</strong></td>'
-          + '<td style="text-align:center;width:90px;">'
-            + '<input type="checkbox" class="' + chkClass + '" value="' + escHtmlDiv(nom) + '"' + (isOn ? ' checked' : '') + ' title="Activar evaluación">'
-          + '</td>'
-        + '</tr>'
-      );
-    });
+      return '<label class="uni-chk-item">'
+        + '<input type="checkbox" class="' + chkClass + '" value="' + escHtmlDiv(nom) + '"' + (isOn ? ' checked' : '') + ' title="Activar evaluación">'
+        + '<span>' + escHtmlDiv(nom) + '</span>'
+        + '</label>';
+    }).filter(Boolean).join('');
+
+    return '<div class="uni-div-col">'
+      + '<div class="uni-div-head"><i class="fas fa-sitemap" style="margin-right:5px;"></i>'
+      + escHtmlDiv(div.nombre) + ' <small>(' + units.length + ')</small></div>'
+      + '<div class="uni-div-list">' + (items || '<span style="font-size:11px;color:#999;padding:4px;">Sin unidades</span>') + '</div>'
+      + '</div>';
   });
 
-  cont.innerHTML = '<table class="t" style="margin:0;">'
-    + '<thead><tr><th>División</th><th>Dependencia</th><th style="text-align:center;width:90px;">Activa</th></tr></thead>'
-    + '<tbody>' + filas.join('') + '</tbody></table>';
+  cont.innerHTML = '<div class="uni-grid-activacion">' + cols.join('') + '</div>';
 }
 
 function escHtmlDiv(s) {

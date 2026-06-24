@@ -1934,8 +1934,9 @@ app.get('/pdf/grupo', requireAuth, async (req, res) => {
     const label  = division || comisaria || unidad;
     const buf    = await generarPDFComisaria(label, merged, pregsR.rows);
     const nom    = 'Cuestionario_' + label.replace(/\s+/g,'_') + '.pdf';
+    const inline = req.query.inline === '1' || req.query.ver === '1';
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${nom}"`);
+    res.setHeader('Content-Disposition', (inline ? 'inline' : 'attachment') + `; filename="${nom}"`);
     res.send(buf);
   } catch (e) {
     res.status(500).json({ error: e.message });

@@ -115,7 +115,7 @@
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=2"></script>
 <script src="portal.js?v=28"></script>
-<script src="divisiones-ui.js?v=1"></script>
+<script src="divisiones-ui.js?v=3"></script>
 <script src="panel-cms.js?v=11"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
@@ -369,7 +369,7 @@ function renderTabEvaluaciones() {
   return '<div class="card">'
     +'<h3><i class="fas fa-building"></i> Activar dependencias para evaluaciones</h3>'
     +'<p style="font-size:12px;color:#666;margin-bottom:10px;">Marque las dependencias habilitadas por división (DIVOPUS 1, 2, 3 y DIVUES).</p>'
-    +'<div id="u-cfg-unidades-list" style="max-height:480px;overflow-y:auto;border:1.5px solid #c8e6c9;border-radius:8px;padding:12px;display:grid;gap:14px;background:#f8fcf8;margin-bottom:10px;"></div>'
+    +'<div id="u-cfg-unidades-list" style="margin-bottom:10px;"></div>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">'
     +'<button class="btn btn-v" onclick="guardarActivacionUsuario()"><i class="fas fa-save"></i> Guardar activación</button>'
     +'<button class="btn" style="background:#888;color:#fff;" onclick="marcarTodasUsuario(true)">Marcar todas</button>'
