@@ -517,7 +517,7 @@
         <!-- TAB: Buscar persona -->
         <div id="dtab-persona" style="display:none;">
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-            <input id="bus-cip"  type="text" placeholder="CIP..." style="padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;width:150px;"/>
+            <input id="bus-cip"  type="text" placeholder="CIP o DNI..." style="padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;width:150px;"/>
             <input id="bus-nom"  type="text" placeholder="Nombres..." style="padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;flex:1;min-width:180px;"/>
             <button class="btn btn-v" onclick="buscarPersona()"><i class="fas fa-search"></i> Buscar</button>
           </div>
@@ -1645,6 +1645,12 @@ function vistaPreviaDescarga(filtro, selId, prefijo) {
   ]).then(function(results) {
     var d = results[0], av = results[1];
     if (!body) return;
+    if (!d.ok && !av.ok) {
+      body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#c0392b;padding:14px;">Error al cargar: '
+        + escHtml((d.error || av.error || 'sin detalle')) + '</td></tr>';
+      if (info) info.textContent = 'Error';
+      return;
+    }
     var filas = [], cipsListos = {};
     (d.ok ? d.rows : []).forEach(function(r) {
       cipsListos[(r.cip || '').toLowerCase()] = true;
@@ -1727,7 +1733,7 @@ function cargarAvancesDescarga(){
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d.ok){
-        body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#c0392b;padding:14px;">Error al cargar avances.</td></tr>';
+        body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#c0392b;padding:14px;">Error al cargar avances: '+escHtml(d.error||'sin detalle')+'</td></tr>';
         return;
       }
       var rows = d.rows || [];
@@ -1789,7 +1795,7 @@ function buscarPersona(){
     fetch(API+'/admin/registro-cip?cip='+encodeURIComponent(cip),{headers:hdr()})
       .then(function(r){return r.json();})
       .then(function(d){
-        if(!d.ok){tbody.innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error al buscar.</td></tr>';return;}
+        if(!d.ok){tbody.innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error al buscar: '+escHtml(d.error||'sin detalle')+'</td></tr>';return;}
         var filas = [];
         if(d.diagnostico){
           filas.push('<tr><td colspan="7" style="background:#fff8e1;padding:10px;font-size:12px;color:#7a5c00;"><strong>Diagnóstico:</strong> '+escHtml(d.diagnostico)+'</td></tr>');
@@ -1813,13 +1819,16 @@ function buscarPersona(){
           return;
         }
         tbody.innerHTML = filas.join('');
+      })
+      .catch(function(){
+        tbody.innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error de conexión al buscar.</td></tr>';
       });
     return;
   }
 
   var q = 'busqueda='+encodeURIComponent(nom);
   fetch(API+'/evaluaciones?'+q+'&pagina=1',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
-    if(!d.ok){tbody.innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error al buscar.</td></tr>';return;}
+    if(!d.ok){tbody.innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error al buscar: '+escHtml(d.error||'')+'</td></tr>';return;}
     if(!d.rows.length){tbody.innerHTML='<tr><td colspan="7" style="color:#bbb;padding:12px;text-align:center;">Sin resultados.</td></tr>';return;}
     tbody.innerHTML = d.rows.map(function(r){
       var total=parseInt(r.total_resp,10)||0;
@@ -1832,6 +1841,8 @@ function buscarPersona(){
         +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+r.fecha+'</td>'
         +'<td>'+badge+'</td><td>'+pdf+'</td></tr>';
     }).join('');
+  }).catch(function(){
+    tbody.innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error de conexión al buscar.</td></tr>';
   });
 }
 

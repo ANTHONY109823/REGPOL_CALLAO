@@ -526,6 +526,16 @@ function debeFiltrarPorUnidadAsignada(admin) {
   return !normalizarPermisos(admin.permisos).includes('evaluaciones');
 }
 
+// Conteo seguro de respuestas JSONB (evita error si el valor no es objeto)
+function sqlContarRespuestas(col) {
+  return `(CASE WHEN ${col} IS NOT NULL AND jsonb_typeof(${col}) = 'object'
+    THEN (SELECT COUNT(*)::int FROM jsonb_object_keys(${col})) ELSE 0 END)`;
+}
+
+function sqlTieneRespuestas(col) {
+  return `${sqlContarRespuestas(col)} > 0`;
+}
+
 async function leerUnidadesActivas() {
   let unidades = [];
   const raw = await getConfig('unidades_activas');
@@ -784,7 +794,7 @@ app.get('/admin/avances', requireAuth, async (req, res) => {
     if (!comisaria && !unidad) {
       return res.json({ ok: false, error: 'comisaria o unidad requerido' });
     }
-    let where = `WHERE (SELECT COUNT(*) FROM jsonb_object_keys(respuestas)) > 0
+    let where = `WHERE ${sqlTieneRespuestas('respuestas')}
       AND NOT EXISTS (
         SELECT 1 FROM evaluaciones e
         WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(progresos.cip)) AND e.completada = TRUE
@@ -799,7 +809,7 @@ app.get('/admin/avances', requireAuth, async (req, res) => {
     }
     const r = await pool.query(
       `SELECT cip, nombres, comisaria, unidad, bloque_max AS bloque,
-              (SELECT COUNT(*)::int FROM jsonb_object_keys(respuestas)) AS total,
+              ${sqlContarRespuestas('respuestas')} AS total,
               TO_CHAR(actualizado,'DD/MM/YYYY HH24:MI') AS ultima
        FROM progresos ${where} ORDER BY actualizado DESC`,
       params
@@ -844,7 +854,7 @@ function mapearProgresoParaPDF(p) {
 async function obtenerProgresoParaPDF(cip, admin) {
   const r = await pool.query(
     `SELECT p.*, TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha,
-            (SELECT COUNT(*)::int FROM jsonb_object_keys(p.respuestas)) AS total_resp
+            ${sqlContarRespuestas('p.respuestas')} AS total_resp
      FROM progresos p
      WHERE UPPER(TRIM(p.cip))=UPPER(TRIM($1)) OR LOWER(TRIM(p.clave))=LOWER(TRIM($1))
      LIMIT 1`,
@@ -863,7 +873,7 @@ async function obtenerProgresoParaPDF(cip, admin) {
 }
 
 async function consultarProgresosFiltrados(admin, query) {
-  let where = `WHERE (SELECT COUNT(*) FROM jsonb_object_keys(p.respuestas)) > 0
+  let where = `WHERE ${sqlTieneRespuestas('p.respuestas')}
     AND NOT EXISTS (
       SELECT 1 FROM evaluaciones e
       WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(p.cip)) AND e.completada = TRUE
@@ -917,7 +927,7 @@ async function consultarProgresosPendientes(admin, query) {
   const r = await pool.query(
     `SELECT NULL::INTEGER AS id, p.cip, p.nombres, '' AS dni, p.comisaria, p.unidad,
             p.bloque_max, NULL::SMALLINT AS edad,
-            (SELECT COUNT(*) FROM jsonb_object_keys(p.respuestas)) AS total_resp,
+            ${sqlContarRespuestas('p.respuestas')} AS total_resp,
             FALSE AS completada, TRUE AS solo_progreso,
             TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha
      FROM progresos p ${where}
@@ -931,7 +941,7 @@ async function consultarProgresosParaPDFGrupo(admin, query) {
   const { where, params } = await consultarProgresosFiltrados(admin, query);
   const r = await pool.query(
     `SELECT p.*, TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha,
-            (SELECT COUNT(*)::int FROM jsonb_object_keys(p.respuestas)) AS total_resp
+            ${sqlContarRespuestas('p.respuestas')} AS total_resp
      FROM progresos p ${where}
      ORDER BY p.comisaria, p.nombres`,
     params
@@ -958,13 +968,15 @@ app.get('/admin/registro-cip', requireAuth, async (req, res) => {
     const evalR = await pool.query(
       `SELECT id, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha, comisaria, unidad, nombres, cip, dni,
               completada, bloque_max,
-              (SELECT COUNT(*) FROM jsonb_object_keys(respuestas)) AS total_resp
-       FROM evaluaciones WHERE UPPER(TRIM(cip))=UPPER(TRIM($1)) ORDER BY fecha DESC`,
+              ${sqlContarRespuestas('respuestas')} AS total_resp
+       FROM evaluaciones
+       WHERE UPPER(TRIM(cip))=UPPER(TRIM($1)) OR TRIM(dni)=TRIM($1)
+       ORDER BY fecha DESC`,
       [cip]
     );
     const progR = await pool.query(
       `SELECT cip, nombres, comisaria, unidad, bloque_max,
-              (SELECT COUNT(*) FROM jsonb_object_keys(respuestas)) AS total_resp,
+              ${sqlContarRespuestas('respuestas')} AS total_resp,
               TO_CHAR(actualizado,'DD/MM/YYYY HH24:MI') AS fecha
        FROM progresos WHERE UPPER(TRIM(cip))=UPPER(TRIM($1)) OR LOWER(TRIM(clave))=LOWER(TRIM($1))`,
       [cip]
@@ -995,7 +1007,7 @@ app.get('/stats', requireAuth, async (req, res) => {
     let whereAdmin = '';
     const params = [];
     if (debeFiltrarPorUnidadAsignada(req.admin)) {
-      whereAdmin = 'WHERE UPPER(unidad) LIKE $1';
+      whereAdmin = 'WHERE (UPPER(unidad) LIKE $1 OR UPPER(comisaria) LIKE $1)';
       params.push('%' + req.admin.unidad.toUpperCase() + '%');
     }
     const total    = await pool.query(`SELECT COUNT(*) AS t FROM evaluaciones ${whereAdmin}`, params);
@@ -1005,7 +1017,7 @@ app.get('/stats', requireAuth, async (req, res) => {
     const porUnidad= await pool.query(
       `SELECT unidad AS nombre, COUNT(*) AS total FROM evaluaciones ${whereAdmin} GROUP BY unidad ORDER BY unidad`, params);
 
-    let progWhere = 'WHERE (SELECT COUNT(*) FROM jsonb_object_keys(p.respuestas)) > 0 '
+    let progWhere = `WHERE ${sqlTieneRespuestas('p.respuestas')} `
       + 'AND NOT EXISTS ('
       + 'SELECT 1 FROM evaluaciones e '
       + 'WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(p.cip)) AND e.completada = TRUE'
@@ -1111,7 +1123,7 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
 
     let baseWhere = 'WHERE 1=1', baseParams = [];
     if (debeFiltrarPorUnidadAsignada(req.admin)) {
-      baseWhere += ' AND UPPER(unidad) LIKE $1';
+      baseWhere += ' AND (UPPER(unidad) LIKE $1 OR UPPER(comisaria) LIKE $1)';
       baseParams.push('%' + req.admin.unidad.toUpperCase() + '%');
     }
     const { where, params, pi } = await buildWhere(req.query, baseWhere, baseParams);
@@ -1123,7 +1135,7 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
     const rows = await pool.query(
       `SELECT id, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha, comisaria, unidad,
               nombres, cip, dni, edad, completada, bloque_max,
-              (SELECT COUNT(*) FROM jsonb_object_keys(respuestas)) AS total_resp,
+              ${sqlContarRespuestas('respuestas')} AS total_resp,
               FALSE AS solo_progreso
        FROM evaluaciones ${where} ORDER BY fecha DESC LIMIT $${pi} OFFSET $${pi+1}`,
       [...params, porPagina, offset]
@@ -1132,7 +1144,11 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
     // Incluir progresos no enviados (misma búsqueda / filtros)
     let progresosRows = [];
     if (pagina === 1 || (req.query.busqueda || '').trim()) {
-      progresosRows = await consultarProgresosPendientes(req.admin, req.query);
+      try {
+        progresosRows = await consultarProgresosPendientes(req.admin, req.query);
+      } catch (progErr) {
+        console.error('Error consultando progresos:', progErr.message);
+      }
     }
 
     const cipsEval = new Set(rows.rows.map(function(r) { return (r.cip || '').toUpperCase(); }));
@@ -1186,7 +1202,7 @@ app.get('/descargar', requireAuth, async (req, res) => {
   try {
     let baseWhere = 'WHERE 1=1', baseParams = [];
     if (debeFiltrarPorUnidadAsignada(req.admin)) {
-      baseWhere += ' AND UPPER(unidad) LIKE $1';
+      baseWhere += ' AND (UPPER(unidad) LIKE $1 OR UPPER(comisaria) LIKE $1)';
       baseParams.push('%' + req.admin.unidad.toUpperCase() + '%');
     }
     const { where, params } = await buildWhere(req.query, baseWhere, baseParams);
