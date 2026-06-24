@@ -63,7 +63,7 @@
 .card-body-eval { padding: 28px 22px; }
 
 .seccion-bloqueada { display: none !important; }
-.card-registro-bloqueado .form-grid input,
+.card-registro-bloqueado .form-grid input:not([type="file"]),
 .card-registro-bloqueado .form-grid select { background: #f0f4f2; pointer-events: none; opacity: .92; }
 
 .registro-intro {
@@ -168,7 +168,28 @@
   align-items: center;
   justify-content: center;
 }
-.campo-foto.invalido input[type="file"] { border-color: var(--error); }
+.campo-foto.invalido input[type="file"],
+.campo-foto.invalido .btn-seleccionar-foto { border-color: var(--error); }
+.campo-foto.invalido .msg-error,
+.campo-foto.invalido #msg-foto { display: block; }
+.btn-seleccionar-foto {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border: 1.5px dashed var(--verde-pnp);
+  border-radius: 7px;
+  background: var(--fondo-suave);
+  color: var(--verde-pnp);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-seleccionar-foto:hover { background: #e4f0eb; }
+.foto-nombre-archivo { font-size: 12px; color: var(--texto-muted); flex: 1; min-width: 140px; }
+.foto-nombre-archivo.ok { color: var(--exito); font-weight: 600; }
+.campo-foto input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
 
 /* PROGRESO */
 .progreso-wrap { margin: 22px 0 10px; }

@@ -4,8 +4,15 @@
    Preguntas se cargan desde la API (PostgreSQL)
 ================================================================ */
 
-var LOCAL_API = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
-  : ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://localhost:3000' : '');
+var LOCAL_API = (function() {
+  if (window.REGPOL_API_BASE) return window.REGPOL_API_BASE;
+  var h = location.hostname;
+  if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
+  if (h.indexOf('github.io') !== -1 || h.indexOf('github.com') !== -1) {
+    return 'https://regpolcallao-production.up.railway.app';
+  }
+  return '';
+})();
 
 var PREGUNTAS       = [];   // se llena desde /preguntas
 var TOTAL_PREGUNTAS = 0;
@@ -30,7 +37,11 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('f-nacimiento').addEventListener('input', formatearFechaNacimiento);
   document.getElementById('f-nacimiento').addEventListener('blur',  validarFechaNacimiento);
   var fotoInput = document.getElementById('f-foto');
+  var btnFoto = document.getElementById('btn-seleccionar-foto');
   if (fotoInput) fotoInput.addEventListener('change', manejarFotoSeleccionada);
+  if (btnFoto && fotoInput) {
+    btnFoto.addEventListener('click', function() { fotoInput.click(); });
+  }
   ['f-cip','f-dni'].forEach(function(id) {
     document.getElementById(id).addEventListener('input', function(e) {
       e.target.value = e.target.value.replace(/\D/g,'');
@@ -187,27 +198,107 @@ function obtenerEdadParaEnvio() {
   return nac ? obtenerEdad(nac) : 0;
 }
 
-function manejarFotoSeleccionada(e) {
-  var file = e.target.files && e.target.files[0];
-  if (!file) { FOTO_BASE64 = ''; actualizarPreviewFoto(''); return; }
-  if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
-    mostrarAlerta('Use una imagen JPG, PNG o WEBP.', 'error');
-    e.target.value = '';
-    return;
-  }
-  if (file.size > 2 * 1024 * 1024) {
-    mostrarAlerta('La foto no debe superar 2 MB.', 'error');
-    e.target.value = '';
+function esImagenPermitida(file) {
+  if (!file) return false;
+  var tipo = (file.type || '').toLowerCase();
+  if (/^image\/(jpeg|jpg|png|webp|pjpeg|x-png)$/i.test(tipo)) return true;
+  return /\.(jpe?g|png|webp)$/i.test(file.name || '');
+}
+
+function mostrarErrorFoto(msg) {
+  var campo = document.querySelector('.campo-foto');
+  var inp = document.getElementById('f-foto');
+  var msgEl = document.getElementById('msg-foto');
+  if (campo) campo.classList.add('invalido');
+  if (inp) inp.classList.add('invalido');
+  if (msgEl) msgEl.textContent = msg;
+  mostrarAlerta(msg, 'error');
+}
+
+function limpiarErrorFoto() {
+  var campo = document.querySelector('.campo-foto');
+  var inp = document.getElementById('f-foto');
+  var msgEl = document.getElementById('msg-foto');
+  if (campo) campo.classList.remove('invalido');
+  if (inp) inp.classList.remove('invalido');
+  if (msgEl) msgEl.textContent = 'Suba una foto (JPG, PNG o WEBP, máx. 2 MB).';
+}
+
+function comprimirImagenFoto(file, callback) {
+  if (!window.FileReader || !window.Image) {
+    var readerSimple = new FileReader();
+    readerSimple.onload = function(ev) { callback(ev.target.result); };
+    readerSimple.onerror = function() { callback(null); };
+    readerSimple.readAsDataURL(file);
     return;
   }
   var reader = new FileReader();
   reader.onload = function(ev) {
-    FOTO_BASE64 = ev.target.result;
-    actualizarPreviewFoto(FOTO_BASE64);
-    var campo = document.getElementById('f-foto').closest('.campo');
-    if (campo) campo.classList.remove('invalido');
+    var img = new Image();
+    img.onload = function() {
+      var maxW = 1200, maxH = 1600;
+      var w = img.width, h = img.height;
+      var scale = Math.min(1, maxW / w, maxH / h);
+      var cw = Math.max(1, Math.round(w * scale));
+      var ch = Math.max(1, Math.round(h * scale));
+      var canvas = document.createElement('canvas');
+      canvas.width = cw;
+      canvas.height = ch;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, cw, ch);
+      try {
+        callback(canvas.toDataURL('image/jpeg', 0.88));
+      } catch (e) {
+        callback(ev.target.result);
+      }
+    };
+    img.onerror = function() { callback(ev.target.result); };
+    img.src = ev.target.result;
   };
+  reader.onerror = function() { callback(null); };
   reader.readAsDataURL(file);
+}
+
+function manejarFotoSeleccionada(e) {
+  var file = e.target.files && e.target.files[0];
+  var nombreEl = document.getElementById('foto-nombre');
+  if (!file) {
+    FOTO_BASE64 = '';
+    actualizarPreviewFoto('');
+    if (nombreEl) { nombreEl.textContent = 'Ningún archivo seleccionado'; nombreEl.classList.remove('ok'); }
+    return;
+  }
+  if (!esImagenPermitida(file)) {
+    mostrarErrorFoto('Use una imagen JPG, PNG o WEBP.');
+    e.target.value = '';
+    if (nombreEl) { nombreEl.textContent = 'Ningún archivo seleccionado'; nombreEl.classList.remove('ok'); }
+    return;
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    mostrarErrorFoto('La foto es demasiado grande. Elija una imagen menor a 8 MB.');
+    e.target.value = '';
+    return;
+  }
+  if (nombreEl) { nombreEl.textContent = 'Procesando: ' + file.name + '...'; nombreEl.classList.remove('ok'); }
+  comprimirImagenFoto(file, function(dataUrl) {
+    if (!dataUrl) {
+      mostrarErrorFoto('No se pudo leer la imagen. Intente con otro archivo JPG o PNG.');
+      e.target.value = '';
+      if (nombreEl) { nombreEl.textContent = 'Ningún archivo seleccionado'; nombreEl.classList.remove('ok'); }
+      return;
+    }
+    if (dataUrl.length > 2.8 * 1024 * 1024) {
+      mostrarErrorFoto('La foto comprimida sigue siendo muy grande. Use una imagen más pequeña.');
+      e.target.value = '';
+      if (nombreEl) { nombreEl.textContent = 'Ningún archivo seleccionado'; nombreEl.classList.remove('ok'); }
+      return;
+    }
+    FOTO_BASE64 = dataUrl;
+    actualizarPreviewFoto(FOTO_BASE64);
+    limpiarErrorFoto();
+    ocultarAlerta();
+    if (nombreEl) { nombreEl.textContent = file.name + ' — lista'; nombreEl.classList.add('ok'); }
+  });
 }
 
 function actualizarPreviewFoto(src) {
@@ -223,6 +314,9 @@ function quitarFoto() {
   var inp = document.getElementById('f-foto');
   if (inp) inp.value = '';
   actualizarPreviewFoto('');
+  limpiarErrorFoto();
+  var nombreEl = document.getElementById('foto-nombre');
+  if (nombreEl) { nombreEl.textContent = 'Ningún archivo seleccionado'; nombreEl.classList.remove('ok'); }
 }
 
 function parsearFechaDMY(str) {
@@ -269,10 +363,13 @@ function validarRegistro() {
     else el.classList.add('valido');
   });
   var campoFoto = document.querySelector('.campo-foto');
+  var inpFoto = document.getElementById('f-foto');
   if (campoFoto) campoFoto.classList.remove('invalido');
+  if (inpFoto) inpFoto.classList.remove('invalido');
   if (!FOTO_BASE64) {
     if (campoFoto) campoFoto.classList.add('invalido');
-    if (!err) err = 'Suba su fotografía.';
+    if (inpFoto) inpFoto.classList.add('invalido');
+    if (!err) err = 'Suba su fotografía (botón Seleccionar fotografía).';
   }
   return err;
 }

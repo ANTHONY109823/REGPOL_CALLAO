@@ -134,7 +134,11 @@
         <div class="campo campo-full campo-foto">
           <label for="f-foto">Fotografía del efectivo <span class="req">*</span></label>
           <div class="foto-carga-wrap">
-            <input type="file" id="f-foto" accept="image/jpeg,image/png,image/webp" />
+            <input type="file" id="f-foto" accept="image/jpeg,image/png,image/webp,image/*,.jpg,.jpeg,.png,.webp" />
+            <button type="button" class="btn-seleccionar-foto" id="btn-seleccionar-foto">
+              <i class="fas fa-camera"></i> Seleccionar fotografía
+            </button>
+            <span id="foto-nombre" class="foto-nombre-archivo">Ningún archivo seleccionado</span>
             <div id="foto-preview" class="foto-preview" style="display:none;">
               <img id="foto-preview-img" alt="Vista previa de la fotografía" />
               <button type="button" class="btn-quitar-foto" onclick="quitarFoto()" title="Quitar foto">
@@ -214,13 +218,14 @@
   <p>&copy; 2026 -- REGPOL Callao -- Policía Nacional del Perú &nbsp;|&nbsp; Desarrollado por <strong>Ing. Anthony Ccayo -- UNITIC</strong> &nbsp;|&nbsp; <a href="index.html">Volver al Portal</a></p>
 </footer>
 
+<script src="api-config.js?v=1"></script>
 <script src="portal-data.js?v=2"></script>
-<script src="portal.js?v=21"></script>
+<script src="portal.js?v=23"></script>
 <script>initPortalPagina({ activeNav: 'bienestar' });</script>
 <script src="comisarias.js?v=2"></script>
 <script src="divisiones-ui.js?v=1"></script>
 <script src="preguntas.js?v=1"></script>
-<script src="evaluacion.js?v=7"></script>
+<script src="evaluacion.js?v=8"></script>
 </body>
 </html>
 
