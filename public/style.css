@@ -284,7 +284,7 @@ img {
     max-width: 1200px;
 }
 
-/* --- 3. NAVEGACIÓN (altura fija, sin saltos) --- */
+/* --- 3. NAVEGACIÓN (fija al hacer scroll en página de inicio) --- */
 .nav-main {
     background: var(--verde-pnp);
     position: sticky;
@@ -295,6 +295,20 @@ img {
     height: auto;
     border-bottom: 2px solid rgba(243, 156, 18, 0.35);
     width: 100%;
+}
+
+.portal-home .nav-main.nav-is-fixed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+.nav-main-placeholder {
+    width: 100%;
+    height: 0;
+    flex-shrink: 0;
 }
 
 .nav-main .container {
@@ -1562,8 +1576,12 @@ table.t { min-width: 600px; }
   padding: 32px 0 48px;
 }
 
+#inicio.portal-viewport-wrap {
+  scroll-margin-top: 58px;
+}
+
 .portal-home-content .portal-seccion {
-  scroll-margin-top: 72px;
+  scroll-margin-top: 58px;
   background: #fff;
   border-radius: 16px;
   border: 1px solid #e5ece8;
