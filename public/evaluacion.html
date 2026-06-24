@@ -6,7 +6,7 @@
   <title>Bienestar - REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css?v=27" />
-  <link rel="stylesheet" href="evaluacion.css?v=6" />
+  <link rel="stylesheet" href="evaluacion.css?v=7" />
 </head>
 <body class="body-portal body-bienestar">
 
@@ -62,19 +62,18 @@
     <span id="texto-alerta-global">Complete todos los campos obligatorios.</span>
   </div>
 
-  <!-- CONTINUAR SOLO CON CIP (primero para quien ya guardó avance) -->
+  <!-- CONTINUAR SOLO CON CIP (compacto — no tapa el registro) -->
   <div class="card-eval card-continuar-cip" id="card-continuar-cip">
-    <div class="card-header-eval card-header-continuar">
-      <i class="fas fa-play-circle"></i>
-      <h2>¿Ya comenzó el cuestionario? Continúe con su CIP</h2>
-    </div>
-    <div class="card-body-eval">
-      <p class="registro-intro">Si guardó un bloque y salió, ingrese solo su <strong>CIP</strong> para retomar donde lo dejó. No necesita volver a llenar el registro.</p>
+    <div class="continuar-cip-compact">
+      <div class="continuar-cip-compact-titulo">
+        <i class="fas fa-play-circle"></i>
+        <span>¿Ya comenzó? Ingrese su <strong>CIP</strong> y continúe</span>
+      </div>
       <div class="continuar-cip-fila">
-        <input type="text" id="f-cip-continuar" placeholder="Ingrese su CIP" maxlength="20" autocomplete="off"
+        <input type="text" id="f-cip-continuar" placeholder="CIP" maxlength="20" autocomplete="off"
           onkeydown="if(event.key==='Enter'){event.preventDefault();continuarConCIP();}" />
-        <button type="button" class="btn-eval btn-verde" onclick="continuarConCIP()">
-          <i class="fas fa-play"></i> Continuar evaluación
+        <button type="button" class="btn-eval btn-verde btn-continuar-cip" onclick="continuarConCIP()">
+          <i class="fas fa-play"></i> Continuar
         </button>
       </div>
     </div>
