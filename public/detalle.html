@@ -64,6 +64,20 @@
     .inscripciones-cerradas{background:#fff3cd;border:1.5px solid #ffe082;border-radius:8px;padding:14px 18px;color:#856404;font-size:13.5px;font-weight:600;text-align:center;margin-top:8px;}
     #cuerpo-detalle{min-height:300px;}
     .loading-msg{text-align:center;padding:48px;color:#bbb;font-size:14px;}
+    /* Disponibilidad convenio */
+    .disp-box{grid-column:1/-1;background:#fff;border:1.5px solid #c8e6c9;border-radius:10px;padding:14px;}
+    .disp-box > label{font-size:13px;font-weight:800;color:#004d3d;display:block;margin-bottom:10px;}
+    .disp-opciones{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    @media(max-width:600px){.disp-opciones{grid-template-columns:1fr;}}
+    .disp-btn{border:2px solid #ccc;border-radius:10px;padding:14px 12px;background:#fff;cursor:pointer;text-align:left;transition:border-color .2s,background .2s;}
+    .disp-btn:hover{border-color:#004d3d;}
+    .disp-btn.sel{border-color:#004d3d;background:#f0f7f0;}
+    .disp-btn.sel-vac{border-color:#27ae60;background:#eafaf1;}
+    .disp-btn i{font-size:20px;margin-bottom:6px;display:block;}
+    .disp-btn strong{display:block;font-size:13px;color:#004d3d;margin-bottom:4px;}
+    .disp-btn span{font-size:11px;color:#666;line-height:1.4;display:block;}
+    .disp-btn.sel-vac strong{color:#1e8449;}
+    .disp-aviso{font-size:11.5px;color:#856404;background:#fff8e1;border-radius:6px;padding:8px 10px;margin-top:10px;line-height:1.45;}
   </style>
 </head>
 <body class="body-cursos">
@@ -134,7 +148,7 @@ function renderDetalle(item){
     : '<li><i class="fas fa-info-circle"></i> Sin requisitos especificados.</li>';
 
   var horarioHtml = '';
-  if(item.horario) horarioHtml += '<div class="info-item"><span>HORARIO:</span><p>'+escHtmlD(item.horario)+'</p></div>';
+  if(item.horario) horarioHtml += '<div class="info-item"><span>TURNOS / HORARIOS:</span><p>'+escHtmlD(item.horario)+'</p></div>';
   if(item.vacantes) horarioHtml += '<div class="info-item"><span>VACANTES:</span><p>'+escHtmlD(item.vacantes)+' efectivos</p></div>';
   if(item.lugar) horarioHtml += '<div class="info-item"><span>LUGAR:</span><p>'+escHtmlD(item.lugar)+'</p></div>';
 
@@ -235,12 +249,23 @@ function renderFormInscripcion(item){
         +'<option value="ESTADO">Estado (en actividad)</option>'
         +'<option value="PARTICULAR">Particular / Fuera de actividad</option>'
         +'</select></div>'
-        +'<div class="fi-group"><label>Disponibilidad para el servicio *</label>'
-        +'<select id="fi-disponibilidad" required onchange="toggleDiaFranco(this.value)">'
-        +'<option value="">— Seleccionar —</option>'
-        +'<option value="VACACIONES">VACACIONES (período de vacaciones)</option>'
-        +'<option value="FRANCO">FRANCO (trabaja en día de franco)</option>'
-        +'</select></div>'
+        +'<div class="disp-box fi-full">'
+        +'<label><i class="fas fa-calendar-check"></i> ¿Cuál es su situación para el servicio? *</label>'
+        +'<div class="disp-opciones">'
+        +'<button type="button" class="disp-btn disp-vac" id="btn-disp-vac" onclick="seleccionarDisp(\'VACACIONES\')">'
+        +'<i class="fas fa-umbrella-beach" style="color:#27ae60;"></i>'
+        +'<strong>ESTOY EN VACACIONES</strong>'
+        +'<span>Ocupa una vacante automáticamente. <strong>No participa</strong> en la rueda del sorteo.</span>'
+        +'</button>'
+        +'<button type="button" class="disp-btn disp-franco" id="btn-disp-franco" onclick="seleccionarDisp(\'FRANCO\')">'
+        +'<i class="fas fa-random" style="color:#2980b9;"></i>'
+        +'<strong>TRABAJO EN MI DÍA DE FRANCO</strong>'
+        +'<span>Entra a la rueda del sorteo público junto con los demás efectivos.</span>'
+        +'</button>'
+        +'</div>'
+        +'<input type="hidden" id="fi-disponibilidad" required/>'
+        +'<div class="disp-aviso" id="disp-aviso" style="display:none;"></div>'
+        +'</div>'
         +'<div class="fi-group" id="fi-dia-franco-box" style="display:none;">'
         +'<label>Día de franco *</label>'
         +'<select id="fi-dia-franco">'
@@ -290,6 +315,30 @@ function renderFormInscripcion(item){
     +'<button type="submit" class="btn-registro-grande"><i class="fas fa-paper-plane"></i> ENVIAR INSCRIPCIÓN</button>'
     +'</div>'
     +'</form>';
+}
+
+function seleccionarDisp(val){
+  var hid = document.getElementById('fi-disponibilidad');
+  if(hid) hid.value = val;
+  var btnVac = document.getElementById('btn-disp-vac');
+  var btnFranco = document.getElementById('btn-disp-franco');
+  var aviso = document.getElementById('disp-aviso');
+  if(btnVac) btnVac.className = 'disp-btn disp-vac'+(val==='VACACIONES'?' sel-vac':'');
+  if(btnFranco) btnFranco.className = 'disp-btn disp-franco'+(val==='FRANCO'?' sel':'');
+  if(aviso){
+    if(val==='VACACIONES'){
+      aviso.style.display='block';
+      aviso.innerHTML='<i class="fas fa-check-circle" style="color:#27ae60;"></i> '
+        +'Al estar en <strong>VACACIONES</strong>, si su inscripción es aprobada ocupará una vacante sin necesidad del sorteo en vivo.';
+    } else if(val==='FRANCO'){
+      aviso.style.display='block';
+      aviso.innerHTML='<i class="fas fa-info-circle" style="color:#2980b9;"></i> '
+        +'Participará en el <strong>sorteo público</strong> si su expediente es verificado y aprobado.';
+    } else {
+      aviso.style.display='none';
+    }
+  }
+  toggleDiaFranco(val);
 }
 
 function toggleDiaFranco(val){

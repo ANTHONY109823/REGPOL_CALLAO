@@ -1671,7 +1671,9 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
 // ── GET /admin/items/:id/candidatos — aprobados para la rueda de sorteo ────────
 app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
   try {
-    const cur = await pool.query('SELECT tipo,titulo,vacantes FROM items_portal WHERE id=$1', [req.params.id]);
+    const cur = await pool.query(
+      'SELECT tipo,titulo,vacantes,horario,duracion,lugar,fecha_inicio,descripcion FROM items_portal WHERE id=$1',
+      [req.params.id]);
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
