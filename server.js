@@ -97,6 +97,10 @@ async function initDB() {
       actualizado TIMESTAMP DEFAULT NOW()
     );
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS unidad VARCHAR(150);
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS bloque_max SMALLINT DEFAULT 0;
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS total_resp SMALLINT DEFAULT 0;
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS respuestas JSONB;
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS actualizado TIMESTAMP DEFAULT NOW();
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS cargo VARCHAR(80);
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS sexo VARCHAR(20);
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS armamento TEXT;
@@ -790,6 +794,9 @@ app.post('/progreso', async (req, res) => {
     const totalGuardar = Math.max(totalFinal, merged.total);
     const bloqueGuardar = merged.bloque_max;
     // Agregar columnas extra a progresos si no existen (BD antiguas)
+    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS bloque_max SMALLINT DEFAULT 0`).catch(()=>{});
+    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS total_resp SMALLINT DEFAULT 0`).catch(()=>{});
+    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS respuestas JSONB`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS unidad VARCHAR(150)`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS cargo VARCHAR(80)`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS sexo VARCHAR(20)`).catch(()=>{});

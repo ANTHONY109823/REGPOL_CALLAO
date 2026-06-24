@@ -267,7 +267,7 @@
         <div class="sb-group-body">
           <div class="sb-item" data-perm-evaluaciones data-page="evaluaciones" onclick="ir('evaluaciones',this)"><i class="fas fa-clipboard-list"></i> Evaluaciones MMPI-2</div>
           <div class="sb-item" data-perm-preguntas data-page="preguntas" onclick="ir('preguntas',this)"><i class="fas fa-question-circle"></i> Preguntas del test</div>
-          <div class="sb-item" data-perm-descargas data-page="descargas" onclick="ir('descargas',this)"><i class="fas fa-download"></i> Descargas PDF</div>
+          <div class="sb-item" data-perm-descargas data-page="descargas" onclick="ir('descargas',this)"><i class="fas fa-list-alt"></i> RESPUESTAS</div>
         </div>
       </div>
 
@@ -426,25 +426,6 @@
           </div>
           <p style="font-size:12px;margin-top:10px;color:#004d3d;font-weight:600;">Activas: <span id="cfg-activa">—</span></p>
         </div>
-        <div class="filtros">
-          <select id="f-div" onchange="onFiltroDivisionAdmin()"><option value="">Todas las divisiones</option></select>
-          <select id="f-uni" onchange="actualizarBotonesEliminarEval();cargarTabla(1)"><option value="">Todas las unidades</option></select>
-          <input  id="f-bus" type="text" placeholder="Nombre / CIP / DNI..." oninput="cargarTabla(1)"/>
-          <button class="btn btn-v" onclick="cargarTabla(1)"><i class="fas fa-sync"></i></button>
-          <button class="btn btn-r" id="btn-del-unidad" style="display:none;" onclick="eliminarEvaluacionesUnidad()" title="Eliminar registros del filtro seleccionado"><i class="fas fa-trash-alt"></i> Eliminar por unidad</button>
-          <button class="btn btn-r" id="btn-del-todos" style="display:none;" onclick="limpiarTodosRegistrosEval()" title="Solo Super Admin"><i class="fas fa-broom"></i> Limpiar todos</button>
-        </div>
-        <div class="tinfo" id="tabla-info"></div>
-        <div style="overflow-x:auto;">
-          <table class="t">
-            <thead><tr>
-              <th>Nombres</th><th>CIP</th><th>DNI</th><th>Dependencia</th>
-              <th>Fecha</th><th>Edad</th><th>Estado</th><th>PDF</th><th></th>
-            </tr></thead>
-            <tbody id="tabla-body"></tbody>
-          </table>
-        </div>
-        <div id="paginacion" style="margin-top:8px;"></div>
       </div>
     </div>
 
@@ -482,10 +463,33 @@
       </div>
     </div>
 
-    <!-- DESCARGAS -->
+    <!-- RESPUESTAS (listado + descargas PDF) -->
     <div id="page-descargas" class="page">
       <div class="card">
-        <h3><i class="fas fa-file-download"></i> Descargar reportes</h3>
+        <h3><i class="fas fa-list-alt"></i> RESPUESTAS</h3>
+        <div class="filtros">
+          <select id="f-div" onchange="onFiltroDivisionAdmin()"><option value="">Todas las divisiones</option></select>
+          <select id="f-uni" onchange="actualizarBotonesEliminarEval();cargarTabla(1)"><option value="">Todas las unidades</option></select>
+          <input  id="f-bus" type="text" placeholder="Nombre / CIP / DNI..." oninput="cargarTabla(1)"/>
+          <button class="btn btn-v" onclick="cargarTabla(1)"><i class="fas fa-sync"></i></button>
+          <button class="btn btn-r" id="btn-del-unidad" style="display:none;" onclick="eliminarEvaluacionesUnidad()" title="Eliminar registros del filtro seleccionado"><i class="fas fa-trash-alt"></i> Eliminar por unidad</button>
+          <button class="btn btn-r" id="btn-del-todos" style="display:none;" onclick="limpiarTodosRegistrosEval()" title="Solo Super Admin"><i class="fas fa-broom"></i> Limpiar todos</button>
+        </div>
+        <div class="tinfo" id="tabla-info"></div>
+        <div style="overflow-x:auto;">
+          <table class="t">
+            <thead><tr>
+              <th>Nombres</th><th>CIP</th><th>DNI</th><th>Dependencia</th>
+              <th>Fecha</th><th>Edad</th><th>Estado</th><th>PDF</th><th></th>
+            </tr></thead>
+            <tbody id="tabla-body"></tbody>
+          </table>
+        </div>
+        <div id="paginacion" style="margin-top:8px;"></div>
+
+        <hr style="margin:22px 0;border:none;border-top:2px solid #e0e8e0;"/>
+
+        <h3 style="font-size:15px;margin-bottom:10px;"><i class="fas fa-file-download"></i> Descargar reportes</h3>
 
         <!-- Tabs de descarga -->
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid #e0e8e0;padding-bottom:8px;">
@@ -1076,7 +1080,7 @@
       <div class="perm-box">
         <div class="pb-title">Psicología / Bienestar</div>
         <label><input type="checkbox" value="evaluaciones" class="perm-chk"> Evaluaciones MMPI-2</label>
-        <label><input type="checkbox" value="descargas" class="perm-chk"> Descargas PDF</label>
+        <label><input type="checkbox" value="descargas" class="perm-chk"> RESPUESTAS</label>
         <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Gestiona evaluaciones recibidas de personal. Las preguntas del test las edita Super Admin o quien tenga evaluaciones.</p>
       </div>
       <div class="perm-box">
@@ -1126,7 +1130,7 @@ var ITEMS_CACHE=[], ITEM_ACTIVO_ID=null;
 
 var ETIQUETAS_PERM={
   evaluaciones:'Evaluaciones MMPI-2',
-  descargas:'Descargas PDF',
+  descargas:'RESPUESTAS',
   cms_convenios:'Gestión Convenios',
   cms_cursos:'Gestión Cursos'
 };
@@ -1582,7 +1586,7 @@ var panelPaginasCargadas = {};
 function ir(page, el){
   if(page==='preguntas'&&!puedeVerPreguntas()){alert('Sin acceso. Las preguntas solo las gestiona Psicología/Bienestar o Super Admin.');return;}
   if(page==='evaluaciones'&&!puedeVerEvaluaciones()){alert('Sin acceso a evaluaciones.');return;}
-  if(page==='descargas'&&!puedeVerDescargas()){alert('Sin acceso a descargas.');return;}
+  if(page==='descargas'&&!puedeVerDescargas()){alert('Sin acceso a respuestas.');return;}
   if(page==='items'&&!puedeGestionConvenios()&&!puedeGestionCursos()){alert('Sin acceso a convocatorias.');return;}
   if(page==='sorteos'&&!puedeGestionConvenios()&&!puedeGestionCursos()){alert('Sin acceso a resultados publicados.');return;}
   if(page==='inscritos'&&!puedeGestionConvenios()&&!puedeGestionCursos()){alert('Sin acceso a inscripciones.');return;}
@@ -1596,13 +1600,15 @@ function ir(page, el){
   var ya = panelPaginasCargadas[page];
   if(page==='evaluaciones'){
     if(!ya) cargarConfigEvaluacion();
+  }
+  if(page==='preguntas' && !ya)    cargarPreguntas();
+  if(page==='usuarios' && !ya)     cargarUsuarios();
+  if(page==='descargas'){
+    if(!ya) cargarFiltrosDescarga();
     if(!ya) cargarFiltrosTabla();
     actualizarBotonesEliminarEval();
     cargarTabla(1);
   }
-  if(page==='preguntas' && !ya)    cargarPreguntas();
-  if(page==='usuarios' && !ya)     cargarUsuarios();
-  if(page==='descargas' && !ya)    cargarFiltrosDescarga();
   if(page==='dashboard')           cargarDashboard(!ya);
   if(page==='divisiones' && !ya)   cargarDivisiones();
   if(page==='items' && !ya)        { aplicarRestriccionFiltroItems(); cargarItems(); }
@@ -1674,7 +1680,7 @@ function cargarStatsSistema(){
       psico.innerHTML = sysModKpi('Evaluaciones registradas', r.evaluaciones_total || 0)
         + sysModKpi('Completas al 100%', r.evaluaciones_completas || 0)
         + sysModKpi('En curso (sin enviar)', r.evaluaciones_en_curso || 0)
-        + '<p style="margin:10px 0 0;font-size:11px;color:#666;">Gestión detallada en <strong>Evaluaciones MMPI-2</strong> y <strong>Descargas PDF</strong>.</p>';
+        + '<p style="margin:10px 0 0;font-size:11px;color:#666;">Gestión detallada en <strong>Evaluaciones MMPI-2</strong> y <strong>RESPUESTAS</strong>.</p>';
     }
     var conv = document.getElementById('sys-mod-convenios');
     if (conv) {
