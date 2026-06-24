@@ -198,6 +198,7 @@ function obtenerSiteDataSync() {
 
 function aplicarPortalConfig(config, data) {
   if (!data) return;
+  aplicarEncabezadoMarca(data);
   if (config.renderResena) renderResenaHistorica(data, config.renderResena);
   if (config.renderLabor) renderNuestraLabor(data, config.renderLabor);
   if (config.renderNovedades) renderNovedades(data, config.renderNovedades, config.limiteNovedades);
@@ -316,7 +317,7 @@ function initPortalScrollNav() {
 function initPortalNav(activeId) {
   if (activeId) portalActiveNavId = activeId;
   else activeId = portalActiveNavId;
-  aplicarEncabezadoMarca();
+  aplicarEncabezadoMarca(obtenerSiteDataSync());
   var ul = document.querySelector('.nav-main ul');
   if (!ul) return;
   var navItems = obtenerPortalNav();
@@ -352,13 +353,46 @@ function normalizarHeroTexto(heroT) {
   return { titulo: titulo, lema: lema, eslogan: eslogan };
 }
 
-function aplicarEncabezadoMarca() {
+function aplicarEncabezadoMarca(data) {
   document.querySelectorAll('.main-header .portal-eslogan').forEach(function(el) {
     el.textContent = PORTAL_MARCA.titulo;
   });
   document.querySelectorAll('.main-header .portal-subtitulo').forEach(function(el) {
     el.textContent = PORTAL_MARCA.subtitulo;
   });
+  if (data) renderFotosEncabezado(data);
+}
+
+var FOTOS_ENCABEZADO_DEFAULT = ['img/Imagen1.jpg', 'img/saludo.jpg', 'img/lunespatriotico.jpg'];
+
+function asegurarPanelFotosEncabezado() {
+  var flex = document.querySelector('.main-header .header-flex');
+  if (!flex) return null;
+  var panel = document.getElementById('header-fotos-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'header-fotos-panel';
+    panel.className = 'header-fotos-panel';
+    panel.setAttribute('aria-label', 'Galería institucional del encabezado');
+    flex.appendChild(panel);
+  }
+  return panel;
+}
+
+function renderFotosEncabezado(data) {
+  var panel = asegurarPanelFotosEncabezado();
+  if (!panel) return;
+  var fotos = (data && data.fotosEncabezado) ? data.fotosEncabezado.slice(0, 3) : [];
+  while (fotos.length < 3) fotos.push('');
+  var usarDefault = !fotos.some(function(f) { return !!(f && String(f).trim()); });
+  if (usarDefault) fotos = FOTOS_ENCABEZADO_DEFAULT.slice();
+  panel.innerHTML = fotos.map(function(src, i) {
+    var url = String(src || '').trim();
+    if (!url) {
+      return '<div class="header-foto-item header-foto-vacio"><i class="fas fa-image"></i></div>';
+    }
+    return '<div class="header-foto-item"><img src="' + escHtml(url) + '" alt="REGPOL Callao foto ' + (i + 1) + '" loading="lazy" decoding="async"/></div>';
+  }).join('');
 }
 
 function aplicarHeroMarca(heroT) {

@@ -28,6 +28,7 @@ function initCMS() {
   var iniciar = function(data) {
     cmsDataActual = data || {};
     if (!cmsDataActual.carrusel)  cmsDataActual.carrusel  = [];
+    if (!cmsDataActual.fotosEncabezado) cmsDataActual.fotosEncabezado = ['', '', ''];
     if (!cmsDataActual.novedades) cmsDataActual.novedades = [];
     if (!cmsDataActual.convenios) cmsDataActual.convenios = [];
     if (!cmsDataActual.cursos)    cmsDataActual.cursos    = [];
@@ -93,6 +94,7 @@ function renderListasCMS() {
   renderListaEditable('cms-lista-convenios', cmsDataActual.convenios || [], 'convenios');
   renderListaEditable('cms-lista-cursos',    cmsDataActual.cursos    || [], 'cursos');
   renderListaNovedades('cms-lista-novedades', cmsDataActual.novedades || []);
+  renderEditorFotosEncabezado();
   renderEditorCarrusel();
   renderEditorMenu();
 }
@@ -119,6 +121,60 @@ function getVal(id) {
 }
 function safeTextareaContent(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FOTOS ENCABEZADO (3 imágenes junto al logo)
+// ═══════════════════════════════════════════════════════════════
+function renderEditorFotosEncabezado() {
+  var el = document.getElementById('editor-fotos-encabezado');
+  if (!el) return;
+  if (!cmsDataActual.fotosEncabezado) cmsDataActual.fotosEncabezado = ['', '', ''];
+  var fotos = cmsDataActual.fotosEncabezado;
+  while (fotos.length < 3) fotos.push('');
+
+  var html = '<div style="background:#f0f7f4;border:1.5px dashed #c8a94a;border-radius:10px;padding:14px;margin-bottom:20px;">'
+    + '<strong style="color:#004d3d;font-size:13px;display:block;margin-bottom:6px;"><i class="fas fa-th-large"></i> Panel de 3 fotos del encabezado</strong>'
+    + '<p style="font-size:11px;color:#666;margin:0 0 12px;">Se muestran a la derecha del logo y título en la página principal. JPG/PNG, máx. 1.5 MB cada una.</p>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:12px;">';
+  for (var i = 0; i < 3; i++) {
+    html += renderSlotFotoEncabezado(i);
+  }
+  html += '</div>'
+    + '<button class="btn btn-v btn-sm" onclick="guardarFotosEncabezado()"><i class="fas fa-save"></i> Guardar fotos del encabezado</button>'
+    + '</div>';
+  el.innerHTML = html;
+
+  for (var j = 0; j < 3; j++) {
+    inicializarBannerImg('encabezado' + j, fotos[j] || '');
+  }
+}
+
+function renderSlotFotoEncabezado(idx) {
+  var sec = 'encabezado' + idx;
+  return '<div style="border:1.5px solid #e0e8e0;border-radius:8px;padding:10px;background:#fff;">'
+    + '<p style="font-size:11px;font-weight:700;color:#004d3d;margin:0 0 8px;">Foto ' + (idx + 1) + '</p>'
+    + '<input type="hidden" id="cms-' + sec + '-img-data" />'
+    + '<input type="file" id="cms-' + sec + '-img-file" accept="image/jpeg,image/png,image/webp" onchange="previewBannerImg(this,\'' + sec + '\')" style="font-size:10px;width:100%;margin-bottom:6px;"/>'
+    + '<input type="text" id="cms-' + sec + '-img-url" placeholder="URL de imagen (opcional)" class="cms-input" style="font-size:10px;margin-bottom:6px;" onchange="previewBannerUrl(this,\'' + sec + '\')"/>'
+    + '<div id="cms-' + sec + '-img-preview" style="display:none;margin-bottom:6px;">'
+    + '<img id="cms-' + sec + '-img-thumb" style="width:100%;height:80px;object-fit:cover;border-radius:6px;" alt=""/>'
+    + '</div>'
+    + '<button type="button" class="btn-mini btn-mini-danger" onclick="quitarBannerImg(\'' + sec + '\')"><i class="fas fa-trash"></i> Quitar</button>'
+    + '</div>';
+}
+
+function leerFotosEncabezado() {
+  var arr = [];
+  for (var i = 0; i < 3; i++) {
+    arr.push(leerBannerImg('encabezado' + i));
+  }
+  return arr;
+}
+
+function guardarFotosEncabezado() {
+  cmsDataActual.fotosEncabezado = leerFotosEncabezado();
+  guardarSitioWeb();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -594,6 +650,11 @@ function recolectarDatosCMS() {
   data.nuestraLabor.imagenBanner = leerBannerImg('labor');
   if (!data.nuestraLabor.pilares) data.nuestraLabor.pilares = (cmsDataActual.nuestraLabor || {}).pilares || [];
   data.imagenBannerNovedades = leerBannerImg('novedades');
+  if (document.getElementById('cms-encabezado0-img-data')) {
+    data.fotosEncabezado = leerFotosEncabezado();
+  } else if (cmsDataActual.fotosEncabezado) {
+    data.fotosEncabezado = cmsDataActual.fotosEncabezado.slice(0, 3);
+  }
   return data;
 }
 
