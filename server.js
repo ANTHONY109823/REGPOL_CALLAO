@@ -9,7 +9,7 @@ const path     = require('path');
 const fs       = require('fs');
 const crypto   = require('crypto');
 const { Pool } = require('pg');
-const { generarPDFIndividual, generarPDFComisaria } = require('./pdf_gen');
+const { generarPDFIndividual, generarPDFComisaria, calcularMMPI2, interpretarT, contarRespuestas } = require('./pdf_gen');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -80,6 +80,7 @@ async function initDB() {
     ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS foto TEXT;
     ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS sexo VARCHAR(20);
     ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS armamento TEXT;
+    ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS grado VARCHAR(80);
     CREATE INDEX IF NOT EXISTS idx_eval_comisaria ON evaluaciones(comisaria);
     CREATE INDEX IF NOT EXISTS idx_eval_unidad    ON evaluaciones(unidad);
 
@@ -691,7 +692,7 @@ app.delete('/admin/preguntas/:id', requireAuth, async (req, res) => {
 // ── POST /guardar ─────────────────────────────────────────────────────────────
 app.post('/guardar', async (req, res) => {
   try {
-    const { comisaria, unidad, nombres, cip, dni, fecha_nac, edad, cargo, sexo, armamento, foto, respuestas, completada } = req.body;
+    const { comisaria, unidad, nombres, cip, dni, fecha_nac, edad, cargo, grado, sexo, armamento, foto, respuestas, completada } = req.body;
     if (!nombres || !cip) return res.json({ ok: false, error: 'Faltan datos obligatorios' });
     const edadFinal = parseInt(edad) || calcularEdadDesdeISO(fecha_nac) || 0;
     const totalResp = Object.keys(respuestas || {}).filter(function(k) {
@@ -709,18 +710,18 @@ app.post('/guardar', async (req, res) => {
       await pool.query(
         `UPDATE evaluaciones SET comisaria=$1, unidad=$2, nombres=$3, dni=$4, fecha_nac=$5, edad=$6,
          cargo=$7, foto=COALESCE(NULLIF($8,''), foto), respuestas=$9, completada=$10, bloque_max=$11,
-         sexo=$12, armamento=$13, fecha=NOW() WHERE id=$14`,
+         sexo=$12, armamento=$13, grado=$14, fecha=NOW() WHERE id=$15`,
         [comisaria || '', unidad || '', nombres || '', dni || '', fecha_nac || null,
          edadFinal, cargo || '', foto || '', respuestas || {}, !!completada, totalResp,
-         sexo || '', armamentoStr, exist.rows[0].id]
+         sexo || '', armamentoStr, grado || '', exist.rows[0].id]
       );
     } else {
       await pool.query(
-        `INSERT INTO evaluaciones (comisaria,unidad,nombres,cip,dni,fecha_nac,edad,cargo,sexo,armamento,foto,respuestas,completada,bloque_max)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        `INSERT INTO evaluaciones (comisaria,unidad,nombres,cip,dni,fecha_nac,edad,cargo,sexo,armamento,foto,grado,respuestas,completada,bloque_max)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
         [comisaria || '', unidad || '', nombres || '', cip || '', dni || '',
          fecha_nac || null, edadFinal, cargo || '', sexo || '', armamentoStr,
-         foto || '', respuestas || {}, !!completada, totalResp]
+         foto || '', grado || '', respuestas || {}, !!completada, totalResp]
       );
     }
 
@@ -741,7 +742,7 @@ app.post('/guardar', async (req, res) => {
 // ── POST /progreso (guardar bloque parcial) ────────────────────────────────────
 app.post('/progreso', async (req, res) => {
   try {
-    const { cip, nombres, comisaria, unidad, cargo, sexo, armamento, foto, bloque, total, respuestas } = req.body;
+    const { cip, nombres, comisaria, unidad, cargo, grado, sexo, armamento, foto, bloque, total, respuestas } = req.body;
     const clave = (cip || 'anonimo').toLowerCase().trim();
     const armamentoStr = Array.isArray(armamento) ? armamento.join(', ') : (armamento || '');
     // Agregar columnas cargo/sexo/armamento/foto a progresos si no existen
@@ -749,6 +750,7 @@ app.post('/progreso', async (req, res) => {
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS sexo VARCHAR(20)`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS armamento TEXT`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS foto TEXT`).catch(()=>{});
+    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS grado VARCHAR(80)`).catch(()=>{});
     await pool.query(
       `INSERT INTO progresos (clave,cip,nombres,comisaria,unidad,bloque_max,total_resp,respuestas,actualizado)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
@@ -759,8 +761,8 @@ app.post('/progreso', async (req, res) => {
     );
     // Actualizar campos extra por separado para compatibilidad con esquema dinámico
     await pool.query(
-      `UPDATE progresos SET cargo=$2, sexo=$3, armamento=$4, foto=COALESCE(NULLIF($5,''),foto) WHERE clave=$1`,
-      [clave, cargo||'', sexo||'', armamentoStr, foto||'']
+      `UPDATE progresos SET cargo=$2, sexo=$3, armamento=$4, foto=COALESCE(NULLIF($5,''),foto), grado=COALESCE(NULLIF($6,''),grado) WHERE clave=$1`,
+      [clave, cargo||'', sexo||'', armamentoStr, foto||'', grado||'']
     ).catch(()=>{});
     res.json({ ok: true });
   } catch (e) {
@@ -779,6 +781,7 @@ app.get('/progreso', async (req, res) => {
     res.json({
       ok: true, encontrado: true,
       cip: row.cip, nombres: row.nombres, comisaria: row.comisaria, unidad: row.unidad,
+      grado: row.grado || '', cargo: row.cargo || '', sexo: row.sexo || '',
       bloque: row.bloque_max, total: row.total_resp, respuestas: row.respuestas,
       ultima: new Date(row.actualizado).toLocaleString('es-PE')
     });
@@ -836,6 +839,7 @@ function mapearProgresoParaPDF(p) {
     dni: p.dni || '',
     comisaria: p.comisaria || '',
     unidad: p.unidad || '',
+    grado: p.grado || '',
     cargo: p.cargo || '',
     sexo: p.sexo || '',
     armamento: p.armamento || '',
@@ -1134,7 +1138,7 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
 
     const rows = await pool.query(
       `SELECT id, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha, comisaria, unidad,
-              nombres, cip, dni, edad, completada, bloque_max,
+              nombres, cip, dni, edad, grado, completada, bloque_max,
               ${sqlContarRespuestas('respuestas')} AS total_resp,
               FALSE AS solo_progreso
        FROM evaluaciones ${where} ORDER BY fecha DESC LIMIT $${pi} OFFSET $${pi+1}`,
@@ -1243,53 +1247,100 @@ app.get('/descargar', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /pdf/efectivo?id=N | ?cip= ─────────────────────────────────────────────
+function evaluacionEstaCompleta(ev) {
+  if (!ev) return false;
+  const stats = contarRespuestas(ev);
+  return !!ev.completada && stats.total >= 566;
+}
+
+async function cargarEvaluacionAdmin({ id, cip }, admin) {
+  let ev = null;
+  if (id) {
+    const r = await pool.query(
+      `SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha FROM evaluaciones WHERE id=$1`, [id]
+    );
+    if (!r.rows.length) return null;
+    ev = r.rows[0];
+  } else if (cip) {
+    const r = await pool.query(
+      `SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha
+       FROM evaluaciones WHERE UPPER(TRIM(cip))=UPPER(TRIM($1)) OR TRIM(dni)=TRIM($1)
+       ORDER BY fecha DESC LIMIT 1`,
+      [cip]
+    );
+    if (!r.rows.length) return null;
+    ev = r.rows[0];
+  }
+  if (!ev) return null;
+  if (debeFiltrarPorUnidadAsignada(admin)) {
+    const u = (admin.unidad || '').toUpperCase();
+    const uni = (ev.unidad || '').toUpperCase();
+    const com = (ev.comisaria || '').toUpperCase();
+    if (!uni.includes(u) && !com.includes(u)) return null;
+  }
+  return ev;
+}
+
+// ── GET /admin/preview-resultado?id= | ?cip= — vista previa MMPI-2 ─────────────
+app.get('/admin/preview-resultado', requireAuth, async (req, res) => {
+  try {
+    const id  = parseInt(req.query.id);
+    const cip = (req.query.cip || '').trim();
+    if (!id && !cip) return res.json({ ok: false, error: 'id o cip requerido' });
+
+    const ev = await cargarEvaluacionAdmin({ id: id || null, cip: cip || null }, req.admin);
+    if (!ev) return res.json({ ok: false, error: 'No encontrado' });
+
+    const stats = contarRespuestas(ev);
+    const completa = evaluacionEstaCompleta(ev);
+    const mmpi = completa ? calcularMMPI2(ev) : { ok: false, escalas: [], error: 'Evaluación incompleta' };
+
+    res.json({
+      ok: true,
+      completa,
+      efectivo: {
+        id: ev.id,
+        grado: ev.grado || '',
+        nombres: ev.nombres || '',
+        cip: ev.cip || '',
+        dni: ev.dni || '',
+        edad: ev.edad || null,
+        sexo: ev.sexo || '',
+        cargo: ev.cargo || '',
+        armamento: ev.armamento || '',
+        comisaria: ev.comisaria || '',
+        unidad: ev.unidad || '',
+        fecha: ev.fecha || '',
+        foto: ev.foto && String(ev.foto).length > 80 ? ev.foto : '',
+        total_resp: stats.total,
+        v: stats.v,
+        f: stats.f
+      },
+      mmpi
+    });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── GET /pdf/efectivo?id=N | ?cip= (solo evaluación 100% completa) ─────────────
 app.get('/pdf/efectivo', requireAuth, async (req, res) => {
   try {
     const id  = parseInt(req.query.id);
     const cip = (req.query.cip || '').trim();
-    let ev = null;
+    if (!id && !cip) return res.status(400).json({ error: 'id o cip requerido' });
 
-    if (id) {
-      const r = await pool.query(
-        `SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha FROM evaluaciones WHERE id=$1`, [id]
-      );
-      if (!r.rows.length) return res.status(404).json({ error: 'No encontrado' });
-      ev = r.rows[0];
-      if (debeFiltrarPorUnidadAsignada(req.admin)) {
-        const u = (req.admin.unidad || '').toUpperCase();
-        const uni = (ev.unidad || '').toUpperCase();
-        const com = (ev.comisaria || '').toUpperCase();
-        if (!uni.includes(u) && !com.includes(u)) return res.status(403).json({ error: 'Sin acceso' });
-      }
-    } else if (cip) {
-      ev = await obtenerProgresoParaPDF(cip, req.admin);
-      if (!ev) {
-        const r = await pool.query(
-          `SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha
-           FROM evaluaciones WHERE UPPER(TRIM(cip))=UPPER(TRIM($1))
-           ORDER BY fecha DESC LIMIT 1`,
-          [cip]
-        );
-        if (!r.rows.length) return res.status(404).json({ error: 'No encontrado' });
-        ev = r.rows[0];
-        if (debeFiltrarPorUnidadAsignada(req.admin)) {
-          const u = (req.admin.unidad || '').toUpperCase();
-          const uni = (ev.unidad || '').toUpperCase();
-          const com = (ev.comisaria || '').toUpperCase();
-          if (!uni.includes(u) && !com.includes(u)) return res.status(403).json({ error: 'Sin acceso' });
-        }
-      }
-    } else {
-      return res.status(400).json({ error: 'id o cip requerido' });
+    const ev = await cargarEvaluacionAdmin({ id: id || null, cip: cip || null }, req.admin);
+    if (!ev) return res.status(404).json({ error: 'No encontrado' });
+    if (!evaluacionEstaCompleta(ev)) {
+      return res.status(403).json({ error: 'Solo se puede descargar evaluaciones completadas al 100% con resultado MMPI-2' });
     }
 
     const pregsR = await pool.query('SELECT numero AS id, texto FROM preguntas WHERE activa=TRUE ORDER BY orden,numero');
-    const buf = await generarPDFIndividual(ev, pregsR.rows);
+    const buf = await generarPDFIndividual(ev, pregsR.rows, { soloResultados: true });
     const nom = (ev.nombres||'efectivo').replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
-    const suf = ev.completada ? '' : '_avance';
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${nom}_CuestPsicologico${suf}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${nom}_ResultadoMMPI2.pdf"`);
     res.send(buf);
   } catch (e) {
     res.status(500).json({ error: e.message });

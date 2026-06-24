@@ -349,6 +349,7 @@ function fechaNacParaEnvio() {
 function validarRegistro() {
   var err='', campos=[
     {id:'f-unidad',  test:function(v){return v.trim().length>0;},      msg:'Seleccione su comisaría.'},
+    {id:'f-grado',   test:function(v){return v.trim().length>0;},      msg:'Seleccione su grado.'},
     {id:'f-nombres', test:function(v){return v.trim().length>2;},      msg:'Ingrese su nombre completo.'},
     {id:'f-cip',     test:function(v){return /^\d{8}$/.test(v.trim());}, msg:'CIP: 8 dígitos.'},
     {id:'f-dni',     test:function(v){return /^\d{8}$/.test(v.trim());}, msg:'DNI: 8 dígitos.'},
@@ -393,6 +394,7 @@ function construirPayloadGuardar(completada) {
     fecha_nac: fechaNacParaEnvio(),
     edad:      obtenerEdadParaEnvio(),
     sexo:      (document.getElementById('f-sexo')||{value:''}).value.trim(),
+    grado:     (document.getElementById('f-grado')||{value:''}).value.trim(),
     cargo:     document.getElementById('f-cargo').value.trim(),
     armamento: obtenerArmamento(),
     foto:      FOTO_BASE64 || '',
@@ -565,6 +567,7 @@ function guardarBloqueEnServidor(callback) {
   var payload = {
     cip:cip, nombres:nombres, comisaria:comisaria, unidad:unidad,
     sexo: (document.getElementById('f-sexo')||{value:''}).value||'',
+    grado: (document.getElementById('f-grado')||{value:''}).value||'',
     cargo: (document.getElementById('f-cargo')||{}).value||'',
     armamento: obtenerArmamento(),
     foto: FOTO_BASE64 || '',
@@ -610,6 +613,7 @@ function continuarConCIP() {
     document.getElementById('f-cip').value = data.cip || cip;
     if (data.nombres) document.getElementById('f-nombres').value = data.nombres;
     if (data.sexo) { var sel = document.getElementById('f-sexo'); if(sel) sel.value = data.sexo; }
+    if (data.grado) { var g = document.getElementById('f-grado'); if(g) g.value = data.grado; }
     if (data.cargo) document.getElementById('f-cargo').value = data.cargo;
     if (data.foto) { FOTO_BASE64 = data.foto; actualizarPreviewFoto(data.foto); }
     seleccionarComisariaEnSelect('f-unidad', data.unidad || data.comisaria || '');
@@ -630,6 +634,7 @@ function autoGuardarProgreso() {
     comisaria: obtenerComisariaEvaluacion(),
     unidad:    (document.getElementById('f-unidad')||{}).value||'',
     sexo:      (document.getElementById('f-sexo')||{value:''}).value||'',
+    grado:     (document.getElementById('f-grado')||{value:''}).value||'',
     cargo:     (document.getElementById('f-cargo')||{}).value||'',
     armamento: obtenerArmamento(),
     foto:      FOTO_BASE64 || '',
@@ -693,6 +698,7 @@ function restaurarProgreso() {
   if(data.cip)     document.getElementById('f-cip').value    =data.cip;
   if(data.nombres) document.getElementById('f-nombres').value=data.nombres;
   if(data.sexo){ var sel=document.getElementById('f-sexo'); if(sel) sel.value=data.sexo; }
+  if(data.grado){ var g=document.getElementById('f-grado'); if(g) g.value=data.grado; }
   if(data.cargo) document.getElementById('f-cargo').value=data.cargo;
   if(data.foto) { FOTO_BASE64 = data.foto; actualizarPreviewFoto(data.foto); }
   seleccionarComisariaEnSelect('f-unidad', data.unidad || data.comisaria || '');
@@ -761,7 +767,7 @@ function enviarEvaluacion() {
 }
 
 function limpiarFormulario() {
-  ['f-unidad','f-nombres','f-cip','f-dni','f-nacimiento','f-sexo','f-cargo'].forEach(function(id){var el=document.getElementById(id);if(el) el.value='';});
+  ['f-unidad','f-grado','f-nombres','f-cip','f-dni','f-nacimiento','f-sexo','f-cargo'].forEach(function(id){var el=document.getElementById(id);if(el) el.value='';});
   var chkP=document.getElementById('f-arm-particular'); if(chkP) chkP.checked=false;
   var chkE=document.getElementById('f-arm-estado'); if(chkE) chkE.checked=false;
   FOTO_BASE64 = '';

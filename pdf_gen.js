@@ -102,57 +102,61 @@ function formatearFechaPDF(valor) {
   return s.length > 16 ? s.substring(0, 16) : s;
 }
 
-// ── Encabezado del efectivo (barra nombre + datos + foto) ─────────────────────
+// ── Encabezado del efectivo — banner plomo con grado, datos y foto ─────────────
 function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   const tieneFoto = ev.foto && String(ev.foto).length > 80;
-  const fotoW = 50;
-  const fotoH = 62;
-  const filaDatosH = tieneFoto ? fotoH + 6 : 36;
+  const fotoW = 56;
+  const fotoH = 68;
+  const pad = 8;
+  const bannerH = 78;
+  const textoW = tieneFoto ? W - fotoW - pad * 3 : W - pad * 2;
 
-  doc.rect(x0, y, W, 22).fill(COLOR_VERDE);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(11)
-     .text(String(ev.nombres || '—').toUpperCase(), x0 + 8, y + 6, { width: W - 16, lineBreak: false, ellipsis: true });
-  y += 22;
+  doc.rect(x0, y, W, bannerH).fill('#ececec').stroke('#c8c8c8');
 
-  doc.rect(x0, y, W, filaDatosH).fill('#ececec');
-
-  const textoX = x0 + 6;
-  const textoW = tieneFoto ? W - fotoW - 18 : W - 12;
-  const edadTxt  = ev.edad ? ev.edad + ' años' : '—';
+  const gradoTxt = String(ev.grado || '—').toUpperCase();
+  const nombreTxt = String(ev.nombres || '—').toUpperCase();
+  const edadTxt = ev.edad ? ev.edad + ' años' : '—';
+  const sexoTxt = ev.sexo || '—';
   const cargoTxt = ev.cargo || '—';
-  const sexoTxt  = ev.sexo  || '—';
-  const armaTxt  = ev.armamento || 'Sin armamento';
+  const armaTxt = ev.armamento || 'Sin armamento';
+  const fechaTxt = formatearFechaPDF(ev.fecha);
+
+  let ty = y + pad;
+  doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(7.5)
+     .text('GRADO: ' + gradoTxt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
+  ty += 11;
+  doc.fillColor(COLOR_NEGRO).font('Helvetica-Bold').fontSize(10.5)
+     .text(nombreTxt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
+  ty += 13;
+  doc.font('Helvetica').fontSize(7.5).fillColor(COLOR_NEGRO)
+     .text('CIP: ' + (ev.cip || '—') + '          DNI: ' + (ev.dni || '—'), x0 + pad, ty, { width: textoW, lineBreak: false });
+  ty += 10;
+  doc.text('EDAD: ' + edadTxt + '          SEXO: ' + sexoTxt, x0 + pad, ty, { width: textoW, lineBreak: false });
+  ty += 10;
+  doc.text('CARGO: ' + cargoTxt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
+  ty += 10;
+  doc.text('ARMAMENTO: ' + armaTxt, x0 + pad, ty, { width: Math.min(textoW, W * 0.62), lineBreak: false, ellipsis: true });
 
   if (tieneFoto) {
-    doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(7.5)
-       .text('CIP: ' + (ev.cip || '—') + '   DNI: ' + (ev.dni || '—') + '   Edad: ' + edadTxt + '   Sexo: ' + sexoTxt,
-             textoX, y + 4, { width: textoW, lineBreak: false });
-    doc.text('Cargo: ' + cargoTxt, textoX, y + 16, { width: textoW, lineBreak: false });
-    doc.text('Armamento: ' + armaTxt, textoX, y + 28, { width: textoW, lineBreak: false });
-  } else {
-    doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(7.5)
-       .text('CIP: ' + (ev.cip || '—') + '   DNI: ' + (ev.dni || '—') + '   Edad: ' + edadTxt + '   Sexo: ' + sexoTxt + '   Cargo: ' + cargoTxt,
-             textoX, y + 5, { width: textoW * 0.72, lineBreak: false, ellipsis: true });
-    doc.text('Armamento: ' + armaTxt, textoX, y + 17, { width: textoW * 0.72, lineBreak: false, ellipsis: true });
-  }
-
-  if (tieneFoto) {
+    const fotoX = x0 + W - fotoW - pad;
+    const fotoY = y + (bannerH - fotoH) / 2;
     try {
-      const fotoX = x0 + W - fotoW - 4;
-      const fotoY = y + 2;
+      doc.save();
+      doc.rect(fotoX, fotoY, fotoW, fotoH).clip();
       doc.image(ev.foto, fotoX, fotoY, { fit: [fotoW, fotoH], align: 'center', valign: 'center' });
-      doc.rect(fotoX, fotoY, fotoW, fotoH).stroke('#bbbbbb');
+      doc.restore();
+      doc.rect(fotoX, fotoY, fotoW, fotoH).stroke('#aaaaaa');
     } catch (e) {}
   }
 
-  const statsY = tieneFoto ? y + 4 : y + 24;
-  doc.fillColor('#1a7a3a').font('Helvetica-Bold').fontSize(8)
-     .text('V: ' + totalV, x0 + W * 0.54, statsY, { lineBreak: false });
+  doc.fillColor('#1a7a3a').font('Helvetica-Bold').fontSize(7.5)
+     .text('V: ' + totalV, x0 + W * 0.58, y + bannerH - 14, { lineBreak: false });
   doc.fillColor('#7a1a1a')
-     .text('F: ' + totalF, x0 + W * 0.62, statsY, { lineBreak: false });
-  doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
-     .text('Fecha: ' + (ev.fecha || '—'), x0 + W * 0.72, statsY + 1, { width: W * 0.26, align: 'right', lineBreak: false });
-  return y + filaDatosH;
+     .text('F: ' + totalF, x0 + W * 0.66, y + bannerH - 14, { lineBreak: false });
+  doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7)
+     .text('Fecha: ' + fechaTxt, x0 + W * 0.74, y + bannerH - 14, { width: W * 0.24, align: 'right', lineBreak: false });
+
+  return y + bannerH;
 }
 
 // ── Matriz compacta N° + respuesta (10 columnas) ──────────────────────────────
@@ -203,10 +207,10 @@ function aplicarPiesEnTodas(doc) {
 //   1) Resultados MMPI-2 (puntajes T por escala)
 //   2) Matriz compacta N° + V/F
 // ─────────────────────────────────────────────────────────────────────────────
-function generarPDFIndividual(evaluacion, preguntas) {
-  var PREGUNTAS = preguntas || PREGUNTAS_DEFAULT;
+function generarPDFIndividual(evaluacion, preguntas, opts) {
+  opts = opts || {};
+  var soloResultados = opts.soloResultados !== false;
   return new Promise(function(resolve) {
-    // Calcular puntajes MMPI-2 primero (síncrono, puede tardar ~10s)
     const mmpi = calcularMMPI2(evaluacion);
 
     const doc = new PDFDocument({
@@ -227,44 +231,45 @@ function generarPDFIndividual(evaluacion, preguntas) {
 
     const totalV = Object.values(resp).filter(function(v) { return v === 'V'; }).length;
     const totalF = Object.values(resp).filter(function(v) { return v === 'F'; }).length;
-    const totalIds = PREGUNTAS.length;
     const m  = { left: 40, right: 40, top: 75, bottom: 45 };
     const W  = A4_W - m.left - m.right;
     const x0 = m.left;
     const maxY = A4_H - m.bottom - 8;
 
-    // ── BLOQUE 1: Resultados MMPI-2 ──────────────────────────────────────────
     doc.addPage();
     dibujarCabecera(doc);
     let y = 78;
     y = dibujarEncabezadoEfectivo(doc, x0, y, W, evaluacion, totalV, totalF) + 10;
     y = dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY);
 
-    // ── BLOQUE 2: Matriz compacta N° + respuesta ──────────────────────────────
-    let gridId = 1;
-    const TITULO_H   = 14;
-    const CONT_H     = 16;
-    const MIN_FILAS  = 5; // mínimo de filas que deben caber para continuar en la misma página
-
-    // Continuar en la misma página si hay espacio suficiente; si no, nueva página
-    const espacioDisponible = maxY - y;
-    if (espacioDisponible >= TITULO_H + GRID_ROW_H * MIN_FILAS) {
-      y += 8;
-      doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(9)
-         .text('MATRIZ DE RESPUESTAS — ÍTEM / V o F', x0, y, { width: W, lineBreak: false });
-      y += TITULO_H;
-      gridId = dibujarGrillaCompacta(doc, x0, y, W, maxY, resp, gridId, totalIds);
-    }
-
-    while (gridId <= totalIds) {
-      doc.addPage();
-      dibujarCabecera(doc);
-      y = 78;
-      doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(8)
-         .text('Matriz de respuestas (continuación) — ' + (evaluacion.nombres || '—'),
-               x0, y, { width: W, lineBreak: false, ellipsis: true });
-      y += CONT_H;
-      gridId = dibujarGrillaCompacta(doc, x0, y, W, maxY, resp, gridId, totalIds);
+    if (!soloResultados) {
+      const totalIds = (preguntas || PREGUNTAS_DEFAULT).length;
+      let gridId = 1;
+      const TITULO_H = 14;
+      const CONT_H = 16;
+      const MIN_FILAS = 5;
+      const espacioDisponible = maxY - y;
+      if (espacioDisponible >= TITULO_H + GRID_ROW_H * MIN_FILAS) {
+        y += 8;
+        doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(9)
+           .text('MATRIZ DE RESPUESTAS — ÍTEM / V o F', x0, y, { width: W, lineBreak: false });
+        y += TITULO_H;
+        gridId = dibujarGrillaCompacta(doc, x0, y, W, maxY, resp, gridId, totalIds);
+      }
+      let paginasVacias = 0;
+      while (gridId <= totalIds && paginasVacias < 2) {
+        const prevId = gridId;
+        doc.addPage();
+        dibujarCabecera(doc);
+        y = 78;
+        doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(8)
+           .text('Matriz de respuestas (continuación) — ' + (evaluacion.nombres || '—'),
+                 x0, y, { width: W, lineBreak: false, ellipsis: true });
+        y += CONT_H;
+        gridId = dibujarGrillaCompacta(doc, x0, y, W, maxY, resp, gridId, totalIds);
+        if (gridId === prevId) paginasVacias++;
+        else paginasVacias = 0;
+      }
     }
 
     aplicarPiesEnTodas(doc);
@@ -475,4 +480,4 @@ function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY) {
   return y;
 }
 
-module.exports = { generarPDFIndividual, generarPDFComisaria };
+module.exports = { generarPDFIndividual, generarPDFComisaria, calcularMMPI2, interpretarT, contarRespuestas };

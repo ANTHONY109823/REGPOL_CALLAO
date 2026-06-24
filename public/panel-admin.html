@@ -1080,6 +1080,19 @@
   </div>
 </div>
 
+<!-- Modal vista previa resultado MMPI-2 -->
+<div class="modal" id="modal-resultado">
+  <div class="modal-box" style="width:min(720px,96vw);max-height:90vh;overflow:auto;">
+    <h3><i class="fas fa-chart-bar"></i> Resultado de evaluación MMPI-2</h3>
+    <div id="prev-efectivo-banner" style="background:#ececec;border:1px solid #c8c8c8;border-radius:8px;padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;align-items:flex-start;"></div>
+    <div id="prev-mmpi-wrap"></div>
+    <div class="modal-footer">
+      <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-resultado')">Cerrar</button>
+      <a id="prev-btn-pdf" href="#" target="_blank" class="btn btn-r" style="display:none;text-decoration:none;"><i class="fas fa-file-pdf"></i> Descargar PDF</a>
+    </div>
+  </div>
+</div>
+
 <script src="api-config.js?v=1"></script>
 <script src="portal-data.js?v=2"></script>
 <script src="portal.js?v=27"></script>
@@ -1149,16 +1162,127 @@ function puedeVerPreguntas(){ return esUnitic()||tienePermiso('evaluaciones'); }
 function puedeVerEvaluaciones(){ return esUnitic()||tienePermiso('evaluaciones'); }
 function puedeVerDescargas(){ return esUnitic()||tienePermiso('descargas')||tienePermiso('evaluaciones'); }
 
-function urlPdfEfectivo(r) {
-  if (!r) return null;
-  if (r.id && !r.solo_progreso) return API + '/pdf/efectivo?id=' + r.id + '&token=' + encodeURIComponent(TOKEN);
-  if (r.cip) return API + '/pdf/efectivo?cip=' + encodeURIComponent(r.cip) + '&token=' + encodeURIComponent(TOKEN);
-  return null;
+function esEvalCompleta(r) {
+  if (!r) return false;
+  var total = parseInt(r.total_resp, 10) || 0;
+  return total >= 566 && !r.solo_progreso && !!r.id && !!r.completada;
 }
+
+function urlPdfEfectivo(r) {
+  if (!esEvalCompleta(r) || !r.id) return null;
+  return API + '/pdf/efectivo?id=' + r.id + '&token=' + encodeURIComponent(TOKEN);
+}
+
+function btnAccionesEval(r) {
+  if (!r) return '<span style="color:#bbb;font-size:10px;">—</span>';
+  var html = '';
+  if (r.id) {
+    html += '<button type="button" class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="verResultadoEval(' + r.id + ')"><i class="fas fa-eye"></i> Ver</button>';
+  } else if (r.cip) {
+    html += '<span style="color:#888;font-size:10px;">En curso</span>';
+  }
+  if (esEvalCompleta(r)) {
+    html += ' <a href="' + urlPdfEfectivo(r) + '" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;"><i class="fas fa-file-pdf"></i> PDF</a>';
+  }
+  return html || '<span style="color:#bbb;font-size:10px;">—</span>';
+}
+
 function btnPdfEfectivo(r, label) {
-  var url = urlPdfEfectivo(r);
-  if (!url) return '<span style="color:#bbb;font-size:10px;">—</span>';
-  return '<a href="' + url + '" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;">' + (label || 'PDF') + '</a>';
+  return btnAccionesEval(r);
+}
+
+function colorInterpT(t) {
+  if (!t || t === 0) return '#888888';
+  if (t >= 80) return '#c0392b';
+  if (t >= 65) return '#e67e22';
+  if (t >= 55) return '#f39c12';
+  if (t >= 45) return '#27ae60';
+  return '#2980b9';
+}
+
+function labelInterpT(t) {
+  if (!t || t === 0) return 'N/D';
+  if (t >= 80) return 'MUY ELEVADO';
+  if (t >= 65) return 'ELEVADO';
+  if (t >= 55) return 'LEVE ELEV.';
+  if (t >= 45) return 'NORMAL';
+  return 'BAJO';
+}
+
+function verResultadoEval(id) {
+  if (!id) return;
+  var banner = document.getElementById('prev-efectivo-banner');
+  var wrap = document.getElementById('prev-mmpi-wrap');
+  var btnPdf = document.getElementById('prev-btn-pdf');
+  if (banner) banner.innerHTML = '<p style="color:#888;margin:0;">Cargando...</p>';
+  if (wrap) wrap.innerHTML = '';
+  if (btnPdf) btnPdf.style.display = 'none';
+  document.getElementById('modal-resultado').classList.add('open');
+
+  fetch(API + '/admin/preview-resultado?id=' + id, { headers: hdr() })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) {
+        if (banner) banner.innerHTML = '<p style="color:#c0392b;margin:0;">' + escHtml(d.error || 'Error') + '</p>';
+        return;
+      }
+      var e = d.efectivo || {};
+      var fotoHtml = e.foto
+        ? '<img src="' + e.foto + '" alt="Foto" style="width:56px;height:68px;object-fit:cover;border:1px solid #aaa;border-radius:4px;flex-shrink:0;">'
+        : '';
+      if (banner) {
+        banner.innerHTML = '<div style="flex:1;min-width:0;">'
+          + '<div style="font-size:11px;font-weight:700;color:#004d3d;margin-bottom:2px;">GRADO: ' + escHtml(e.grado || '—') + '</div>'
+          + '<div style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">' + escHtml((e.nombres || '—').toUpperCase()) + '</div>'
+          + '<div style="font-size:11.5px;color:#333;line-height:1.55;">'
+          + 'CIP: <strong>' + escHtml(e.cip || '—') + '</strong> &nbsp; DNI: <strong>' + escHtml(e.dni || '—') + '</strong><br>'
+          + 'EDAD: ' + escHtml(e.edad ? e.edad + ' años' : '—') + ' &nbsp; SEXO: ' + escHtml(e.sexo || '—') + '<br>'
+          + 'CARGO: ' + escHtml(e.cargo || '—') + '<br>'
+          + 'ARMAMENTO: ' + escHtml(e.armamento || 'Sin armamento')
+          + '</div>'
+          + '<div style="font-size:10.5px;color:#666;margin-top:6px;">V: ' + (e.v || 0) + ' &nbsp; F: ' + (e.f || 0) + ' &nbsp; Fecha: ' + escHtml(e.fecha || '—') + '</div>'
+          + '</div>' + fotoHtml;
+      }
+
+      if (!d.completa) {
+        if (wrap) wrap.innerHTML = '<p style="background:#fff3cd;border:1px solid #ffeeba;border-radius:6px;padding:12px;font-size:12.5px;color:#856404;">Evaluación al <strong>' + (e.total_resp || 0) + '/566</strong>. La descarga PDF solo está disponible al completar el 100% y enviar con <em>Finalizar y Enviar</em>.</p>';
+        return;
+      }
+
+      if (btnPdf && d.completa) {
+        btnPdf.href = API + '/pdf/efectivo?id=' + id + '&token=' + encodeURIComponent(TOKEN);
+        btnPdf.style.display = '';
+      }
+
+      var mmpi = d.mmpi || {};
+      if (!mmpi.ok || !(mmpi.escalas || []).length) {
+        if (wrap) wrap.innerHTML = '<p style="color:#888;font-size:12px;">Resultados MMPI-2 no disponibles' + (mmpi.error ? ': ' + escHtml(mmpi.error) : '') + '.</p>';
+        return;
+      }
+
+      var filas = (mmpi.escalas || []).map(function(esc, i) {
+        var bg = i % 2 === 0 ? '#f7faf7' : '#fff';
+        var tc = colorInterpT(esc.t);
+        return '<tr style="background:' + bg + ';">'
+          + '<td style="padding:6px 8px;font-size:11px;font-weight:600;">' + escHtml(esc.nombre) + '</td>'
+          + '<td style="padding:6px;text-align:center;font-size:11px;">' + esc.tv + '</td>'
+          + '<td style="padding:6px;text-align:center;font-size:11px;">' + esc.tf + '</td>'
+          + '<td style="padding:6px;text-align:center;font-size:11px;">' + esc.tb + '</td>'
+          + '<td style="padding:6px;text-align:center;font-size:11px;font-weight:700;color:' + (esc.t >= 65 ? '#c0392b' : '#1a1a1a') + ';">' + (esc.t > 0 ? esc.t : '—') + '</td>'
+          + '<td style="padding:6px;font-size:10.5px;font-weight:600;color:' + tc + ';">' + labelInterpT(esc.t) + '</td>'
+          + '</tr>';
+      }).join('');
+
+      if (wrap) {
+        wrap.innerHTML = '<p style="font-size:11px;color:#666;margin:0 0 8px;">Normas: ' + escHtml(mmpi.sexo || 'Hombre') + ' — Ítems sin contestar: ' + (mmpi.sin_contestar || 0) + '</p>'
+          + '<div style="overflow-x:auto;"><table class="t" style="font-size:11px;">'
+          + '<thead><tr><th>Escala</th><th>TV</th><th>TF</th><th>Bruto</th><th>T-score</th><th>Interpretación</th></tr></thead>'
+          + '<tbody>' + filas + '</tbody></table></div>';
+      }
+    })
+    .catch(function() {
+      if (banner) banner.innerHTML = '<p style="color:#c0392b;margin:0;">Error de conexión.</p>';
+    });
 }
 
 function puedeGestionPsicologia(){
@@ -1357,7 +1481,7 @@ function cargarStats(){
             +'<div><span class="ult-nom">'+escHtml(e.nombres)+'</span>'
             +'<span class="ult-meta"> — '+escHtml(e.comisaria||e.unidad||'')+'</span></div>'
             +'<div style="display:flex;align-items:center;gap:8px;">'
-            +btnPdfEfectivo(e,'Ver PDF')
+            +btnAccionesEval(e)
             +badge+'<span style="color:#bbb;font-size:10.5px;">'+escHtml(e.fecha)+'</span></div></div>';
         }).join('')
       :'<div style="color:#bbb;padding:12px;font-size:12px;text-align:center;">Sin evaluaciones aún.</div>';
@@ -1380,7 +1504,7 @@ function cargarStatsPsico(){
           return '<div class="ult-item"><div><span class="ult-nom">'+escHtml(e.nombres)+'</span>'
             +'<span class="ult-meta"> — '+escHtml(e.comisaria||e.unidad||'')+'</span></div>'
             +'<div style="display:flex;align-items:center;gap:8px;">'
-            +btnPdfEfectivo(e,'PDF')
+            +btnAccionesEval(e)
             +badge+'<span style="color:#bbb;font-size:10.5px;">'+escHtml(e.fecha)+'</span></div></div>';
         }).join('')
       : '<div style="color:#bbb;padding:12px;font-size:12px;text-align:center;">Sin evaluaciones registradas.</div>';
@@ -1492,7 +1616,7 @@ function cargarTabla(pag){
         } else {
           badge=comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+total+'/566</span>';
         }
-        var pdf = btnPdfEfectivo(r);
+        var pdf = btnAccionesEval(r);
         return '<tr'+(r.solo_progreso?' style="background:#fffdf5;"':'')+'><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
           +'<td style="font-size:11px;">'+escHtml(r.unidad||r.comisaria||'—')+'</td>'
           +'<td style="font-size:11px;">'+escHtml(r.fecha)+'</td><td style="text-align:center;">'+(r.edad||'—')+'</td>'
@@ -1681,7 +1805,7 @@ function vistaPreviaDescarga(filtro, selId, prefijo) {
       var badge = r.enCurso
         ? '<span class="badge" style="background:#fff3cd;color:#856404;">En curso</span>'
         : (r.comp ? '<span class="badge ok">Completo</span>' : '<span class="badge pend">Parcial</span>');
-      var pdf = btnPdfEfectivo(r);
+      var pdf = btnAccionesEval(r);
       return '<tr>'
         + '<td style="text-align:center;font-weight:700;">' + (i + 1) + '</td>'
         + '<td><strong>' + escHtml(r.nombres) + '</strong></td>'
@@ -1753,7 +1877,7 @@ function cargarAvancesDescarga(){
           +'<td style="font-size:11px;">'+escHtml(r.fecha)+'</td>'
           +'<td style="text-align:center;">'+bloque+'/12</td>'
           +'<td>'+total+'/566</td>'
-          +'<td>'+btnPdfEfectivo(r)+'</td>'
+          +'<td><span style="color:#888;font-size:10px;">Sin enviar</span></td>'
           +'</tr>';
       }).join('');
       if(info) info.textContent = rows.length + ' avance' + (rows.length === 1 ? '' : 's') + ' sin enviar';
@@ -1812,7 +1936,7 @@ function buscarPersona(){
           filas.push('<tr style="background:#fffdf5;"><td><strong>'+escHtml(p.nombres)+'</strong></td><td>'+escHtml(p.cip)+'</td><td>—</td>'
             +'<td style="font-size:11px;">'+escHtml(p.comisaria||p.unidad)+'</td><td style="font-size:11px;">'+escHtml(p.fecha)+'</td>'
             +'<td><span class="badge" style="background:#fff3cd;color:#856404;">'+pt+'/566 sin enviar</span></td>'
-            +'<td>'+btnPdfEfectivo({cip:p.cip,solo_progreso:true})+'</td></tr>');
+            +'<td><span style="color:#888;font-size:10px;">En curso</span></td></tr>');
         }
         if(filas.length<= (d.diagnostico?1:0)){
           tbody.innerHTML='<tr><td colspan="7" style="color:#bbb;padding:12px;text-align:center;">Sin resultados para CIP '+escHtml(cip)+'.</td></tr>';
@@ -1836,7 +1960,7 @@ function buscarPersona(){
       var badge=r.solo_progreso
         ?'<span class="badge" style="background:#fff3cd;color:#856404;">'+total+'/566 sin enviar</span>'
         :(comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+total+'/566</span>');
-      var pdf = btnPdfEfectivo(r);
+      var pdf = btnAccionesEval(r);
       return '<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
         +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+r.fecha+'</td>'
         +'<td>'+badge+'</td><td>'+pdf+'</td></tr>';
