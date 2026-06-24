@@ -1435,7 +1435,7 @@ app.post('/admin/sorteos/:id/importar-inscritos', requireAuth, async (req, res) 
     if (!item_id) return res.json({ ok: false, error: 'item_id requerido' });
     const insc = await pool.query(
       `SELECT cip,nombres,unidad,cargo FROM inscripciones
-       WHERE item_id=$1 AND estado IN ('verificado','ganador','aprobado')
+       WHERE item_id=$1 AND estado IN ('aprobado','ganador')
        ORDER BY fecha`,
       [item_id]);
     await pool.query('DELETE FROM resultados_sorteo WHERE sorteo_id=$1', [req.params.id]);
@@ -1668,7 +1668,7 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── GET /admin/items/:id/candidatos-sorteo — verificados para la rueda ─────────
+// ── GET /admin/items/:id/candidatos — aprobados para la rueda de sorteo ────────
 app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
   try {
     const cur = await pool.query('SELECT tipo,titulo,vacantes FROM items_portal WHERE id=$1', [req.params.id]);
@@ -1677,7 +1677,7 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const r = await pool.query(
       `SELECT id,cip,dni,grado,nombres,unidad,area,cargo,disponibilidad,dia_franco,tiempo_servicio,estado
-       FROM inscripciones WHERE item_id=$1 AND estado IN ('verificado','ganador','reserva')
+       FROM inscripciones WHERE item_id=$1 AND estado IN ('verificado','aprobado','ganador','reserva')
        ORDER BY fecha ASC`, [req.params.id]);
     res.json({ ok: true, candidatos: r.rows, item: cur.rows[0] });
   } catch (e) { res.json({ ok: false, error: e.message }); }

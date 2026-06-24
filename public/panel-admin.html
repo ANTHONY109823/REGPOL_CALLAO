@@ -684,7 +684,7 @@
 
         <div id="sorteo-convenio-panel" style="background:#f0f7f0;border:1.5px solid #c8e6c9;border-radius:10px;padding:16px;margin-bottom:18px;">
           <strong style="color:#004d3d;display:block;margin-bottom:10px;font-size:13px;"><i class="fas fa-handshake"></i> Sorteo de convenio</strong>
-          <p style="font-size:12px;color:#666;margin-bottom:12px;">Seleccione la convocatoria, verifique inscritos y ejecute el sorteo en vivo con la rueda aleatoria.</p>
+          <p style="font-size:12px;color:#666;margin-bottom:12px;">Flujo: verificar expedientes → aprobar postulantes → sorteo en vivo solo con los aprobados.</p>
           <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
             <div style="flex:1;min-width:280px;">
               <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Convocatoria de convenio</label>
@@ -913,9 +913,9 @@
     <label>Estado</label>
     <select id="mins-estado">
       <option value="pendiente">Pendiente (revisión)</option>
-      <option value="verificado">Verificado (expediente OK)</option>
+      <option value="verificado">Verificado (expediente OK, sin aprobar)</option>
+      <option value="aprobado" id="mins-opt-aprobado">Aprobado para sorteo</option>
       <option value="ganador">Ganador (sorteo)</option>
-      <option value="aprobado">Aprobado (méritos)</option>
       <option value="reserva">Reserva</option>
       <option value="rechazado">✗ Rechazado (expediente inválido)</option>
     </select>
@@ -1820,19 +1820,22 @@ function onSelectConvocatoriaSorteo(){
       var list = d.inscritos || [];
       var pend = list.filter(function(i){ return i.estado === 'pendiente'; }).length;
       var verif = list.filter(function(i){ return i.estado === 'verificado'; }).length;
-      var gan = list.filter(function(i){ return i.estado === 'ganador' || i.estado === 'aprobado'; }).length;
+      var aptos = list.filter(function(i){ return i.estado === 'aprobado'; }).length;
+      var gan = list.filter(function(i){ return i.estado === 'ganador'; }).length;
       if(stats){
         stats.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">'
           +'<div><strong style="color:#004d3d;">'+list.length+'</strong><br><span style="color:#888;">Total inscritos</span></div>'
-          +'<div><strong style="color:#856404;">'+pend+'</strong><br><span style="color:#888;">Pendientes</span></div>'
-          +'<div><strong style="color:#1a7a3a;">'+verif+'</strong><br><span style="color:#888;">Verificados (en rueda)</span></div>'
+          +'<div><strong style="color:#856404;">'+pend+'</strong><br><span style="color:#888;">Pendientes revisión</span></div>'
+          +'<div><strong style="color:#1a7a3a;">'+verif+'</strong><br><span style="color:#888;">Verificados (sin aprobar)</span></div>'
+          +'<div><strong style="color:#2980b9;">'+aptos+'</strong><br><span style="color:#888;">Aprobados para sorteo</span></div>'
           +'<div><strong style="color:#c8a94a;">'+gan+'</strong><br><span style="color:#888;">Ganadores</span></div>'
           +'<div><strong style="color:#004d3d;">'+(SORTEO_CONV_ACTIVO.vacantes||'—')+'</strong><br><span style="color:#888;">Vacantes</span></div>'
           +'</div>'
-          +(verif ? '<p style="margin-top:10px;color:#1a7a3a;"><i class="fas fa-check-circle"></i> Listo para sorteo en vivo con <strong>'+verif+'</strong> verificados.</p>'
-            : '<p style="margin-top:10px;color:#856404;"><i class="fas fa-exclamation-triangle"></i> No hay inscritos verificados. Revise expedientes en «Ver inscritos».</p>');
+          +(aptos ? '<p style="margin-top:10px;color:#1a7a3a;"><i class="fas fa-check-circle"></i> Listo para sorteo en vivo con <strong>'+aptos+'</strong> aprobados.</p>'
+            : verif ? '<p style="margin-top:10px;color:#856404;"><i class="fas fa-exclamation-triangle"></i> Hay <strong>'+verif+'</strong> verificados pendientes de aprobación. Apruebe en «Ver inscritos».</p>'
+            : '<p style="margin-top:10px;color:#856404;"><i class="fas fa-exclamation-triangle"></i> No hay postulantes aprobados para el sorteo.</p>');
       }
-      if(btnLive) btnLive.disabled = verif < 1;
+      if(btnLive) btnLive.disabled = aptos < 1;
     })
     .catch(function(){
       if(stats) stats.innerHTML = '<span style="color:#c0392b;">Error de conexión al cargar inscritos.</span>';
@@ -1978,14 +1981,14 @@ function cargarSelectItems(){
 
 function importarInscritos(){
   var itemId=document.getElementById('ms-import-item').value;
-  if(!itemId){alert('Seleccione un convenio para importar los verificados.');return;}
+  if(!itemId){alert('Seleccione un convenio para importar los aprobados para sorteo.');return;}
   var sorteoId=val('ms-id');
   if(!sorteoId){alert('Guarde primero el sorteo antes de importar.');return;}
   fetch(API+'/admin/sorteos/'+sorteoId+'/importar-inscritos',{
     method:'POST',headers:hdr(),body:JSON.stringify({item_id:parseInt(itemId)})
   }).then(function(r){return r.json();}).then(function(d){
     if(!d.ok){alert('Error: '+(d.error||''));return;}
-    alert('Se importaron '+d.importados+' seleccionados verificados.');
+    alert('Se importaron '+d.importados+' aprobados para sorteo.');
     // Recargar sorteo para actualizar resultados
     fetch(API+'/admin/sorteos',{headers:hdr()}).then(function(r){return r.json();}).then(function(dd){
       SORTEOS_CACHE=dd.sorteos||[];
@@ -2328,17 +2331,23 @@ function renderInscritos(list, tipo){
   var total=INSCRITOS_CACHE.length;
   var pend =INSCRITOS_CACHE.filter(function(i){return i.estado==='pendiente';}).length;
   var verif=INSCRITOS_CACHE.filter(function(i){return i.estado==='verificado';}).length;
-  var gan  =INSCRITOS_CACHE.filter(function(i){return i.estado==='ganador'||i.estado==='aprobado';}).length;
+  var esConvenio = INSCRITOS_TIPO_ACTUAL==='convenio';
+  var aptos = esConvenio
+    ? INSCRITOS_CACHE.filter(function(i){return i.estado==='aprobado';}).length
+    : INSCRITOS_CACHE.filter(function(i){return i.estado==='aprobado';}).length;
+  var gan  = esConvenio
+    ? INSCRITOS_CACHE.filter(function(i){return i.estado==='ganador';}).length
+    : INSCRITOS_CACHE.filter(function(i){return i.estado==='aprobado';}).length;
   var rech =INSCRITOS_CACHE.filter(function(i){return i.estado==='rechazado';}).length;
 
-  var esConvenio = INSCRITOS_TIPO_ACTUAL==='convenio';
-
-  // Botón de acción masiva
   var btnAccion = '';
-  if(esConvenio && verif>0){
+  if(esConvenio && aptos>0){
     btnAccion='<a href="sorteo-live.html?item_id='+ITEM_ACTIVO_ID+'" target="_blank" '
       +'class="btn btn-o" style="text-decoration:none;margin-left:8px;">'
-      +'<i class="fas fa-random"></i> ABRIR SORTEO EN VIVO ('+verif+' verificados)</a>';
+      +'<i class="fas fa-random"></i> ABRIR SORTEO EN VIVO ('+aptos+' aprobados)</a>';
+  } else if(esConvenio && verif>0){
+    btnAccion='<button class="btn btn-v" style="margin-left:8px;" onclick="aprobarTodosParaSorteo()">'
+      +'<i class="fas fa-user-check"></i> APROBAR TODOS PARA SORTEO ('+verif+')</button>';
   } else if(!esConvenio && verif>0){
     btnAccion='<button class="btn btn-v" style="margin-left:8px;" onclick="verAprobadosCurso()">'
       +'<i class="fas fa-list-ol"></i> VER LISTA DE APROBADOS ('+verif+' verificados)</button>';
@@ -2346,10 +2355,11 @@ function renderInscritos(list, tipo){
 
   document.getElementById('inscritos-stats').innerHTML=
     '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
-    +'<div class="stats-grid" style="grid-template-columns:repeat(5,auto);gap:8px;flex:1;">'
+    +'<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;flex:1;">'
     +'<div class="stat"><div class="n">'+total+'</div><div class="l">Total</div></div>'
     +'<div class="stat" style="border-color:#ffe082;"><div class="n" style="color:#856404;">'+pend+'</div><div class="l">Pendientes</div></div>'
     +'<div class="stat" style="border-color:#a5d6a7;"><div class="n" style="color:#1a7a3a;">'+verif+'</div><div class="l">Verificados</div></div>'
+    +(esConvenio?'<div class="stat" style="border-color:#2980b9;"><div class="n" style="color:#2980b9;">'+aptos+'</div><div class="l">Aprobados sorteo</div></div>':'')
     +'<div class="stat" style="border-color:#c8a94a;"><div class="n" style="color:#856404;">'+gan+'</div><div class="l">'+(esConvenio?'Ganadores':'Aprobados')+'</div></div>'
     +'<div class="stat" style="border-color:#f5c2c7;"><div class="n" style="color:#c0392b;">'+rech+'</div><div class="l">Rechazados</div></div>'
     +'</div>'
@@ -2392,11 +2402,14 @@ function renderInscritos(list, tipo){
         +'<td style="text-align:center;">'+(ins.tiene_pdf
           ?'<button class="btn-mini" style="background:#e74c3c;color:#fff;" title="Ver PDF" onclick="verPdfInscripcion('+ins.id+')"><i class="fas fa-file-pdf"></i></button>'
           :'<span style="color:#bbb;font-size:11px;">—</span>')+'</td>'
-        +'<td><span class="badge" style="background:'+bg+';color:'+c+';font-size:10px;">'+escHtml(ins.estado)+'</span></td>'
+        +'<td><span class="badge" style="background:'+bg+';color:'+c+';font-size:10px;">'+escHtml(etiquetaEstadoInscripcion(ins.estado, esConvenio))+'</span></td>'
         +'<td style="font-size:11px;color:#888;">'+fecha+'</td>'
         +'<td style="white-space:nowrap;">'
         +(ins.estado==='pendiente'
-          ?'<button class="btn-mini btn-mini-ok" title="Verificar expediente OK" onclick="verificarInscripcion('+ins.id+')"><i class="fas fa-check-double"></i> Verificar</button> '
+          ?'<button class="btn-mini btn-mini-ok" title="Verificar expediente" onclick="verificarInscripcion('+ins.id+')"><i class="fas fa-check-double"></i> Verificar</button> '
+          :'')
+        +(esConvenio && ins.estado==='verificado'
+          ?'<button class="btn-mini" style="background:#2980b9;color:#fff;" title="Aprobar para sorteo" onclick="aprobarParaSorteo('+ins.id+')"><i class="fas fa-user-check"></i> Aprobar</button> '
           :'')
         +'<button class="btn-mini" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i></button>'
         +'</td>'
@@ -2405,14 +2418,52 @@ function renderInscritos(list, tipo){
     +'</tbody></table></div>';
 }
 
+function etiquetaEstadoInscripcion(estado, esConvenio){
+  if(!esConvenio) return estado;
+  var mapa={
+    pendiente:'Pendiente',
+    verificado:'Expediente verificado',
+    aprobado:'Aprobado para sorteo',
+    ganador:'Ganador',
+    reserva:'Reserva',
+    rechazado:'Rechazado'
+  };
+  return mapa[estado] || estado;
+}
+
 function verificarInscripcion(id){
-  if(!confirm('¿Marcar este expediente como VERIFICADO?\nEl postulante pasará a la lista del sorteo o aprobados.')) return;
+  if(!confirm('¿El expediente está correcto?\nEl postulante quedará VERIFICADO y deberá ser APROBADO por el área antes de entrar al sorteo.')) return;
   fetch(API+'/admin/inscripciones/'+id,{
     method:'PUT', headers:hdr(),
-    body:JSON.stringify({estado:'verificado', observacion:'Expediente verificado por el área'})
+    body:JSON.stringify({estado:'verificado', observacion:'Expediente verificado por el área de convenios'})
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok) verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/.*— /,''));
     else alert('Error: '+(d.error||''));
+  });
+}
+
+function aprobarParaSorteo(id){
+  if(!confirm('¿Aprobar a este postulante para participar en el SORTEO?\nSolo los aprobados entran a la rueda aleatoria.')) return;
+  fetch(API+'/admin/inscripciones/'+id,{
+    method:'PUT', headers:hdr(),
+    body:JSON.stringify({estado:'aprobado', observacion:'Aprobado por el área de convenios para el sorteo'})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok) verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/.*— /,''));
+    else alert('Error: '+(d.error||''));
+  });
+}
+
+function aprobarTodosParaSorteo(){
+  var lista=INSCRITOS_CACHE.filter(function(i){return i.estado==='verificado';});
+  if(!lista.length){alert('No hay inscritos verificados pendientes de aprobación.');return;}
+  if(!confirm('¿Aprobar a los '+lista.length+' postulantes verificados para el SORTEO?')) return;
+  Promise.all(lista.map(function(ins){
+    return fetch(API+'/admin/inscripciones/'+ins.id,{
+      method:'PUT', headers:hdr(),
+      body:JSON.stringify({estado:'aprobado', observacion:'Aprobado masivamente para el sorteo'})
+    }).then(function(r){return r.json();});
+  })).then(function(){
+    verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/.*— /,''));
   });
 }
 
@@ -2501,6 +2552,8 @@ function abrirModalInscripcion(id){
       :'<div style="margin-top:8px;font-size:11.5px;color:#c0392b;"><i class="fas fa-exclamation-triangle"></i> Sin PDF adjunto</div>');
 
   document.getElementById('mins-estado').value=ins.estado||'pendiente';
+  var optAprob=document.getElementById('mins-opt-aprobado');
+  if(optAprob) optAprob.textContent = INSCRITOS_TIPO_ACTUAL==='convenio' ? 'Aprobado para sorteo' : 'Aprobado (méritos)';
   document.getElementById('mins-observacion').value=ins.observacion||'';
   document.getElementById('modal-inscripcion').classList.add('open');
 }

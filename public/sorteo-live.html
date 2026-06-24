@@ -234,29 +234,35 @@ function cargarCandidatos(){
       document.getElementById('cfg-nombre').textContent = ITEM_DATA.titulo||'';
       document.getElementById('sl-subtitulo').textContent = ITEM_DATA.titulo||'';
       renderConfigInfo();
-      document.getElementById('btn-iniciar').disabled = false;
     });
 }
 
 function renderConfigInfo(){
   var ya_ganadores = TODOS_CAND.filter(function(c){return c.estado==='ganador';});
   var verificados  = TODOS_CAND.filter(function(c){return c.estado==='verificado';});
-  var vacaciones_n = verificados.filter(function(c){return c.disponibilidad==='VACACIONES';}).length;
-  var franco_n     = verificados.filter(function(c){return c.disponibilidad==='FRANCO';}).length;
+  var aprobados    = TODOS_CAND.filter(function(c){return c.estado==='aprobado';});
+  var vacaciones_n = aprobados.filter(function(c){return c.disponibilidad==='VACACIONES';}).length;
+  var franco_n     = aprobados.filter(function(c){return c.disponibilidad==='FRANCO';}).length;
 
   document.getElementById('cfg-info').innerHTML =
-    '<div><i class="fas fa-users" style="color:#c8a94a;width:20px;"></i> Candidatos verificados: <strong>'+verificados.length+'</strong></div>'
+    '<div><i class="fas fa-users" style="color:#c8a94a;width:20px;"></i> Aprobados para sorteo: <strong>'+aprobados.length+'</strong></div>'
+   +'<div><i class="fas fa-file-check" style="color:#1a7a3a;width:20px;"></i> Verificados sin aprobar: <strong>'+verificados.length+'</strong> <span style="color:#888;font-size:11px;">(no entran a la rueda)</span></div>'
    +'<div><i class="fas fa-umbrella-beach" style="color:#27ae60;width:20px;"></i> En VACACIONES (pasan automático): <strong style="color:#27ae60;">'+vacaciones_n+'</strong></div>'
    +'<div><i class="fas fa-moon" style="color:#3498db;width:20px;"></i> En FRANCO (entran a la rueda): <strong style="color:#3498db;">'+franco_n+'</strong></div>'
    +(ya_ganadores.length?'<div><i class="fas fa-trophy" style="color:#c8a94a;width:20px;"></i> Ya sorteados: <strong style="color:#c8a94a;">'+ya_ganadores.length+'</strong></div>':'')
    +'<div style="color:#c8a94a;font-weight:700;padding-top:4px;"><i class="fas fa-info-circle" style="width:20px;"></i> Vacantes configuradas en la convocatoria: '+VACANTES+'</div>';
+  document.getElementById('btn-iniciar').disabled = aprobados.length < 1;
 }
 
 function iniciarSorteo(){
   VACANTES = parseInt(document.getElementById('cfg-vacantes').value)||1;
-  var verificados = TODOS_CAND.filter(function(c){return c.estado==='verificado';});
-  VACACIONES_CAND = verificados.filter(function(c){return c.disponibilidad==='VACACIONES';});
-  RUEDA_CAND      = verificados.filter(function(c){return c.disponibilidad!=='VACACIONES';});
+  var aprobados = TODOS_CAND.filter(function(c){return c.estado==='aprobado';});
+  if(!aprobados.length){
+    alert('No hay postulantes aprobados para el sorteo. El área de convenios debe aprobarlos después de verificar expedientes.');
+    return;
+  }
+  VACACIONES_CAND = aprobados.filter(function(c){return c.disponibilidad==='VACACIONES';});
+  RUEDA_CAND      = aprobados.filter(function(c){return c.disponibilidad!=='VACACIONES';});
 
   // Ya ganadores previos
   GANADORES = TODOS_CAND.filter(function(c){return c.estado==='ganador';}).map(function(c){
@@ -424,7 +430,6 @@ function guardarResultados(){
 
   // Actualizar estados en inscripciones
   var promesas=[];
-  var todosIds=TODOS_CAND.filter(function(c){return c.estado==='verificado';}).map(function(c){return c.id;});
 
   // Marcar ganadores
   GANADORES.forEach(function(g){
@@ -434,13 +439,15 @@ function guardarResultados(){
     }));
   });
 
-  // Marcar restantes como reserva
+  // Marcar restantes como reserva (solo los que estaban aprobados y no ganaron)
   var idsGanadores=GANADORES.map(function(g){return g.id;});
-  todosIds.filter(function(id){return idsGanadores.indexOf(id)<0;}).forEach(function(id){
-    promesas.push(fetch(API+'/admin/inscripciones/'+id,{
-      method:'PUT',headers:HDR,
-      body:JSON.stringify({estado:'reserva',observacion:'No seleccionado en el sorteo'})
-    }));
+  TODOS_CAND.filter(function(c){return c.estado==='aprobado';}).forEach(function(c){
+    if(idsGanadores.indexOf(c.id)<0){
+      promesas.push(fetch(API+'/admin/inscripciones/'+c.id,{
+        method:'PUT',headers:HDR,
+        body:JSON.stringify({estado:'reserva',observacion:'No seleccionado en el sorteo'})
+      }));
+    }
   });
 
   Promise.all(promesas).then(function(){
