@@ -1,11 +1,13 @@
-/* api-config.js — URL del backend según dónde se abre el sitio */
+/* api-config.js — URL del backend (única fuente de verdad) */
 (function() {
+  var PRODUCCION = 'https://regpolcallao-production.up.railway.app';
   var h = location.hostname;
-  if (h === 'localhost' || h === '127.0.0.1') {
-    window.REGPOL_API_BASE = 'http://localhost:3000';
-  } else if (h.indexOf('github.io') !== -1 || h.indexOf('github.com') !== -1) {
-    window.REGPOL_API_BASE = 'https://regpolcallao-production.up.railway.app';
-  } else {
-    window.REGPOL_API_BASE = '';
-  }
+  var esLocal = h === 'localhost' || h === '127.0.0.1';
+
+  window.REGPOL_API_PRODUCTION = PRODUCCION;
+  window.REGPOL_API_BASE = esLocal ? 'http://localhost:3000' : PRODUCCION;
+
+  window.regpolApiBase = function() {
+    return window.REGPOL_API_BASE || PRODUCCION;
+  };
 })();

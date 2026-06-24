@@ -1,14 +1,9 @@
 /* portal.js \u2014 Datos y renderizado compartido del portal REGPOL Callao */
 (function() {
-  if (window.REGPOL_API_BASE != null) return;
+  if (window.REGPOL_API_BASE) return;
   var h = location.hostname;
-  if (h === 'localhost' || h === '127.0.0.1') {
-    window.REGPOL_API_BASE = 'http://localhost:3000';
-  } else if (h.indexOf('github.io') !== -1 || h.indexOf('github.com') !== -1) {
-    window.REGPOL_API_BASE = 'https://regpolcallao-production.up.railway.app';
-  } else {
-    window.REGPOL_API_BASE = '';
-  }
+  var prod = window.REGPOL_API_PRODUCTION || 'https://regpolcallao-production.up.railway.app';
+  window.REGPOL_API_BASE = (h === 'localhost' || h === '127.0.0.1') ? 'http://localhost:3000' : prod;
 })();
 
 var REGPOL_WEB_APP = 'https://script.google.com/macros/s/AKfycbzHHCUjXQVNtgVTERGx3RuiGPfSHuhCgTVddHL8ByDJUE-lLQessVsdFCFabayhCC5u/exec';
@@ -53,10 +48,11 @@ function escHtml(str) {
 }
 
 function apiBasePortal() {
-  if (window.REGPOL_API_BASE != null) return window.REGPOL_API_BASE;
+  if (typeof window.regpolApiBase === 'function') return window.regpolApiBase();
+  if (window.REGPOL_API_BASE) return window.REGPOL_API_BASE;
   var h = location.hostname;
   if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
-  return '';
+  return window.REGPOL_API_PRODUCTION || 'https://regpolcallao-production.up.railway.app';
 }
 
 function htmlTarjetaPortalItem(item) {

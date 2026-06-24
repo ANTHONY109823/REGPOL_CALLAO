@@ -59,6 +59,7 @@ function initCMS() {
 
 function apiBaseCMS() {
   if (typeof API !== 'undefined' && API) return API;
+  if (typeof window.regpolApiBase === 'function') return window.regpolApiBase();
   if (typeof apiBasePortal === 'function') {
     var b = apiBasePortal();
     if (b) return b;
@@ -66,10 +67,7 @@ function apiBaseCMS() {
   if (window.REGPOL_API_BASE) return window.REGPOL_API_BASE;
   var h = location.hostname;
   if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
-  if (h.indexOf('github.io') !== -1 || h.indexOf('github.com') !== -1) {
-    return 'https://regpolcallao-production.up.railway.app';
-  }
-  return '';
+  return window.REGPOL_API_PRODUCTION || 'https://regpolcallao-production.up.railway.app';
 }
 
 function fechaActualizacionHoy() {

@@ -5,13 +5,11 @@
 ================================================================ */
 
 var LOCAL_API = (function() {
+  if (typeof regpolApiBase === 'function') return regpolApiBase();
   if (window.REGPOL_API_BASE) return window.REGPOL_API_BASE;
   var h = location.hostname;
   if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
-  if (h.indexOf('github.io') !== -1 || h.indexOf('github.com') !== -1) {
-    return 'https://regpolcallao-production.up.railway.app';
-  }
-  return '';
+  return window.REGPOL_API_PRODUCTION || 'https://regpolcallao-production.up.railway.app';
 })();
 
 var PREGUNTAS       = [];   // se llena desde /preguntas

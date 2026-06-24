@@ -68,14 +68,14 @@
   </div>
 </div>
 
-<script src="api-config.js?v=1"></script>
+<script src="api-config.js?v=2"></script>
 <script>
-var API = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
-  : ((location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '');
+var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 
 // Permisos que dan acceso a panel-admin
 var PERMS_PANEL_ADMIN = [
-  'cms_cursos', 'cms_convenios', 'evaluaciones', 'descargas'
+  'cms_cursos', 'cms_convenios', 'cms_inicio', 'cms_resena', 'cms_labor', 'cms_novedades',
+  'evaluaciones', 'descargas'
 ];
 
 function rutaSegunSesion(rol, permisos){
