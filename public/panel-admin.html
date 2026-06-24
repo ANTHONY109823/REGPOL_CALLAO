@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Panel UNITIC — REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <link rel="stylesheet" href="panel-admin.css?v=9"/>
+  <link rel="stylesheet" href="panel-admin.css?v=11"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{background:#f0f4f0;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;min-height:100vh;}
@@ -37,8 +37,8 @@
       text-transform:uppercase;padding:0 16px 4px;}
 
     .sb-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;
-      font-size:13px;font-weight:600;color:#444;transition:all .18s;border-left:3px solid transparent;
-      user-select:none;}
+      font-size:12px;font-weight:700;color:#444;transition:all .18s;border-left:3px solid transparent;
+      user-select:none;text-transform:uppercase;letter-spacing:.35px;}
     .sb-item:hover{background:#f0f7f0;color:#004d3d;}
     .sb-item.on{background:#e8f5e9;color:#004d3d;border-left-color:#004d3d;}
     .sb-item i{width:18px;text-align:center;color:#888;font-size:13px;}
@@ -47,8 +47,8 @@
     /* grupo colapsable */
     .sb-group{}
     .sb-group-header{display:flex;align-items:center;justify-content:space-between;
-      padding:9px 16px;cursor:pointer;font-size:13px;font-weight:700;color:#004d3d;
-      background:#f0f7f0;border-left:3px solid #c8a94a;user-select:none;}
+      padding:9px 16px;cursor:pointer;font-size:12px;font-weight:800;color:#004d3d;
+      background:#f0f7f0;border-left:3px solid #c8a94a;user-select:none;text-transform:uppercase;letter-spacing:.4px;}
     .sb-group-header:hover{background:#e8f5e9;}
     .sb-group-header .gi{display:flex;align-items:center;gap:10px;}
     .sb-group-header i.fa-chevron-down{font-size:10px;color:#888;transition:transform .2s;}
@@ -100,7 +100,11 @@
     .filtros input,.filtros select{padding:7px 10px;border:1.5px solid #ccc;
       border-radius:6px;font-size:12.5px;min-width:140px;}
     table.t{width:100%;border-collapse:collapse;font-size:12px;}
-    table.t th{background:#004d3d;color:#fff;padding:8px 10px;text-align:left;}
+    table.t th{background:#004d3d;color:#fff;padding:8px 10px;text-align:left;
+      font-size:11px;text-transform:uppercase;letter-spacing:.35px;}
+    table.t td select,table.t td input[type="text"]{width:100%;min-width:120px;
+      padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;box-sizing:border-box;}
+    table.t td .btn-acciones-celda{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
     table.t td{padding:7px 10px;border-bottom:1px solid #eee;}
     table.t tr:nth-child(even){background:#f7faf7;}
     .badge{padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700;}
@@ -251,7 +255,7 @@
     <div class="sb-section" id="sb-sec-general">
       <div class="sb-section-label">General</div>
       <div class="sb-item on" data-page="dashboard" onclick="ir('dashboard',this)">
-        <i class="fas fa-chart-pie"></i> Dashboard
+        <i class="fas fa-chart-pie"></i> DASHBOARD
       </div>
     </div>
 
@@ -261,45 +265,45 @@
 
       <div class="sb-group" id="sb-grp-psico">
         <div class="sb-group-header" onclick="toggleGrupo(this)">
-          <div class="gi"><i class="fas fa-brain" style="color:#8e44ad;font-size:13px;"></i> Psicología</div>
+          <div class="gi"><i class="fas fa-brain" style="color:#8e44ad;font-size:13px;"></i> PSICOLOGÍA</div>
           <i class="fas fa-chevron-down"></i>
         </div>
         <div class="sb-group-body">
-          <div class="sb-item" data-perm-evaluaciones data-page="evaluaciones" onclick="ir('evaluaciones',this)"><i class="fas fa-clipboard-list"></i> Evaluaciones MMPI-2</div>
-          <div class="sb-item" data-perm-preguntas data-page="preguntas" onclick="ir('preguntas',this)"><i class="fas fa-question-circle"></i> Preguntas del test</div>
+          <div class="sb-item" data-perm-evaluaciones data-page="evaluaciones" onclick="ir('evaluaciones',this)"><i class="fas fa-clipboard-list"></i> EVALUACIONES MMPI-2</div>
+          <div class="sb-item" data-perm-preguntas data-page="preguntas" onclick="ir('preguntas',this)"><i class="fas fa-question-circle"></i> PREGUNTAS DEL TEST</div>
           <div class="sb-item" data-perm-descargas data-page="descargas" onclick="ir('descargas',this)"><i class="fas fa-list-alt"></i> RESPUESTAS</div>
         </div>
       </div>
 
       <div class="sb-group" id="sb-grp-convenios" style="margin-top:4px;">
         <div class="sb-group-header" onclick="toggleGrupo(this)">
-          <div class="gi"><i class="fas fa-handshake" style="color:#27ae60;font-size:13px;"></i> Convenios</div>
+          <div class="gi"><i class="fas fa-handshake" style="color:#27ae60;font-size:13px;"></i> CONVENIOS</div>
           <i class="fas fa-chevron-down"></i>
         </div>
         <div class="sb-group-body">
           <div class="sb-item" data-page="items-convenio" onclick="irGestionItems('convenio',this)">
-            <i class="fas fa-list-alt"></i> Convocatorias e inscritos
+            <i class="fas fa-list-alt"></i> CONVOCATORIAS E INSCRITOS
           </div>
           <div class="sb-item" data-page="sorteos" onclick="irGestionSorteos(this)">
-            <i class="fas fa-trophy"></i> Sorteos y resultados
+            <i class="fas fa-trophy"></i> SORTEOS Y RESULTADOS
           </div>
           <div class="sb-item" data-page="resultados-web-convenio" onclick="irPublicarResultados('convenio',this)">
-            <i class="fas fa-globe"></i> Publicar resultados (web)
+            <i class="fas fa-globe"></i> PUBLICAR RESULTADOS (WEB)
           </div>
         </div>
       </div>
 
       <div class="sb-group" id="sb-grp-cursos" style="margin-top:4px;">
         <div class="sb-group-header" onclick="toggleGrupo(this)">
-          <div class="gi"><i class="fas fa-graduation-cap" style="color:#2980b9;font-size:13px;"></i> Educación (Cursos)</div>
+          <div class="gi"><i class="fas fa-graduation-cap" style="color:#2980b9;font-size:13px;"></i> EDUCACIÓN (CURSOS)</div>
           <i class="fas fa-chevron-down"></i>
         </div>
         <div class="sb-group-body">
           <div class="sb-item" data-page="items-curso" onclick="irGestionItems('curso',this)">
-            <i class="fas fa-list-alt"></i> Convocatorias e inscritos
+            <i class="fas fa-list-alt"></i> CONVOCATORIAS E INSCRITOS
           </div>
           <div class="sb-item" data-page="resultados-web-curso" onclick="irPublicarResultados('curso',this)">
-            <i class="fas fa-globe"></i> Publicar resultados (web)
+            <i class="fas fa-globe"></i> PUBLICAR RESULTADOS (WEB)
           </div>
         </div>
       </div>
@@ -309,23 +313,23 @@
     <div class="sb-section" data-rol-unitic>
       <div class="sb-section-label">Administración</div>
       <div class="sb-item" data-page="usuarios" onclick="ir('usuarios',this)">
-        <i class="fas fa-users-cog"></i> Usuarios y permisos
+        <i class="fas fa-users-cog"></i> USUARIOS Y PERMISOS
       </div>
       <div class="sb-item" data-page="divisiones" onclick="ir('divisiones',this)">
-        <i class="fas fa-sitemap"></i> Divisiones / Unidades
+        <i class="fas fa-sitemap"></i> DIVISIONES / UNIDADES
       </div>
     </div>
 
     <!-- PORTAL WEB (solo Super Admin — contenido visible en la página pública) -->
     <div class="sb-section" id="sb-sec-portal" data-rol-unitic>
       <div class="sb-section-label">Portal Web</div>
-      <div class="sb-item" onclick="irCMS('carrusel',this)"><i class="fas fa-home"></i> Inicio / Carrusel</div>
-      <div class="sb-item" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> Novedades</div>
-      <div class="sb-item" onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> Convenios (web)</div>
-      <div class="sb-item" onclick="irCMS('cursos',this)"><i class="fas fa-graduation-cap"></i> Cursos (web)</div>
-      <div class="sb-item" onclick="irCMS('resena',this)"><i class="fas fa-landmark"></i> Reseña Histórica</div>
-      <div class="sb-item" onclick="irCMS('labor',this)"><i class="fas fa-tasks"></i> Nuestra Labor</div>
-      <div class="sb-item" onclick="irCMS('menu',this)"><i class="fas fa-bars"></i> Menú del sitio</div>
+      <div class="sb-item" onclick="irCMS('carrusel',this)"><i class="fas fa-home"></i> INICIO / CARRUSEL</div>
+      <div class="sb-item" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> NOVEDADES</div>
+      <div class="sb-item" onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> CONVENIOS (WEB)</div>
+      <div class="sb-item" onclick="irCMS('cursos',this)"><i class="fas fa-graduation-cap"></i> CURSOS (WEB)</div>
+      <div class="sb-item" onclick="irCMS('resena',this)"><i class="fas fa-landmark"></i> RESEÑA HISTÓRICA</div>
+      <div class="sb-item" onclick="irCMS('labor',this)"><i class="fas fa-tasks"></i> NUESTRA LABOR</div>
+      <div class="sb-item" onclick="irCMS('menu',this)"><i class="fas fa-bars"></i> MENÚ DEL SITIO</div>
     </div>
 
   </nav>
@@ -414,18 +418,17 @@
     <!-- EVALUACIONES -->
     <div id="page-evaluaciones" class="page">
       <div class="card">
-        <h3><i class="fas fa-clipboard-list"></i> Evaluaciones — todas las dependencias</h3>
-        <div class="descarga-box" style="margin-bottom:16px;background:#f8fcf8;">
-          <strong><i class="fas fa-building"></i> Activar dependencias para evaluaciones</strong>
-          <p style="font-size:12px;color:#666;margin:8px 0;">Marque las dependencias habilitadas, agrupadas por división (DIVOPUS 1, 2, 3 y DIVUES).</p>
-          <div id="cfg-unidades-list" style="max-height:520px;overflow-y:auto;border:1.5px solid #c8e6c9;border-radius:8px;padding:12px;display:grid;gap:14px;background:#f8fcf8;"></div>
-          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <button class="btn btn-v" onclick="guardarActivacionUnidades()"><i class="fas fa-save"></i> Guardar activación</button>
-            <button class="btn" style="background:#888;color:#fff;" onclick="marcarTodasUnidades(true)">Marcar todas</button>
-            <button class="btn" style="background:#aaa;color:#fff;" onclick="marcarTodasUnidades(false)">Desmarcar todas</button>
-          </div>
-          <p style="font-size:12px;margin-top:10px;color:#004d3d;font-weight:600;">Activas: <span id="cfg-activa">—</span></p>
+        <h3><i class="fas fa-clipboard-list"></i> EVALUACIONES — TODAS LAS DEPENDENCIAS</h3>
+        <p style="font-size:12px;color:#666;margin:-6px 0 12px;">Marque las dependencias habilitadas (DIVOPUS 1, 2, 3 y DIVUES).</p>
+        <div style="overflow-x:auto;max-height:560px;overflow-y:auto;margin-bottom:12px;">
+          <div id="cfg-unidades-list"></div>
         </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+          <button class="btn btn-v" onclick="guardarActivacionUnidades()"><i class="fas fa-save"></i> Guardar activación</button>
+          <button class="btn" style="background:#888;color:#fff;" onclick="marcarTodasUnidades(true)">Marcar todas</button>
+          <button class="btn" style="background:#aaa;color:#fff;" onclick="marcarTodasUnidades(false)">Desmarcar todas</button>
+        </div>
+        <p style="font-size:12px;margin:0;color:#004d3d;font-weight:600;">Activas: <span id="cfg-activa">—</span></p>
       </div>
     </div>
 
@@ -463,106 +466,60 @@
       </div>
     </div>
 
-    <!-- RESPUESTAS (listado + descargas PDF) -->
+    <!-- RESPUESTAS — consulta, PDF y eliminación unificados -->
     <div id="page-descargas" class="page">
       <div class="card">
         <h3><i class="fas fa-list-alt"></i> RESPUESTAS</h3>
-        <div class="filtros">
-          <select id="f-div" onchange="onFiltroDivisionAdmin()"><option value="">Todas las divisiones</option></select>
-          <select id="f-uni" onchange="actualizarBotonesEliminarEval();cargarTabla(1)"><option value="">Todas las unidades</option></select>
-          <input  id="f-bus" type="text" placeholder="Nombre / CIP / DNI..." oninput="cargarTabla(1)"/>
-          <button class="btn btn-v" onclick="cargarTabla(1)"><i class="fas fa-sync"></i></button>
-          <button class="btn btn-r" id="btn-del-unidad" style="display:none;" onclick="eliminarEvaluacionesUnidad()" title="Eliminar registros del filtro seleccionado"><i class="fas fa-trash-alt"></i> Eliminar por unidad</button>
-          <button class="btn btn-r" id="btn-del-todos" style="display:none;" onclick="limpiarTodosRegistrosEval()" title="Solo Super Admin"><i class="fas fa-broom"></i> Limpiar todos</button>
+        <div style="overflow-x:auto;margin-bottom:14px;">
+          <table class="t">
+            <thead>
+              <tr>
+                <th>División</th>
+                <th>Unidad</th>
+                <th>Búsqueda (CIP / DNI / nombre)</th>
+                <th>Acciones masivas</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="min-width:150px;">
+                  <select id="f-div" onchange="onFiltroDivisionAdmin()"><option value="">Todas las divisiones</option></select>
+                </td>
+                <td style="min-width:150px;">
+                  <select id="f-uni" onchange="onFiltroRespuestasChange()"><option value="">Todas las unidades</option></select>
+                </td>
+                <td style="min-width:200px;">
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <input id="f-bus" type="text" placeholder="CIP / DNI / Nombres..." style="flex:1;min-width:140px;"
+                      onkeydown="if(event.key==='Enter'){event.preventDefault();cargarTabla(1);}"/>
+                    <button class="btn btn-v" type="button" onclick="cargarTabla(1)"><i class="fas fa-search"></i> Buscar</button>
+                    <button class="btn btn-v" type="button" onclick="cargarTabla(window._tablaPaginaActual||1)" title="Actualizar"><i class="fas fa-sync"></i></button>
+                  </div>
+                </td>
+                <td>
+                  <div class="btn-acciones-celda">
+                    <button class="btn btn-r" id="btn-pdf-unidad" style="display:none;" type="button" onclick="descargarPdfRespuestas('unidad')"><i class="fas fa-file-pdf"></i> PDF unidad</button>
+                    <button class="btn btn-r" id="btn-pdf-division" style="display:none;" type="button" onclick="descargarPdfRespuestas('division')"><i class="fas fa-file-pdf"></i> PDF división</button>
+                    <button class="btn btn-r" id="btn-pdf-todas" type="button" onclick="descargarPdfRespuestas('todas')"><i class="fas fa-file-pdf"></i> PDF todas</button>
+                    <button class="btn btn-r" id="btn-del-unidad" style="display:none;" type="button" onclick="eliminarEvaluacionesUnidad()"><i class="fas fa-trash-alt"></i> Eliminar unidad</button>
+                    <button class="btn btn-r" id="btn-del-todos" style="display:none;" type="button" onclick="limpiarTodosRegistrosEval()"><i class="fas fa-broom"></i> Limpiar todos</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
         <div class="tinfo" id="tabla-info"></div>
         <div style="overflow-x:auto;">
           <table class="t">
             <thead><tr>
               <th>Nombres</th><th>CIP</th><th>DNI</th><th>Dependencia</th>
-              <th>Fecha</th><th>Edad</th><th>Estado</th><th>PDF</th><th></th>
+              <th>Fecha</th><th>Edad</th><th>Estado</th><th>Ver / PDF</th><th>Eliminar</th>
             </tr></thead>
             <tbody id="tabla-body"></tbody>
           </table>
         </div>
         <div id="paginacion" style="margin-top:8px;"></div>
-
-        <hr style="margin:22px 0;border:none;border-top:2px solid #e0e8e0;"/>
-
-        <h3 style="font-size:15px;margin-bottom:10px;"><i class="fas fa-file-download"></i> Descargar reportes</h3>
-
-        <!-- Tabs de descarga -->
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid #e0e8e0;padding-bottom:8px;">
-          <button class="dtab on" onclick="descTab('division',this)"><i class="fas fa-sitemap"></i> Por División</button>
-          <button class="dtab" onclick="descTab('unidad',this)"><i class="fas fa-building"></i> Por Unidad</button>
-          <button class="dtab" onclick="descTab('avances',this)"><i class="fas fa-hourglass-half"></i> Avances</button>
-          <button class="dtab" onclick="descTab('persona',this)"><i class="fas fa-user-search"></i> Buscar Persona</button>
-          <button class="dtab" onclick="descTab('todo',this)"><i class="fas fa-database"></i> Todos</button>
-        </div>
-
-        <!-- TAB: División -->
-        <div id="dtab-division">
-          <p style="font-size:12px;color:#666;margin-bottom:12px;">Seleccione una división para descargar el PDF de todas sus unidades.</p>
-          <div id="div-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;"></div>
-        </div>
-
-        <!-- TAB: Por unidad (agrupadas por división) -->
-        <div id="dtab-unidad" style="display:none;">
-          <div class="descarga-grid">
-            <div class="descarga-box" style="max-width:640px;">
-              <strong>Reporte por unidad</strong>
-              <p>Vista previa del listado antes de descargar. Unidades agrupadas en DIVOPUS 1, 2, 3 y DIVUES.</p>
-              <select id="d-uni-pdf" onchange="vistaPreviaDescarga('unidad','d-uni-pdf','prev-uni')"><option value="">— Seleccionar unidad —</option></select>
-              <div id="prev-uni-wrap" style="display:none;margin:12px 0;">
-                <div style="overflow-x:auto;">
-                  <table class="t">
-                    <thead><tr><th>N°</th><th>Nombres</th><th>CIP</th><th>DNI</th><th>Fecha</th><th>Bloque</th><th>Avance</th><th>Estado</th><th>PDF</th></tr></thead>
-                    <tbody id="prev-uni-body"></tbody>
-                  </table>
-            </div>
-                <p id="prev-uni-info" style="font-size:11.5px;color:#666;margin-top:6px;"></p>
-              </div>
-              <button class="btn btn-r" onclick="descargar('unidad','d-uni-pdf')" style="width:100%;justify-content:center;margin-top:6px;">Descargar PDF</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB: Avances (sin finalizar) -->
-        <div id="dtab-avances" style="display:none;">
-          <p style="font-size:12px;color:#666;margin-bottom:12px;">Evaluaciones guardadas por bloques sin enviar. Use <strong>Ver</strong> para revisar datos del efectivo y todas las respuestas registradas hasta el momento.</p>
-          <div style="overflow-x:auto;">
-            <table class="t">
-              <thead><tr><th>N°</th><th>Nombres</th><th>CIP</th><th>Unidad</th><th>Última actualización</th><th>Bloque</th><th>Avance</th><th>Ver</th></tr></thead>
-              <tbody id="avances-body"><tr><td colspan="8" style="text-align:center;color:#bbb;padding:18px;">Cargando avances...</td></tr></tbody>
-            </table>
-          </div>
-          <p id="avances-info" style="font-size:11.5px;color:#666;margin-top:8px;"></p>
-        </div>
-
-        <!-- TAB: Buscar persona -->
-        <div id="dtab-persona" style="display:none;">
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-            <input id="bus-cip"  type="text" placeholder="CIP o DNI..." style="padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;width:150px;"/>
-            <input id="bus-nom"  type="text" placeholder="Nombres..." style="padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;flex:1;min-width:180px;"/>
-            <button class="btn btn-v" onclick="buscarPersona()"><i class="fas fa-search"></i> Buscar</button>
-          </div>
-          <div style="overflow-x:auto;">
-            <table class="t">
-              <thead><tr><th>Nombres</th><th>CIP</th><th>DNI</th><th>Comisaría / Unidad</th><th>Fecha</th><th>Estado</th><th>PDF</th></tr></thead>
-              <tbody id="bus-resultados"><tr><td colspan="7" style="text-align:center;color:#bbb;padding:18px;">Ingrese CIP o nombre para buscar.</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- TAB: Todos -->
-        <div id="dtab-todo" style="display:none;">
-          <p style="font-size:12px;color:#666;margin-bottom:14px;">Descarga el PDF con todas las evaluaciones de la región.</p>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="btn btn-r" style="font-size:13px;" onclick="window.open(API+'/pdf/grupo?division=TODAS&token='+encodeURIComponent(TOKEN),'_blank')">
-              <i class="fas fa-file-pdf"></i> PDF — todas las divisiones
-            </button>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -1121,7 +1078,7 @@
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=2"></script>
 <script src="portal.js?v=32"></script>
-<script src="divisiones-ui.js?v=1"></script>
+<script src="divisiones-ui.js?v=2"></script>
 <script src="panel-cms.js?v=12"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
@@ -1129,7 +1086,8 @@ var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[], SESION=null;
 var ITEMS_CACHE=[], ITEM_ACTIVO_ID=null;
 
 var ETIQUETAS_PERM={
-  evaluaciones:'Evaluaciones MMPI-2',
+  evaluaciones:'EVALUACIONES MMPI-2',
+  preguntas:'PREGUNTAS DEL TEST',
   descargas:'RESPUESTAS',
   cms_convenios:'Gestión Convenios',
   cms_cursos:'Gestión Cursos'
@@ -1267,10 +1225,43 @@ function btnEliminarEval(r) {
 }
 
 function actualizarBotonesEliminarEval() {
+  actualizarBotonesRespuestas();
+}
+
+function actualizarBotonesRespuestas() {
+  var uni = val('f-uni');
+  var div = val('f-div');
   var btnU = document.getElementById('btn-del-unidad');
   var btnT = document.getElementById('btn-del-todos');
-  if (btnU) btnU.style.display = (val('f-uni') || val('f-div')) ? '' : 'none';
+  var btnPdfU = document.getElementById('btn-pdf-unidad');
+  var btnPdfD = document.getElementById('btn-pdf-division');
+  if (btnU) btnU.style.display = (uni || div) ? '' : 'none';
   if (btnT) btnT.style.display = esUnitic() ? '' : 'none';
+  if (btnPdfU) btnPdfU.style.display = uni ? '' : 'none';
+  if (btnPdfD) btnPdfD.style.display = div ? '' : 'none';
+}
+
+function onFiltroRespuestasChange() {
+  actualizarBotonesRespuestas();
+  cargarTabla(1);
+}
+
+function descargarPdfRespuestas(tipo) {
+  if (tipo === 'todas') {
+    window.open(API + '/pdf/grupo?division=TODAS&token=' + encodeURIComponent(TOKEN), '_blank');
+    return;
+  }
+  if (tipo === 'unidad') {
+    var u = val('f-uni');
+    if (!u) { alert('Seleccione una unidad en el filtro.'); return; }
+    window.open(API + '/pdf/grupo?unidad=' + encodeURIComponent(u) + '&token=' + encodeURIComponent(TOKEN), '_blank');
+    return;
+  }
+  if (tipo === 'division') {
+    var d = val('f-div');
+    if (!d) { alert('Seleccione una división en el filtro.'); return; }
+    window.open(API + '/pdf/grupo?division=' + encodeURIComponent(d) + '&token=' + encodeURIComponent(TOKEN), '_blank');
+  }
 }
 
 function eliminarRegistroEval(id, cip, soloProgreso, nombre) {
@@ -1604,9 +1595,8 @@ function ir(page, el){
   if(page==='preguntas' && !ya)    cargarPreguntas();
   if(page==='usuarios' && !ya)     cargarUsuarios();
   if(page==='descargas'){
-    if(!ya) cargarFiltrosDescarga();
     if(!ya) cargarFiltrosTabla();
-    actualizarBotonesEliminarEval();
+    actualizarBotonesRespuestas();
     cargarTabla(1);
   }
   if(page==='dashboard')           cargarDashboard(!ya);
@@ -1835,13 +1825,15 @@ function cargarFiltrosTabla(){
   fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
     guardarDivisionesEnVentana(d.divisiones || []);
+    DIVISIONES_DATA = d.divisiones || [];
     llenarSelectDivisiones('f-div', d.divisiones, 'Todas las divisiones');
     llenarSelectUnidadesAgrupadas('f-uni', d.divisiones, 'Todas las unidades');
+    actualizarBotonesRespuestas();
   });
 }
 
 function onFiltroDivisionAdmin() {
-  onFiltroDivisionCambio('f-div', 'f-uni', window._divisionesData || [], function() { actualizarBotonesEliminarEval(); cargarTabla(1); });
+  onFiltroDivisionCambio('f-div', 'f-uni', window._divisionesData || [], function() { actualizarBotonesRespuestas(); cargarTabla(1); });
 }
 
 function cargarTabla(pag){
@@ -1997,229 +1989,11 @@ function eliminarUsuario(id){
   fetch(API+'/admin/usuarios/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarUsuarios();});
 }
 
-// ── DESCARGAS ───────────────────────────────────────────────────────────────
-function vistaPreviaDescarga(filtro, selId, prefijo) {
-  var v = val(selId);
-  var wrap = document.getElementById(prefijo + '-wrap');
-  var body = document.getElementById(prefijo + '-body');
-  var info = document.getElementById(prefijo + '-info');
-  if (!v) {
-    if (wrap) wrap.style.display = 'none';
-    return;
-  }
-  if (wrap) wrap.style.display = '';
-  if (body) body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#bbb;padding:14px;">Cargando...</td></tr>';
-  var q = filtro === 'unidad' ? 'unidad=' : 'comisaria=';
-  Promise.all([
-    fetch(API + '/evaluaciones?pagina=1&' + q + encodeURIComponent(v) + '&busqueda=', { headers: hdr() }).then(function(r) { return r.json(); }),
-    fetch(API + '/admin/avances?' + q + encodeURIComponent(v), { headers: hdr() }).then(function(r) { return r.json(); })
-  ]).then(function(results) {
-    var d = results[0], av = results[1];
-    if (!body) return;
-    if (!d.ok && !av.ok) {
-      body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#c0392b;padding:14px;">Error al cargar: '
-        + escHtml((d.error || av.error || 'sin detalle')) + '</td></tr>';
-      if (info) info.textContent = 'Error';
-      return;
-    }
-    var filas = [], cipsListos = {};
-    (d.ok ? d.rows : []).forEach(function(r) {
-      cipsListos[(r.cip || '').toLowerCase()] = true;
-      var total = parseInt(r.total_resp, 10) || 0;
-      var esAvance = !!r.solo_progreso;
-      var comp = total >= 566 && !esAvance && !!r.completada;
-      var bloque = parseInt(r.bloque_max, 10) || Math.min(12, Math.ceil(total / 50) || 0);
-      filas.push({
-        nombres: r.nombres, cip: r.cip, dni: r.dni, fecha: r.fecha,
-        bloque: bloque, total: total, total_resp: total, comp: comp, id: r.id,
-        completada: !!r.completada,
-        solo_progreso: esAvance, enCurso: esAvance
-      });
-    });
-    (av.ok ? av.rows : []).forEach(function(p) {
-      if (cipsListos[(p.cip || '').toLowerCase()]) return;
-      filas.push({
-        nombres: p.nombres, cip: p.cip, dni: '—', fecha: p.ultima || '—',
-        bloque: parseInt(p.bloque, 10) || 1, total: parseInt(p.total, 10) || 0,
-        comp: false, id: null, solo_progreso: true, enCurso: true
-      });
-    });
-    if (!filas.length) {
-      body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#bbb;padding:14px;">Sin registros para esta selección.</td></tr>';
-      if (info) info.textContent = '0 registros';
-      return;
-    }
-    body.innerHTML = filas.map(function(r, i) {
-      var badge = r.enCurso
-        ? '<span class="badge" style="background:#fff3cd;color:#856404;">En curso</span>'
-        : (r.comp ? '<span class="badge ok">Completo</span>' : '<span class="badge pend">Parcial</span>');
-      var pdf = r.enCurso
-        ? '<button type="button" class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="verAvance(\'' + escJs(r.cip) + '\')"><i class="fas fa-eye"></i> Ver</button>'
-        : btnAccionesEval(r);
-      return '<tr>'
-        + '<td style="text-align:center;font-weight:700;">' + (i + 1) + '</td>'
-        + '<td><strong>' + escHtml(r.nombres) + '</strong></td>'
-        + '<td>' + escHtml(r.cip) + '</td>'
-        + '<td>' + escHtml(r.dni) + '</td>'
-        + '<td style="font-size:11px;">' + escHtml(r.fecha) + '</td>'
-        + '<td style="text-align:center;">' + r.bloque + '/12</td>'
-        + '<td>' + r.total + '/566 <span style="color:#666;font-size:11px;">(' + pctAvance(r.total) + '%)</span></td>'
-        + '<td>' + badge + '</td>'
-        + '<td>' + pdf + '</td>'
-        + '</tr>';
-    }).join('');
-    var enCurso = filas.filter(function(r) { return r.enCurso; }).length;
-    if (info) info.textContent = filas.length + ' registros' + (enCurso ? ' (' + enCurso + ' en curso sin enviar)' : '');
-  }).catch(function() {
-    if (body) body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#c0392b;padding:14px;">Error al cargar vista previa.</td></tr>';
-  });
-}
-
-function descargar(filtro, selId) {
-  var v = val(selId);
-  if (!v) { alert('Seleccione un ' + filtro); return; }
-  window.open(API + '/pdf/grupo?' + filtro + '=' + encodeURIComponent(v) + '&token=' + encodeURIComponent(TOKEN), '_blank');
-}
-
 // ── MODALES ─────────────────────────────────────────────────────────────────
-function cerrarModal(id){document.getElementById(id).classList.remove('open');}
-document.addEventListener('click',function(e){if(e.target.classList.contains('modal'))e.target.classList.remove('open');});
-
-// ── DESCARGAS — TABS ──────────────────────────────────────────────────────────
 var DIVISIONES_DATA = [];
 
-function descTab(tab, el){
-  ['division','unidad','avances','persona','todo'].forEach(function(t){
-    document.getElementById('dtab-'+t).style.display = t===tab ? '' : 'none';
-  });
-  document.querySelectorAll('.dtab').forEach(function(b){b.classList.remove('on');});
-  if(el) el.classList.add('on');
-  if(tab==='division') renderDivCards();
-  if(tab==='avances') cargarAvancesDescarga();
-}
-
-function cargarAvancesDescarga(){
-  var body = document.getElementById('avances-body');
-  var info = document.getElementById('avances-info');
-  if(!body) return;
-  body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#bbb;padding:14px;">Cargando...</td></tr>';
-  fetch(API+'/admin/progresos-pendientes',{headers:hdr()})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(!d.ok){
-        body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#c0392b;padding:14px;">Error al cargar avances: '+escHtml(d.error||'sin detalle')+'</td></tr>';
-        return;
-      }
-      var rows = d.rows || [];
-      if(!rows.length){
-        body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#bbb;padding:18px;">No hay avances guardados sin enviar.</td></tr>';
-        if(info) info.textContent = '0 avances';
-        return;
-      }
-      body.innerHTML = rows.map(function(r, i){
-        var total = parseInt(r.total_resp, 10) || 0;
-        var pct = pctAvance(total);
-        var bloque = parseInt(r.bloque_max, 10) || Math.min(12, Math.ceil(total / 50) || 1);
-        return '<tr style="background:#fffdf5;">'
-          +'<td style="text-align:center;font-weight:700;">'+(i+1)+'</td>'
-          +'<td><strong>'+escHtml(r.nombres)+'</strong></td>'
-          +'<td>'+escHtml(r.cip)+'</td>'
-          +'<td style="font-size:11px;">'+escHtml(r.unidad||r.comisaria||'—')+'</td>'
-          +'<td style="font-size:11px;">'+escHtml(r.fecha)+'</td>'
-          +'<td style="text-align:center;">'+bloque+'/12</td>'
-          +'<td><strong>'+total+'/566</strong> <span style="color:#856404;font-size:11px;">('+pct+'%)</span></td>'
-          +'<td><button type="button" class="btn btn-o" style="font-size:11px;padding:3px 10px;" onclick="verAvance(\''+escJs(r.cip)+'\')"><i class="fas fa-eye"></i> Ver</button></td>'
-          +'</tr>';
-      }).join('');
-      if(info) info.textContent = rows.length + ' avance' + (rows.length === 1 ? '' : 's') + ' sin enviar';
-    })
-    .catch(function(){
-      body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#c0392b;padding:14px;">Error de conexión.</td></tr>';
-    });
-}
-
-function renderDivCards(){
-  var cont = document.getElementById('div-cards');
-  if(!DIVISIONES_DATA.length){
-    cont.innerHTML='<p style="color:#bbb;font-size:12px;">Cargando...</p>';
-    fetch(API+'/admin/divisiones',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
-      if(d.ok){DIVISIONES_DATA=d.divisiones; renderDivCards();}
-    });
-    return;
-  }
-  cont.innerHTML = DIVISIONES_DATA.map(function(div){
-    return '<div class="descarga-box" style="border-color:#a5d6a7;">'
-      +'<strong><i class="fas fa-sitemap" style="color:#004d3d;"></i> '+escHtml(div.nombre)+'</strong>'
-      +'<p style="color:#888;font-size:11px;">'+div.unidades.length+' unidades</p>'
-      +'<button class="btn btn-r" style="width:100%;justify-content:center;" '
-        +'onclick="window.open(API+\'/pdf/grupo?division=\'+encodeURIComponent(\''+escJs(div.nombre)+'\')+\'&token=\'+encodeURIComponent(TOKEN),\'_blank\')">'
-        +'<i class="fas fa-file-pdf"></i> Descargar PDF</button>'
-    +'</div>';
-  }).join('');
-}
-
-// ── BUSCAR PERSONA ────────────────────────────────────────────────────────────
-function buscarPersona(){
-  var cip = val('bus-cip').trim();
-  var nom = val('bus-nom').trim();
-  if(!cip && !nom){alert('Ingrese CIP o nombre.');return;}
-  var tbody = document.getElementById('bus-resultados');
-  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#bbb;padding:12px;">Buscando...</td></tr>';
-
-  if (cip) {
-    fetch(API+'/admin/registro-cip?cip='+encodeURIComponent(cip),{headers:hdr()})
-      .then(function(r){return r.json();})
-      .then(function(d){
-        if(!d.ok){tbody.innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error al buscar: '+escHtml(d.error||'sin detalle')+'</td></tr>';return;}
-        var filas = [];
-        if(d.diagnostico){
-          filas.push('<tr><td colspan="7" style="background:#fff8e1;padding:10px;font-size:12px;color:#7a5c00;"><strong>Diagnóstico:</strong> '+escHtml(d.diagnostico)+'</td></tr>');
-        }
-        (d.evaluaciones||[]).forEach(function(r){
-          var comp = parseInt(r.total_resp,10) >= 566 && !!r.completada;
-          filas.push('<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
-            +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+escHtml(r.fecha)+'</td>'
-            +'<td>'+(comp?'<span class="badge ok">Enviado</span>':'<span class="badge pend">'+r.total_resp+'/566</span>')+'</td>'
-            +'<td>'+btnAccionesEval(r)+'</td></tr>');
-        });
-        if(d.progreso && !(d.evaluaciones||[]).some(function(e){return e.completada;})){
-          var p=d.progreso, pt=parseInt(p.total_resp,10)||0;
-          filas.push('<tr style="background:#fffdf5;"><td><strong>'+escHtml(p.nombres)+'</strong></td><td>'+escHtml(p.cip)+'</td><td>—</td>'
-            +'<td style="font-size:11px;">'+escHtml(p.comisaria||p.unidad)+'</td><td style="font-size:11px;">'+escHtml(p.fecha)+'</td>'
-            +'<td><span class="badge" style="background:#fff3cd;color:#856404;">'+pt+'/566 sin enviar</span></td>'
-            +'<td><span style="color:#888;font-size:10px;">En curso</span></td></tr>');
-        }
-        if(filas.length<= (d.diagnostico?1:0)){
-          tbody.innerHTML='<tr><td colspan="7" style="color:#bbb;padding:12px;text-align:center;">Sin resultados para CIP '+escHtml(cip)+'.</td></tr>';
-          return;
-        }
-        tbody.innerHTML = filas.join('');
-      })
-      .catch(function(){
-        tbody.innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error de conexión al buscar.</td></tr>';
-      });
-    return;
-  }
-
-  var q = 'busqueda='+encodeURIComponent(nom);
-  fetch(API+'/evaluaciones?'+q+'&pagina=1',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
-    if(!d.ok){tbody.innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error al buscar: '+escHtml(d.error||'')+'</td></tr>';return;}
-    if(!d.rows.length){tbody.innerHTML='<tr><td colspan="7" style="color:#bbb;padding:12px;text-align:center;">Sin resultados.</td></tr>';return;}
-    tbody.innerHTML = d.rows.map(function(r){
-      var total=parseInt(r.total_resp,10)||0;
-      var comp=total>=566 && !r.solo_progreso && !!r.completada;
-      var badge=r.solo_progreso
-        ?'<span class="badge" style="background:#fff3cd;color:#856404;">'+total+'/566 sin enviar</span>'
-        :(comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+total+'/566</span>');
-      var pdf = btnAccionesEval(r);
-      return '<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
-        +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+r.fecha+'</td>'
-        +'<td>'+badge+'</td><td>'+pdf+'</td></tr>';
-    }).join('');
-  }).catch(function(){
-    tbody.innerHTML='<tr><td colspan="7" style="color:#c00;padding:12px;text-align:center;">Error de conexión al buscar.</td></tr>';
-  });
-}
+function cerrarModal(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('click',function(e){if(e.target.classList.contains('modal'))e.target.classList.remove('open');});
 
 // ── GESTIÓN DIVISIONES ────────────────────────────────────────────────────────
 function cargarDivisiones(){
@@ -2331,19 +2105,6 @@ function guardarUnidad(){
 function eliminarUnidad(id){
   if(!confirm('¿Eliminar esta unidad?')) return;
   fetch(API+'/admin/unidades/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarDivisiones();});
-}
-
-// ── DESCARGAS — actualizar filtros al entrar ──────────────────────────────────
-function cargarFiltrosDescarga(){
-  fetch(API+'/listar',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
-    if(!d.ok) return;
-    if(d.divisiones) {
-      DIVISIONES_DATA = d.divisiones;
-      guardarDivisionesEnVentana(d.divisiones);
-    }
-    llenarSelectUnidadesAgrupadas('d-uni-pdf', DIVISIONES_DATA, '— Seleccionar unidad —');
-    renderDivCards();
-  });
 }
 
 // ── SORTEOS Y RESULTADOS ──────────────────────────────────────────────────────

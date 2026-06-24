@@ -18,32 +18,41 @@ function renderCheckboxesPorDivision(contId, divisiones, activas, chkClass) {
   var cont = document.getElementById(contId);
   if (!cont) return;
   if (!divisiones || !divisiones.length) {
-    cont.innerHTML = '<p style="color:#888;font-size:12px;">Cargando unidades...</p>';
+    cont.innerHTML = '<p style="color:#888;font-size:12px;padding:12px;">Cargando unidades...</p>';
     return;
   }
-  cont.style.display = 'block';
-  cont.style.gridTemplateColumns = '1fr';
-  cont.style.gap = '14px';
-  cont.innerHTML = divisiones.map(function(div) {
+
+  var filas = [];
+  divisiones.forEach(function(div) {
     var units = div.unidades || [];
-    var checks = units.map(function(u) {
+    filas.push(
+      '<tr class="fila-division">'
+        + '<td colspan="3" style="background:#004d3d;color:#fff;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.35px;">'
+        + '<i class="fas fa-sitemap" style="margin-right:6px;"></i>' + escHtmlDiv(div.nombre)
+        + ' <span style="font-weight:500;opacity:.85;">(' + units.length + ' unidades)</span></td>'
+      + '</tr>'
+    );
+    units.forEach(function(u) {
       var nom = typeof u === 'string' ? u : (u.nombre || '');
-      if (!nom) return '';
+      if (!nom) return;
       var isOn = activas && activas.length
         ? activas.some(function(a) { return normalizarNombreUnidad(a) === normalizarNombreUnidad(nom); })
         : false;
-      return '<label style="font-size:12px;display:flex;align-items:flex-start;gap:6px;cursor:pointer;line-height:1.3;">'
-        + '<input type="checkbox" class="' + chkClass + '" value="' + escHtmlDiv(nom) + '"' + (isOn ? ' checked' : '') + '> '
-        + '<span>' + escHtmlDiv(nom) + '</span></label>';
-    }).join('');
+      filas.push(
+        '<tr>'
+          + '<td style="width:28%;font-size:11px;color:#666;">' + escHtmlDiv(div.nombre) + '</td>'
+          + '<td><strong>' + escHtmlDiv(nom) + '</strong></td>'
+          + '<td style="text-align:center;width:90px;">'
+            + '<input type="checkbox" class="' + chkClass + '" value="' + escHtmlDiv(nom) + '"' + (isOn ? ' checked' : '') + ' title="Activar evaluación">'
+          + '</td>'
+        + '</tr>'
+      );
+    });
+  });
 
-    return '<div class="bloque-division" style="border:1.5px solid #c8e6c9;border-radius:8px;padding:12px;background:#fff;">'
-      + '<div style="font-weight:700;color:#004d3d;font-size:13px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #e8f5e9;">'
-      + '<i class="fas fa-sitemap" style="margin-right:6px;"></i>' + escHtmlDiv(div.nombre)
-      + ' <span style="font-weight:400;color:#888;font-size:11px;">(' + units.length + ' unidades)</span></div>'
-      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">' + checks + '</div>'
-      + '</div>';
-  }).join('');
+  cont.innerHTML = '<table class="t" style="margin:0;">'
+    + '<thead><tr><th>División</th><th>Dependencia</th><th style="text-align:center;width:90px;">Activa</th></tr></thead>'
+    + '<tbody>' + filas.join('') + '</tbody></table>';
 }
 
 function escHtmlDiv(s) {
