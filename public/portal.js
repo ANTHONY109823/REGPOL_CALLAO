@@ -531,7 +531,7 @@ function renderUnidadesPublico(data) {
   var msg  = document.getElementById('msg-cargando');
   if (!cont || !msg) return;
   if (!data || !data.ok || !data.divisiones || !data.divisiones.length) {
-    msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> No se pudo cargar la informaci?n.';
+    msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> No se pudo cargar la información.';
     return;
   }
   msg.style.display = 'none';
@@ -551,8 +551,8 @@ function renderUnidadesPublico(data) {
       + '<thead><tr>'
       + '<th style="text-align:center;">#</th>'
       + '<th>Comisaria / Unidad</th>'
-      + '<th>Direcci?n</th>'
-      + '<th style="text-align:center;">Tel?fono</th>'
+      + '<th>Dirección</th>'
+      + '<th style="text-align:center;">Teléfono</th>'
       + '<th style="text-align:center;">Mapa</th>'
       + '</tr></thead><tbody>';
     div.unidades.forEach(function(u, i) {

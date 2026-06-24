@@ -629,7 +629,7 @@
       </div><!-- /card -->
     </div>
 
-    <!-- GESTIÁ“N ITEMS (cursos / convenios) -->
+    <!-- GESTIÓN ITEMS (cursos / convenios) -->
     <div id="page-items" class="page">
       <div class="card">
         <h3 id="items-titulo"><i class="fas fa-clipboard-list"></i> Convocatorias</h3>
@@ -664,7 +664,10 @@
           <select id="inscritos-filtro-estado" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
             <option value="">Todos</option>
             <option value="pendiente">Pendiente</option>
-            <option value="aceptado">Aceptado</option>
+            <option value="verificado">Verificado</option>
+            <option value="ganador">Ganador</option>
+            <option value="aprobado">Aprobado</option>
+            <option value="reserva">Reserva</option>
             <option value="rechazado">Rechazado</option>
           </select>
           <button class="btn btn-v" onclick="exportarInscritos()"><i class="fas fa-download"></i> Exportar CSV</button>
@@ -678,12 +681,30 @@
     <div id="page-sorteos" class="page">
       <div class="card">
         <h3><i class="fas fa-trophy" style="color:#c8a94a;"></i> Sorteos y Publicación de Resultados</h3>
+
+        <div id="sorteo-convenio-panel" style="background:#f0f7f0;border:1.5px solid #c8e6c9;border-radius:10px;padding:16px;margin-bottom:18px;">
+          <strong style="color:#004d3d;display:block;margin-bottom:10px;font-size:13px;"><i class="fas fa-handshake"></i> Sorteo de convenio</strong>
+          <p style="font-size:12px;color:#666;margin-bottom:12px;">Seleccione la convocatoria, verifique inscritos y ejecute el sorteo en vivo con la rueda aleatoria.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+            <div style="flex:1;min-width:280px;">
+              <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Convocatoria de convenio</label>
+              <select id="sorteo-conv-select" onchange="onSelectConvocatoriaSorteo()" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
+                <option value="">— Seleccione un convenio —</option>
+              </select>
+            </div>
+            <button class="btn btn-o" id="btn-sorteo-live" disabled onclick="abrirSorteoEnVivoConvenio()"><i class="fas fa-random"></i> Sorteo en vivo</button>
+            <button class="btn btn-v" id="btn-ver-inscritos-sorteo" disabled onclick="irInscritosDesdeSorteo()"><i class="fas fa-users"></i> Ver inscritos</button>
+            <button class="btn" style="background:#2980b9;color:#fff;" id="btn-flyer-sorteo" disabled onclick="crearFlyerDesdeConvenio()"><i class="fas fa-bullhorn"></i> Crear flyer</button>
+          </div>
+          <div id="sorteo-conv-stats" style="display:none;margin-top:14px;padding:12px;background:#fff;border-radius:8px;border:1px solid #e0e8e0;font-size:12.5px;"></div>
+        </div>
+
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
           <button class="btn btn-o" onclick="abrirModalSorteo(null,'proximo')"><i class="fas fa-bullhorn"></i> Nuevo flyer / Próximo sorteo</button>
           <button class="btn btn-v" onclick="abrirModalSorteo(null,'resultado')"><i class="fas fa-trophy"></i> Publicar resultados</button>
         </div>
         <div id="sorteos-alerta" class="alerta" style="display:none;"></div>
-        <div id="sorteos-tabla"><p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i></p></div>
+        <div id="sorteos-tabla"><p style="color:#bbb;text-align:center;padding:24px;">Cargando sorteos...</p></div>
       </div>
     </div>
 
@@ -716,7 +737,7 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div style="grid-column:1/-1;">
         <label>Título *</label>
-        <input type="text" id="mi-titulo-val" placeholder="Ej: CURSO DE INVESTIGACIÁ“N EN ACCIDENTES DE TRÁNSITO" maxlength="200"/>
+        <input type="text" id="mi-titulo-val" placeholder="Ej: CURSO DE INVESTIGACIÓN EN ACCIDENTES DE TRÁNSITO" maxlength="200"/>
       </div>
       <div style="grid-column:1/-1;">
         <label>Descripción / Subtítulo</label>
@@ -836,6 +857,11 @@
 
     <label>Título *</label>
     <input type="text" id="ms-titulo-val" placeholder="Ej: SORTEO PLAN CELADOR — JULIO 2026" maxlength="200"/>
+
+    <label>Convocatoria vinculada</label>
+    <select id="ms-item-id" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;margin-bottom:10px;">
+      <option value="">— Sin vincular —</option>
+    </select>
 
     <label>Descripción / Detalle</label>
     <textarea id="ms-descripcion" rows="3" placeholder="Convocatoria para servicio policial voluntario remunerado..."></textarea>
@@ -1028,7 +1054,7 @@ var ETIQUETAS_PERM={
   cms_labor:'Nuestra Labor', cms_novedades:'Novedades'
 };
 
-// ── SESIÁ“N ────────────────────────────────────────────────────────────────────
+// ── SESIÓN ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',function(){
   var s=JSON.parse(localStorage.getItem('regpol_session')||'null');
   var perms=s&&s.permisos?s.permisos:[];
@@ -1143,7 +1169,7 @@ function iniciarPanel(s){
   }
 }
 
-// ── NAVEGACIÁ“N SIDEBAR ────────────────────────────────────────────────────────
+// ── NAVEGACIÓN SIDEBAR ────────────────────────────────────────────────────────
 var panelPaginasCargadas = {};
 
 function ir(page, el){
@@ -1168,7 +1194,7 @@ function ir(page, el){
   if(page==='dashboard' && !ya)    cargarStats();
   if(page==='divisiones' && !ya)   cargarDivisiones();
   if(page==='items' && !ya)        cargarItems();
-  if(page==='sorteos' && !ya)      cargarSorteos();
+  if(page==='sorteos')             cargarSorteos();
   panelPaginasCargadas[page] = true;
 }
 
@@ -1602,7 +1628,7 @@ function buscarPersona(){
   });
 }
 
-// ── GESTIÁ“N DIVISIONES ────────────────────────────────────────────────────────
+// ── GESTIÓN DIVISIONES ────────────────────────────────────────────────────────
 function cargarDivisiones(){
   fetch(API+'/admin/divisiones',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
@@ -1728,15 +1754,124 @@ function cargarFiltrosDescarga(){
 }
 
 // ── SORTEOS Y RESULTADOS ──────────────────────────────────────────────────────
-var SORTEOS_CACHE = [], RESULTADOS_EDIT = [];
+var SORTEOS_CACHE = [], RESULTADOS_EDIT = [], CONVENIOS_SORTEO_CACHE = [], SORTEO_CONV_ACTIVO = null;
+
+function cargarConvocatoriasSorteo(){
+  return fetch(API+'/admin/items?tipo=convenio',{headers:hdr()})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      CONVENIOS_SORTEO_CACHE = (d.ok && d.items) ? d.items : [];
+      var sel = document.getElementById('sorteo-conv-select');
+      var prev = sel ? sel.value : '';
+      if(sel){
+        sel.innerHTML = '<option value="">— Seleccione un convenio —</option>'
+          + CONVENIOS_SORTEO_CACHE.map(function(i){
+            return '<option value="'+i.id+'">'+escHtml(i.titulo)+' ('+escHtml(i.estado||'')+')</option>';
+          }).join('');
+        if(prev) sel.value = prev;
+      }
+      llenarSelectConveniosSorteo('ms-item-id', '— Sin vincular —');
+      llenarSelectConveniosSorteo('ms-import-item', '— Importar desde convenio —');
+      onSelectConvocatoriaSorteo();
+    })
+    .catch(function(){});
+}
+
+function llenarSelectConveniosSorteo(selectId, placeholder){
+  var sel = document.getElementById(selectId);
+  if(!sel) return;
+  var val = sel.value;
+  sel.innerHTML = '<option value="">'+(placeholder||'— Seleccionar —')+'</option>'
+    + CONVENIOS_SORTEO_CACHE.map(function(i){
+      return '<option value="'+i.id+'">'+escHtml(i.titulo)+'</option>';
+    }).join('');
+  if(val) sel.value = val;
+}
+
+function onSelectConvocatoriaSorteo(){
+  var sel = document.getElementById('sorteo-conv-select');
+  var stats = document.getElementById('sorteo-conv-stats');
+  var id = sel && sel.value ? parseInt(sel.value, 10) : 0;
+  SORTEO_CONV_ACTIVO = CONVENIOS_SORTEO_CACHE.find(function(i){ return i.id === id; }) || null;
+  var btnLive = document.getElementById('btn-sorteo-live');
+  var btnIns = document.getElementById('btn-ver-inscritos-sorteo');
+  var btnFlyer = document.getElementById('btn-flyer-sorteo');
+  if(!id || !SORTEO_CONV_ACTIVO){
+    if(stats) stats.style.display = 'none';
+    if(btnLive) btnLive.disabled = true;
+    if(btnIns) btnIns.disabled = true;
+    if(btnFlyer) btnFlyer.disabled = true;
+    return;
+  }
+  if(btnIns) btnIns.disabled = false;
+  if(btnFlyer) btnFlyer.disabled = false;
+  if(stats){
+    stats.style.display = 'block';
+    stats.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando inscritos...';
+  }
+  fetch(API+'/admin/items/'+id+'/inscritos',{headers:hdr()})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok){
+        if(stats) stats.innerHTML = '<span style="color:#c0392b;">'+escHtml(d.error||'Error al cargar inscritos')+'</span>';
+        if(btnLive) btnLive.disabled = true;
+        return;
+      }
+      var list = d.inscritos || [];
+      var pend = list.filter(function(i){ return i.estado === 'pendiente'; }).length;
+      var verif = list.filter(function(i){ return i.estado === 'verificado'; }).length;
+      var gan = list.filter(function(i){ return i.estado === 'ganador' || i.estado === 'aprobado'; }).length;
+      if(stats){
+        stats.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">'
+          +'<div><strong style="color:#004d3d;">'+list.length+'</strong><br><span style="color:#888;">Total inscritos</span></div>'
+          +'<div><strong style="color:#856404;">'+pend+'</strong><br><span style="color:#888;">Pendientes</span></div>'
+          +'<div><strong style="color:#1a7a3a;">'+verif+'</strong><br><span style="color:#888;">Verificados (en rueda)</span></div>'
+          +'<div><strong style="color:#c8a94a;">'+gan+'</strong><br><span style="color:#888;">Ganadores</span></div>'
+          +'<div><strong style="color:#004d3d;">'+(SORTEO_CONV_ACTIVO.vacantes||'—')+'</strong><br><span style="color:#888;">Vacantes</span></div>'
+          +'</div>'
+          +(verif ? '<p style="margin-top:10px;color:#1a7a3a;"><i class="fas fa-check-circle"></i> Listo para sorteo en vivo con <strong>'+verif+'</strong> verificados.</p>'
+            : '<p style="margin-top:10px;color:#856404;"><i class="fas fa-exclamation-triangle"></i> No hay inscritos verificados. Revise expedientes en «Ver inscritos».</p>');
+      }
+      if(btnLive) btnLive.disabled = verif < 1;
+    })
+    .catch(function(){
+      if(stats) stats.innerHTML = '<span style="color:#c0392b;">Error de conexión al cargar inscritos.</span>';
+      if(btnLive) btnLive.disabled = true;
+    });
+}
+
+function abrirSorteoEnVivoConvenio(){
+  if(!SORTEO_CONV_ACTIVO) return;
+  window.open('sorteo-live.html?item_id='+SORTEO_CONV_ACTIVO.id, 'regpol_sorteo_live', 'noopener,noreferrer');
+}
+
+function irInscritosDesdeSorteo(){
+  if(!SORTEO_CONV_ACTIVO) return;
+  verInscritos(SORTEO_CONV_ACTIVO.id, SORTEO_CONV_ACTIVO.titulo);
+}
+
+function crearFlyerDesdeConvenio(){
+  if(!SORTEO_CONV_ACTIVO) return;
+  abrirModalSorteo(null, 'proximo');
+  document.getElementById('ms-titulo-val').value = 'PRÓXIMO SORTEO — ' + (SORTEO_CONV_ACTIVO.titulo || '');
+  document.getElementById('ms-descripcion').value = SORTEO_CONV_ACTIVO.descripcion || '';
+  document.getElementById('ms-item-id').value = String(SORTEO_CONV_ACTIVO.id);
+}
 
 function cargarSorteos(){
-  document.getElementById('sorteos-tabla').innerHTML='<p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>';
-  fetch(API+'/admin/sorteos',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
-    if(!d.ok){ mostrarAlertaSorteos('Error: '+(d.error||''),'error'); return; }
-    SORTEOS_CACHE = d.sorteos||[];
-    renderTablaSorteos(SORTEOS_CACHE);
-  });
+  cargarConvocatoriasSorteo();
+  document.getElementById('sorteos-tabla').innerHTML='<p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i> Cargando sorteos...</p>';
+  fetch(API+'/admin/sorteos',{headers:hdr()})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok){ mostrarAlertaSorteos('Error: '+(d.error||''),'error'); return; }
+      SORTEOS_CACHE = d.sorteos||[];
+      renderTablaSorteos(SORTEOS_CACHE);
+    })
+    .catch(function(){
+      document.getElementById('sorteos-tabla').innerHTML='<p style="color:#c0392b;text-align:center;padding:24px;">No se pudo conectar con el servidor.</p>';
+      mostrarAlertaSorteos('Error de conexión al cargar sorteos.','error');
+    });
 }
 
 function renderTablaSorteos(list){
@@ -1745,18 +1880,20 @@ function renderTablaSorteos(list){
     el.innerHTML='<p style="color:#bbb;text-align:center;padding:24px;">No hay sorteos. Cree uno con los botones de arriba.</p>';
     return;
   }
-  el.innerHTML = '<table class="t"><thead><tr><th>Tipo</th><th>Título</th><th>Fecha</th><th>Publicado</th><th>Seleccionados</th><th>Acciones</th></tr></thead><tbody>'
+  el.innerHTML = '<table class="t"><thead><tr><th>Tipo</th><th>Título</th><th>Convocatoria</th><th>Fecha</th><th>Publicado</th><th>Seleccionados</th><th>Acciones</th></tr></thead><tbody>'
     + list.map(function(s){
         var tipoBadge = s.tipo==='proximo'
           ? '<span class="badge" style="background:#fff3cd;color:#856404;">PRÓXIMO</span>'
           : '<span class="badge ok">RESULTADO</span>';
         return '<tr>'
           +'<td>'+tipoBadge+'</td>'
-          +'<td style="font-weight:600;max-width:220px;">'+escHtml(s.titulo)+'</td>'
+          +'<td style="font-weight:600;max-width:200px;">'+escHtml(s.titulo)+'</td>'
+          +'<td style="font-size:11.5px;max-width:160px;">'+escHtml(s.item_titulo||'—')+'</td>'
           +'<td style="font-size:11.5px;">'+escHtml(s.fecha_sorteo||'—')+'</td>'
           +'<td>'+(s.publicado?'<span class="badge ok">✓ Sí</span>':'<span class="badge pend">No</span>')+'</td>'
           +'<td style="text-align:center;font-weight:700;color:#004d3d;">'+(s.resultados&&s.resultados.length?s.resultados.length:'—')+'</td>'
-          +'<td><div style="display:flex;gap:5px;">'
+          +'<td><div style="display:flex;gap:5px;flex-wrap:wrap;">'
+          +(s.item_id?'<button class="btn-mini" style="background:#2980b9;color:#fff;" onclick="window.open(\'sorteo-live.html?item_id='+s.item_id+(s.tipo===\'resultado\'?'&sorteo_id='+s.id:'')+'\',\'regpol_sorteo\',\'noopener\')"><i class="fas fa-random"></i></button>':'')
           +'<button class="btn-mini" onclick="abrirModalSorteo('+s.id+')"><i class="fas fa-edit"></i> Editar</button>'
           +'<button class="btn-mini btn-mini-danger" onclick="eliminarSorteo('+s.id+')"><i class="fas fa-trash"></i></button>'
           +'</div></td>'
@@ -1774,6 +1911,10 @@ function mostrarAlertaSorteos(texto,tipo){
 }
 
 function abrirModalSorteo(id, tipoForzado){
+  if(!CONVENIOS_SORTEO_CACHE.length){
+    cargarConvocatoriasSorteo().then(function(){ abrirModalSorteo(id, tipoForzado); });
+    return;
+  }
   RESULTADOS_EDIT=[];
   document.getElementById('ms-id').value='';
   document.getElementById('ms-tipo').value=tipoForzado||'proximo';
@@ -1787,9 +1928,10 @@ function abrirModalSorteo(id, tipoForzado){
   document.getElementById('ms-publicado').checked=true;
   document.getElementById('ms-titulo').textContent=tipoForzado==='resultado'?'Publicar resultados':'Nuevo flyer / Próximo sorteo';
   document.getElementById('ms-resultados-section').style.display=tipoForzado==='resultado'?'':'none';
+  document.getElementById('ms-item-id').value=SORTEO_CONV_ACTIVO?String(SORTEO_CONV_ACTIVO.id):'';
 
-  // Cargar items en select de importación
-  cargarSelectItems();
+  llenarSelectConveniosSorteo('ms-item-id', '— Sin vincular —');
+  llenarSelectConveniosSorteo('ms-import-item', '— Importar desde convenio —');
 
   if(id){
     var s=SORTEOS_CACHE.find(function(x){return x.id===id;});
@@ -1800,6 +1942,7 @@ function abrirModalSorteo(id, tipoForzado){
       document.getElementById('ms-descripcion').value=s.descripcion||'';
       document.getElementById('ms-fecha').value=s.fecha_sorteo||'';
       document.getElementById('ms-publicado').checked=!!s.publicado;
+      document.getElementById('ms-item-id').value=s.item_id?String(s.item_id):'';
       document.getElementById('ms-titulo').textContent='Editar: '+s.titulo;
       if(s.imagen){
         document.getElementById('ms-img-preview').src=s.imagen;
@@ -1830,28 +1973,19 @@ function previewImgSorteo(input){
 }
 
 function cargarSelectItems(){
-  var sel=document.getElementById('ms-import-item');
-  sel.innerHTML='<option value="">— Importar desde item —</option>';
-  fetch(API+'/admin/items',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
-    (d.items||[]).forEach(function(i){
-      var o=document.createElement('option');
-      o.value=i.id;
-      o.textContent='['+i.tipo.toUpperCase()+'] '+i.titulo;
-      sel.appendChild(o);
-    });
-  });
+  llenarSelectConveniosSorteo('ms-import-item', '— Importar desde convenio —');
 }
 
 function importarInscritos(){
   var itemId=document.getElementById('ms-import-item').value;
-  if(!itemId){alert('Seleccione un ítem para importar los aceptados.');return;}
+  if(!itemId){alert('Seleccione un convenio para importar los verificados.');return;}
   var sorteoId=val('ms-id');
   if(!sorteoId){alert('Guarde primero el sorteo antes de importar.');return;}
   fetch(API+'/admin/sorteos/'+sorteoId+'/importar-inscritos',{
     method:'POST',headers:hdr(),body:JSON.stringify({item_id:parseInt(itemId)})
   }).then(function(r){return r.json();}).then(function(d){
     if(!d.ok){alert('Error: '+(d.error||''));return;}
-    alert('Se importaron '+d.importados+' seleccionados.');
+    alert('Se importaron '+d.importados+' seleccionados verificados.');
     // Recargar sorteo para actualizar resultados
     fetch(API+'/admin/sorteos',{headers:hdr()}).then(function(r){return r.json();}).then(function(dd){
       SORTEOS_CACHE=dd.sorteos||[];
@@ -1905,6 +2039,7 @@ function guardarSorteo(){
     descripcion:val('ms-descripcion'),
     fecha_sorteo:val('ms-fecha'),
     imagen:document.getElementById('ms-img-data').value||'',
+    item_id: val('ms-item-id') ? parseInt(val('ms-item-id'), 10) : null,
     publicado:document.getElementById('ms-publicado').checked,
     orden:0
   };
@@ -1963,7 +2098,7 @@ function quitarPlantillaItem(){
   document.getElementById('mi-plantilla-label').textContent='Seleccionar plantilla PDF';
 }
 
-// ── GESTIÁ“N ITEMS (CURSOS / CONVENIOS) ────────────────────────────────────────
+// ── GESTIÓN ITEMS (CURSOS / CONVENIOS) ────────────────────────────────────────
 var INSCRITOS_CACHE = [];
 
 function cargarItems(tipo){

@@ -1434,8 +1434,10 @@ app.post('/admin/sorteos/:id/importar-inscritos', requireAuth, async (req, res) 
     const { item_id } = req.body;
     if (!item_id) return res.json({ ok: false, error: 'item_id requerido' });
     const insc = await pool.query(
-      'SELECT cip,nombres,unidad,cargo FROM inscripciones WHERE item_id=$1 AND estado=$2 ORDER BY fecha',
-      [item_id, 'aceptado']);
+      `SELECT cip,nombres,unidad,cargo FROM inscripciones
+       WHERE item_id=$1 AND estado IN ('verificado','ganador','aprobado')
+       ORDER BY fecha`,
+      [item_id]);
     await pool.query('DELETE FROM resultados_sorteo WHERE sorteo_id=$1', [req.params.id]);
     for (let i = 0; i < insc.rows.length; i++) {
       const r = insc.rows[i];
