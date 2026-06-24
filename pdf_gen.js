@@ -93,15 +93,20 @@ function dibujarCabecera(doc) {
      .text('EVALUACIÓN MMPI-2 — BIENESTAR DEL PERSONAL POLICIAL', 40, 46, { align: 'center', width: doc.page.width - 80, lineBreak: false });
 }
 
+function yPieSeguro(doc, altoPie) {
+  return doc.page.height - doc.page.margins.bottom - altoPie;
+}
+
 function dibujarPie(doc, pagina, totalPaginas) {
-  const y = doc.page.height - 35;
-  doc.rect(0, y - 5, doc.page.width, 40).fill('#eeeeee');
+  const altoPie = 28;
+  const y = yPieSeguro(doc, altoPie);
+  doc.rect(0, y - 5, doc.page.width, altoPie + 8).fill('#eeeeee');
   doc.rect(0, y - 5, doc.page.width, 2).fill(COLOR_ORO);
   doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
      .text('REGPOL CALLAO — UNITIC 2026 — Documento confidencial de uso psicológico exclusivo',
-           40, y + 4, { align: 'left', width: 350, lineBreak: false });
+           40, y + 2, { align: 'left', width: 350, lineBreak: false });
   doc.text('Pág. ' + pagina + ' / ' + totalPaginas,
-           doc.page.width - 100, y + 4, { align: 'right', width: 60, lineBreak: false });
+           doc.page.width - 100, y + 2, { align: 'right', width: 60, lineBreak: false });
 }
 
 function formatearArmamentoLegible(arm) {
@@ -308,13 +313,14 @@ function generarPDFIndividual(evaluacion, preguntas, opts) {
 }
 
 function dibujarPieLista(doc, pagina) {
-  const y = doc.page.height - 30;
-  doc.rect(0, y - 4, doc.page.width, 34).fill('#eeeeee');
+  const altoPie = 24;
+  const y = yPieSeguro(doc, altoPie);
+  doc.rect(0, y - 4, doc.page.width, altoPie + 6).fill('#eeeeee');
   doc.rect(0, y - 4, doc.page.width, 2).fill(COLOR_ORO);
   doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7)
      .text('REGPOL CALLAO — UNITIC 2026 — Listado resumido de evaluaciones',
-           36, y + 3, { align: 'left', width: 380, lineBreak: false });
-  doc.text('Pág. ' + pagina, doc.page.width - 70, y + 3, { align: 'right', width: 50, lineBreak: false });
+           36, y + 2, { align: 'left', width: 380, lineBreak: false });
+  doc.text('Pág. ' + pagina, doc.page.width - 70, y + 2, { align: 'right', width: 50, lineBreak: false });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -336,7 +342,8 @@ function generarPDFComisaria(comisaria, evaluaciones) {
     const rowH = 14;
     const cols = [20, 118, 44, 44, 54, 18, 18, 34, 22];
     const heads = ['N°', 'Apellidos y Nombres', 'CIP', 'DNI', 'Fecha', 'V', 'F', 'Avance', 'Edad'];
-    const maxRowY = A4_H - 40;
+    const marginBottom = 38;
+    const maxRowY = A4_H - marginBottom - 30;
     const lista = evaluaciones || [];
     let pagina = 0;
 
