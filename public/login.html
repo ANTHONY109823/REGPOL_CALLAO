@@ -74,15 +74,24 @@ var API = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
   : ((location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '');
 
 // Permisos que dan acceso a panel-admin
-var PERMS_PANEL_ADMIN = ['cms_cursos','cms_convenios','evaluaciones','descargas'];
+var PERMS_PANEL_ADMIN = [
+  'cms_cursos','cms_convenios','cms_novedades','cms_resena','cms_labor','cms_inicio',
+  'evaluaciones','descargas'
+];
 
 function rutaSegunSesion(rol, permisos){
-  if(rol==='unitic') return 'panel-admin.html';
-  var perms=permisos||[];
-  for(var i=0;i<PERMS_PANEL_ADMIN.length;i++){
-    if(perms.indexOf(PERMS_PANEL_ADMIN[i])!==-1) return 'panel-admin.html';
+  if (rol === 'unitic' || rol === 'bienestar') return 'panel-admin.html';
+  var perms = permisos || [];
+  for (var i = 0; i < PERMS_PANEL_ADMIN.length; i++) {
+    if (perms.indexOf(PERMS_PANEL_ADMIN[i]) !== -1) return 'panel-admin.html';
   }
   return 'panel-usuario.html';
+}
+
+function limpiarSesionLocal(){
+  localStorage.removeItem('regpol_session');
+  localStorage.removeItem('uniticToken');
+  localStorage.removeItem('bienToken');
 }
 
 function redirigirSesion(s){
@@ -100,7 +109,7 @@ window.addEventListener('DOMContentLoaded', function(){
       .then(function(r){ return r.json(); })
       .then(function(d){
         if (d.ok !== false) redirigirSesion(saved);
-        else localStorage.removeItem('regpol_session');
+        else limpiarSesionLocal();
       })
       .catch(function(){});
   }

@@ -144,7 +144,7 @@
 </footer>
 
 <script src="portal-data.js?v=4"></script>
-<script src="portal.js?v=19"></script>
+<script src="portal.js?v=21"></script>
 <script>
 function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -152,7 +152,7 @@ initPortalPagina({ activeNav: 'novedades', renderNovedades: 'lista-novedades' })
 
 document.addEventListener('keydown', function(e){ if(e.key==='Escape') cerrarNovedadModal(); });
 
-fetch('/portal/sorteos')
+fetch((apiBasePortal() || '') + '/portal/sorteos')
   .then(function(r){ return r.json(); })
   .then(function(d){
     if(!d.ok) return;
@@ -160,7 +160,8 @@ fetch('/portal/sorteos')
     var resultados = (d.sorteos||[]).filter(function(s){ return s.tipo==='resultado'; });
     renderProximos(proximos);
     renderResultados(resultados);
-  });
+  })
+  .catch(function(){});
 
 function renderProximos(list){
   if(!list.length) return;

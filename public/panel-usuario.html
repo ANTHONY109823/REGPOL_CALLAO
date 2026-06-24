@@ -113,7 +113,7 @@
 </div>
 
 <script src="portal-data.js?v=2"></script>
-<script src="portal.js?v=16"></script>
+<script src="portal.js?v=21"></script>
 <script src="divisiones-ui.js?v=1"></script>
 <script src="panel-cms.js?v=4"></script>
 <script>
@@ -167,7 +167,12 @@ function iniciarPanelUsuario() {
 window.addEventListener('DOMContentLoaded', function(){
   var saved = JSON.parse(localStorage.getItem('regpol_session') || 'null');
   if (!saved || !saved.token) { window.location.href='login.html'; return; }
-  if (saved.rol === 'unitic') { window.location.href='panel-admin.html'; return; }
+  if (saved.rol === 'unitic' || saved.rol === 'bienestar') { window.location.href='panel-admin.html'; return; }
+  var adminPerms = ['cms_cursos','cms_convenios','cms_novedades','cms_resena','cms_labor','cms_inicio','evaluaciones','descargas'];
+  var perms = saved.permisos || [];
+  for (var i = 0; i < adminPerms.length; i++) {
+    if (perms.indexOf(adminPerms[i]) !== -1) { window.location.href='panel-admin.html'; return; }
+  }
 
   SESSION = saved;
   TOKEN   = saved.token;
@@ -179,26 +184,29 @@ window.addEventListener('DOMContentLoaded', function(){
   fetch(API + '/admin/perfil', { headers: { 'x-admin-token': TOKEN } })
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if (d.ok) {
-        SESSION.permisos = normalizarPermisos(d.permisos);
-        SESSION.rol      = d.rol || SESSION.rol;
-        SESSION.nombre   = d.nombre || SESSION.nombre;
-        SESSION.unidad   = d.unidad || '';
-        SESSION.usuario  = d.usuario || SESSION.usuario;
-        localStorage.setItem('regpol_session', JSON.stringify(SESSION));
-        document.getElementById('ph-nombre').textContent  = SESSION.nombre || 'Usuario';
-        document.getElementById('ph-oficina').textContent = SESSION.nombre || '';
-        document.getElementById('ph-usuario').textContent = SESSION.usuario || '';
+      if (!d.ok) {
+        logout();
+        return;
       }
+      SESSION.permisos = normalizarPermisos(d.permisos);
+      SESSION.rol      = d.rol || SESSION.rol;
+      SESSION.nombre   = d.nombre || SESSION.nombre;
+      SESSION.unidad   = d.unidad || '';
+      SESSION.usuario  = d.usuario || SESSION.usuario;
+      localStorage.setItem('regpol_session', JSON.stringify(SESSION));
+      document.getElementById('ph-nombre').textContent  = SESSION.nombre || 'Usuario';
+      document.getElementById('ph-oficina').textContent = SESSION.nombre || '';
+      document.getElementById('ph-usuario').textContent = SESSION.usuario || '';
       iniciarPanelUsuario();
     })
     .catch(function() {
-      iniciarPanelUsuario();
+      logout();
     });
 });
 
 function logout() {
   localStorage.removeItem('regpol_session');
+  localStorage.removeItem('uniticToken');
   localStorage.removeItem('bienToken');
   window.location.href = 'login.html';
 }

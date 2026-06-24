@@ -1,4 +1,4 @@
-?<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -52,7 +52,7 @@
 </footer>
 
 <script src="portal-data.js?v=2"></script>
-<script src="portal.js?v=18"></script>
+<script src="portal.js?v=21"></script>
 <script>
 // 1�?⃣ Nav + CMS items (portal-data.js — siempre han estado aquí)
 initPortalPagina({
@@ -68,7 +68,7 @@ cargarSiteData().then(function(data){
 
 // 2�?⃣ Convenios editables desde el panel (items_portal)
 var dbConvenios = [];
-fetch('/portal/items?tipo=convenio')
+fetch((apiBasePortal() || '') + '/portal/items?tipo=convenio')
   .then(function(r){return r.json();})
   .then(function(d){ dbConvenios = d.ok&&d.items ? d.items : []; renderGrid([]); })
   .catch(function(){});

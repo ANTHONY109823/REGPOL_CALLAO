@@ -156,15 +156,27 @@ function fetchConTimeout(url, ms) {
   ]);
 }
 
+function esHostEstaticoPortal() {
+  var h = location.hostname;
+  return h.indexOf('github.io') !== -1 || h.indexOf('github.com') !== -1;
+}
+
 function fetchSiteDataDefault() {
+  var cargarJsonLocal = function() {
+    return fetchConTimeout('site-data.json?v=3', 4000)
+      .then(function(r) { if (!r.ok) throw new Error('site-data'); return r.json(); })
+      .catch(function() {
+        if (typeof REGPOL_SITE_DATA_BUILTIN !== 'undefined' && REGPOL_SITE_DATA_BUILTIN) {
+          return REGPOL_SITE_DATA_BUILTIN;
+        }
+        return null;
+      });
+  };
+  if (esHostEstaticoPortal()) return cargarJsonLocal();
   var base = apiBasePortal();
   return fetchConTimeout((base || '') + '/portal/configuracion', 6000)
     .then(function(r) { if (!r.ok) throw new Error('no-config'); return r.json(); })
-    .catch(function() {
-      return fetchConTimeout('site-data.json?v=3', 4000)
-        .then(function(r) { if (!r.ok) throw new Error('site-data'); return r.json(); })
-        .catch(function() { return null; });
-    });
+    .catch(cargarJsonLocal);
 }
 
 function obtenerSiteDataSync() {
@@ -198,6 +210,7 @@ function aplicarPortalConfig(config, data) {
 }
 
 function refrescarSiteDataEnFondo(config) {
+  if (esHostEstaticoPortal() && obtenerSiteDataSync()) return Promise.resolve(null);
   return fetchSiteDataDefault().then(function(fresh) {
     if (!fresh) return null;
     saveSiteDataToStorage(fresh);

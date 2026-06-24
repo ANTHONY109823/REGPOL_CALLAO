@@ -1,5 +1,6 @@
 node_modules/
-regpol_callao.db
+.env
+.env.*
 *.db
 *.log
 cookies.txt

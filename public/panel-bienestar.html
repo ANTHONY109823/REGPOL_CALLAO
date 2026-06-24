@@ -179,14 +179,17 @@
   </div><!-- /panel-body -->
 </div><!-- /panel -->
 
+<script src="api-config.js?v=1"></script>
 <script>
-var API_URL = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '';
+var API_URL = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
+  : ((location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '');
 var TOKEN   = '';
 var ROL     = '';
 
 function logout() {
   TOKEN='';
   localStorage.removeItem('regpol_session');
+  localStorage.removeItem('uniticToken');
   localStorage.removeItem('bienToken');
   window.location.href='login.html';
 }
@@ -197,11 +200,17 @@ window.addEventListener('DOMContentLoaded',function(){
   if (!saved || !saved.token || saved.rol !== 'bienestar') {
     window.location.href = 'login.html'; return;
   }
-  TOKEN = saved.token; ROL = 'bienestar';
-  document.getElementById('ph-nombre').textContent = saved.nombre || 'Bienestar';
-  document.getElementById('pantalla-login').style.display='none';
-  document.getElementById('pantalla-panel').style.display='block';
-  iniciarPanel();
+  fetch(API_URL+'/admin/perfil',{headers:{'x-admin-token':saved.token}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok){logout();return;}
+      TOKEN = saved.token; ROL = 'bienestar';
+      document.getElementById('ph-nombre').textContent = saved.nombre || 'Bienestar';
+      document.getElementById('pantalla-login').style.display='none';
+      document.getElementById('pantalla-panel').style.display='block';
+      iniciarPanel();
+    })
+    .catch(function(){logout();});
 });
 
 function authHeaders(){ return {'Content-Type':'application/json','x-admin-token':TOKEN}; }
