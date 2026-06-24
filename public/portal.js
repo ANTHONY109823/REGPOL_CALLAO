@@ -75,7 +75,7 @@ function htmlTarjetaPortalItem(item) {
       '<h4>' + escHtml(item.titulo) + '</h4>' +
       '<p>' + escHtml(item.descripcion || '') + '</p>' +
       (item.vacantes ? '<p style="font-size:12px;color:#666;"><i class="fas fa-users" style="margin-right:4px;"></i>' + escHtml(String(item.vacantes)) + ' vacantes</p>' : '') +
-      '<span style="color:' + colorEstado + ';font-weight:bold;font-size:12px;">' + escHtml(item.estado) + '</span>' +
+      '<span class="card-estado" style="color:' + colorEstado + ';">' + escHtml(item.estado) + '</span>' +
       inscBadge +
     '</div></a>';
 }
@@ -390,7 +390,7 @@ function renderTarjetas(items, containerId) {
         '</div>' +
         '<h4>' + escHtml(item.titulo) + '</h4>' +
         '<p>' + escHtml(item.descripcion) + '</p>' +
-        '<span style="color:' + escHtml(item.estadoColor || 'green') + ';font-weight:bold;font-size:12px;">' +
+        '<span class="card-estado" style="color:' + escHtml(item.estadoColor || 'green') + ';">' +
           escHtml(item.estado) +
         '</span>' +
       '</div></a>';
