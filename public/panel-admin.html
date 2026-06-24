@@ -1857,6 +1857,12 @@ function abrirSorteoEnVivoConvenio(){
   window.open('sorteo-live.html?item_id='+SORTEO_CONV_ACTIVO.id, 'regpol_sorteo_live', 'noopener,noreferrer');
 }
 
+function abrirSorteoLivePanel(itemId, sorteoId, tipo) {
+  var url = 'sorteo-live.html?item_id=' + encodeURIComponent(itemId);
+  if (tipo === 'resultado' && sorteoId) url += '&sorteo_id=' + encodeURIComponent(sorteoId);
+  window.open(url, 'regpol_sorteo', 'noopener');
+}
+
 function irInscritosDesdeSorteo(){
   if(!SORTEO_CONV_ACTIVO) return;
   verInscritos(SORTEO_CONV_ACTIVO.id, SORTEO_CONV_ACTIVO.titulo);
@@ -1897,6 +1903,9 @@ function renderTablaSorteos(list){
         var tipoBadge = s.tipo==='proximo'
           ? '<span class="badge" style="background:#fff3cd;color:#856404;">PRÓXIMO</span>'
           : '<span class="badge ok">RESULTADO</span>';
+        var btnLive = s.item_id
+          ? '<button class="btn-mini" style="background:#2980b9;color:#fff;" onclick="abrirSorteoLivePanel('+s.item_id+','+s.id+',\''+escJs(s.tipo||'')+'\')"><i class="fas fa-random"></i></button>'
+          : '';
         return '<tr>'
           +'<td>'+tipoBadge+'</td>'
           +'<td style="font-weight:600;max-width:200px;">'+escHtml(s.titulo)+'</td>'
@@ -1905,7 +1914,7 @@ function renderTablaSorteos(list){
           +'<td>'+(s.publicado?'<span class="badge ok">✓ Sí</span>':'<span class="badge pend">No</span>')+'</td>'
           +'<td style="text-align:center;font-weight:700;color:#004d3d;">'+(s.resultados&&s.resultados.length?s.resultados.length:'—')+'</td>'
           +'<td><div style="display:flex;gap:5px;flex-wrap:wrap;">'
-          +(s.item_id?'<button class="btn-mini" style="background:#2980b9;color:#fff;" onclick="window.open(\'sorteo-live.html?item_id='+s.item_id+(s.tipo===\'resultado\'?'&sorteo_id='+s.id:'')+'\',\'regpol_sorteo\',\'noopener\')"><i class="fas fa-random"></i></button>':'')
+          + btnLive
           +'<button class="btn-mini" onclick="abrirModalSorteo('+s.id+')"><i class="fas fa-edit"></i> Editar</button>'
           +'<button class="btn-mini btn-mini-danger" onclick="eliminarSorteo('+s.id+')"><i class="fas fa-trash"></i></button>'
           +'</div></td>'
