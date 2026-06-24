@@ -384,6 +384,25 @@ function obtenerArmamento() {
   return vals;
 }
 
+function restaurarArmamentoDesdeData(data) {
+  var str = '';
+  if (data && data.armamento) {
+    str = Array.isArray(data.armamento) ? data.armamento.join(', ') : String(data.armamento);
+  }
+  var chkP = document.getElementById('f-arm-particular');
+  var chkE = document.getElementById('f-arm-estado');
+  if (chkP) chkP.checked = /particular/i.test(str);
+  if (chkE) chkE.checked = /estado/i.test(str);
+}
+
+function ocultarPanelRegistro() {
+  var r = document.getElementById('card-registro');
+  if (r) r.style.display = 'none';
+  var c = document.getElementById('card-continuar-cip');
+  if (c) c.style.display = 'none';
+  ESTADO.registroCompleto = true;
+}
+
 function construirPayloadGuardar(completada) {
   return {
     comisaria: obtenerComisariaEvaluacion(),
@@ -590,12 +609,10 @@ function guardarBloqueEnServidor(callback) {
     });
 }
 
-// Botón "Guardar y salir" — guarda y muestra mensaje
+// Botón "Guardar y salir" — guarda y vuelve al inicio del portal
 function guardarYSalir() {
   guardarBloqueEnServidor(function(){
-    mostrarAlerta('Progreso guardado (bloque '+ESTADO.bloqueActual+'). Use "Continuar evaluación" arriba con su CIP para retomar.','exito');
-    setTimeout(ocultarAlerta, 6000);
-    document.getElementById('card-continuar-cip').scrollIntoView({behavior:'smooth',block:'start'});
+    window.location.href = 'index.html';
   });
 }
 
@@ -615,8 +632,10 @@ function continuarConCIP() {
     if (data.sexo) { var sel = document.getElementById('f-sexo'); if(sel) sel.value = data.sexo; }
     if (data.grado) { var g = document.getElementById('f-grado'); if(g) g.value = data.grado; }
     if (data.cargo) document.getElementById('f-cargo').value = data.cargo;
+    restaurarArmamentoDesdeData(data);
     if (data.foto) { FOTO_BASE64 = data.foto; actualizarPreviewFoto(data.foto); }
     seleccionarComisariaEnSelect('f-unidad', data.unidad || data.comisaria || '');
+    ocultarPanelRegistro();
     aplicarProgresoRestaurado(data);
   });
 }
@@ -684,8 +703,10 @@ function mostrarBannerProgreso(data) {
 function aplicarProgresoRestaurado(data) {
   ESTADO.respuestas   = typeof data.respuestas==='string'?JSON.parse(data.respuestas):(data.respuestas||{});
   ESTADO.bloqueActual = parseInt(data.bloque,10)||1;
+  ESTADO.registroCompleto = true;
   var banner=document.getElementById('banner-progreso');
   if(banner) banner.style.display='none';
+  ocultarPanelRegistro();
   activarCuestionario(true);
   var total=Object.keys(ESTADO.respuestas).length;
   mostrarAlerta('Continúa desde el bloque '+ESTADO.bloqueActual+' — '+total+'/'+TOTAL_PREGUNTAS+' respuestas guardadas.','exito');
@@ -700,8 +721,10 @@ function restaurarProgreso() {
   if(data.sexo){ var sel=document.getElementById('f-sexo'); if(sel) sel.value=data.sexo; }
   if(data.grado){ var g=document.getElementById('f-grado'); if(g) g.value=data.grado; }
   if(data.cargo) document.getElementById('f-cargo').value=data.cargo;
+  restaurarArmamentoDesdeData(data);
   if(data.foto) { FOTO_BASE64 = data.foto; actualizarPreviewFoto(data.foto); }
   seleccionarComisariaEnSelect('f-unidad', data.unidad || data.comisaria || '');
+  ocultarPanelRegistro();
   aplicarProgresoRestaurado(data);
 }
 

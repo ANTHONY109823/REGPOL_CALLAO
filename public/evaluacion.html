@@ -62,6 +62,24 @@
     <span id="texto-alerta-global">Complete todos los campos obligatorios.</span>
   </div>
 
+  <!-- CONTINUAR SOLO CON CIP (primero para quien ya guardó avance) -->
+  <div class="card-eval card-continuar-cip" id="card-continuar-cip">
+    <div class="card-header-eval card-header-continuar">
+      <i class="fas fa-play-circle"></i>
+      <h2>¿Ya comenzó el cuestionario? Continúe con su CIP</h2>
+    </div>
+    <div class="card-body-eval">
+      <p class="registro-intro">Si guardó un bloque y salió, ingrese solo su <strong>CIP</strong> para retomar donde lo dejó. No necesita volver a llenar el registro.</p>
+      <div class="continuar-cip-fila">
+        <input type="text" id="f-cip-continuar" placeholder="Ingrese su CIP" maxlength="20" autocomplete="off"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();continuarConCIP();}" />
+        <button type="button" class="btn-eval btn-verde" onclick="continuarConCIP()">
+          <i class="fas fa-play"></i> Continuar evaluación
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- PASO 1: DATOS DEL EFECTIVO -->
   <div class="card-eval" id="card-registro">
     <div class="card-header-eval">
@@ -140,15 +158,15 @@
           <span class="msg-error">Seleccione su cargo.</span>
         </div>
         <div class="campo campo-full">
-          <label>Armamento</label>
+          <label>Arma</label>
           <div class="check-group">
             <label class="check-item">
-              <input type="checkbox" id="f-arm-particular" value="ARMAMENTO PARTICULAR" />
-              <span>Armamento Particular</span>
+              <input type="checkbox" id="f-arm-particular" value="PARTICULAR" />
+              <span>Particular</span>
             </label>
             <label class="check-item">
-              <input type="checkbox" id="f-arm-estado" value="ARMAMENTO DEL ESTADO" />
-              <span>Armamento del Estado</span>
+              <input type="checkbox" id="f-arm-estado" value="DEL ESTADO" />
+              <span>Del Estado</span>
             </label>
           </div>
         </div>
@@ -175,24 +193,6 @@
           <i class="fas fa-user-check"></i> Registrar y continuar al cuestionario
         </button>
         <p class="registro-aviso">Todos los campos marcados con * son obligatorios.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- CONTINUAR SOLO CON CIP (debajo del registro) -->
-  <div class="card-eval card-continuar-cip" id="card-continuar-cip">
-    <div class="card-header-eval card-header-continuar">
-      <i class="fas fa-play-circle"></i>
-      <h2>¿Ya comenzó el cuestionario? Continúe con su CIP</h2>
-    </div>
-    <div class="card-body-eval">
-      <p class="registro-intro">Si guardó un bloque y salió, ingrese solo su <strong>CIP</strong> para retomar donde lo dejó. No necesita volver a llenar el registro.</p>
-      <div class="continuar-cip-fila">
-        <input type="text" id="f-cip-continuar" placeholder="Ingrese su CIP" maxlength="20" autocomplete="off"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();continuarConCIP();}" />
-        <button type="button" class="btn-eval btn-verde" onclick="continuarConCIP()">
-          <i class="fas fa-play"></i> Continuar evaluación
-        </button>
       </div>
     </div>
   </div>
@@ -246,7 +246,7 @@
 <script src="comisarias.js?v=2"></script>
 <script src="divisiones-ui.js?v=1"></script>
 <script src="preguntas.js?v=1"></script>
-<script src="evaluacion.js?v=9"></script>
+<script src="evaluacion.js?v=10"></script>
 </body>
 </html>
 

@@ -504,10 +504,10 @@
 
         <!-- TAB: Avances (sin finalizar) -->
         <div id="dtab-avances" style="display:none;">
-          <p style="font-size:12px;color:#666;margin-bottom:12px;">Evaluaciones guardadas por bloques que aún no se enviaron con <strong>Finalizar y Enviar</strong>. Puede ver o imprimir el PDF con los datos del efectivo y el avance respondido.</p>
+          <p style="font-size:12px;color:#666;margin-bottom:12px;">Evaluaciones guardadas por bloques sin enviar. Use <strong>Ver</strong> para revisar datos del efectivo y todas las respuestas registradas hasta el momento.</p>
           <div style="overflow-x:auto;">
             <table class="t">
-              <thead><tr><th>N°</th><th>Nombres</th><th>CIP</th><th>Unidad</th><th>Última actualización</th><th>Bloque</th><th>Avance</th><th>PDF</th></tr></thead>
+              <thead><tr><th>N°</th><th>Nombres</th><th>CIP</th><th>Unidad</th><th>Última actualización</th><th>Bloque</th><th>Avance</th><th>Ver</th></tr></thead>
               <tbody id="avances-body"><tr><td colspan="8" style="text-align:center;color:#bbb;padding:18px;">Cargando avances...</td></tr></tbody>
             </table>
           </div>
@@ -1082,8 +1082,8 @@
 
 <!-- Modal vista previa resultado MMPI-2 -->
 <div class="modal" id="modal-resultado">
-  <div class="modal-box" style="width:min(720px,96vw);max-height:90vh;overflow:auto;">
-    <h3><i class="fas fa-chart-bar"></i> Resultado de evaluación MMPI-2</h3>
+  <div class="modal-box" style="width:min(920px,96vw);max-height:92vh;overflow:auto;">
+    <h3 id="modal-resultado-titulo"><i class="fas fa-chart-bar"></i> Resultado de evaluación MMPI-2</h3>
     <div id="prev-efectivo-banner" style="background:#ececec;border:1px solid #c8c8c8;border-radius:8px;padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;align-items:flex-start;"></div>
     <div id="prev-mmpi-wrap"></div>
     <div class="modal-footer">
@@ -1162,6 +1162,21 @@ function puedeVerPreguntas(){ return esUnitic()||tienePermiso('evaluaciones'); }
 function puedeVerEvaluaciones(){ return esUnitic()||tienePermiso('evaluaciones'); }
 function puedeVerDescargas(){ return esUnitic()||tienePermiso('descargas')||tienePermiso('evaluaciones'); }
 
+function pctAvance(total) {
+  var t = parseInt(total, 10) || 0;
+  return Math.min(100, Math.round(t / 566 * 100));
+}
+
+function textoArmamento(arm) {
+  if (!arm) return 'Ninguno';
+  return String(arm).split(',').map(function(s) {
+    s = s.trim().replace(/^ARMAMENTO\s+/i, '');
+    if (/particular/i.test(s)) return 'Particular';
+    if (/estado/i.test(s)) return 'Del Estado';
+    return s;
+  }).filter(Boolean).join(', ') || 'Ninguno';
+}
+
 function esEvalCompleta(r) {
   if (!r) return false;
   var total = parseInt(r.total_resp, 10) || 0;
@@ -1178,8 +1193,8 @@ function btnAccionesEval(r) {
   var html = '';
   if (r.id) {
     html += '<button type="button" class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="verResultadoEval(' + r.id + ')"><i class="fas fa-eye"></i> Ver</button>';
-  } else if (r.cip) {
-    html += '<span style="color:#888;font-size:10px;">En curso</span>';
+  } else if (r.cip && r.solo_progreso) {
+    html += '<button type="button" class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="verAvance(\'' + escJs(r.cip) + '\')"><i class="fas fa-eye"></i> Ver</button>';
   }
   if (esEvalCompleta(r)) {
     html += ' <a href="' + urlPdfEfectivo(r) + '" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;"><i class="fas fa-file-pdf"></i> PDF</a>';
@@ -1211,6 +1226,8 @@ function labelInterpT(t) {
 
 function verResultadoEval(id) {
   if (!id) return;
+  var titulo = document.getElementById('modal-resultado-titulo');
+  if (titulo) titulo.innerHTML = '<i class="fas fa-chart-bar"></i> Resultado de evaluación MMPI-2';
   var banner = document.getElementById('prev-efectivo-banner');
   var wrap = document.getElementById('prev-mmpi-wrap');
   var btnPdf = document.getElementById('prev-btn-pdf');
@@ -1238,7 +1255,7 @@ function verResultadoEval(id) {
           + 'CIP: <strong>' + escHtml(e.cip || '—') + '</strong> &nbsp; DNI: <strong>' + escHtml(e.dni || '—') + '</strong><br>'
           + 'EDAD: ' + escHtml(e.edad ? e.edad + ' años' : '—') + ' &nbsp; SEXO: ' + escHtml(e.sexo || '—') + '<br>'
           + 'CARGO: ' + escHtml(e.cargo || '—') + '<br>'
-          + 'ARMAMENTO: ' + escHtml(e.armamento || 'Sin armamento')
+          + 'ARMA: ' + escHtml(textoArmamento(e.armamento))
           + '</div>'
           + '<div style="font-size:10.5px;color:#666;margin-top:6px;">V: ' + (e.v || 0) + ' &nbsp; F: ' + (e.f || 0) + ' &nbsp; Fecha: ' + escHtml(e.fecha || '—') + '</div>'
           + '</div>' + fotoHtml;
@@ -1278,6 +1295,75 @@ function verResultadoEval(id) {
           + '<div style="overflow-x:auto;"><table class="t" style="font-size:11px;">'
           + '<thead><tr><th>Escala</th><th>TV</th><th>TF</th><th>Bruto</th><th>T-score</th><th>Interpretación</th></tr></thead>'
           + '<tbody>' + filas + '</tbody></table></div>';
+      }
+    })
+    .catch(function() {
+      if (banner) banner.innerHTML = '<p style="color:#c0392b;margin:0;">Error de conexión.</p>';
+    });
+}
+
+function verAvance(cip) {
+  if (!cip) return;
+  var titulo = document.getElementById('modal-resultado-titulo');
+  if (titulo) titulo.innerHTML = '<i class="fas fa-hourglass-half"></i> Avance de evaluación (sin enviar)';
+  var banner = document.getElementById('prev-efectivo-banner');
+  var wrap = document.getElementById('prev-mmpi-wrap');
+  var btnPdf = document.getElementById('prev-btn-pdf');
+  if (banner) banner.innerHTML = '<p style="color:#888;margin:0;">Cargando avance...</p>';
+  if (wrap) wrap.innerHTML = '';
+  if (btnPdf) btnPdf.style.display = 'none';
+  document.getElementById('modal-resultado').classList.add('open');
+
+  fetch(API + '/admin/preview-avance?cip=' + encodeURIComponent(cip), { headers: hdr() })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) {
+        if (banner) banner.innerHTML = '<p style="color:#c0392b;margin:0;">' + escHtml(d.error || 'Error') + '</p>';
+        return;
+      }
+      var e = d.efectivo || {};
+      var av = d.avance || {};
+      var fotoHtml = e.foto
+        ? '<img src="' + e.foto + '" alt="Foto" style="width:64px;height:78px;object-fit:cover;border:1px solid #aaa;border-radius:4px;flex-shrink:0;">'
+        : '';
+      if (banner) {
+        banner.innerHTML = '<div style="flex:1;min-width:0;">'
+          + '<div style="font-size:11px;font-weight:700;color:#004d3d;margin-bottom:2px;">GRADO: ' + escHtml(e.grado || '—') + '</div>'
+          + '<div style="font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">' + escHtml((e.nombres || '—').toUpperCase()) + '</div>'
+          + '<div style="font-size:12px;color:#333;line-height:1.6;">'
+          + 'CIP: <strong>' + escHtml(e.cip || '—') + '</strong> &nbsp; DNI: <strong>' + escHtml(e.dni || '—') + '</strong><br>'
+          + 'EDAD: ' + escHtml(e.edad ? e.edad + ' años' : '—') + ' &nbsp; SEXO: ' + escHtml(e.sexo || '—') + '<br>'
+          + 'CARGO: ' + escHtml(e.cargo || '—') + '<br>'
+          + 'ARMA: ' + escHtml(e.armamento || 'Ninguno')
+          + '</div>'
+          + '<div style="font-size:11px;color:#666;margin-top:8px;">V: ' + (e.v || 0) + ' &nbsp; F: ' + (e.f || 0) + ' &nbsp; Fecha: ' + escHtml(e.fecha || '—') + '</div>'
+          + '</div>' + fotoHtml;
+      }
+      var pct = av.pct || pctAvance(e.total_resp);
+      var filas = (d.respuestas || []).map(function(r, i) {
+        var bg = i % 2 === 0 ? '#f7faf7' : '#fff';
+        var rc = r.respuesta === 'V' ? '#1a7a3a' : '#7a1a1a';
+        return '<tr style="background:' + bg + ';">'
+          + '<td style="padding:6px 8px;font-weight:700;color:#004d3d;width:42px;">' + r.numero + '</td>'
+          + '<td style="padding:6px 8px;font-size:12px;">' + escHtml(r.texto) + '</td>'
+          + '<td style="padding:6px 8px;text-align:center;font-weight:700;color:' + rc + ';width:36px;">' + r.respuesta + '</td>'
+          + '</tr>';
+      }).join('');
+      if (wrap) {
+        wrap.innerHTML = '<div style="background:#fff8e1;border:1px solid #ffeeba;border-radius:8px;padding:12px 14px;margin-bottom:12px;">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'
+          + '<strong style="color:#856404;font-size:13px;">Avance: ' + (av.total || e.total_resp || 0) + ' / 566 (' + pct + '%)</strong>'
+          + '<span style="font-size:12px;color:#666;">Bloque ' + (av.bloque || 1) + ' / ' + (av.bloques || 12) + '</span>'
+          + '</div>'
+          + '<div style="background:#e9ecef;border-radius:6px;height:10px;overflow:hidden;">'
+          + '<div style="background:linear-gradient(90deg,#004d3d,#1a7a3a);height:100%;width:' + pct + '%;"></div>'
+          + '</div></div>'
+          + '<p style="font-size:12px;color:#666;margin:0 0 8px;"><strong>' + (d.respuestas || []).length + '</strong> respuestas registradas</p>'
+          + '<div style="overflow-x:auto;max-height:52vh;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">'
+          + '<table class="t" style="font-size:12px;margin:0;"><thead><tr>'
+          + '<th style="width:42px;">N°</th><th>Pregunta</th><th style="width:36px;">R</th>'
+          + '</tr></thead><tbody>' + (filas || '<tr><td colspan="3" style="text-align:center;padding:14px;color:#bbb;">Sin respuestas</td></tr>') + '</tbody></table>'
+          + '</div>';
       }
     })
     .catch(function() {
@@ -1806,7 +1892,9 @@ function vistaPreviaDescarga(filtro, selId, prefijo) {
       var badge = r.enCurso
         ? '<span class="badge" style="background:#fff3cd;color:#856404;">En curso</span>'
         : (r.comp ? '<span class="badge ok">Completo</span>' : '<span class="badge pend">Parcial</span>');
-      var pdf = btnAccionesEval(r);
+      var pdf = r.enCurso
+        ? '<button type="button" class="btn btn-o" style="font-size:11px;padding:3px 8px;" onclick="verAvance(\'' + escJs(r.cip) + '\')"><i class="fas fa-eye"></i> Ver</button>'
+        : btnAccionesEval(r);
       return '<tr>'
         + '<td style="text-align:center;font-weight:700;">' + (i + 1) + '</td>'
         + '<td><strong>' + escHtml(r.nombres) + '</strong></td>'
@@ -1814,7 +1902,7 @@ function vistaPreviaDescarga(filtro, selId, prefijo) {
         + '<td>' + escHtml(r.dni) + '</td>'
         + '<td style="font-size:11px;">' + escHtml(r.fecha) + '</td>'
         + '<td style="text-align:center;">' + r.bloque + '/12</td>'
-        + '<td>' + r.total + '/566</td>'
+        + '<td>' + r.total + '/566 <span style="color:#666;font-size:11px;">(' + pctAvance(r.total) + '%)</span></td>'
         + '<td>' + badge + '</td>'
         + '<td>' + pdf + '</td>'
         + '</tr>';
@@ -1869,6 +1957,7 @@ function cargarAvancesDescarga(){
       }
       body.innerHTML = rows.map(function(r, i){
         var total = parseInt(r.total_resp, 10) || 0;
+        var pct = pctAvance(total);
         var bloque = parseInt(r.bloque_max, 10) || Math.min(12, Math.ceil(total / 50) || 1);
         return '<tr style="background:#fffdf5;">'
           +'<td style="text-align:center;font-weight:700;">'+(i+1)+'</td>'
@@ -1877,8 +1966,8 @@ function cargarAvancesDescarga(){
           +'<td style="font-size:11px;">'+escHtml(r.unidad||r.comisaria||'—')+'</td>'
           +'<td style="font-size:11px;">'+escHtml(r.fecha)+'</td>'
           +'<td style="text-align:center;">'+bloque+'/12</td>'
-          +'<td>'+total+'/566</td>'
-          +'<td><span style="color:#888;font-size:10px;">Sin enviar</span></td>'
+          +'<td><strong>'+total+'/566</strong> <span style="color:#856404;font-size:11px;">('+pct+'%)</span></td>'
+          +'<td><button type="button" class="btn btn-o" style="font-size:11px;padding:3px 10px;" onclick="verAvance(\''+escJs(r.cip)+'\')"><i class="fas fa-eye"></i> Ver</button></td>'
           +'</tr>';
       }).join('');
       if(info) info.textContent = rows.length + ' avance' + (rows.length === 1 ? '' : 's') + ' sin enviar';

@@ -9,7 +9,7 @@ const path     = require('path');
 const fs       = require('fs');
 const crypto   = require('crypto');
 const { Pool } = require('pg');
-const { generarPDFIndividual, generarPDFComisaria, calcularMMPI2, interpretarT, contarRespuestas } = require('./pdf_gen');
+const { generarPDFIndividual, generarPDFComisaria, calcularMMPI2, interpretarT, contarRespuestas, formatearArmamentoLegible } = require('./pdf_gen');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -782,6 +782,7 @@ app.get('/progreso', async (req, res) => {
       ok: true, encontrado: true,
       cip: row.cip, nombres: row.nombres, comisaria: row.comisaria, unidad: row.unidad,
       grado: row.grado || '', cargo: row.cargo || '', sexo: row.sexo || '',
+      armamento: row.armamento || '', foto: row.foto || '',
       bloque: row.bloque_max, total: row.total_resp, respuestas: row.respuestas,
       ultima: new Date(row.actualizado).toLocaleString('es-PE')
     });
@@ -1319,6 +1320,71 @@ app.get('/admin/preview-resultado', requireAuth, async (req, res) => {
         f: stats.f
       },
       mmpi
+    });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── GET /admin/preview-avance?cip= — vista previa de progreso parcial ───────────
+app.get('/admin/preview-avance', requireAuth, async (req, res) => {
+  try {
+    const cip = (req.query.cip || '').trim();
+    if (!cip) return res.json({ ok: false, error: 'CIP requerido' });
+
+    let ev = await obtenerProgresoParaPDF(cip, req.admin);
+    if (!ev) {
+      const parcial = await cargarEvaluacionAdmin({ cip }, req.admin);
+      if (parcial && !evaluacionEstaCompleta(parcial)) ev = parcial;
+    }
+    if (!ev) return res.json({ ok: false, error: 'No hay avance guardado para este CIP' });
+    if (evaluacionEstaCompleta(ev)) {
+      return res.json({ ok: false, error: 'Evaluación ya completada. Use Ver resultado.' });
+    }
+
+    const stats = contarRespuestas(ev);
+    const pct = Math.min(100, Math.round((stats.total / 566) * 100));
+    const pregsR = await pool.query(
+      'SELECT numero, texto FROM preguntas WHERE activa=TRUE ORDER BY orden,numero'
+    );
+    let resp = ev.respuestas || {};
+    if (typeof resp === 'string') {
+      try { resp = JSON.parse(resp); } catch (e) { resp = {}; }
+    }
+    const filas = [];
+    pregsR.rows.forEach(function(p) {
+      const r = resp[p.numero] || resp[String(p.numero)];
+      if (r === 'V' || r === 'F') {
+        filas.push({ numero: p.numero, texto: p.texto, respuesta: r });
+      }
+    });
+
+    res.json({
+      ok: true,
+      efectivo: {
+        grado: ev.grado || '',
+        nombres: ev.nombres || '',
+        cip: ev.cip || '',
+        dni: ev.dni || '',
+        edad: ev.edad || null,
+        sexo: ev.sexo || '',
+        cargo: ev.cargo || '',
+        armamento: formatearArmamentoLegible(ev.armamento || ''),
+        comisaria: ev.comisaria || '',
+        unidad: ev.unidad || '',
+        fecha: ev.fecha || '',
+        foto: ev.foto && String(ev.foto).length > 80 ? ev.foto : '',
+        total_resp: stats.total,
+        v: stats.v,
+        f: stats.f
+      },
+      avance: {
+        total: stats.total,
+        pct: pct,
+        bloque: parseInt(ev.bloque_max, 10) || Math.min(12, Math.ceil(stats.total / 50) || 1),
+        bloques: 12
+      },
+      respuestas: filas
     });
   } catch (e) {
     res.json({ ok: false, error: e.message });

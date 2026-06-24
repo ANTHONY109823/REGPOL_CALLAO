@@ -90,6 +90,19 @@ function dibujarPie(doc, pagina, totalPaginas) {
            doc.page.width - 100, y + 4, { align: 'right', width: 60, lineBreak: false });
 }
 
+function formatearArmamentoLegible(arm) {
+  if (!arm || arm === 'Sin armamento') return 'Ninguno';
+  return String(arm).split(',')
+    .map(function(s) {
+      s = s.trim().replace(/^ARMAMENTO\s+/i, '');
+      if (/^particular$/i.test(s) || /particular/i.test(s)) return 'Particular';
+      if (/^del\s+estado$/i.test(s) || /del estado/i.test(s)) return 'Del Estado';
+      return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+    })
+    .filter(Boolean)
+    .join(', ') || 'Ninguno';
+}
+
 function formatearFechaPDF(valor) {
   if (!valor) return '—';
   if (valor instanceof Date && !isNaN(valor.getTime())) {
@@ -118,7 +131,7 @@ function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   const edadTxt = ev.edad ? ev.edad + ' años' : '—';
   const sexoTxt = ev.sexo || '—';
   const cargoTxt = ev.cargo || '—';
-  const armaTxt = ev.armamento || 'Sin armamento';
+  const armaTxt = formatearArmamentoLegible(ev.armamento || '');
   const fechaTxt = formatearFechaPDF(ev.fecha);
 
   let ty = y + pad;
@@ -135,7 +148,7 @@ function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   ty += 10;
   doc.text('CARGO: ' + cargoTxt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
   ty += 10;
-  doc.text('ARMAMENTO: ' + armaTxt, x0 + pad, ty, { width: Math.min(textoW, W * 0.62), lineBreak: false, ellipsis: true });
+  doc.text('ARMA: ' + armaTxt, x0 + pad, ty, { width: Math.min(textoW, W * 0.62), lineBreak: false, ellipsis: true });
 
   if (tieneFoto) {
     const fotoX = x0 + W - fotoW - pad;
@@ -480,4 +493,4 @@ function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY) {
   return y;
 }
 
-module.exports = { generarPDFIndividual, generarPDFComisaria, calcularMMPI2, interpretarT, contarRespuestas };
+module.exports = { generarPDFIndividual, generarPDFComisaria, calcularMMPI2, interpretarT, contarRespuestas, formatearArmamentoLegible };
