@@ -102,6 +102,9 @@ async function initDB() {
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS armamento TEXT;
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS foto TEXT;
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS grado VARCHAR(80);
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS dni VARCHAR(20);
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS fecha_nac DATE;
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS edad SMALLINT;
 
     CREATE TABLE IF NOT EXISTS divisiones (
       id     SERIAL PRIMARY KEY,
@@ -777,11 +780,12 @@ app.post('/guardar', async (req, res) => {
 // ── POST /progreso (guardar bloque parcial) ────────────────────────────────────
 app.post('/progreso', async (req, res) => {
   try {
-    const { cip, nombres, comisaria, unidad, cargo, grado, sexo, armamento, foto, bloque, total, respuestas } = req.body;
+    const { cip, nombres, comisaria, unidad, cargo, grado, sexo, armamento, foto, bloque, total, respuestas, dni, fecha_nac, edad } = req.body;
     const clave = (cip || 'anonimo').toLowerCase().trim();
     const armamentoStr = Array.isArray(armamento) ? armamento.join(', ') : (armamento || '');
     const totalCalc = contarRespuestasObj(respuestas).total;
     const totalFinal = Math.max(parseInt(total, 10) || 0, totalCalc);
+    const edadFinal = parseInt(edad, 10) || calcularEdadDesdeISO(fecha_nac) || null;
     // Agregar columnas extra a progresos si no existen (BD antiguas)
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS unidad VARCHAR(150)`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS cargo VARCHAR(80)`).catch(()=>{});
@@ -789,6 +793,9 @@ app.post('/progreso', async (req, res) => {
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS armamento TEXT`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS foto TEXT`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS grado VARCHAR(80)`).catch(()=>{});
+    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS dni VARCHAR(20)`).catch(()=>{});
+    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS fecha_nac DATE`).catch(()=>{});
+    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS edad SMALLINT`).catch(()=>{});
     await pool.query(
       `INSERT INTO progresos (clave,cip,nombres,comisaria,unidad,bloque_max,total_resp,respuestas,actualizado)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
@@ -797,10 +804,12 @@ app.post('/progreso', async (req, res) => {
          total_resp=$7, respuestas=$8, actualizado=NOW()`,
       [clave, cip||'', nombres||'', comisaria||'', unidad||'', bloque||0, totalFinal, respuestas||{}]
     );
-    // Actualizar campos extra por separado para compatibilidad con esquema dinámico
     await pool.query(
-      `UPDATE progresos SET cargo=$2, sexo=$3, armamento=$4, foto=COALESCE(NULLIF($5,''),foto), grado=COALESCE(NULLIF($6,''),grado) WHERE clave=$1`,
-      [clave, cargo||'', sexo||'', armamentoStr, foto||'', grado||'']
+      `UPDATE progresos SET cargo=$2, sexo=$3, armamento=$4,
+         foto=COALESCE(NULLIF($5,''),foto), grado=COALESCE(NULLIF($6,''),grado),
+         dni=COALESCE(NULLIF($7,''),dni), fecha_nac=COALESCE($8,fecha_nac), edad=COALESCE($9,edad)
+       WHERE clave=$1`,
+      [clave, cargo||'', sexo||'', armamentoStr, foto||'', grado||'', dni||'', fecha_nac || null, edadFinal]
     ).catch(()=>{});
     res.json({ ok: true });
   } catch (e) {
@@ -816,12 +825,24 @@ app.get('/progreso', async (req, res) => {
     const r = await pool.query('SELECT * FROM progresos WHERE clave=$1', [clave]);
     if (!r.rows.length) return res.json({ ok: true, encontrado: false });
     const row = r.rows[0];
+    const totalCalc = Math.max(
+      parseInt(row.total_resp, 10) || 0,
+      contarRespuestasObj(row.respuestas).total
+    );
+    let fechaNac = '';
+    if (row.fecha_nac) {
+      const f = new Date(row.fecha_nac);
+      if (!isNaN(f.getTime())) {
+        fechaNac = f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0') + '-' + String(f.getDate()).padStart(2, '0');
+      }
+    }
     res.json({
       ok: true, encontrado: true,
       cip: row.cip, nombres: row.nombres, comisaria: row.comisaria, unidad: row.unidad,
       grado: row.grado || '', cargo: row.cargo || '', sexo: row.sexo || '',
+      dni: row.dni || '', edad: row.edad || null, fecha_nac: fechaNac,
       armamento: row.armamento || '', foto: row.foto || '',
-      bloque: row.bloque_max, total: row.total_resp, respuestas: row.respuestas,
+      bloque: row.bloque_max, total: totalCalc, respuestas: row.respuestas,
       ultima: new Date(row.actualizado).toLocaleString('es-PE')
     });
   } catch (e) {
@@ -931,9 +952,9 @@ function mapearProgresoParaPDF(p) {
   if (typeof resp === 'string') {
     try { resp = JSON.parse(resp); } catch (e) { resp = {}; }
   }
-  const totalResp = p.total_resp != null
-    ? parseInt(p.total_resp, 10)
-    : Object.keys(resp).filter(function(k) { return resp[k] === 'V' || resp[k] === 'F'; }).length;
+  const totalDb = p.total_resp != null ? parseInt(p.total_resp, 10) : 0;
+  const totalJson = Object.keys(resp).filter(function(k) { return resp[k] === 'V' || resp[k] === 'F'; }).length;
+  const totalResp = Math.max(totalDb || 0, totalJson);
   return {
     id: null,
     cip: p.cip || '',
@@ -968,7 +989,7 @@ async function obtenerProgresoParaPDF(cip, admin) {
   );
   if (!r.rows.length) return null;
   const ev = mapearProgresoParaPDF(r.rows[0]);
-  if (!ev.total_resp) return null;
+  if (!ev || (!ev.total_resp && !ev.nombres)) return null;
   if (debeFiltrarPorUnidadAsignada(admin)) {
     const u = (admin.unidad || '').toUpperCase();
     const uni = (ev.unidad || '').toUpperCase();
@@ -1031,9 +1052,9 @@ async function consultarProgresosFiltrados(admin, query) {
 async function consultarProgresosPendientes(admin, query) {
   const { where, params } = await consultarProgresosFiltrados(admin, query);
   const r = await pool.query(
-    `SELECT NULL::INTEGER AS id, p.cip, p.nombres, '' AS dni, p.comisaria, p.unidad,
+    `SELECT NULL::INTEGER AS id, p.cip, p.nombres, COALESCE(p.dni,'') AS dni, p.comisaria, p.unidad,
             p.bloque_max, NULL::SMALLINT AS edad,
-            COALESCE(p.total_resp, 0) AS total_resp,
+            GREATEST(COALESCE(p.total_resp, 0), ${sqlContarRespuestas('p.respuestas')}) AS total_resp,
             FALSE AS completada, TRUE AS solo_progreso,
             TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha
      FROM progresos p ${where}
@@ -1077,7 +1098,7 @@ app.get('/admin/registro-cip', requireAuth, async (req, res) => {
               ${sqlContarRespuestas('respuestas')} AS total_resp
        FROM evaluaciones
        WHERE UPPER(TRIM(cip))=UPPER(TRIM($1)) OR TRIM(dni)=TRIM($1)
-       ORDER BY fecha DESC`,
+       ORDER BY evaluaciones.fecha DESC`,
       [cip]
     );
     const progR = await pool.query(
@@ -1628,19 +1649,23 @@ async function cargarEvaluacionAdmin({ id, cip }, admin) {
   let ev = null;
   if (id) {
     const r = await pool.query(
-      `SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha FROM evaluaciones WHERE id=$1`, [id]
+      `SELECT e.*, TO_CHAR(e.fecha,'DD/MM/YYYY HH24:MI') AS fecha_txt
+       FROM evaluaciones e WHERE e.id=$1`, [id]
     );
     if (!r.rows.length) return null;
     ev = r.rows[0];
+    ev.fecha = ev.fecha_txt || ev.fecha;
   } else if (cip) {
     const r = await pool.query(
-      `SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha
-       FROM evaluaciones WHERE UPPER(TRIM(cip))=UPPER(TRIM($1)) OR TRIM(dni)=TRIM($1)
-       ORDER BY fecha DESC LIMIT 1`,
+      `SELECT e.*, TO_CHAR(e.fecha,'DD/MM/YYYY HH24:MI') AS fecha_txt
+       FROM evaluaciones e
+       WHERE UPPER(TRIM(e.cip))=UPPER(TRIM($1)) OR TRIM(e.dni)=TRIM($1)
+       ORDER BY e.fecha DESC LIMIT 1`,
       [cip]
     );
     if (!r.rows.length) return null;
     ev = r.rows[0];
+    ev.fecha = ev.fecha_txt || ev.fecha;
   }
   if (!ev) return null;
   if (debeFiltrarPorUnidadAsignada(admin)) {

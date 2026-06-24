@@ -401,6 +401,39 @@ function ocultarPanelRegistro() {
   ESTADO.registroCompleto = true;
 }
 
+function construirPayloadProgreso() {
+  return {
+    cip:       document.getElementById('f-cip').value.trim(),
+    nombres:   document.getElementById('f-nombres').value.trim(),
+    dni:       document.getElementById('f-dni').value.trim(),
+    fecha_nac: fechaNacParaEnvio(),
+    edad:      obtenerEdadParaEnvio(),
+    comisaria: obtenerComisariaEvaluacion(),
+    unidad:    document.getElementById('f-unidad').value.trim(),
+    sexo:      (document.getElementById('f-sexo')||{value:''}).value||'',
+    grado:     (document.getElementById('f-grado')||{value:''}).value||'',
+    cargo:     (document.getElementById('f-cargo')||{}).value||'',
+    armamento: obtenerArmamento(),
+    foto:      FOTO_BASE64 || '',
+    bloque:    ESTADO.bloqueActual || 1,
+    total:     Object.keys(ESTADO.respuestas).length,
+    respuestas: ESTADO.respuestas
+  };
+}
+
+function guardarRegistroEnServidor(callback) {
+  var payload = construirPayloadProgreso();
+  if (!payload.cip) { if (callback) callback(false); return; }
+  localStorage.setItem('progreso_' + payload.cip, JSON.stringify(payload));
+  fetch(LOCAL_API + '/progreso', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(function(r) { return r.json(); })
+    .then(function(d) { if (callback) callback(!!d.ok); })
+    .catch(function() { if (callback) callback(false); });
+}
+
 function construirPayloadGuardar(completada) {
   return {
     comisaria: obtenerComisariaEvaluacion(),
@@ -447,12 +480,17 @@ function continuarAlCuestionario() {
   var cip = document.getElementById('f-cip').value.trim();
   verificarProgresoGuardado(cip, function(data) {
     if (data && data.total > 0) {
+      guardarRegistroEnServidor();
       mostrarBannerProgreso(data);
     } else {
-      activarCuestionario(true);
-      guardarBloqueEnServidor();
-      mostrarAlerta('Cuestionario iniciado. Puede guardar y continuar en otra sesión.','exito');
-      setTimeout(ocultarAlerta, 3500);
+      guardarRegistroEnServidor(function(ok) {
+        activarCuestionario(true);
+        guardarBloqueEnServidor();
+        mostrarAlerta(ok
+          ? 'Registro guardado. Cuestionario iniciado — puede continuar después con su CIP.'
+          : 'Cuestionario iniciado. Guarde su avance con el botón inferior.','exito');
+        setTimeout(ocultarAlerta, 4000);
+      });
     }
   });
 }
@@ -571,24 +609,9 @@ function cambiarBloque(delta) {
    GUARDADO POR BLOQUES EN SERVIDOR
 ================================================================ */
 function guardarBloqueEnServidor(callback) {
-  var cip       = document.getElementById('f-cip').value.trim();
-  var nombres   = document.getElementById('f-nombres').value.trim();
-  var comisaria = obtenerComisariaEvaluacion();
-  var unidad    = document.getElementById('f-unidad').value.trim();
-  var total     = Object.keys(ESTADO.respuestas).length;
+  var payload = construirPayloadProgreso();
 
-  var payload = {
-    cip:cip, nombres:nombres, comisaria:comisaria, unidad:unidad,
-    sexo: (document.getElementById('f-sexo')||{value:''}).value||'',
-    grado: (document.getElementById('f-grado')||{value:''}).value||'',
-    cargo: (document.getElementById('f-cargo')||{}).value||'',
-    armamento: obtenerArmamento(),
-    foto: FOTO_BASE64 || '',
-    bloque:ESTADO.bloqueActual, total:total, respuestas:ESTADO.respuestas
-  };
-
-  // Guardar local siempre
-  localStorage.setItem('progreso_'+cip, JSON.stringify(payload));
+  localStorage.setItem('progreso_'+payload.cip, JSON.stringify(payload));
 
   fetch(LOCAL_API+'/progreso',{
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
@@ -608,25 +631,30 @@ function volverAlPanelRegistro() {
   ESTADO.registroCompleto = false;
   var cuest = document.getElementById('card-cuestionario');
   if (cuest) cuest.classList.add('seccion-bloqueada');
+  var zona = document.getElementById('zona-preguntas');
+  if (zona) zona.innerHTML = '';
+
+  // Ocultar formulario completo — solo panel compacto CIP
   var reg = document.getElementById('card-registro');
-  if (reg) {
-    reg.style.display = '';
-    reg.classList.remove('card-registro-bloqueado');
-  }
+  if (reg) reg.style.display = 'none';
   var cont = document.getElementById('card-continuar-cip');
   if (cont) cont.style.display = '';
+
   var cip = document.getElementById('f-cip');
   var cipCont = document.getElementById('f-cip-continuar');
   if (cip && cipCont && cip.value.trim()) cipCont.value = cip.value.trim();
+
   var total = Object.keys(ESTADO.respuestas).length;
   if (total > 0) {
     mostrarBannerProgreso({
       cip: (cip && cip.value.trim()) || '',
+      nombres: (document.getElementById('f-nombres')||{}).value || '',
       total: total,
       bloque: ESTADO.bloqueActual
     });
   }
-  ocultarAlerta();
+  mostrarAlerta('Progreso guardado. Para continuar ingrese su CIP en el panel superior.', 'exito');
+  setTimeout(ocultarAlerta, 4500);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -656,6 +684,14 @@ function continuarConCIP() {
     }
     document.getElementById('f-cip').value = data.cip || cip;
     if (data.nombres) document.getElementById('f-nombres').value = data.nombres;
+    if (data.dni) document.getElementById('f-dni').value = data.dni;
+    if (data.fecha_nac) {
+      var fn = document.getElementById('f-nacimiento');
+      if (fn && /^\d{4}-\d{2}-\d{2}$/.test(data.fecha_nac)) {
+        var p = data.fecha_nac.split('-');
+        fn.value = p[2] + '/' + p[1] + '/' + p[0];
+      }
+    }
     if (data.sexo) { var sel = document.getElementById('f-sexo'); if(sel) sel.value = data.sexo; }
     if (data.grado) { var g = document.getElementById('f-grado'); if(g) g.value = data.grado; }
     if (data.cargo) document.getElementById('f-cargo').value = data.cargo;
@@ -672,22 +708,9 @@ var AUTO_SAVE_COUNTER = 0;
 function autoGuardarProgreso() {
   AUTO_SAVE_COUNTER++;
   if (AUTO_SAVE_COUNTER % 5 !== 0) return;
-  var cip = document.getElementById('f-cip') ? document.getElementById('f-cip').value.trim() : '';
-  if (!cip) return;
-  var payload = {
-    cip:cip,
-    nombres:   (document.getElementById('f-nombres')||{}).value||'',
-    comisaria: obtenerComisariaEvaluacion(),
-    unidad:    (document.getElementById('f-unidad')||{}).value||'',
-    sexo:      (document.getElementById('f-sexo')||{value:''}).value||'',
-    grado:     (document.getElementById('f-grado')||{value:''}).value||'',
-    cargo:     (document.getElementById('f-cargo')||{}).value||'',
-    armamento: obtenerArmamento(),
-    foto:      FOTO_BASE64 || '',
-    bloque:ESTADO.bloqueActual, total:Object.keys(ESTADO.respuestas).length,
-    respuestas:ESTADO.respuestas
-  };
-  localStorage.setItem('progreso_'+cip, JSON.stringify(payload));
+  var payload = construirPayloadProgreso();
+  if (!payload.cip) return;
+  localStorage.setItem('progreso_'+payload.cip, JSON.stringify(payload));
   fetch(LOCAL_API+'/progreso',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).catch(function(){});
   mostrarIndicadorGuardado();
 }
