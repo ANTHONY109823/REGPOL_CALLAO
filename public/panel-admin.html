@@ -229,7 +229,66 @@
 
     /* ── RESPONSIVE ── */
     @media(max-width:700px){.sidebar{display:none;} .breakdown-grid{grid-template-columns:1fr;}}
+
+    /* Evitar flash del menú Super Admin antes de aplicar permisos */
+    html.panel-iniciando .top-bar,
+    html.panel-iniciando .layout { visibility: hidden; }
+    html.panel-listo .top-bar,
+    html.panel-listo .layout { visibility: visible; }
   </style>
+  <script>
+  window.regpolAplicarPermisosPanel = function(s) {
+    if (!s || !s.token) return;
+    var perms = s.permisos || [];
+    if (typeof perms === 'string') { try { perms = JSON.parse(perms); } catch (e) { perms = []; } }
+    var rol = s.rol || '';
+    var esU = rol === 'unitic';
+    var tieneCursos = esU || perms.indexOf('cms_cursos') !== -1;
+    var tieneConvenios = esU || perms.indexOf('cms_convenios') !== -1;
+    var tieneEval = esU || perms.indexOf('evaluaciones') !== -1;
+    var tieneDesc = esU || perms.indexOf('descargas') !== -1 || tieneEval;
+    var tienePsico = esU || rol === 'bienestar' || tieneEval || tieneDesc;
+    var tieneGestion = esU || tienePsico || tieneCursos || tieneConvenios;
+
+    var st = document.getElementById('panel-perm-style');
+    if (!st) {
+      st = document.createElement('style');
+      st.id = 'panel-perm-style';
+      document.head.appendChild(st);
+    }
+    st.textContent = [
+      '[data-rol-unitic]{display:none!important}',
+      '[data-perm-evaluaciones],[data-perm-descargas],[data-perm-preguntas]{display:none!important}',
+      '#sb-grp-psico,#sb-grp-convenios,#sb-grp-cursos,#sb-sec-gestion{display:none!important}',
+      esU ? '[data-rol-unitic],#sb-sec-portal{display:block!important}' : '',
+      tieneEval ? '[data-perm-evaluaciones],[data-perm-preguntas]{display:flex!important}' : '',
+      tieneDesc ? '[data-perm-descargas]{display:flex!important}' : '',
+      tienePsico ? '#sb-grp-psico{display:block!important}' : '',
+      tieneConvenios ? '#sb-grp-convenios{display:block!important}' : '',
+      tieneCursos ? '#sb-grp-cursos{display:block!important}' : '',
+      tieneGestion ? '#sb-sec-gestion{display:block!important}' : ''
+    ].join('\n');
+
+    var badge = document.querySelector('.super-badge');
+    if (badge) {
+      if (esU) badge.textContent = 'SUPER ADMIN';
+      else if (tieneCursos && tieneConvenios) badge.textContent = 'CONVENIOS + EDUCACIÓN';
+      else if (tieneCursos) badge.textContent = 'EDUCACIÓN';
+      else if (tieneConvenios) badge.textContent = 'CONVENIOS';
+      else if (tienePsico) badge.textContent = 'PSICOLOGÍA';
+      else badge.textContent = 'USUARIO';
+    }
+    var nombreEl = document.getElementById('ph-nombre');
+    if (nombreEl) nombreEl.textContent = s.nombre || s.usuario || 'Panel';
+  };
+  (function() {
+    document.documentElement.classList.add('panel-iniciando');
+    try {
+      var s = JSON.parse(localStorage.getItem('regpol_session') || 'null');
+      if (s && s.token) regpolAplicarPermisosPanel(s);
+    } catch (e) {}
+  })();
+  </script>
 </head>
 <body>
 
@@ -1075,37 +1134,51 @@ var ETIQUETAS_PERM={
   cms_cursos:'Gestión Cursos'
 };
 
+function normalizarPermisosPanel(p) {
+  if (!p) return [];
+  if (Array.isArray(p)) return p;
+  if (typeof p === 'string') { try { return JSON.parse(p); } catch (e) { return []; } }
+  return [];
+}
+
+function puedeEntrarPanel(s) {
+  if (!s || !s.token) return false;
+  var perms = normalizarPermisosPanel(s.permisos);
+  return s.rol === 'unitic' || s.rol === 'bienestar'
+    || perms.indexOf('cms_cursos') !== -1 || perms.indexOf('cms_convenios') !== -1
+    || perms.indexOf('cms_inicio') !== -1 || perms.indexOf('cms_resena') !== -1
+    || perms.indexOf('cms_labor') !== -1 || perms.indexOf('cms_novedades') !== -1
+    || perms.indexOf('evaluaciones') !== -1 || perms.indexOf('descargas') !== -1;
+}
+
+function mostrarPanelListo() {
+  document.documentElement.classList.remove('panel-iniciando');
+  document.documentElement.classList.add('panel-listo');
+}
+
 // ── SESIÓN ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',function(){
   var s=JSON.parse(localStorage.getItem('regpol_session')||'null');
-  var perms=s&&s.permisos?s.permisos:[];
-  var puedeEntrar = s&&s.token&&(
-    s.rol==='unitic'||
-    s.rol==='bienestar'||
-    perms.indexOf('cms_cursos')!==-1||
-    perms.indexOf('cms_convenios')!==-1||
-    perms.indexOf('cms_inicio')!==-1||
-    perms.indexOf('cms_resena')!==-1||
-    perms.indexOf('cms_labor')!==-1||
-    perms.indexOf('cms_novedades')!==-1||
-    perms.indexOf('evaluaciones')!==-1||
-    perms.indexOf('descargas')!==-1
-  );
-  if(!puedeEntrar){window.location.href='login.html';return;}
+  if(!puedeEntrarPanel(s)){window.location.href='login.html';return;}
+
+  TOKEN = s.token;
+  SESION = s;
+  SESION.permisos = normalizarPermisosPanel(s.permisos);
+  aplicarPermisosSidebar(SESION);
+  cargarDashboard(false);
+  iniciarPanel(SESION);
+  mostrarPanelListo();
 
   fetch(API+'/admin/perfil',{headers:{'x-admin-token':s.token}})
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d.ok){logout();return;}
-      TOKEN=s.token;
-      SESION=s;
-      if(d.permisos) SESION.permisos=d.permisos;
+      if(d.permisos) SESION.permisos=normalizarPermisosPanel(d.permisos);
       if(d.rol) SESION.rol=d.rol;
       if(d.nombre) SESION.nombre=d.nombre;
       localStorage.setItem('regpol_session',JSON.stringify(SESION));
-      document.getElementById('ph-nombre').textContent=SESION.nombre||SESION.usuario||'Panel';
       aplicarPermisosSidebar(SESION);
-      iniciarPanel(SESION);
+      cargarDashboard(true);
     })
     .catch(function(){logout();});
 });
@@ -1515,38 +1588,7 @@ function puedeGestionConvenios(){ return esUnitic()||tienePermiso('cms_convenios
 function puedeGestionCursos(){ return esUnitic()||tienePermiso('cms_cursos'); }
 
 function aplicarPermisosSidebar(s){
-  var perms=s.permisos||[], rol=s.rol;
-  var esU=(rol==='unitic');
-  var tieneCursos    = esU || perms.indexOf('cms_cursos')    !== -1;
-  var tieneConvenios = esU || perms.indexOf('cms_convenios') !== -1;
-  var tieneEval      = esU || perms.indexOf('evaluaciones')  !== -1;
-  var tieneDesc      = esU || perms.indexOf('descargas')     !== -1 || tieneEval;
-  var tienePsico     = esU || (rol === 'bienestar') || tieneEval || tieneDesc;
-  var tieneGestion   = esU || tienePsico || tieneCursos || tieneConvenios;
-
-  document.querySelectorAll('[data-rol-unitic]').forEach(function(el){ el.style.display = esU ? '' : 'none'; });
-  document.querySelectorAll('[data-perm-evaluaciones]').forEach(function(el){ el.style.display = tieneEval ? '' : 'none'; });
-  document.querySelectorAll('[data-perm-descargas]').forEach(function(el){   el.style.display = tieneDesc ? '' : 'none'; });
-  document.querySelectorAll('[data-perm-preguntas]').forEach(function(el){   el.style.display = tieneEval ? '' : 'none'; });
-
-  var grpCursos = document.getElementById('sb-grp-cursos');
-  if (grpCursos) grpCursos.style.display = tieneCursos ? '' : 'none';
-  var grpConvenios = document.getElementById('sb-grp-convenios');
-  if (grpConvenios) grpConvenios.style.display = tieneConvenios ? '' : 'none';
-  var grpPsico = document.getElementById('sb-grp-psico');
-  if (grpPsico) grpPsico.style.display = tienePsico ? '' : 'none';
-  var secGestion = document.getElementById('sb-sec-gestion');
-  if (secGestion) secGestion.style.display = tieneGestion ? '' : 'none';
-
-  var badge = document.querySelector('.super-badge');
-  if (badge) {
-    if (esU)                               badge.textContent = 'SUPER ADMIN';
-    else if (tieneCursos && tieneConvenios) badge.textContent = 'CONVENIOS + EDUCACIÓN';
-    else if (tieneCursos)                  badge.textContent = 'EDUCACIÓN';
-    else if (tieneConvenios)               badge.textContent = 'CONVENIOS';
-    else if (tienePsico)                   badge.textContent = 'PSICOLOGÍA';
-    else                                   badge.textContent = 'USUARIO';
-  }
+  if (typeof regpolAplicarPermisosPanel === 'function') regpolAplicarPermisosPanel(s);
 }
 
 function aplicarRestriccionFiltroItems(){
@@ -1651,6 +1693,7 @@ function toggleGrupo(header){
 
 // ── DASHBOARD ───────────────────────────────────────────────────────────────
 function tipoDashboardLocal(){
+  if (!SESION) return 'none';
   if (esUnitic()) return 'unitic';
   if (puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos()) return 'psico';
   if (puedeGestionConvenios() && !puedeGestionCursos() && !puedeGestionPsicologia()) return 'convenios';
@@ -1658,7 +1701,7 @@ function tipoDashboardLocal(){
   if (puedeGestionPsicologia()) return 'psico';
   if (puedeGestionConvenios()) return 'convenios';
   if (puedeGestionCursos()) return 'cursos';
-  return 'unitic';
+  return 'gestion';
 }
 
 function cargarDashboard(force){
@@ -1668,7 +1711,8 @@ function cargarDashboard(force){
   var g = document.getElementById('dash-panel-gestion');
   if (u) u.style.display = modo === 'unitic' ? '' : 'none';
   if (p) p.style.display = modo === 'psico' ? '' : 'none';
-  if (g) g.style.display = (modo === 'convenios' || modo === 'cursos') ? '' : 'none';
+  if (g) g.style.display = (modo === 'convenios' || modo === 'cursos' || modo === 'gestion') ? '' : 'none';
+  if (modo === 'none') return;
   if (modo === 'unitic') cargarStatsSistema(force);
   else if (modo === 'psico') cargarStatsPsico(force);
   else cargarStatsGestion(modo === 'convenios' ? 'convenio' : 'curso', force);
@@ -1904,7 +1948,7 @@ function filaRegistroRespuesta(r, divNombre) {
     + '<td>' + escHtml(r.cip) + '</td>'
     + '<td>' + escHtml(r.dni || '—') + '</td>'
     + '<td style="font-size:11px;">' + escHtml(r.fecha) + '</td>'
-    + '<td style="text-align:center;">' + (r.edad || '—') + '</td>'
+    + '<td style="text-align:center;">' + (r.edad ? escHtml(String(r.edad)) : '—') + '</td>'
     + '<td>' + badgeEstadoRegistro(r) + '</td>'
     + '<td>' + btnAccionesEval(r) + '</td>'
     + '<td>' + btnEliminarEval(r) + '</td>'

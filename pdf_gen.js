@@ -36,15 +36,29 @@ function dibujarCabeceraLista(doc) {
 function contarRespuestas(ev) {
   try {
     const r = typeof ev.respuestas === 'string' ? JSON.parse(ev.respuestas || '{}') : (ev.respuestas || {});
-    const vals = Object.values(r);
+    const vals = Object.keys(r).filter(function(k) { return r[k] === 'V' || r[k] === 'F'; });
     return {
       total: vals.length,
-      v: vals.filter(function(x) { return x === 'V'; }).length,
-      f: vals.filter(function(x) { return x === 'F'; }).length
+      v: vals.filter(function(k) { return r[k] === 'V'; }).length,
+      f: vals.filter(function(k) { return r[k] === 'F'; }).length
     };
   } catch (e) {
     return { total: 0, v: 0, f: 0 };
   }
+}
+
+function resolverEdad(ev) {
+  if (!ev) return null;
+  const e = parseInt(ev.edad, 10);
+  if (e > 0) return e;
+  if (!ev.fecha_nac) return null;
+  const nac = new Date(ev.fecha_nac);
+  if (isNaN(nac.getTime())) return null;
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - nac.getFullYear();
+  const m = hoy.getMonth() - nac.getMonth();
+  if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
+  return edad > 0 ? edad : null;
 }
 
 function dibujarFilaTabla(doc, x0, y, W, cols, celdas, opts) {
@@ -128,7 +142,10 @@ function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
 
   const gradoTxt = String(ev.grado || '—').toUpperCase();
   const nombreTxt = String(ev.nombres || '—').toUpperCase();
-  const edadTxt = ev.edad ? ev.edad + ' años' : '—';
+  const edadTxt = (function() {
+    const e = resolverEdad(ev);
+    return e ? e + ' años' : '—';
+  })();
   const sexoTxt = ev.sexo || '—';
   const cargoTxt = ev.cargo || '—';
   const armaTxt = formatearArmamentoLegible(ev.armamento || '');
@@ -290,51 +307,67 @@ function generarPDFIndividual(evaluacion, preguntas, opts) {
   });
 }
 
+function dibujarPieLista(doc, pagina) {
+  const y = doc.page.height - 30;
+  doc.rect(0, y - 4, doc.page.width, 34).fill('#eeeeee');
+  doc.rect(0, y - 4, doc.page.width, 2).fill(COLOR_ORO);
+  doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7)
+     .text('REGPOL CALLAO — UNITIC 2026 — Listado resumido de evaluaciones',
+           36, y + 3, { align: 'left', width: 380, lineBreak: false });
+  doc.text('Pág. ' + pagina, doc.page.width - 70, y + 3, { align: 'right', width: 50, lineBreak: false });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// PDF POR COMISARÍA — resumen de todos los efectivos
+// PDF POR COMISARÍA / UNIDAD — tabla resumida (sin hojas en blanco)
 // ─────────────────────────────────────────────────────────────────────────────
-function generarPDFComisaria(comisaria, evaluaciones, preguntas) {
+function generarPDFComisaria(comisaria, evaluaciones) {
   return new Promise(function(resolve) {
     const doc = new PDFDocument({
       size: 'A4',
-      margins: { top: 70, bottom: 45, left: 40, right: 40 },
-      autoFirstPage: false,
-      bufferPages: true
+      margins: { top: 52, bottom: 38, left: 36, right: 36 },
+      autoFirstPage: false
     });
     const chunks = [];
     doc.on('data', function(c) { chunks.push(c); });
     doc.on('end',  function()  { resolve(Buffer.concat(chunks)); });
 
-    const m  = { left: 40, right: 40, top: 70, bottom: 45 };
-    const W  = A4_W - m.left - m.right;
-    const x0 = m.left;
-    const rowH = 16;
-    const cols = [26, 148, 52, 52, 68, 26, 26, 48];
-    const heads = ['N°', 'Apellidos y Nombres', 'CIP', 'DNI', 'Fecha', 'V', 'F', 'Avance'];
+    const x0 = 36;
+    const W  = A4_W - 72;
+    const rowH = 14;
+    const cols = [20, 118, 44, 44, 54, 18, 18, 34, 22];
+    const heads = ['N°', 'Apellidos y Nombres', 'CIP', 'DNI', 'Fecha', 'V', 'F', 'Avance', 'Edad'];
+    const maxRowY = A4_H - 40;
+    const lista = evaluaciones || [];
+    let pagina = 0;
 
-    doc.addPage();
-    dibujarCabeceraLista(doc);
+    function cerrarPaginaActual() {
+      if (pagina > 0) dibujarPieLista(doc, pagina);
+    }
 
-    doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(13)
-       .text('LISTADO DE EFECTIVOS EVALUADOS', 40, 68, { align: 'center', width: doc.page.width - 80, lineBreak: false });
-    doc.fillColor(COLOR_ORO).font('Helvetica-Bold').fontSize(11)
-       .text(String(comisaria || '').toUpperCase(), 40, 86, { align: 'center', width: doc.page.width - 80, lineBreak: false });
-
-    let rowY = 108;
-    dibujarFilaTabla(doc, x0, rowY, W, cols, heads, { header: true, rowH: rowH });
-    rowY += rowH;
-
-    evaluaciones.forEach(function(ev, idx) {
-      if (rowY > A4_H - 55) {
-        doc.addPage();
-        dibujarCabeceraLista(doc);
-        rowY = 68;
-        dibujarFilaTabla(doc, x0, rowY, W, cols, heads, { header: true, rowH: rowH });
-        rowY += rowH;
+    function abrirPagina(esContinuacion) {
+      cerrarPaginaActual();
+      doc.addPage();
+      pagina += 1;
+      dibujarCabeceraLista(doc);
+      let startY = 58;
+      if (!esContinuacion) {
+        doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(11)
+           .text('LISTADO DE EFECTIVOS EVALUADOS', x0, 56, { align: 'center', width: W, lineBreak: false });
+        doc.fillColor(COLOR_ORO).font('Helvetica-Bold').fontSize(10)
+           .text(String(comisaria || '').toUpperCase(), x0, 70, { align: 'center', width: W, lineBreak: false });
+        startY = 84;
       }
+      dibujarFilaTabla(doc, x0, startY, W, cols, heads, { header: true, rowH: rowH });
+      return startY + rowH;
+    }
 
+    let rowY = abrirPagina(false);
+
+    lista.forEach(function(ev, idx) {
+      if (rowY + rowH > maxRowY) rowY = abrirPagina(true);
       const stats = contarRespuestas(ev);
-      const fecha = String(ev.fecha || '—').substring(0, 16);
+      const fecha = String(ev.fecha || '—').substring(0, 10);
+      const edad = resolverEdad(ev);
       dibujarFilaTabla(doc, x0, rowY, W, cols, [
         String(idx + 1),
         ev.nombres || '—',
@@ -343,12 +376,19 @@ function generarPDFComisaria(comisaria, evaluaciones, preguntas) {
         fecha,
         String(stats.v),
         String(stats.f),
-        stats.total + '/566'
+        stats.total + '/566',
+        edad ? String(edad) : '—'
       ], { par: idx % 2 === 0, rowH: rowH });
       rowY += rowH;
     });
 
-    aplicarPiesEnTodas(doc);
+    if (!lista.length) {
+      dibujarFilaTabla(doc, x0, rowY, W, cols,
+        ['—', 'Sin registros para este filtro', '—', '—', '—', '—', '—', '—', '—'],
+        { par: false, rowH: rowH });
+    }
+
+    cerrarPaginaActual();
     doc.end();
   });
 }

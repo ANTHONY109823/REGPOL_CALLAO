@@ -30,13 +30,74 @@ const sha256 = s => crypto.createHash('sha256').update(s).digest('hex');
 
 function calcularEdadDesdeISO(fecha_nac) {
   if (!fecha_nac) return 0;
-  const nac = new Date(fecha_nac);
-  if (isNaN(nac.getTime())) return 0;
+  let y, mo, d;
+  if (fecha_nac instanceof Date) {
+    if (isNaN(fecha_nac.getTime())) return 0;
+    y = fecha_nac.getFullYear();
+    mo = fecha_nac.getMonth();
+    d = fecha_nac.getDate();
+  } else {
+    const s = String(fecha_nac);
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) {
+      y = parseInt(iso[1], 10);
+      mo = parseInt(iso[2], 10) - 1;
+      d = parseInt(iso[3], 10);
+    } else {
+      const nac = new Date(s);
+      if (isNaN(nac.getTime())) return 0;
+      y = nac.getFullYear();
+      mo = nac.getMonth();
+      d = nac.getDate();
+    }
+  }
   const hoy = new Date();
-  let edad = hoy.getFullYear() - nac.getFullYear();
-  const m = hoy.getMonth() - nac.getMonth();
-  if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
-  return edad;
+  let edad = hoy.getFullYear() - y;
+  if (hoy.getMonth() - mo < 0 || (hoy.getMonth() === mo && hoy.getDate() < d)) edad--;
+  return edad > 0 ? edad : 0;
+}
+
+function resolverEdadFila(row) {
+  if (!row) return null;
+  const e = parseInt(row.edad, 10);
+  if (e > 0) return e;
+  const calc = calcularEdadDesdeISO(row.fecha_nac);
+  return calc > 0 ? calc : null;
+}
+
+function enriquecerFilaEdad(row) {
+  if (!row) return row;
+  const edad = resolverEdadFila(row);
+  return edad ? Object.assign({}, row, { edad: edad }) : row;
+}
+
+function deduplicarFilasPorCip(rows) {
+  const seen = new Set();
+  const out = [];
+  (rows || []).forEach(function(row) {
+    const cip = (row.cip || '').toUpperCase().trim();
+    if (cip) {
+      if (seen.has(cip)) return;
+      seen.add(cip);
+    }
+    out.push(row);
+  });
+  return out;
+}
+
+function normalizarFilasPDFGrupo(rows) {
+  return deduplicarFilasPorCip(rows).map(function(row) {
+    let base;
+    if (row.id) {
+      base = Object.assign({}, row);
+    } else if (row.clave != null || row.actualizado != null) {
+      base = mapearProgresoParaPDF(row);
+    } else {
+      base = Object.assign({}, row);
+    }
+    base.edad = resolverEdadFila(base);
+    return base;
+  });
 }
 
 // ── Inicializar tablas + seed ──────────────────────────────────────────────────
@@ -912,7 +973,7 @@ app.get('/progreso', async (req, res) => {
       ok: true, encontrado: true,
       cip: row.cip, nombres: row.nombres, comisaria: row.comisaria, unidad: row.unidad,
       grado: row.grado || '', cargo: row.cargo || '', sexo: row.sexo || '',
-      dni: row.dni || '', edad: row.edad || null, fecha_nac: fechaNac,
+      dni: row.dni || '', edad: resolverEdadFila(row), fecha_nac: fechaNac,
       armamento: row.armamento || '', foto: row.foto || '',
       bloque: row.bloque_max, total: totalCalc, respuestas: row.respuestas,
       ultima: new Date(row.actualizado).toLocaleString('es-PE')
@@ -1047,7 +1108,9 @@ async function fusionarFilaListadoEval(row) {
   if (totalP > totalE) {
     return Object.assign({}, row, {
       total_resp: totalP,
-      solo_progreso: true
+      solo_progreso: true,
+      edad: resolverEdadFila(prog) || resolverEdadFila(row),
+      fecha_nac: prog.fecha_nac || row.fecha_nac
     });
   }
   return row;
@@ -1074,7 +1137,7 @@ function mapearProgresoParaPDF(p) {
     sexo: p.sexo || '',
     armamento: p.armamento || '',
     foto: p.foto || '',
-    edad: p.edad || null,
+    edad: resolverEdadFila(p),
     bloque_max: p.bloque_max || 0,
     completada: false,
     respuestas: statsMerged.respuestas,
@@ -1160,7 +1223,7 @@ async function consultarProgresosPendientes(admin, query) {
   const { where, params } = await consultarProgresosFiltrados(admin, query);
   const r = await pool.query(
     `SELECT NULL::INTEGER AS id, p.cip, p.nombres, COALESCE(p.dni,'') AS dni, p.comisaria, p.unidad,
-            p.bloque_max, NULL::SMALLINT AS edad,
+            p.bloque_max, p.fecha_nac, p.edad,
             GREATEST(COALESCE(p.total_resp, 0), ${sqlContarRespuestas('p.respuestas')}) AS total_resp,
             FALSE AS completada, TRUE AS solo_progreso,
             TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha
@@ -1168,7 +1231,7 @@ async function consultarProgresosPendientes(admin, query) {
      ORDER BY p.actualizado DESC LIMIT 200`,
     params
   );
-  return r.rows;
+  return r.rows.map(enriquecerFilaEdad);
 }
 
 async function consultarProgresosParaPDFGrupo(admin, query) {
@@ -1480,7 +1543,7 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
 
     const rows = await pool.query(
       `SELECT id, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha, comisaria, unidad,
-              nombres, cip, dni, edad, grado, completada, bloque_max,
+              nombres, cip, dni, fecha_nac, edad, grado, completada, bloque_max,
               ${sqlContarRespuestas('respuestas')} AS total_resp,
               FALSE AS solo_progreso
        FROM evaluaciones ${where} ORDER BY fecha DESC LIMIT $${pi} OFFSET $${pi+1}`,
@@ -1489,7 +1552,7 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
 
     const rowsEnriquecidas = [];
     for (const row of rows.rows) {
-      rowsEnriquecidas.push(await fusionarFilaListadoEval(row));
+      rowsEnriquecidas.push(enriquecerFilaEdad(await fusionarFilaListadoEval(row)));
     }
 
     // Incluir progresos no enviados (misma búsqueda / filtros)
@@ -1505,6 +1568,7 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
     const cipsEval = new Set(rowsEnriquecidas.map(function(r) { return (r.cip || '').toUpperCase(); }));
     const merged = rowsEnriquecidas.concat(
       progresosRows.filter(function(p) { return !cipsEval.has((p.cip || '').toUpperCase()); })
+        .map(enriquecerFilaEdad)
     );
 
     res.json({ ok: true, rows: merged, total: total + progresosRows.length, pagina, paginas });
@@ -1807,7 +1871,7 @@ app.get('/admin/preview-resultado', requireAuth, async (req, res) => {
         nombres: ev.nombres || '',
         cip: ev.cip || '',
         dni: ev.dni || '',
-        edad: ev.edad || null,
+        edad: resolverEdadFila(ev) || null,
         sexo: ev.sexo || '',
         cargo: ev.cargo || '',
         armamento: ev.armamento || '',
@@ -1862,7 +1926,7 @@ app.get('/admin/preview-avance', requireAuth, async (req, res) => {
         nombres: ev.nombres || '',
         cip: ev.cip || '',
         dni: ev.dni || '',
-        edad: ev.edad || null,
+        edad: resolverEdadFila(ev) || null,
         sexo: ev.sexo || '',
         cargo: ev.cargo || '',
         armamento: formatearArmamentoLegible(ev.armamento || ''),
@@ -1925,14 +1989,15 @@ app.get('/pdf/grupo', requireAuth, async (req, res) => {
 
     const cipsEval = new Set(r.rows.map(function(row) { return (row.cip || '').toUpperCase(); }));
     const progresos = await consultarProgresosParaPDFGrupo(req.admin, req.query);
-    const merged = r.rows.concat(
-      progresos.filter(function(p) { return !cipsEval.has((p.cip || '').toUpperCase()); })
+    const merged = normalizarFilasPDFGrupo(
+      r.rows.concat(
+        progresos.filter(function(p) { return !cipsEval.has((p.cip || '').toUpperCase()); })
+      )
     );
     if (!merged.length) return res.status(404).json({ error: 'Sin evaluaciones para este filtro' });
 
-    const pregsR = await pool.query('SELECT numero AS id, texto FROM preguntas WHERE activa=TRUE ORDER BY orden,numero');
     const label  = division || comisaria || unidad;
-    const buf    = await generarPDFComisaria(label, merged, pregsR.rows);
+    const buf    = await generarPDFComisaria(label, merged);
     const nom    = 'Cuestionario_' + label.replace(/\s+/g,'_') + '.pdf';
     const inline = req.query.inline === '1' || req.query.ver === '1';
     res.setHeader('Content-Type', 'application/pdf');
