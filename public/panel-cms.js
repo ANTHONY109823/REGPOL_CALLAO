@@ -24,7 +24,8 @@ var CMS_ICONOS = [
 // INIT
 // ═══════════════════════════════════════════════════════════════
 function initCMS() {
-  cargarSiteData().then(function(data) {
+  var base = apiBaseCMS();
+  var iniciar = function(data) {
     cmsDataActual = data || {};
     if (!cmsDataActual.carrusel)  cmsDataActual.carrusel  = [];
     if (!cmsDataActual.novedades) cmsDataActual.novedades = [];
@@ -37,7 +38,43 @@ function initCMS() {
     };
     poblarFormulariosCMS();
     renderListasCMS();
-  });
+  };
+  if (base) {
+    fetch(base + '/portal/configuracion?t=' + Date.now(), { cache: 'no-store' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(server) {
+        if (server && server.novedades && server.ok !== false) {
+          iniciar(server);
+          saveSiteDataToStorage(server);
+          return;
+        }
+        return cargarSiteData().then(iniciar);
+      })
+      .catch(function() { cargarSiteData().then(iniciar); });
+    return;
+  }
+  cargarSiteData().then(iniciar);
+}
+
+function apiBaseCMS() {
+  if (typeof API !== 'undefined' && API) return API;
+  if (typeof apiBasePortal === 'function') {
+    var b = apiBasePortal();
+    if (b) return b;
+  }
+  if (window.REGPOL_API_BASE) return window.REGPOL_API_BASE;
+  var h = location.hostname;
+  if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
+  if (h.indexOf('github.io') !== -1 || h.indexOf('github.com') !== -1) {
+    return 'https://regpolcallao-production.up.railway.app';
+  }
+  return '';
+}
+
+function fechaActualizacionHoy() {
+  var meses = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  var hoy = new Date();
+  return hoy.getDate() + ' DE ' + meses[hoy.getMonth()] + ' ' + hoy.getFullYear();
 }
 
 function cambiarTabCMS(tab) {
@@ -562,25 +599,35 @@ function recolectarDatosCMS() {
 
 function guardarSitioWeb() {
   cmsDataActual = recolectarDatosCMS();
+  cmsDataActual.actualizacion = fechaActualizacionHoy();
+  cmsDataActual.cmsPublicadoEn = new Date().toISOString();
+  setVal('cms-actualizacion', cmsDataActual.actualizacion);
   saveSiteDataToStorage(cmsDataActual);
-  publicarSiteData(cmsDataActual);
-  mostrarAlertaCMS('Publicando...', 'ok');
-  var base = (window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE : '');
+  var base = apiBaseCMS();
   var token = (typeof TOKEN !== 'undefined' && TOKEN) ? TOKEN : '';
+  if (!base) {
+    mostrarAlertaCMS('No hay URL del servidor configurada. No se pudo publicar.', 'error');
+    return;
+  }
+  if (!token) {
+    mostrarAlertaCMS('Sesión expirada. Vuelva a ingresar al panel.', 'error');
+    return;
+  }
+  mostrarAlertaCMS('Publicando en el servidor...', 'ok');
   fetch(base + '/admin/configuracion', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
     body: JSON.stringify(cmsDataActual)
-  }).then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d && d.ok) {
-        mostrarAlertaCMS('¡Publicado! Los visitantes ven los cambios al recargar.', 'ok');
+  }).then(function(r) { return r.json().then(function(d) { return { status: r.status, data: d }; }); })
+    .then(function(res) {
+      if (res.data && res.data.ok) {
+        mostrarAlertaCMS('¡Publicado en el servidor! Los visitantes verán los cambios al recargar (Ctrl+F5).', 'ok');
       } else {
-        mostrarAlertaCMS('Guardado local. Verifica la conexión al servidor.', 'ok');
+        mostrarAlertaCMS('No se publicó: ' + ((res.data && res.data.error) || ('error HTTP ' + res.status)), 'error');
       }
     })
     .catch(function() {
-      mostrarAlertaCMS('Guardado local. Sin conexión al servidor.', 'ok');
+      mostrarAlertaCMS('Sin conexión al servidor. Los cambios quedaron solo en este navegador.', 'error');
     });
 }
 

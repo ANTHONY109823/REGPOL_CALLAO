@@ -12,7 +12,7 @@
 })();
 
 var REGPOL_WEB_APP = 'https://script.google.com/macros/s/AKfycbzHHCUjXQVNtgVTERGx3RuiGPfSHuhCgTVddHL8ByDJUE-lLQessVsdFCFabayhCC5u/exec';
-var REGPOL_SITE_KEY = 'regpolSiteData_v1';
+var REGPOL_SITE_KEY = 'regpolSiteData_v2';
 
 var PORTAL_MARCA = {
   titulo: 'REGI\u00d3N POLICIAL CALLAO',
@@ -174,7 +174,8 @@ function fetchSiteDataDefault() {
   };
   var base = apiBasePortal();
   if (base) {
-    return fetchConTimeout(base + '/portal/configuracion', 8000)
+    var urlApi = base + '/portal/configuracion?t=' + Date.now();
+    return fetchConTimeout(urlApi, 8000)
       .then(function(r) { if (!r.ok) throw new Error('no-config'); return r.json(); })
       .then(function(data) {
         if (!data || data.ok === false) throw new Error('no-config');
@@ -505,8 +506,10 @@ function initPortalPagina(config) {
   config = config || {};
   initPortalNav(config.activeNav || '');
   aplicarHeroMarca();
-  var data = obtenerSiteDataSync();
-  if (data) aplicarPortalConfig(config, data);
+  if (!esHostEstaticoPortal()) {
+    var data = obtenerSiteDataSync();
+    if (data) aplicarPortalConfig(config, data);
+  }
   return cargarSiteData().then(function(fresh) {
     if (fresh) aplicarPortalConfig(config, fresh);
     return fresh;

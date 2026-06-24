@@ -1037,13 +1037,21 @@
   </div>
 </div>
 
+<script src="api-config.js?v=1"></script>
 <script src="portal-data.js?v=2"></script>
-<script src="portal.js?v=21"></script>
+<script src="portal.js?v=24"></script>
 <script src="divisiones-ui.js?v=1"></script>
-<script src="panel-cms.js?v=6"></script>
+<script src="panel-cms.js?v=7"></script>
 <script>
-var API = window.REGPOL_API_BASE != null ? window.REGPOL_API_BASE
-  : ((location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:3000' : '');
+var API = (function() {
+  if (window.REGPOL_API_BASE) return window.REGPOL_API_BASE;
+  var h = location.hostname;
+  if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
+  if (h.indexOf('github.io') !== -1 || h.indexOf('github.com') !== -1) {
+    return 'https://regpolcallao-production.up.railway.app';
+  }
+  return '';
+})();
 var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[], SESION=null;
 var ITEMS_CACHE=[], ITEM_ACTIVO_ID=null;
 

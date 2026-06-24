@@ -449,7 +449,7 @@ app.get('/health', function(req, res) {
 });
 
 app.use(cors());
-app.use(express.json({ limit: '4mb' }));
+app.use(express.json({ limit: '12mb' }));
 app.use(staticBufferado);
 app.use(express.static(PUBLIC_DIR, {
   maxAge: 0, etag: false, fallthrough: true,
@@ -1333,6 +1333,10 @@ app.post('/admin/configuracion', requireAuth, async (req, res) => {
   try {
     const data = req.body;
     if (!data || typeof data !== 'object') return res.status(400).json({ ok: false, error: 'Datos inválidos' });
+    const meses = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+    const hoy = new Date();
+    data.actualizacion = data.actualizacion || (hoy.getDate() + ' DE ' + meses[hoy.getMonth()] + ' ' + hoy.getFullYear());
+    data.cmsPublicadoEn = new Date().toISOString();
     const json = JSON.stringify(data);
     await pool.query(
       `INSERT INTO portal_configuracion(id, data_json, updated_at) VALUES(1, $1, NOW())
