@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Panel UNITIC — REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <link rel="stylesheet" href="panel-admin.css?v=8"/>
+  <link rel="stylesheet" href="panel-admin.css?v=9"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{background:#f0f4f0;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;min-height:100vh;}
@@ -240,7 +240,7 @@
   <!-- SIDEBAR -->
   <nav class="sidebar">
 
-    <div class="sb-section" id="sb-sec-general" data-rol-unitic>
+    <div class="sb-section" id="sb-sec-general">
       <div class="sb-section-label">General</div>
       <div class="sb-item on" data-page="dashboard" onclick="ir('dashboard',this)">
         <i class="fas fa-chart-pie"></i> Dashboard
@@ -275,6 +275,9 @@
           <div class="sb-item" data-page="sorteos" onclick="irGestionSorteos(this)">
             <i class="fas fa-trophy"></i> Sorteos y resultados
           </div>
+          <div class="sb-item" data-page="resultados-web-convenio" onclick="irPublicarResultados('convenio',this)">
+            <i class="fas fa-globe"></i> Publicar resultados (web)
+          </div>
         </div>
       </div>
 
@@ -286,6 +289,9 @@
         <div class="sb-group-body">
           <div class="sb-item" data-page="items-curso" onclick="irGestionItems('curso',this)">
             <i class="fas fa-list-alt"></i> Convocatorias e inscritos
+          </div>
+          <div class="sb-item" data-page="resultados-web-curso" onclick="irPublicarResultados('curso',this)">
+            <i class="fas fa-globe"></i> Publicar resultados (web)
           </div>
         </div>
       </div>
@@ -321,8 +327,8 @@
 
     <!-- DASHBOARD -->
     <div id="page-dashboard" class="page on">
-      <div class="card">
-        <h3><i class="fas fa-chart-bar"></i> Resumen global — todas las dependencias</h3>
+      <div id="dash-panel-unitic" class="card" style="display:none;">
+        <h3><i class="fas fa-chart-bar"></i> Dashboard — Super Admin</h3>
         <div class="stats-grid">
           <div class="stat"><div class="n" id="s-total">—</div><div class="l">Total evaluaciones</div></div>
           <div class="stat" style="border-color:#a5d6a7;"><div class="n" id="s-completas" style="color:#1a7a3a;">—</div><div class="l">Completas</div></div>
@@ -344,6 +350,43 @@
           <div class="bl-box">
             <div class="bl-head"><i class="fas fa-clock"></i> Últimas 10 evaluaciones</div>
             <div id="ult-lista" style="padding:0 12px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="dash-panel-psico" class="card" style="display:none;">
+        <h3><i class="fas fa-brain"></i> Dashboard — Psicología / Bienestar</h3>
+        <div class="stats-grid">
+          <div class="stat"><div class="n" id="dp-total">—</div><div class="l">Evaluaciones registradas</div></div>
+          <div class="stat" style="border-color:#a5d6a7;"><div class="n" id="dp-completas" style="color:#1a7a3a;">—</div><div class="l">Completas</div></div>
+          <div class="stat" style="border-color:#ffe082;"><div class="n" id="dp-pendientes" style="color:#856404;">—</div><div class="l">Parciales</div></div>
+          <div class="stat"><div class="n" id="dp-curso">—</div><div class="l">En curso</div></div>
+        </div>
+        <div style="margin-top:14px;">
+          <div class="bl-box">
+            <div class="bl-head"><i class="fas fa-clock"></i> Últimas evaluaciones recibidas</div>
+            <div id="dp-ult-lista" style="padding:0 12px;"><p style="color:#bbb;padding:12px;text-align:center;">Cargando...</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="dash-panel-gestion" class="card" style="display:none;">
+        <h3 id="dash-gestion-titulo"><i class="fas fa-clipboard-list"></i> Dashboard</h3>
+        <div class="stats-grid">
+          <div class="stat"><div class="n" id="dg-convocatorias">—</div><div class="l">Convocatorias</div></div>
+          <div class="stat"><div class="n" id="dg-inscritos">—</div><div class="l">Inscritos</div></div>
+          <div class="stat" style="border-color:#ffe082;"><div class="n" id="dg-pendientes" style="color:#856404;">—</div><div class="l">Pendientes</div></div>
+          <div class="stat" style="border-color:#a5d6a7;"><div class="n" id="dg-ganadores" style="color:#1a7a3a;">—</div><div class="l">Ganadores</div></div>
+          <div class="stat"><div class="n" id="dg-publicados">—</div><div class="l">Resultados en web</div></div>
+        </div>
+        <div class="breakdown-grid" style="margin-top:14px;">
+          <div class="bl-box">
+            <div class="bl-head"><i class="fas fa-list-alt"></i> Convocatorias activas</div>
+            <table><tbody id="dg-convocatorias-lista"><tr><td colspan="2" style="color:#bbb;padding:10px;text-align:center;">Cargando...</td></tr></tbody></table>
+          </div>
+          <div class="bl-box">
+            <div class="bl-head"><i class="fas fa-inbox"></i> Últimas inscripciones</div>
+            <div id="dg-ult-insc" style="padding:0 12px;"><p style="color:#bbb;padding:12px;text-align:center;">Cargando...</p></div>
           </div>
         </div>
       </div>
@@ -664,7 +707,8 @@
     <!-- SORTEOS / RESULTADOS -->
     <div id="page-sorteos" class="page">
       <div class="card">
-        <h3><i class="fas fa-trophy" style="color:#c8a94a;"></i> Sorteos y Publicación de Resultados</h3>
+        <h3 id="sorteos-titulo"><i class="fas fa-trophy" style="color:#c8a94a;"></i> Sorteos y publicación de resultados</h3>
+        <p id="sorteos-ayuda-web" style="display:none;font-size:12px;color:#666;margin:-6px 0 14px;">Única publicación permitida en el portal web para su área. Los resultados aparecerán en la sección de convenios de la página principal.</p>
 
         <div id="sorteo-convenio-panel" style="background:#f0f7f0;border:1.5px solid #c8e6c9;border-radius:10px;padding:16px;margin-bottom:18px;">
           <strong style="color:#004d3d;display:block;margin-bottom:10px;font-size:13px;"><i class="fas fa-handshake"></i> Sorteo de convenio</strong>
@@ -683,9 +727,12 @@
           <div id="sorteo-conv-stats" style="display:none;margin-top:14px;padding:12px;background:#fff;border-radius:8px;border:1px solid #e0e8e0;font-size:12.5px;"></div>
         </div>
 
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        <div id="sorteos-toolbar-completo" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
           <button class="btn btn-o" onclick="abrirModalSorteo(null,'proximo')"><i class="fas fa-bullhorn"></i> Nuevo flyer / Próximo sorteo</button>
           <button class="btn btn-v" onclick="abrirModalSorteo(null,'resultado')"><i class="fas fa-trophy"></i> Publicar resultados</button>
+        </div>
+        <div id="sorteos-toolbar-solo" style="display:none;margin-bottom:14px;">
+          <button class="btn btn-v" onclick="abrirModalSorteo(null,'resultado')"><i class="fas fa-globe"></i> Publicar nuevos resultados en la web</button>
         </div>
         <div id="sorteos-alerta" class="alerta" style="display:none;"></div>
         <div id="sorteos-tabla"><p style="color:#bbb;text-align:center;padding:24px;">Cargando sorteos...</p></div>
@@ -1157,58 +1204,37 @@ function irGestionItems(tipo, el){
 
 function irGestionSorteos(el){
   if (!puedeGestionConvenios()) { alert('Los sorteos corresponden a la gestión de convenios.'); return; }
+  SORTEOS_MODO = 'completo';
+  SORTEOS_TIPO_FILTRO = 'convenio';
   ir('sorteos', el);
+  aplicarModoSorteosUI();
+}
+
+function irPublicarResultados(tipo, el){
+  if (tipo === 'convenio' && !puedeGestionConvenios()) { alert('Sin acceso a convenios.'); return; }
+  if (tipo === 'curso' && !puedeGestionCursos()) { alert('Sin acceso a educación/cursos.'); return; }
+  SORTEOS_MODO = 'solo-resultados';
+  SORTEOS_TIPO_FILTRO = tipo;
+  ir('sorteos', el);
+  aplicarModoSorteosUI();
 }
 
 function iniciarPanel(s){
   s=s||SESION;
-  var esU=s&&s.rol==='unitic';
-  var perms=s&&s.permisos?s.permisos:[];
-  var tienePsico=esU||s.rol==='bienestar'||perms.indexOf('evaluaciones')!==-1||perms.indexOf('descargas')!==-1;
-  var tieneCursos=esU||perms.indexOf('cms_cursos')!==-1;
-  var tieneConvenios=esU||perms.indexOf('cms_convenios')!==-1;
-
-  if (esU) {
-    cargarStats();
-    cargarFiltrosTabla();
-    return;
-  }
-
-  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
-  document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('on'); });
-
-  if (tienePsico && !tieneCursos && !tieneConvenios) {
-    var ev = document.querySelector('[data-page="evaluaciones"]');
-    ir('evaluaciones', ev);
-    return;
-  }
-  if (tieneConvenios && !tieneCursos && !tienePsico) {
-    irGestionItems('convenio', document.querySelector('[data-page="items-convenio"]'));
-    return;
-  }
-  if (tieneCursos && !tieneConvenios && !tienePsico) {
-    irGestionItems('curso', document.querySelector('[data-page="items-curso"]'));
-    return;
-  }
-  if (tieneConvenios) {
-    irGestionItems('convenio', document.querySelector('[data-page="items-convenio"]'));
-  } else if (tieneCursos) {
-    irGestionItems('curso', document.querySelector('[data-page="items-curso"]'));
-  } else if (tienePsico) {
-    ir('evaluaciones', document.querySelector('[data-page="evaluaciones"]'));
-  }
+  if (s && s.rol === 'unitic') cargarFiltrosTabla();
+  var dashEl = document.querySelector('[data-page="dashboard"]');
+  ir('dashboard', dashEl);
 }
 
 // ── NAVEGACIÓN SIDEBAR ────────────────────────────────────────────────────────
 var panelPaginasCargadas = {};
 
 function ir(page, el){
-  if(page==='dashboard'&&!esUnitic()){alert('El dashboard global es solo para Super Admin.');return;}
   if(page==='preguntas'&&!puedeVerPreguntas()){alert('Sin acceso. Las preguntas solo las gestiona Psicología/Bienestar o Super Admin.');return;}
   if(page==='evaluaciones'&&!puedeVerEvaluaciones()){alert('Sin acceso a evaluaciones.');return;}
   if(page==='descargas'&&!puedeVerDescargas()){alert('Sin acceso a descargas.');return;}
   if(page==='items'&&!puedeGestionConvenios()&&!puedeGestionCursos()){alert('Sin acceso a convocatorias.');return;}
-  if(page==='sorteos'&&!puedeGestionConvenios()){alert('Sin acceso a sorteos de convenios.');return;}
+  if(page==='sorteos'&&!puedeGestionConvenios()&&!puedeGestionCursos()){alert('Sin acceso a resultados publicados.');return;}
   if(page==='inscritos'&&!puedeGestionConvenios()&&!puedeGestionCursos()){alert('Sin acceso a inscripciones.');return;}
   if((page==='usuarios'||page==='divisiones')&&!esUnitic()){alert('Solo el Super Admin puede acceder a esta sección.');return;}
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
@@ -1225,10 +1251,10 @@ function ir(page, el){
   if(page==='preguntas' && !ya)    cargarPreguntas();
   if(page==='usuarios' && !ya)     cargarUsuarios();
   if(page==='descargas' && !ya)    cargarFiltrosDescarga();
-  if(page==='dashboard' && !ya)    cargarStats();
+  if(page==='dashboard' && !ya)    cargarDashboard();
   if(page==='divisiones' && !ya)   cargarDivisiones();
   if(page==='items' && !ya)        { aplicarRestriccionFiltroItems(); cargarItems(); }
-  if(page==='sorteos')             cargarSorteos();
+  if(page==='sorteos')             { aplicarModoSorteosUI(); cargarItemsSorteo(SORTEOS_TIPO_FILTRO||'convenio'); cargarSorteos(); }
   panelPaginasCargadas[page] = true;
 }
 
@@ -1248,7 +1274,31 @@ function toggleGrupo(header){
   body.classList.toggle('hidden');
 }
 
-// ── DASHBOARD ────────────────────────────────────────────────────────────────â”€
+// ── DASHBOARD ───────────────────────────────────────────────────────────────
+function tipoDashboardLocal(){
+  if (esUnitic()) return 'unitic';
+  if (puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos()) return 'psico';
+  if (puedeGestionConvenios() && !puedeGestionCursos() && !puedeGestionPsicologia()) return 'convenios';
+  if (puedeGestionCursos() && !puedeGestionConvenios() && !puedeGestionPsicologia()) return 'cursos';
+  if (puedeGestionPsicologia()) return 'psico';
+  if (puedeGestionConvenios()) return 'convenios';
+  if (puedeGestionCursos()) return 'cursos';
+  return 'unitic';
+}
+
+function cargarDashboard(){
+  var modo = tipoDashboardLocal();
+  var u = document.getElementById('dash-panel-unitic');
+  var p = document.getElementById('dash-panel-psico');
+  var g = document.getElementById('dash-panel-gestion');
+  if (u) u.style.display = modo === 'unitic' ? '' : 'none';
+  if (p) p.style.display = modo === 'psico' ? '' : 'none';
+  if (g) g.style.display = (modo === 'convenios' || modo === 'cursos') ? '' : 'none';
+  if (modo === 'unitic') cargarStats();
+  else if (modo === 'psico') cargarStatsPsico();
+  else cargarStatsGestion(modo === 'convenios' ? 'convenio' : 'curso');
+}
+
 function cargarStats(){
   fetch(API+'/stats',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
@@ -1286,6 +1336,64 @@ function cargarStats(){
         }).join('')
       :'<div style="color:#bbb;padding:12px;font-size:12px;text-align:center;">Sin evaluaciones aún.</div>';
   });
+}
+
+function cargarStatsPsico(){
+  fetch(API+'/stats',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok) return;
+    var t=d.totalEvaluaciones||0,c=d.totalCompletas||0;
+    set('dp-total',t); set('dp-completas',c);
+    set('dp-pendientes',Math.max(0,t-c));
+    set('dp-curso',d.totalEnCurso||0);
+    var lista = document.getElementById('dp-ult-lista');
+    if(!lista) return;
+    lista.innerHTML = (d.ultimasEvaluaciones||[]).length
+      ? (d.ultimasEvaluaciones||[]).map(function(e){
+          var badge = e.completada ? '<span class="badge ok">Completo</span>' : '<span class="badge pend">Parcial</span>';
+          return '<div class="ult-item"><div><span class="ult-nom">'+escHtml(e.nombres)+'</span>'
+            +'<span class="ult-meta"> — '+escHtml(e.comisaria||e.unidad||'')+'</span></div>'
+            +'<div style="display:flex;align-items:center;gap:8px;">'+badge
+            +'<span style="color:#bbb;font-size:10.5px;">'+escHtml(e.fecha)+'</span></div></div>';
+        }).join('')
+      : '<div style="color:#bbb;padding:12px;font-size:12px;text-align:center;">Sin evaluaciones registradas.</div>';
+  });
+}
+
+function cargarStatsGestion(tipo){
+  var titulo = document.getElementById('dash-gestion-titulo');
+  if (titulo) {
+    titulo.innerHTML = '<i class="fas fa-clipboard-list"></i> Dashboard — ' + (tipo === 'curso' ? 'Educación (Cursos)' : 'Convenios');
+  }
+  fetch(API+'/admin/stats-gestion?tipo='+encodeURIComponent(tipo),{headers:hdr()})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok) return;
+      var r = d.resumen || {};
+      set('dg-convocatorias', r.convocatorias||0);
+      set('dg-inscritos', r.total_inscritos||0);
+      set('dg-pendientes', r.pendientes||0);
+      set('dg-ganadores', r.ganadores||0);
+      set('dg-publicados', r.resultados_publicados||0);
+      var conv = document.getElementById('dg-convocatorias-lista');
+      if (conv) {
+        conv.innerHTML = (d.convocatorias||[]).length
+          ? (d.convocatorias||[]).map(function(c){
+              return '<tr><td style="padding:5px 12px;font-size:12px;">'+escHtml(c.titulo)+'</td>'
+                +'<td class="bl-num" style="padding:5px 12px;font-size:12px;">'+escHtml(c.inscritos||0)+'</td></tr>';
+            }).join('')
+          : '<tr><td colspan="2" style="color:#bbb;padding:10px;text-align:center;">Sin convocatorias</td></tr>';
+      }
+      var ult = document.getElementById('dg-ult-insc');
+      if (ult) {
+        ult.innerHTML = (d.ultimasInscripciones||[]).length
+          ? (d.ultimasInscripciones||[]).map(function(i){
+              return '<div class="ult-item"><div><span class="ult-nom">'+escHtml(i.nombres)+'</span>'
+                +'<span class="ult-meta"> — '+escHtml(i.convocatoria||'')+'</span></div>'
+                +'<span class="badge pend">'+escHtml(i.estado)+'</span></div>';
+            }).join('')
+          : '<div style="color:#bbb;padding:12px;font-size:12px;text-align:center;">Sin inscripciones recientes.</div>';
+      }
+    });
 }
 
 // ── EVALUACIONES ──────────────────────────────────────────────────────────────
@@ -1374,7 +1482,7 @@ function cargarTabla(pag){
     });
 }
 
-// ── PREGUNTAS ────────────────────────────────────────────────────────────────â”€
+// ── PREGUNTAS ───────────────────────────────────────────────────────────────
 function cargarPreguntas(){
   fetch(API+'/admin/preguntas',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
@@ -1492,7 +1600,7 @@ function eliminarUsuario(id){
   fetch(API+'/admin/usuarios/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarUsuarios();});
 }
 
-// ── DESCARGAS ────────────────────────────────────────────────────────────────â”€
+// ── DESCARGAS ───────────────────────────────────────────────────────────────
 function vistaPreviaDescarga(filtro, selId, prefijo) {
   var v = val(selId);
   var wrap = document.getElementById(prefijo + '-wrap');
@@ -1567,7 +1675,7 @@ function descargar(filtro, selId) {
   window.open(API + '/pdf/grupo?' + filtro + '=' + encodeURIComponent(v) + '&token=' + encodeURIComponent(TOKEN), '_blank');
 }
 
-// ── MODALES ──────────────────────────────────────────────────────────────────â”€
+// ── MODALES ─────────────────────────────────────────────────────────────────
 function cerrarModal(id){document.getElementById(id).classList.remove('open');}
 document.addEventListener('click',function(e){if(e.target.classList.contains('modal'))e.target.classList.remove('open');});
 
@@ -1789,45 +1897,91 @@ function cargarFiltrosDescarga(){
 }
 
 // ── SORTEOS Y RESULTADOS ──────────────────────────────────────────────────────
-var SORTEOS_CACHE = [], RESULTADOS_EDIT = [], CONVENIOS_SORTEO_CACHE = [], SORTEO_CONV_ACTIVO = null;
+var SORTEOS_CACHE = [], RESULTADOS_EDIT = [], ITEMS_SORTEO_CACHE = [], CONVENIOS_SORTEO_CACHE = [], SORTEO_CONV_ACTIVO = null;
+var SORTEOS_MODO = 'completo';
+var SORTEOS_TIPO_FILTRO = 'convenio';
 
-function cargarConvocatoriasSorteo(){
-  return fetch(API+'/admin/items?tipo=convenio',{headers:hdr()})
+function aplicarModoSorteosUI(){
+  var solo = SORTEOS_MODO === 'solo-resultados';
+  var panelConv = document.getElementById('sorteo-convenio-panel');
+  var toolbarCompleto = document.getElementById('sorteos-toolbar-completo');
+  var toolbarSolo = document.getElementById('sorteos-toolbar-solo');
+  var ayuda = document.getElementById('sorteos-ayuda-web');
+  var titulo = document.getElementById('sorteos-titulo');
+  if (panelConv) panelConv.style.display = (!solo && SORTEOS_TIPO_FILTRO === 'convenio') ? '' : 'none';
+  if (toolbarCompleto) toolbarCompleto.style.display = solo ? 'none' : '';
+  if (toolbarSolo) toolbarSolo.style.display = solo ? '' : 'none';
+  if (ayuda) {
+    ayuda.style.display = solo ? '' : 'none';
+    ayuda.textContent = 'Única publicación permitida en el portal web para su área. Los resultados aparecerán en la página principal.';
+  }
+  if (titulo) {
+    titulo.innerHTML = solo
+      ? '<i class="fas fa-globe"></i> Publicar resultados en la web — ' + (SORTEOS_TIPO_FILTRO === 'curso' ? 'Educación' : 'Convenios')
+      : '<i class="fas fa-trophy" style="color:#c8a94a;"></i> Sorteos y publicación de resultados';
+  }
+}
+
+function sorteosVisibles(){
+  var list = SORTEOS_CACHE || [];
+  if (SORTEOS_MODO === 'solo-resultados') {
+    list = list.filter(function(s){ return s.tipo === 'resultado'; });
+    list = list.filter(function(s){ return !s.item_tipo || s.item_tipo === SORTEOS_TIPO_FILTRO; });
+  } else if (!esUnitic() && SORTEOS_TIPO_FILTRO) {
+    list = list.filter(function(s){ return !s.item_tipo || s.item_tipo === SORTEOS_TIPO_FILTRO; });
+  }
+  return list;
+}
+
+function cargarItemsSorteo(tipo){
+  tipo = tipo || SORTEOS_TIPO_FILTRO || 'convenio';
+  SORTEOS_TIPO_FILTRO = tipo;
+  return fetch(API+'/admin/items?tipo='+encodeURIComponent(tipo),{headers:hdr()})
     .then(function(r){return r.json();})
     .then(function(d){
-      CONVENIOS_SORTEO_CACHE = (d.ok && d.items) ? d.items : [];
+      ITEMS_SORTEO_CACHE = (d.ok && d.items) ? d.items : [];
+      CONVENIOS_SORTEO_CACHE = ITEMS_SORTEO_CACHE; // compatibilidad
       var sel = document.getElementById('sorteo-conv-select');
       var prev = sel ? sel.value : '';
-      if(sel){
-        sel.innerHTML = '<option value="">— Seleccione un convenio —</option>'
-          + CONVENIOS_SORTEO_CACHE.map(function(i){
+      if (sel) {
+        var ph = tipo === 'curso' ? '— Seleccione un curso —' : '— Seleccione un convenio —';
+        sel.innerHTML = '<option value="">'+ph+'</option>'
+          + ITEMS_SORTEO_CACHE.map(function(i){
             return '<option value="'+i.id+'">'+escHtml(i.titulo)+' ('+escHtml(i.estado||'')+')</option>';
           }).join('');
-        if(prev) sel.value = prev;
+        if (prev) sel.value = prev;
       }
-      llenarSelectConveniosSorteo('ms-item-id', '— Sin vincular —');
-      llenarSelectConveniosSorteo('ms-import-item', '— Importar desde convenio —');
+      llenarSelectItemsSorteo('ms-item-id', '— Sin vincular —');
+      llenarSelectItemsSorteo('ms-import-item', '— Importar desde convocatoria —');
       onSelectConvocatoriaSorteo();
     })
     .catch(function(){});
 }
 
-function llenarSelectConveniosSorteo(selectId, placeholder){
+function cargarConvocatoriasSorteo(){
+  return cargarItemsSorteo('convenio');
+}
+
+function llenarSelectItemsSorteo(selectId, placeholder){
   var sel = document.getElementById(selectId);
   if(!sel) return;
   var val = sel.value;
   sel.innerHTML = '<option value="">'+(placeholder||'— Seleccionar —')+'</option>'
-    + CONVENIOS_SORTEO_CACHE.map(function(i){
+    + ITEMS_SORTEO_CACHE.map(function(i){
       return '<option value="'+i.id+'">'+escHtml(i.titulo)+'</option>';
     }).join('');
   if(val) sel.value = val;
+}
+
+function llenarSelectConveniosSorteo(selectId, placeholder){
+  llenarSelectItemsSorteo(selectId, placeholder);
 }
 
 function onSelectConvocatoriaSorteo(){
   var sel = document.getElementById('sorteo-conv-select');
   var stats = document.getElementById('sorteo-conv-stats');
   var id = sel && sel.value ? parseInt(sel.value, 10) : 0;
-  SORTEO_CONV_ACTIVO = CONVENIOS_SORTEO_CACHE.find(function(i){ return i.id === id; }) || null;
+  SORTEO_CONV_ACTIVO = ITEMS_SORTEO_CACHE.find(function(i){ return i.id === id; }) || null;
   var btnLive = document.getElementById('btn-sorteo-live');
   var btnIns = document.getElementById('btn-ver-inscritos-sorteo');
   var btnFlyer = document.getElementById('btn-flyer-sorteo');
@@ -1903,25 +2057,27 @@ function crearFlyerDesdeConvenio(){
 }
 
 function cargarSorteos(){
-  cargarConvocatoriasSorteo();
-  document.getElementById('sorteos-tabla').innerHTML='<p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i> Cargando sorteos...</p>';
+  document.getElementById('sorteos-tabla').innerHTML='<p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>';
   fetch(API+'/admin/sorteos',{headers:hdr()})
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d.ok){ mostrarAlertaSorteos('Error: '+(d.error||''),'error'); return; }
       SORTEOS_CACHE = d.sorteos||[];
-      renderTablaSorteos(SORTEOS_CACHE);
+      renderTablaSorteos(sorteosVisibles());
     })
     .catch(function(){
       document.getElementById('sorteos-tabla').innerHTML='<p style="color:#c0392b;text-align:center;padding:24px;">No se pudo conectar con el servidor.</p>';
-      mostrarAlertaSorteos('Error de conexión al cargar sorteos.','error');
+      mostrarAlertaSorteos('Error de conexión al cargar resultados.','error');
     });
 }
 
 function renderTablaSorteos(list){
   var el = document.getElementById('sorteos-tabla');
   if(!list.length){
-    el.innerHTML='<p style="color:#bbb;text-align:center;padding:24px;">No hay sorteos. Cree uno con los botones de arriba.</p>';
+    var vacio = SORTEOS_MODO === 'solo-resultados'
+      ? 'No hay resultados publicados en la web. Use el botón de arriba para publicar.'
+      : 'No hay sorteos. Cree uno con los botones de arriba.';
+    el.innerHTML='<p style="color:#bbb;text-align:center;padding:24px;">'+vacio+'</p>';
     return;
   }
   el.innerHTML = '<table class="t"><thead><tr><th>Tipo</th><th>Título</th><th>Convocatoria</th><th>Fecha</th><th>Publicado</th><th>Seleccionados</th><th>Acciones</th></tr></thead><tbody>'
@@ -1929,7 +2085,7 @@ function renderTablaSorteos(list){
         var tipoBadge = s.tipo==='proximo'
           ? '<span class="badge" style="background:#fff3cd;color:#856404;">PRÓXIMO</span>'
           : '<span class="badge ok">RESULTADO</span>';
-        var btnLive = s.item_id
+        var btnLive = (s.item_id && SORTEOS_MODO !== 'solo-resultados' && s.item_tipo === 'convenio')
           ? '<button class="btn-mini" style="background:#2980b9;color:#fff;" onclick="abrirSorteoLivePanel('+s.item_id+','+s.id+',\''+escJs(s.tipo||'')+'\')"><i class="fas fa-random"></i></button>'
           : '';
         return '<tr>'
@@ -1958,8 +2114,9 @@ function mostrarAlertaSorteos(texto,tipo){
 }
 
 function abrirModalSorteo(id, tipoForzado){
-  if(!CONVENIOS_SORTEO_CACHE.length){
-    cargarConvocatoriasSorteo().then(function(){ abrirModalSorteo(id, tipoForzado); });
+  if (!esUnitic() || SORTEOS_MODO === 'solo-resultados') tipoForzado = 'resultado';
+  if(!ITEMS_SORTEO_CACHE.length){
+    cargarItemsSorteo(SORTEOS_TIPO_FILTRO || 'convenio').then(function(){ abrirModalSorteo(id, tipoForzado); });
     return;
   }
   RESULTADOS_EDIT=[];
@@ -1977,8 +2134,8 @@ function abrirModalSorteo(id, tipoForzado){
   document.getElementById('ms-resultados-section').style.display=tipoForzado==='resultado'?'':'none';
   document.getElementById('ms-item-id').value=SORTEO_CONV_ACTIVO?String(SORTEO_CONV_ACTIVO.id):'';
 
-  llenarSelectConveniosSorteo('ms-item-id', '— Sin vincular —');
-  llenarSelectConveniosSorteo('ms-import-item', '— Importar desde convenio —');
+  llenarSelectItemsSorteo('ms-item-id', '— Sin vincular —');
+  llenarSelectItemsSorteo('ms-import-item', '— Importar desde convocatoria —');
 
   if(id){
     var s=SORTEOS_CACHE.find(function(x){return x.id===id;});
@@ -2020,12 +2177,12 @@ function previewImgSorteo(input){
 }
 
 function cargarSelectItems(){
-  llenarSelectConveniosSorteo('ms-import-item', '— Importar desde convenio —');
+  llenarSelectItemsSorteo('ms-import-item', '— Importar desde convocatoria —');
 }
 
 function importarInscritos(){
   var itemId=document.getElementById('ms-import-item').value;
-  if(!itemId){alert('Seleccione un convenio para importar los aprobados para sorteo.');return;}
+  if(!itemId){alert('Seleccione una convocatoria para importar los seleccionados.');return;}
   var sorteoId=val('ms-id');
   if(!sorteoId){alert('Guarde primero el sorteo antes de importar.');return;}
   fetch(API+'/admin/sorteos/'+sorteoId+'/importar-inscritos',{
@@ -2079,6 +2236,7 @@ function eliminarFilaResultado(i){
 
 function guardarSorteo(){
   var id=val('ms-id'), tipo=val('ms-tipo');
+  if (!esUnitic() || SORTEOS_MODO === 'solo-resultados') tipo = 'resultado';
   var titulo=val('ms-titulo-val').trim();
   if(!titulo){alert('El título es obligatorio.');return;}
   var body={
@@ -2342,7 +2500,7 @@ function eliminarItem(id){
     });
 }
 
-// ── INSCRITOS ────────────────────────────────────────────────────────────────â”€
+// ── INSCRITOS ───────────────────────────────────────────────────────────────
 function verInscritos(itemId, titulo){
   ITEM_ACTIVO_ID=itemId;
   ir('inscritos',null);
@@ -2655,7 +2813,7 @@ function exportarInscritos(){
   a.click();
 }
 
-// ── UTILS ────────────────────────────────────────────────────────────────────â”€
+// ── UTILS ───────────────────────────────────────────────────────────────────
 function val(id){var el=document.getElementById(id);return el?el.value:'';}
 function set(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
 function llenarSel(id,items,ph){

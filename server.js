@@ -1385,7 +1385,7 @@ app.get('/portal/items/:id/plantilla', async (req, res) => {
 app.get('/admin/sorteos', requireAuth, async (req, res) => {
   try {
     const r = await pool.query(
-      'SELECT s.*, i.titulo AS item_titulo FROM sorteos_portal s LEFT JOIN items_portal i ON i.id=s.item_id ORDER BY s.orden,s.id DESC');
+      'SELECT s.*, i.titulo AS item_titulo, i.tipo AS item_tipo FROM sorteos_portal s LEFT JOIN items_portal i ON i.id=s.item_id ORDER BY s.orden,s.id DESC');
     const result = [];
     for (const s of r.rows) {
       const row = { ...s };
@@ -1404,6 +1404,14 @@ app.post('/admin/sorteos', requireAuth, async (req, res) => {
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const { tipo, titulo, descripcion, fecha_sorteo, imagen, item_id, publicado, orden } = req.body;
     if (!titulo) return res.json({ ok: false, error: 'Título obligatorio' });
+    if (req.admin.rol !== 'unitic' && (tipo || 'proximo') !== 'resultado')
+      return res.status(403).json({ ok: false, error: 'Solo puede publicar resultados en la web.' });
+    if (item_id) {
+      const it = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [item_id]);
+      const itemTipo = it.rows[0]?.tipo;
+      if (itemTipo && !puedeGestionarItem(req.admin, itemTipo))
+        return res.status(403).json({ ok: false, error: 'Sin permiso para esta convocatoria.' });
+    }
     const r = await pool.query(
       `INSERT INTO sorteos_portal(tipo,titulo,descripcion,fecha_sorteo,imagen,item_id,publicado,orden)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
@@ -1417,6 +1425,24 @@ app.post('/admin/sorteos', requireAuth, async (req, res) => {
 app.put('/admin/sorteos/:id', requireAuth, async (req, res) => {
   try {
     const { tipo, titulo, descripcion, fecha_sorteo, imagen, item_id, publicado, orden } = req.body;
+    if (req.admin.rol !== 'unitic') {
+      if ((tipo || 'proximo') !== 'resultado')
+        return res.status(403).json({ ok: false, error: 'Solo puede publicar resultados en la web.' });
+      const actual = await pool.query(
+        'SELECT s.tipo, i.tipo AS item_tipo FROM sorteos_portal s LEFT JOIN items_portal i ON i.id=s.item_id WHERE s.id=$1',
+        [req.params.id]
+      );
+      const row = actual.rows[0];
+      if (!row) return res.json({ ok: false, error: 'Sorteo no encontrado' });
+      const itemTipo = row.item_tipo;
+      if (itemTipo && !puedeGestionarItem(req.admin, itemTipo))
+        return res.status(403).json({ ok: false, error: 'Sin permiso para este resultado.' });
+      if (item_id) {
+        const it = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [item_id]);
+        if (it.rows[0]?.tipo && !puedeGestionarItem(req.admin, it.rows[0].tipo))
+          return res.status(403).json({ ok: false, error: 'Sin permiso para esta convocatoria.' });
+      }
+    }
     await pool.query(
       `UPDATE sorteos_portal SET tipo=$1,titulo=$2,descripcion=$3,fecha_sorteo=$4,
         imagen=CASE WHEN $5='' THEN imagen ELSE $5 END,
@@ -1500,6 +1526,50 @@ app.get('/admin/inscripciones/:id/pdf', requireAuth, async (req, res) => {
     if (!r.rows[0].pdf_requisitos)
       return res.json({ ok: false, error: 'Este inscrito no adjuntó PDF' });
     res.json({ ok: true, pdf: r.rows[0].pdf_requisitos, nombre: r.rows[0].pdf_nombre || 'requisitos.pdf' });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── GET /admin/stats-gestion — resumen convocatorias / cursos ─────────────────
+app.get('/admin/stats-gestion', requireAuth, async (req, res) => {
+  try {
+    const tipo = req.query.tipo || '';
+    if (!['convenio', 'curso'].includes(tipo))
+      return res.json({ ok: false, error: 'tipo inválido' });
+    if (!puedeGestionarItem(req.admin, tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+
+    const itemsR = await pool.query(
+      `SELECT COUNT(*)::int AS convocatorias,
+        SUM(CASE WHEN estado='DISPONIBLE' THEN 1 ELSE 0 END)::int AS disponibles,
+        SUM(CASE WHEN inscripciones_abiertas THEN 1 ELSE 0 END)::int AS inscripciones_abiertas
+       FROM items_portal WHERE tipo=$1`, [tipo]);
+    const inscR = await pool.query(
+      `SELECT COUNT(n.id)::int AS total_inscritos,
+        SUM(CASE WHEN n.estado='pendiente' THEN 1 ELSE 0 END)::int AS pendientes,
+        SUM(CASE WHEN n.estado='verificado' THEN 1 ELSE 0 END)::int AS verificados,
+        SUM(CASE WHEN n.estado='aprobado' THEN 1 ELSE 0 END)::int AS aprobados,
+        SUM(CASE WHEN n.estado='ganador' THEN 1 ELSE 0 END)::int AS ganadores
+       FROM inscripciones n JOIN items_portal i ON i.id=n.item_id WHERE i.tipo=$1`, [tipo]);
+    const pubR = await pool.query(
+      `SELECT COUNT(*)::int AS resultados_publicados FROM sorteos_portal s
+       JOIN items_portal i ON i.id=s.item_id
+       WHERE s.tipo='resultado' AND s.publicado=TRUE AND i.tipo=$1`, [tipo]);
+    const ultimasR = await pool.query(
+      `SELECT TO_CHAR(n.fecha,'DD/MM/YYYY HH24:MI') AS fecha, n.nombres, n.estado, i.titulo AS convocatoria
+       FROM inscripciones n JOIN items_portal i ON i.id=n.item_id
+       WHERE i.tipo=$1 ORDER BY n.fecha DESC LIMIT 8`, [tipo]);
+    const activasR = await pool.query(
+      `SELECT i.id, i.titulo, i.estado,
+        (SELECT COUNT(*)::int FROM inscripciones n WHERE n.item_id=i.id) AS inscritos
+       FROM items_portal i WHERE i.tipo=$1 ORDER BY i.orden, i.id DESC LIMIT 6`, [tipo]);
+
+    res.json({
+      ok: true,
+      tipo,
+      resumen: Object.assign({}, itemsR.rows[0] || {}, inscR.rows[0] || {}, pubR.rows[0] || {}),
+      ultimasInscripciones: ultimasR.rows,
+      convocatorias: activasR.rows
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
