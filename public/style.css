@@ -193,40 +193,48 @@ img {
 }
 
 .header-fotos-panel {
-    flex: 0 1 380px;
-    width: min(42vw, 380px);
+    flex: 0 1 420px;
+    width: min(44vw, 420px);
     max-width: 100%;
     margin-left: auto;
-    overflow: hidden;
 }
 
 .header-fotos-viewport {
-    overflow: hidden;
     width: 100%;
 }
 
-.header-fotos-track {
-    display: flex;
+.header-fotos-slots {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
-    transition: transform 0.62s ease-in-out;
-    will-change: transform;
+    width: 100%;
 }
 
 .header-foto-item {
-    flex: 0 0 auto;
     aspect-ratio: 4 / 3;
     border-radius: 8px;
     overflow: hidden;
     border: 2px solid #e2ebe8;
     box-shadow: 0 2px 8px rgba(0, 77, 61, 0.1);
     background: #f4f8f6;
+    contain: layout style paint;
 }
 
 .header-foto-item img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center;
     display: block;
+    image-rendering: auto;
+}
+
+.header-fotos-slots .header-foto-item img {
+    transition: opacity 0.38s ease;
+}
+
+.header-fotos-slots.header-fotos-rotando .header-foto-item img {
+    opacity: 0.2;
 }
 
 .header-foto-vacio {

@@ -414,7 +414,6 @@ function asegurarPanelFotosEncabezado() {
 var FOTOS_ENCABEZADO_DEFAULT = ['img/Imagen1.jpg', 'img/saludo.jpg', 'img/lunespatriotico.jpg'];
 var HEADER_FOTOS_INTERVAL_MS = 3800;
 var _headerFotosTimer = null;
-var _headerFotosResizeFn = null;
 
 function detenerHeaderFotosCarrusel() {
   if (_headerFotosTimer) {
@@ -425,10 +424,6 @@ function detenerHeaderFotosCarrusel() {
 
 function renderFotosEncabezado(data) {
   detenerHeaderFotosCarrusel();
-  if (_headerFotosResizeFn) {
-    window.removeEventListener('resize', _headerFotosResizeFn);
-    _headerFotosResizeFn = null;
-  }
 
   var panel = asegurarPanelFotosEncabezado();
   if (!panel) return;
@@ -437,79 +432,45 @@ function renderFotosEncabezado(data) {
   var fotos = raw.map(function(f) { return String(f || '').trim(); }).filter(Boolean);
   if (!fotos.length) fotos = FOTOS_ENCABEZADO_DEFAULT.slice();
 
-  var clones = fotos.slice(0, Math.min(3, fotos.length));
-  var todos = fotos.concat(clones);
-
   panel.innerHTML =
-    '<div class="header-fotos-viewport" aria-label="Carrusel de fotos institucionales">'
-    + '<div class="header-fotos-track">'
-    + todos.map(function(src, i) {
-      return '<div class="header-foto-item"><img src="' + escHtml(src) + '" alt="REGPOL Callao foto ' + ((i % fotos.length) + 1) + '" '
-        + (i < 4 ? 'decoding="async"' : 'loading="lazy" decoding="async"') + '/></div>';
+    '<div class="header-fotos-viewport">'
+    + '<div class="header-fotos-slots">'
+    + [0, 1, 2].map(function(i) {
+      return '<div class="header-foto-item"><img alt="REGPOL Callao foto ' + (i + 1) + '" decoding="async"'
+        + (i === 0 ? ' fetchpriority="high"' : '') + '/></div>';
     }).join('')
     + '</div></div>';
 
-  if (fotos.length <= 1) return;
+  var slotsEl = panel.querySelector('.header-fotos-slots');
+  var imgs = panel.querySelectorAll('.header-foto-item img');
+  var startIdx = 0;
 
-  var track = panel.querySelector('.header-fotos-track');
-  var viewport = panel.querySelector('.header-fotos-viewport');
-  if (!track || !viewport) return;
-
-  var offset = 0;
-  var animando = false;
-
-  function anchoPaso() {
-    var gap = 8;
-    var vw = viewport.offsetWidth;
-    return (vw - gap * 2) / 3 + gap;
+  function pintar() {
+    for (var s = 0; s < imgs.length; s++) {
+      imgs[s].src = fotos[(startIdx + s) % fotos.length];
+    }
   }
 
-  function ajustarAnchoItems() {
-    var gap = 8;
-    var vw = viewport.offsetWidth;
-    var w = Math.max(60, (vw - gap * 2) / 3);
-    Array.prototype.forEach.call(track.children, function(el) {
-      el.style.width = w + 'px';
-      el.style.flexBasis = w + 'px';
-    });
-  }
+  pintar();
 
-  function paso() {
-    if (animando || !track.children.length) return;
-    animando = true;
-    offset++;
-    track.style.transform = 'translateX(-' + (offset * anchoPaso()) + 'px)';
+  if (fotos.length <= 1 || !slotsEl) return;
+
+  function rotar() {
+    slotsEl.classList.add('header-fotos-rotando');
     setTimeout(function() {
-      animando = false;
-      if (offset >= fotos.length) {
-        track.style.transition = 'none';
-        offset = 0;
-        track.style.transform = 'translateX(0)';
-        void track.offsetHeight;
-        track.style.transition = '';
-      }
-    }, 640);
+      startIdx = (startIdx + 1) % fotos.length;
+      pintar();
+      slotsEl.classList.remove('header-fotos-rotando');
+    }, 380);
   }
 
   function iniciarAuto() {
     detenerHeaderFotosCarrusel();
-    _headerFotosTimer = setInterval(paso, HEADER_FOTOS_INTERVAL_MS);
+    _headerFotosTimer = setInterval(rotar, HEADER_FOTOS_INTERVAL_MS);
   }
-
-  ajustarAnchoItems();
-  _headerFotosResizeFn = function() {
-    ajustarAnchoItems();
-    track.style.transition = 'none';
-    offset = 0;
-    track.style.transform = 'translateX(0)';
-    void track.offsetHeight;
-    track.style.transition = '';
-  };
-  window.addEventListener('resize', _headerFotosResizeFn);
 
   panel.onmouseenter = detenerHeaderFotosCarrusel;
   panel.onmouseleave = iniciarAuto;
-
   setTimeout(iniciarAuto, 600);
 }
 

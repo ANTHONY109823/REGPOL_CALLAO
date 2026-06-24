@@ -137,7 +137,7 @@ function renderEditorFotosEncabezado() {
     + '<strong style="color:#004d3d;font-size:13px;"><i class="fas fa-images"></i> Carrusel de fotos del encabezado</strong>'
     + '<button type="button" class="btn btn-v btn-sm" onclick="agregarFotoEncabezadoCMS()"><i class="fas fa-plus"></i> Añadir imagen</button>'
     + '</div>'
-    + '<p style="font-size:11px;color:#666;margin:0 0 12px;">Se muestran a la derecha del logo en la página principal. Rotan automáticamente de cuadro en cuadro. JPG/PNG/WEBP, máx. 1.5 MB cada una.</p>'
+    + '<p style="font-size:11px;color:#666;margin:0 0 12px;">Se muestran a la derecha del logo en la página principal. Use fotos <strong>anchas (mín. 800 px)</strong> en JPG/PNG/WEBP para máxima nitidez. Máx. 2 MB por imagen.</p>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:12px;">';
   for (var i = 0; i < fotos.length; i++) {
     html += renderSlotFotoEncabezado(i);
@@ -844,18 +844,52 @@ function inicializarBannerImg(seccion, valor) {
   }
 }
 
+function optimizarImagenCMS(dataUrl, maxW, quality, callback) {
+  var img = new Image();
+  img.onload = function() {
+    var w = img.width;
+    var h = img.height;
+    if (!w || !h) { callback(dataUrl); return; }
+    var scale = w > maxW ? maxW / w : 1;
+    var cw = Math.round(w * scale);
+    var ch = Math.round(h * scale);
+    if (scale === 1 && dataUrl.length < 600000) {
+      callback(dataUrl);
+      return;
+    }
+    var canvas = document.createElement('canvas');
+    canvas.width = cw;
+    canvas.height = ch;
+    var ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, cw, ch);
+    callback(canvas.toDataURL('image/jpeg', quality));
+  };
+  img.onerror = function() { callback(dataUrl); };
+  img.src = dataUrl;
+}
+
 function previewBannerImg(input, seccion) {
   var file = input.files && input.files[0];
   if (!file) return;
-  if (file.size > 2 * 1024 * 1024) {
-    alert('La imagen no debe superar 2 MB. Comprime la imagen antes de subirla.');
+  if (file.size > 2.5 * 1024 * 1024) {
+    alert('La imagen no debe superar 2.5 MB. Use una foto de buena resolución pero más liviana.');
     input.value = ''; return;
   }
   var reader = new FileReader();
   reader.onload = function(e) {
-    inicializarBannerImg(seccion, e.target.result);
-    var urlInput = document.getElementById('cms-' + seccion + '-img-url');
-    if (urlInput) urlInput.value = '';
+    var data = e.target.result;
+    var aplicar = function(val) {
+      inicializarBannerImg(seccion, val);
+      var urlInput = document.getElementById('cms-' + seccion + '-img-url');
+      if (urlInput) urlInput.value = '';
+    };
+    if (String(seccion).indexOf('encabezado') === 0) {
+      optimizarImagenCMS(data, 1200, 0.93, aplicar);
+    } else {
+      aplicar(data);
+    }
   };
   reader.readAsDataURL(file);
 }
@@ -863,6 +897,9 @@ function previewBannerImg(input, seccion) {
 function previewBannerUrl(input, seccion) {
   var url = input.value.trim();
   if (!url) { quitarBannerImg(seccion); return; }
+  if (String(seccion).indexOf('encabezado') === 0 && /-\d+x\d+\.(jpe?g|png|webp)/i.test(url)) {
+    mostrarAlertaCMS('Esa URL parece una miniatura. Use la imagen en tamaño completo para mejor nitidez.', 'error');
+  }
   inicializarBannerImg(seccion, url);
 }
 
