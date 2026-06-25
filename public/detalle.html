@@ -313,18 +313,29 @@ function renderFormInscripcion(item){
     +'</div></div>'
 
     +(esConvenio
-      ? '<div class="fi-group"><label>Arma (Condición) *</label>'
+      ? '<div class="fi-group"><label>Arma (Condición laboral) *</label>'
         +'<select id="fi-arma" required>'
         +'<option value="">— Seleccionar —</option>'
         +'<option value="DEL ESTADO">DEL ESTADO</option>'
         +'<option value="PARTICULAR">PARTICULAR</option>'
         +'</select></div>'
-        +'<div class="fi-group"><label>Situación para el servicio *</label>'
-        +'<select id="fi-disponibilidad" required onchange="toggleDiaFranco(this.value)">'
-        +'<option value="">— Seleccionar —</option>'
-        +'<option value="VACACIONES">VACACIONES</option>'
-        +'<option value="FRANCO">DÍA DE FRANCO</option>'
-        +'</select></div>'
+        +'<div class="disp-box fi-full">'
+        +'<label><i class="fas fa-calendar-check"></i> ¿Cuál es su situación para el servicio? *</label>'
+        +'<div class="disp-opciones">'
+        +'<button type="button" class="disp-btn disp-vac" id="btn-disp-vac" onclick="seleccionarDisp(\'VACACIONES\')">'
+        +'<i class="fas fa-umbrella-beach" style="color:#27ae60;"></i>'
+        +'<strong>ESTOY EN VACACIONES</strong>'
+        +'<span>Ocupa una vacante automáticamente. <strong>No participa</strong> en la rueda del sorteo.</span>'
+        +'</button>'
+        +'<button type="button" class="disp-btn disp-franco" id="btn-disp-franco" onclick="seleccionarDisp(\'FRANCO\')">'
+        +'<i class="fas fa-random" style="color:#2980b9;"></i>'
+        +'<strong>TRABAJO EN MI DÍA DE FRANCO</strong>'
+        +'<span>Entra a la rueda del sorteo público junto con los demás efectivos.</span>'
+        +'</button>'
+        +'</div>'
+        +'<input type="hidden" id="fi-disponibilidad" required/>'
+        +'<div class="disp-aviso" id="disp-aviso" style="display:none;"></div>'
+        +'</div>'
         +'<div class="fi-group" id="fi-dia-franco-box" style="display:none;">'
         +'<label>Día de franco *</label>'
         +'<select id="fi-dia-franco">'
@@ -332,6 +343,8 @@ function renderFormInscripcion(item){
         +'<option value="PAR">DÍA PAR</option>'
         +'<option value="IMPAR">DÍA IMPAR</option>'
         +'</select></div>'
+        +'<div class="fi-group"><label>Teléfono / Celular *</label>'
+        +'<input type="tel" id="fi-telefono" maxlength="30" placeholder="Ej: 987654321" required/></div>'
       : '')
 
     // ── CAMPOS ESPECÍFICOS CURSO
@@ -341,13 +354,9 @@ function renderFormInscripcion(item){
         +'<div class="fi-group"><label>Tiempo de Servicio (calculado)</label>'
         +'<input type="text" id="fi-tiempo-servicio" readonly placeholder="Se calculará automáticamente" '
         +'style="background:#f0f7f0;color:#004d3d;font-weight:700;"/></div>'
+        +'<div class="fi-group"><label>Teléfono / Celular</label>'
+        +'<input type="tel" id="fi-telefono" maxlength="30" placeholder="Ej: 987654321"/></div>'
       : '')
-
-    // ── CONTACTO
-    +'<div class="fi-group"><label>Teléfono / Celular</label>'
-    +'<input type="tel" id="fi-telefono" maxlength="30" placeholder=""/></div>'
-    +'<div class="fi-group"><label>Correo electrónico</label>'
-    +'<input type="email" id="fi-email" maxlength="100" placeholder="correo@pnp.gob.pe"/></div>'
 
     // ── PDF EXPEDIENTE
     +'<div class="pdf-upload-box">'
@@ -374,6 +383,31 @@ function renderFormInscripcion(item){
     +'<button type="submit" class="btn-registro-grande"><i class="fas fa-paper-plane"></i> ENVIAR INSCRIPCIÓN</button>'
     +'</div>'
     +'</form>';
+}
+
+function seleccionarDisp(val){
+  var hid = document.getElementById('fi-disponibilidad');
+  if(hid) hid.value = val || '';
+  var btnVac = document.getElementById('btn-disp-vac');
+  var btnFranco = document.getElementById('btn-disp-franco');
+  var aviso = document.getElementById('disp-aviso');
+  if(btnVac) btnVac.className = 'disp-btn disp-vac' + (val === 'VACACIONES' ? ' sel-vac' : '');
+  if(btnFranco) btnFranco.className = 'disp-btn disp-franco' + (val === 'FRANCO' ? ' sel' : '');
+  if(aviso){
+    if(val === 'VACACIONES'){
+      aviso.style.display = 'block';
+      aviso.innerHTML = '<i class="fas fa-check-circle" style="color:#27ae60;"></i> '
+        + 'Al estar en <strong>VACACIONES</strong>, si su inscripción es aprobada ocupará una vacante sin necesidad del sorteo en vivo.';
+    } else if(val === 'FRANCO'){
+      aviso.style.display = 'block';
+      aviso.innerHTML = '<i class="fas fa-info-circle" style="color:#2980b9;"></i> '
+        + 'Participará en el <strong>sorteo público</strong> si su expediente es verificado y aprobado.';
+    } else {
+      aviso.style.display = 'none';
+      aviso.innerHTML = '';
+    }
+  }
+  toggleDiaFranco(val);
 }
 
 function toggleDiaFranco(val){
@@ -496,7 +530,6 @@ function enviarInscripcion(e){
   var area    = obtenerAreaInscripcion();
   var cargo   = v('fi-cargo');
   var tel     = v('fi-telefono');
-  var email   = v('fi-email');
   // Convenio
   var arma           = v('fi-arma');
   var disponibilidad = v('fi-disponibilidad');
@@ -518,6 +551,10 @@ function enviarInscripcion(e){
     } else {
       alerta.textContent='Complete los campos obligatorios: grado, CIP, DNI, nombres, unidad, cargo y área.';
     }
+    alerta.className='fi-alerta error'; alerta.style.display='block'; return;
+  }
+  if(ITEM_TIPO==='convenio' && !tel){
+    alerta.textContent='Ingrese su teléfono o celular de contacto.';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
   if(ITEM_TIPO==='convenio' && !disponibilidad){
@@ -544,7 +581,7 @@ function enviarInscripcion(e){
     method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       cip:cip, dni:dni, grado:grado, nombres:nombres,
-      unidad:unidad, area:area, cargo:cargo, telefono:tel, email:email,
+      unidad:unidad, area:area, cargo:cargo, telefono:tel, email:'',
       arma:arma, disponibilidad:disponibilidad, dia_franco:dia_franco,
       fecha_egreso:fecha_egreso||null, tiempo_servicio:tiempo_servicio,
       pdf_requisitos:pdfData, pdf_nombre:pdfNomb
@@ -560,6 +597,7 @@ function enviarInscripcion(e){
       if(prev) prev.style.display='none';
       var diaBox=document.getElementById('fi-dia-franco-box');
       if(diaBox) diaBox.style.display='none';
+      seleccionarDisp('');
       toggleAreaOtroInscripcion();
     } else {
       alerta.textContent=d.error||'Error al procesar la inscripción.';
