@@ -106,14 +106,9 @@
 
     <section id="bienestar" class="portal-seccion">
         <div class="section-header">
-            <h3>BIENESTAR POLICIAL</h3>
+            <h3 id="bienestar-titulo-seccion">BIENESTAR POLICIAL</h3>
         </div>
-        <div class="bienestar-home-card">
-            <i class="fas fa-heart" style="font-size:36px;color:#c8a94a;margin-bottom:12px;"></i>
-            <h4>EVALUACIÓN PSICOLÓGICA — PROGRAMA DE BIENESTAR</h4>
-            <p>Acceda al cuestionario institucional (MMPI-2) y complete su registro de identificación para la Oficina de Psicología de la REGPOL Callao.</p>
-            <a href="evaluacion.html" class="btn-bienestar"><i class="fas fa-clipboard-check"></i> INICIAR EVALUACIÓN</a>
-        </div>
+        <div id="contenido-bienestar"></div>
     </section>
 
     <section id="resena" class="portal-seccion">
@@ -221,7 +216,7 @@
 
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=5"></script>
-<script src="portal.js?v=38"></script>
+<script src="portal.js?v=39"></script>
 <script>
     initPortalInicio();
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') cerrarNovedadModal(); });

@@ -414,6 +414,7 @@
       <div class="sb-item" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> NOVEDADES</div>
       <div class="sb-item" onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> CONVENIOS (WEB)</div>
       <div class="sb-item" onclick="irCMS('cursos',this)"><i class="fas fa-graduation-cap"></i> CURSOS (WEB)</div>
+      <div class="sb-item" onclick="irCMS('bienestar',this)"><i class="fas fa-heart"></i> BIENESTAR (WEB)</div>
       <div class="sb-item" onclick="irCMS('resena',this)"><i class="fas fa-landmark"></i> RESEÑA HISTÓRICA</div>
       <div class="sb-item" onclick="irCMS('labor',this)"><i class="fas fa-tasks"></i> NUESTRA LABOR</div>
       <div class="sb-item" onclick="irCMS('menu',this)"><i class="fas fa-bars"></i> MENÚ DEL SITIO</div>
@@ -623,6 +624,34 @@
         <!-- PANEL: Cursos -->
         <div id="cms-panel-cursos" class="cms-panel">
           <div id="cms-lista-cursos"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
+        </div>
+
+        <!-- PANEL: Bienestar Policial -->
+        <div id="cms-panel-bienestar" class="cms-panel">
+          <p style="font-size:12px;color:#666;margin:0 0 14px;">Edita la tarjeta de <strong>Bienestar Policial</strong> visible en la página principal (sección MMPI-2).</p>
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;cursor:pointer;">
+            <input type="checkbox" id="cms-bienestar-visible" checked style="width:16px;height:16px;accent-color:#004d3d;"/>
+            <span style="font-size:13px;font-weight:600;color:#004d3d;">Mostrar sección en el portal web</span>
+          </label>
+          <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Título de la sección</label>
+          <input type="text" id="cms-bienestar-titulo-seccion" class="cms-input" style="width:100%;margin-bottom:12px;" placeholder="BIENESTAR POLICIAL"/>
+          <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Título de la tarjeta</label>
+          <input type="text" id="cms-bienestar-titulo" class="cms-input" style="width:100%;margin-bottom:12px;" placeholder="EVALUACIÓN PSICOLÓGICA — PROGRAMA DE BIENESTAR"/>
+          <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Descripción</label>
+          <textarea id="cms-bienestar-descripcion" rows="4" class="cms-textarea" style="width:100%;margin-bottom:12px;" placeholder="Texto descriptivo del programa..."></textarea>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+              <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Icono</label>
+              <select id="cms-bienestar-icono" class="cms-select" style="width:100%;"></select>
+            </div>
+            <div>
+              <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Enlace del botón</label>
+              <input type="text" id="cms-bienestar-boton-url" class="cms-input" style="width:100%;" placeholder="evaluacion.html"/>
+            </div>
+          </div>
+          <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Texto del botón</label>
+          <input type="text" id="cms-bienestar-boton-texto" class="cms-input" style="width:100%;margin-bottom:16px;" placeholder="INICIAR EVALUACIÓN"/>
+          <button class="btn btn-v" onclick="guardarSitioWeb()"><i class="fas fa-save"></i> Guardar Bienestar</button>
         </div>
 
         <!-- PANEL: Reseña Histórica -->
@@ -1209,7 +1238,7 @@
 <script src="portal-data.js?v=2"></script>
 <script src="portal.js?v=32"></script>
 <script src="divisiones-ui.js?v=3"></script>
-<script src="panel-cms.js?v=13"></script>
+<script src="panel-cms.js?v=14"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[], SESION=null;

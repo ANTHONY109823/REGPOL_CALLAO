@@ -248,6 +248,7 @@ function aplicarPortalConfig(config, data) {
   aplicarEncabezadoMarca(data);
   if (config.renderResena) renderResenaHistorica(data, config.renderResena);
   if (config.renderLabor) renderNuestraLabor(data, config.renderLabor);
+  if (config.renderBienestar) renderBienestarPolicial(data, config.renderBienestar);
   if (config.renderNovedades) renderNovedades(data, config.renderNovedades, config.limiteNovedades);
   if (config.renderConvenios) {
     var elConv = document.getElementById(config.renderConvenios);
@@ -763,6 +764,38 @@ function renderNuestraLabor(data, containerId) {
   el.innerHTML = html;
 }
 
+function bienestarPolicialDefault() {
+  return {
+    tituloSeccion: 'BIENESTAR POLICIAL',
+    titulo: 'EVALUACIÓN PSICOLÓGICA — PROGRAMA DE BIENESTAR',
+    descripcion: 'Acceda al cuestionario institucional (MMPI-2) y complete su registro de identificación para la Oficina de Psicología de la REGPOL Callao.',
+    icono: 'fa-heart',
+    botonTexto: 'INICIAR EVALUACIÓN',
+    botonUrl: 'evaluacion.html',
+    visible: true
+  };
+}
+
+function renderBienestarPolicial(data, containerId) {
+  var el = document.getElementById(containerId);
+  var secWrap = document.getElementById('bienestar');
+  var sec = (data && data.bienestarPolicial) ? data.bienestarPolicial : bienestarPolicialDefault();
+  if (secWrap) secWrap.style.display = (sec.visible === false) ? 'none' : '';
+  var tituloSec = document.getElementById('bienestar-titulo-seccion');
+  if (tituloSec) tituloSec.textContent = sec.tituloSeccion || 'BIENESTAR POLICIAL';
+  if (!el) return;
+  if (sec.visible === false) { el.innerHTML = ''; return; }
+  var icono = sec.icono || 'fa-heart';
+  var url = sec.botonUrl || 'evaluacion.html';
+  el.innerHTML = '<div class="bienestar-home-card">'
+    + '<i class="fas ' + escHtml(icono) + '" style="font-size:36px;color:#c8a94a;margin-bottom:12px;"></i>'
+    + '<h4>' + escHtml(sec.titulo || '') + '</h4>'
+    + '<p>' + escHtml(sec.descripcion || '') + '</p>'
+    + '<a href="' + escHtml(url) + '" class="btn-bienestar"><i class="fas fa-clipboard-check"></i> '
+    + escHtml(sec.botonTexto || 'INICIAR EVALUACIÓN') + '</a>'
+    + '</div>';
+}
+
 var _novedadesCache = [];
 
 function imagenNovedad(n) {
@@ -1042,7 +1075,8 @@ function initPortalInicio() {
     renderConveniosPdf: 'lista-pdf-convenios',
     renderCursosPdf: 'lista-pdf-cursos',
     renderResena: 'contenido-resena',
-    renderLabor: 'contenido-labor'
+    renderLabor: 'contenido-labor',
+    renderBienestar: 'contenido-bienestar'
   }).then(function(data) {
     cargarSorteosPortal();
     cargarUnidadesPublico();

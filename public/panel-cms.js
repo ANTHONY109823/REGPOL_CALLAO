@@ -37,6 +37,15 @@ function initCMS() {
       subtitulo: 'AL SERVICIO DE LA CIUDADANÍA',
       parrafo:   'Compromiso, Honor y Servicio en la Provincia Constitucional'
     };
+    if (!cmsDataActual.bienestarPolicial) cmsDataActual.bienestarPolicial = {
+      tituloSeccion: 'BIENESTAR POLICIAL',
+      titulo: 'EVALUACIÓN PSICOLÓGICA — PROGRAMA DE BIENESTAR',
+      descripcion: 'Acceda al cuestionario institucional (MMPI-2) y complete su registro de identificación para la Oficina de Psicología de la REGPOL Callao.',
+      icono: 'fa-heart',
+      botonTexto: 'INICIAR EVALUACIÓN',
+      botonUrl: 'evaluacion.html',
+      visible: true
+    };
     poblarFormulariosCMS();
     renderListasCMS();
   };
@@ -119,6 +128,21 @@ function poblarFormulariosCMS() {
   setVal('cms-actualizacion', d.actualizacion);
   setVal('cms-resena-intro',  (d.resenaHistorica || {}).intro || '');
   setVal('cms-labor-intro',   (d.nuestraLabor    || {}).intro || '');
+  var bp = d.bienestarPolicial || {};
+  setVal('cms-bienestar-titulo-seccion', bp.tituloSeccion || 'BIENESTAR POLICIAL');
+  setVal('cms-bienestar-titulo', bp.titulo || '');
+  setVal('cms-bienestar-descripcion', bp.descripcion || '');
+  setVal('cms-bienestar-boton-texto', bp.botonTexto || 'INICIAR EVALUACIÓN');
+  setVal('cms-bienestar-boton-url', bp.botonUrl || 'evaluacion.html');
+  var chkBien = document.getElementById('cms-bienestar-visible');
+  if (chkBien) chkBien.checked = bp.visible !== false;
+  var selIconoBien = document.getElementById('cms-bienestar-icono');
+  if (selIconoBien) {
+    var iconoBien = bp.icono || 'fa-heart';
+    selIconoBien.innerHTML = CMS_ICONOS.map(function(o) {
+      return '<option value="' + escHtml(o.v) + '"' + (o.v === iconoBien ? ' selected' : '') + '>' + escHtml(o.l) + '</option>';
+    }).join('');
+  }
   renderParrafosResenaCMS();
   renderPilaresCMS();
   inicializarBannerImg('resena',   (d.resenaHistorica || {}).imagenBanner || '');
@@ -736,6 +760,18 @@ function recolectarDatosCMS() {
   data.nuestraLabor.intro  = getVal('cms-labor-intro');
   data.nuestraLabor.imagenBanner = leerBannerImg('labor');
   if (!data.nuestraLabor.pilares) data.nuestraLabor.pilares = (cmsDataActual.nuestraLabor || {}).pilares || [];
+  data.bienestarPolicial = {
+    tituloSeccion: getVal('cms-bienestar-titulo-seccion') || 'BIENESTAR POLICIAL',
+    titulo: getVal('cms-bienestar-titulo'),
+    descripcion: getVal('cms-bienestar-descripcion'),
+    icono: getVal('cms-bienestar-icono') || 'fa-heart',
+    botonTexto: getVal('cms-bienestar-boton-texto') || 'INICIAR EVALUACIÓN',
+    botonUrl: getVal('cms-bienestar-boton-url') || 'evaluacion.html',
+    visible: (function() {
+      var el = document.getElementById('cms-bienestar-visible');
+      return el ? el.checked : true;
+    })()
+  };
   data.imagenBannerNovedades = leerBannerImg('novedades');
   if (document.getElementById('editor-fotos-encabezado')) {
     data.fotosEncabezado = leerFotosEncabezado();

@@ -29,6 +29,15 @@
       { "icono": "fa-laptop", "titulo": "Gestión Digital UNITIC", "texto": "Plataformas web, tableros de datos y canales digitales para el personal y la comunidad." }
     ]
   },
+  "bienestarPolicial": {
+    "tituloSeccion": "BIENESTAR POLICIAL",
+    "titulo": "EVALUACIÓN PSICOLÓGICA — PROGRAMA DE BIENESTAR",
+    "descripcion": "Acceda al cuestionario institucional (MMPI-2) y complete su registro de identificación para la Oficina de Psicología de la REGPOL Callao.",
+    "icono": "fa-heart",
+    "botonTexto": "INICIAR EVALUACIÓN",
+    "botonUrl": "evaluacion.html",
+    "visible": true
+  },
   "novedades": [
     {
       "id": "nov-1",
