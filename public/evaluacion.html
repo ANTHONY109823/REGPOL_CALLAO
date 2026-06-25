@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css?v=39" />
   <link rel="stylesheet" href="responsive.css?v=1" />
-  <link rel="stylesheet" href="evaluacion.css?v=10" />
+  <link rel="stylesheet" href="evaluacion.css?v=11" />
 </head>
 <body class="body-portal body-bienestar">
 
@@ -184,23 +184,29 @@
         <div class="campo campo-full campo-foto">
           <label for="f-foto">Fotografía del efectivo <span class="req">*</span></label>
           <div class="foto-carga-wrap">
-            <div class="foto-opciones">
-              <button type="button" class="btn-seleccionar-foto" id="btn-foto-camara">
-                <i class="fas fa-camera"></i> Tomar foto ahora
-              </button>
-              <button type="button" class="btn-seleccionar-foto btn-foto-galeria" id="btn-foto-galeria">
-                <i class="fas fa-images"></i> Elegir de galería
-              </button>
+            <div class="foto-cajita" id="foto-cajita">
+              <div id="foto-preview" class="foto-preview">
+                <div class="foto-placeholder" id="foto-placeholder">
+                  <i class="fas fa-user" aria-hidden="true"></i>
+                  <span>Sin foto</span>
+                </div>
+                <img id="foto-preview-img" alt="Vista previa de la fotografía" />
+                <button type="button" class="btn-quitar-foto" onclick="quitarFoto()" title="Quitar foto" style="display:none;">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <div class="foto-cajita-botones">
+                <button type="button" class="foto-btn-mini" id="btn-foto-camara" title="Tomar foto ahora">
+                  <i class="fas fa-camera"></i><span class="foto-btn-txt">Cámara</span>
+                </button>
+                <button type="button" class="foto-btn-mini" id="btn-foto-galeria" title="Elegir de galería">
+                  <i class="fas fa-images"></i><span class="foto-btn-txt">Galería</span>
+                </button>
+              </div>
             </div>
             <input type="file" id="f-foto" accept="image/jpeg,image/png,image/webp,image/*,.jpg,.jpeg,.png,.webp" />
             <input type="file" id="f-foto-cam" accept="image/*" capture="user" />
-            <span id="foto-nombre" class="foto-nombre-archivo">Ningún archivo seleccionado</span>
-            <div id="foto-preview" class="foto-preview" style="display:none;">
-              <img id="foto-preview-img" alt="Vista previa de la fotografía" />
-              <button type="button" class="btn-quitar-foto" onclick="quitarFoto()" title="Quitar foto">
-                <i class="fas fa-times"></i>
-              </button>
-            </div>
+            <span id="foto-nombre" class="foto-nombre-archivo">Sin foto</span>
           </div>
           <span class="msg-error" id="msg-foto">Suba una foto (JPG, PNG o WEBP, máx. 2 MB).</span>
         </div>
@@ -281,8 +287,8 @@
 <script src="comisarias.js?v=2"></script>
 <script src="divisiones-ui.js?v=1"></script>
 <script src="preguntas.js?v=1"></script>
-<script src="areas-labor.js?v=1"></script>
-<script src="evaluacion.js?v=20"></script>
+<script src="areas-labor.js?v=2"></script>
+<script src="evaluacion.js?v=21"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof regpolPoblarSelectArea === 'function') {

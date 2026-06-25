@@ -127,10 +127,81 @@
 .check-group { display: flex; flex-wrap: wrap; gap: 14px; padding: 10px 0; }
 .check-item { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--texto); font-weight: 500; }
 .check-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--verde-pnp); cursor: pointer; flex-shrink: 0; }
-.campo-foto .foto-carga-wrap { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 14px; }
-.foto-opciones { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
-.btn-foto-galeria { border-style: solid; background: #fff; }
-.btn-foto-galeria:hover { background: #f0f7f4; }
+.campo-foto .foto-carga-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.foto-cajita {
+  width: 104px;
+  flex-shrink: 0;
+  border: 2px dashed var(--verde-pnp);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--fondo-suave);
+}
+.foto-cajita.con-foto { border-style: solid; }
+.foto-preview {
+  position: relative;
+  width: 100%;
+  height: 118px;
+  overflow: hidden;
+  background: #eef4f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.foto-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--texto-muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 6px;
+  text-align: center;
+}
+.foto-placeholder i { font-size: 26px; color: var(--verde-pnp); opacity: 0.75; }
+.foto-preview img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+}
+.foto-cajita.con-foto .foto-preview img { display: block; }
+.foto-cajita.con-foto .foto-placeholder { display: none; }
+.foto-cajita-botones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #d5e5dd;
+}
+.foto-btn-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border: none;
+  background: #fff;
+  color: var(--verde-pnp);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.1;
+}
+.foto-btn-mini + .foto-btn-mini { border-left: 1px solid #d5e5dd; }
+.foto-btn-mini i { font-size: 14px; }
+.foto-btn-mini:hover { background: #e8f3ed; }
+.foto-btn-mini:active { background: #dceee4; }
 .campo-foto input[type="file"] {
   position: absolute;
   width: 1px;
@@ -139,19 +210,6 @@
   overflow: hidden;
   pointer-events: none;
 }
-.foto-preview {
-  position: relative;
-  width: 88px;
-  height: 110px;
-  border: 2px solid var(--borde);
-  border-radius: 8px;
-  overflow: hidden;
-  background: #f5f5f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.foto-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .btn-quitar-foto {
   position: absolute;
   top: 4px;
@@ -168,26 +226,18 @@
   align-items: center;
   justify-content: center;
 }
-.campo-foto.invalido input[type="file"],
-.campo-foto.invalido .btn-seleccionar-foto { border-color: var(--error); }
+.campo-foto.invalido .foto-cajita { border-color: var(--error); }
+.campo-foto.invalido .foto-btn-mini { color: var(--error); }
 .campo-foto.invalido .msg-error,
 .campo-foto.invalido #msg-foto { display: block; }
-.btn-seleccionar-foto {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 16px;
-  border: 1.5px dashed var(--verde-pnp);
-  border-radius: 7px;
-  background: var(--fondo-suave);
-  color: var(--verde-pnp);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
+.foto-nombre-archivo {
+  font-size: 11px;
+  color: var(--texto-muted);
+  flex: 1;
+  min-width: 0;
+  align-self: center;
+  line-height: 1.35;
 }
-.btn-seleccionar-foto:hover { background: #e4f0eb; }
-.foto-nombre-archivo { font-size: 12px; color: var(--texto-muted); flex: 1; min-width: 140px; }
 .foto-nombre-archivo.ok { color: var(--exito); font-weight: 600; }
 
 /* Modal cámara — registro de fotografía */
@@ -494,5 +544,14 @@
   .opciones-si-no label { padding: 5px 9px; font-size: 12px; }
   .bienestar-comisaria-nombre { font-size: 1rem; }
   .card-header-eval h2 { font-size: 14px; }
-  .foto-preview { width: 100%; max-width: 140px; margin: 0 auto; }
+  .campo-foto .foto-carga-wrap { align-items: center; gap: 8px; }
+  .foto-cajita { width: 92px; }
+  .foto-preview { height: 104px; }
+  .foto-placeholder i { font-size: 22px; }
+  .foto-placeholder span { font-size: 9px; }
+  .foto-btn-mini { padding: 5px 2px; }
+  .foto-btn-mini i { font-size: 13px; }
+  .foto-btn-txt { font-size: 8px; }
+  .foto-nombre-archivo { display: none; }
+  .foto-nombre-archivo.ok { display: block; font-size: 10px; max-width: 72px; }
 }

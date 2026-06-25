@@ -122,7 +122,7 @@
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=2"></script>
 <script src="portal.js?v=36"></script>
-<script src="areas-labor.js?v=1"></script>
+<script src="areas-labor.js?v=2"></script>
 <script>
 var API_PUBLIC = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var ITEM_ID = null;
@@ -220,6 +220,7 @@ function renderDetalle(item){
     +accionHtml;
 
   cargarDivisionesPublico();
+  initCamposInscripcion();
 }
 
 function mostrarFormInscripcion(){
@@ -227,7 +228,24 @@ function mostrarFormInscripcion(){
   var btn = document.getElementById('btn-mostrar-inscripcion');
   if(wrap) wrap.style.display = 'block';
   if(btn) btn.style.display = 'none';
+  initCamposInscripcion();
   if(wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function initCamposInscripcion(){
+  var selArea = document.getElementById('fi-area');
+  if(selArea && typeof regpolPoblarSelectArea === 'function'){
+    regpolPoblarSelectArea(selArea, '— Seleccionar área —');
+  }
+  toggleAreaOtroInscripcion();
+  cargarDivisionesPublico();
+  ['fi-cip','fi-dni'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el && !el.dataset.numericBound){
+      el.dataset.numericBound = '1';
+      el.addEventListener('input', function(e){ e.target.value = e.target.value.replace(/\D/g,''); });
+    }
+  });
 }
 
 var GRADOS_PNP = [
@@ -236,17 +254,11 @@ var GRADOS_PNP = [
   'SUBOFICIAL DE 1RA PNP','SUBOFICIAL DE 2DA PNP','SUBOFICIAL DE 3RA PNP'
 ];
 
-var CARGOS_OPCIONES = ['ADMINISTRATIVO', 'INVESTIGACION', 'PATRULLAJE'];
+var CARGOS_OPCIONES = ['ADMINISTRATIVO', 'PATRULLAJE', 'INVESTIGACIÓN', 'JEFE DE UNIDAD'];
 
 function optsCargo(){
   return '<option value="">— Seleccionar cargo —</option>'
     + CARGOS_OPCIONES.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
-}
-
-function optsArea(){
-  return typeof regpolHtmlOpcionesArea === 'function'
-    ? regpolHtmlOpcionesArea('— Seleccionar área —')
-    : '<option value="">— Seleccionar área —</option>';
 }
 
 function toggleAreaOtroInscripcion() {
@@ -286,18 +298,19 @@ function renderFormInscripcion(item){
     +'<div class="fi-group"><label>DNI *</label>'
     +'<input type="text" id="fi-dni" maxlength="12" placeholder="Número de DNI" required/></div>'
 
-    // ── FILA 3: Unidad + Área
+    // ── FILA 3: Unidad
     +'<div class="fi-group"><label>Unidad / Dependencia *</label>'
     +'<select id="fi-unidad" required><option value="">— Seleccionar —</option></select></div>'
-    +'<div class="fi-group"><label>Área *</label>'
-    +'<select id="fi-area" required onchange="toggleAreaOtroInscripcion()">'+optsArea()+'</select></div>'
-    +'<div class="fi-group fi-full" id="fi-area-otro-box" style="display:none;">'
-    +'<label>Especifique el área *</label>'
-    +'<input type="text" id="fi-area-otro" maxlength="120" placeholder=""/>'
-    +'</div>'
 
+    // ── FILA 4: Cargo + Área (misma lógica que evaluación psicológica)
     +'<div class="fi-group"><label>Cargo *</label>'
     +'<select id="fi-cargo" required>'+optsCargo()+'</select></div>'
+    +'<div class="fi-group"><label>Área *</label>'
+    +'<select id="fi-area" required onchange="toggleAreaOtroInscripcion()">'
+    +'<option value="">— Seleccionar área —</option></select>'
+    +'<div id="fi-area-otro-box" style="display:none;margin-top:8px;">'
+    +'<input type="text" id="fi-area-otro" maxlength="120" placeholder="Especifique el área..."/>'
+    +'</div></div>'
 
     +(esConvenio
       ? '<div class="fi-group"><label>Arma (Condición) *</label>'
@@ -541,6 +554,7 @@ function enviarInscripcion(e){
       alerta.textContent='✓ Inscripción registrada. El área correspondiente revisará su expediente y se comunicará con usted.';
       alerta.className='fi-alerta ok'; alerta.style.display='block';
       document.getElementById('form-inscripcion').reset();
+      initCamposInscripcion();
       if(pdfEl) pdfEl.value='';
       var prev=document.getElementById('fi-pdf-preview');
       if(prev) prev.style.display='none';

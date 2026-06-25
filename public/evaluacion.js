@@ -301,13 +301,13 @@ function aplicarFotoRegistro(dataUrl, nombreArchivo, inputEl) {
   if (!dataUrl) {
     mostrarErrorFoto('No se pudo leer la imagen. Intente con otro archivo JPG o PNG.');
     if (inputEl) inputEl.value = '';
-    if (nombreEl) { nombreEl.textContent = 'Ningún archivo seleccionado'; nombreEl.classList.remove('ok'); }
+    if (nombreEl) { nombreEl.textContent = 'Sin foto'; nombreEl.classList.remove('ok'); }
     return;
   }
   if (dataUrl.length > 2.8 * 1024 * 1024) {
     mostrarErrorFoto('La foto comprimida sigue siendo muy grande. Use una imagen más pequeña.');
     if (inputEl) inputEl.value = '';
-    if (nombreEl) { nombreEl.textContent = 'Ningún archivo seleccionado'; nombreEl.classList.remove('ok'); }
+    if (nombreEl) { nombreEl.textContent = 'Sin foto'; nombreEl.classList.remove('ok'); }
     return;
   }
   FOTO_BASE64 = dataUrl;
@@ -389,13 +389,13 @@ function manejarFotoSeleccionada(e) {
   if (!file) {
     FOTO_BASE64 = '';
     actualizarPreviewFoto('');
-    if (nombreEl) { nombreEl.textContent = 'Ningún archivo seleccionado'; nombreEl.classList.remove('ok'); }
+    if (nombreEl) { nombreEl.textContent = 'Sin foto'; nombreEl.classList.remove('ok'); }
     return;
   }
   if (!esImagenPermitida(file)) {
     mostrarErrorFoto('Use una imagen JPG, PNG o WEBP.');
     e.target.value = '';
-    if (nombreEl) { nombreEl.textContent = 'Ningún archivo seleccionado'; nombreEl.classList.remove('ok'); }
+    if (nombreEl) { nombreEl.textContent = 'Sin foto'; nombreEl.classList.remove('ok'); }
     return;
   }
   if (file.size > 8 * 1024 * 1024) {
@@ -412,9 +412,21 @@ function manejarFotoSeleccionada(e) {
 function actualizarPreviewFoto(src) {
   var preview = document.getElementById('foto-preview');
   var img = document.getElementById('foto-preview-img');
-  if (!preview || !img) return;
-  if (src) { img.src = src; preview.style.display = 'flex'; }
-  else { img.src = ''; preview.style.display = 'none'; }
+  var placeholder = document.getElementById('foto-placeholder');
+  var cajita = document.getElementById('foto-cajita');
+  var btnQuitar = preview ? preview.querySelector('.btn-quitar-foto') : null;
+  if (!img) return;
+  if (src) {
+    img.src = src;
+    if (placeholder) placeholder.style.display = 'none';
+    if (btnQuitar) btnQuitar.style.display = 'flex';
+    if (cajita) cajita.classList.add('con-foto');
+  } else {
+    img.src = '';
+    if (placeholder) placeholder.style.display = 'flex';
+    if (btnQuitar) btnQuitar.style.display = 'none';
+    if (cajita) cajita.classList.remove('con-foto');
+  }
 }
 
 function quitarFoto() {
@@ -427,7 +439,7 @@ function quitarFoto() {
   actualizarPreviewFoto('');
   limpiarErrorFoto();
   var nombreEl = document.getElementById('foto-nombre');
-  if (nombreEl) { nombreEl.textContent = 'Ningún archivo seleccionado'; nombreEl.classList.remove('ok'); }
+  if (nombreEl) { nombreEl.textContent = 'Sin foto'; nombreEl.classList.remove('ok'); }
 }
 
 function parsearFechaDMY(str) {
