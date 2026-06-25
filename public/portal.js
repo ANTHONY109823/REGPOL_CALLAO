@@ -150,6 +150,16 @@ function siteDataParaCacheLocal(data) {
   if (lite.imagenBannerNovedades && String(lite.imagenBannerNovedades).indexOf('data:') === 0) {
     lite.imagenBannerNovedades = '';
   }
+  if (lite.novedades && lite.novedades.length) {
+    lite.novedades = lite.novedades.map(function(n) {
+      if (!n) return n;
+      var img = String(n.imagen || n.foto || '');
+      if (img.indexOf('data:') === 0) {
+        return Object.assign({}, n, { imagen: '' });
+      }
+      return n;
+    });
+  }
   return lite;
 }
 
@@ -644,6 +654,11 @@ function renderNuestraLabor(data, containerId) {
 
 var _novedadesCache = [];
 
+function imagenNovedad(n) {
+  if (!n) return '';
+  return String(n.imagen || n.foto || n.imagenUrl || '').trim();
+}
+
 function renderNovedades(data, containerId, limite) {
   var el = document.getElementById(containerId);
   if (!el) return;
@@ -653,7 +668,12 @@ function renderNovedades(data, containerId, limite) {
   if (!items.length) { el.innerHTML = '<p class="texto-vacio">Sin novedades publicadas.</p>'; return; }
   if (limite) {
     el.innerHTML = '<div class="novedades-portada-lista">' + items.map(function(n, idx) {
-      return '<article class="noticia-card" onclick="abrirNovedadDetalle(' + idx + ')" style="cursor:pointer;">'
+      var src = imagenNovedad(n);
+      var fotoHtml = src
+        ? '<div class="noticia-foto"><img src="' + escHtml(src) + '" alt="' + escHtml(n.titulo) + '" loading="lazy" decoding="async"/></div>'
+        : '';
+      return '<article class="noticia-card' + (src ? ' noticia-card-foto' : '') + '" onclick="abrirNovedadDetalle(' + idx + ')" style="cursor:pointer;">'
+        + fotoHtml
         + '<div class="noticia-contenido">'
         + '<div class="noticia-meta"><span class="noticia-cat">' + escHtml(n.categoria) + '</span>'
         + '<span class="noticia-fecha">' + escHtml(n.fecha) + '</span></div>'
@@ -663,11 +683,13 @@ function renderNovedades(data, containerId, limite) {
     }).join('') + '</div>';
   } else {
     el.innerHTML = '<div class="novedades-grid">' + items.map(function(n, idx) {
-      var bgStyle = n.imagen
-        ? 'background-image:url(' + JSON.stringify(n.imagen) + ');background-size:cover;background-position:center;'
-        : 'background:linear-gradient(135deg,#002d24,#004d3d);';
+      var src = imagenNovedad(n);
+      var imgHtml = src
+        ? '<img class="nov-card-img-photo" src="' + escHtml(src) + '" alt="' + escHtml(n.titulo) + '" loading="lazy" decoding="async"/>'
+        : '';
       return '<article class="nov-card" onclick="abrirNovedadDetalle(' + idx + ')">'
-        + '<div class="nov-card-img" style="' + bgStyle + '">'
+        + '<div class="nov-card-img' + (src ? '' : ' nov-card-img--vacio') + '">'
+        + imgHtml
         + '<div class="nov-card-img-overlay"></div>'
         + '<span class="nov-card-cat">' + escHtml(n.categoria) + '</span>'
         + '</div>'
@@ -686,8 +708,8 @@ function abrirNovedadDetalle(idx) {
   if (!n) return;
   var inner = document.getElementById('modal-nov-inner');
   if (!inner) return;
-  var heroHtml = n.imagen
-    ? '<div class="modal-nov-hero"><img src="' + escHtml(n.imagen) + '" alt="' + escHtml(n.titulo) + '"/></div>'
+  var heroHtml = imagenNovedad(n)
+    ? '<div class="modal-nov-hero"><img src="' + escHtml(imagenNovedad(n)) + '" alt="' + escHtml(n.titulo) + '"/></div>'
     : '';
   inner.innerHTML = heroHtml
     + '<div class="modal-nov-header">'
