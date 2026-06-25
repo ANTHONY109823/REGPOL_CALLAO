@@ -944,6 +944,28 @@ footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; 
     font-size: 26px;
 }
 
+.card-modern--foto {
+    padding-top: 0;
+    overflow: hidden;
+}
+
+.card-modern-foto {
+    width: calc(100% + 44px);
+    margin: 0 -22px 16px;
+    height: 130px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #e8efec, #d0ddd8);
+}
+
+.card-modern-foto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
 .grid-pdf-modern { margin-bottom: 16px; }
 
 .pdf-item {

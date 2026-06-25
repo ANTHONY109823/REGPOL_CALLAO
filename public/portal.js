@@ -160,6 +160,16 @@ function siteDataParaCacheLocal(data) {
       return n;
     });
   }
+  if (lite.convenios && lite.convenios.length) {
+    lite.convenios = lite.convenios.map(function(c) {
+      if (!c) return c;
+      var img = String(c.imagen || '');
+      if (img.indexOf('data:') === 0) {
+        return Object.assign({}, c, { imagen: '' });
+      }
+      return c;
+    });
+  }
   return lite;
 }
 
@@ -584,11 +594,14 @@ function renderTarjetas(items, containerId) {
   }
   el.innerHTML = items.map(function(item) {
     var url = item.url || '#';
+    var src = String(item.imagen || '').trim();
+    var mediaHtml = src
+      ? '<div class="card-modern-foto"><img src="' + escHtml(src) + '" alt="' + escHtml(item.titulo) + '" loading="lazy" decoding="async"/></div>'
+      : '<div class="icon-wrapper" style="background:' + escHtml(item.color || '#004d3d') + ';">'
+        + '<i class="fas ' + escHtml(item.icono || 'fa-file') + '"></i></div>';
     return '<a href="' + escHtml(url) + '">' +
-      '<div class="card-modern">' +
-        '<div class="icon-wrapper" style="background:' + escHtml(item.color || '#004d3d') + ';">' +
-          '<i class="fas ' + escHtml(item.icono || 'fa-file') + '"></i>' +
-        '</div>' +
+      '<div class="card-modern' + (src ? ' card-modern--foto' : '') + '">' +
+        mediaHtml +
         '<h4>' + escHtml(item.titulo) + '</h4>' +
         '<p>' + escHtml(item.descripcion) + '</p>' +
         '<span class="card-estado" style="color:' + escHtml(item.estadoColor || 'green') + ';">' +
