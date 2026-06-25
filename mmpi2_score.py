@@ -1,31 +1,112 @@
 # -*- coding: utf-8 -*-
 """
-mmpi2_score.py — Calcula puntajes MMPI-2 usando la tabla de conversion del Excel.
-Lee el Auxiliar sheet con xlrd (sin necesitar Excel/xlwings instalado).
+mmpi2_score.py — Calcula puntajes MMPI-2 (sin dependencias externas).
+Tabla de puntajes T extraida del Auxiliar sheet del Excel oficial.
 Uso: cat data.json | py -3 mmpi2_score.py
 Entrada stdin: {"sexo": "Hombre"|"Mujer", "respuestas": {"1":"V","2":"F",...}}
 Salida stdout: {"ok": true, "escalas": [...], "sin_contestar": N}
 """
-import sys, json, os, math
+import sys, json, math
 
 if sys.platform == 'win32':
     import io
     sys.stdin  = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8-sig')
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-EXCEL_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'Downloads', 'MMPI-2.xls')
-if not os.path.exists(EXCEL_PATH):
-    for c in [
-        r'C:\Users\USER\Downloads\MMPI-2.xls',
-        os.path.join(os.path.expanduser('~'), 'Downloads', 'MMPI-2.xls'),
-    ]:
-        if os.path.exists(c):
-            EXCEL_PATH = c
-            break
+# ---------------------------------------------------------------------------
+# Tabla de puntajes T (Auxiliar sheet del Excel oficial)
+# Indice: raw_score (0-73) -> [L_H,F_H,K_H,Hs_H,D_H,Hy_H,Pd_H,Mf_H,Pa_H,
+#                              Pt_H,Sc_H,Ma_H,Si_H,
+#                              L_M,F_M,K_M,Hs_M,D_M,Hy_M,Pd_M,Mf_M,Pa_M,
+#                              Pt_M,Sc_M,Ma_M,Si_M]
+# 0 = sin dato en la tabla
+_T = [
+    [35,36,0,0,0,0,0,0,0,0,0,0,0,33,37,0,0,0,0,0,0,0,0,0,0,0],
+    [39,39,0,0,0,0,0,0,0,0,0,0,0,38,41,0,0,0,0,0,0,0,0,0,0,0],
+    [43,42,0,30,0,0,0,0,30,0,0,0,0,43,44,0,0,0,0,0,0,30,0,0,0,0],
+    [48,45,0,31,0,0,0,0,31,0,0,0,0,47,48,0,0,0,0,0,0,31,0,0,0,0],
+    [52,48,0,31,0,0,0,0,32,0,0,0,0,52,51,0,0,0,0,0,0,32,0,0,0,0],
+    [56,51,0,32,0,0,0,0,34,0,0,0,0,57,53,0,0,0,0,0,0,34,0,0,0,0],
+    [61,55,30,33,0,0,0,0,37,0,0,0,0,62,58,30,30,0,0,0,0,37,0,0,0,0],
+    [65,58,33,35,0,0,0,0,39,0,0,0,0,66,61,32,33,0,0,0,120,39,0,0,0,0],
+    [70,61,35,37,0,30,0,0,42,0,0,0,0,71,65,35,35,0,0,0,118,42,0,0,0,0],
+    [74,64,37,39,30,31,0,0,46,0,0,30,30,76,68,37,38,0,30,0,116,45,0,0,30,0],
+    [78,67,39,42,32,32,0,0,49,0,0,31,31,81,72,39,40,30,31,0,114,49,0,0,31,30],
+    [83,70,41,45,34,33,30,0,53,0,0,33,33,86,75,41,43,32,32,0,111,52,0,0,33,32],
+    [87,73,43,48,36,34,31,0,57,0,30,35,34,90,79,43,46,34,32,30,109,56,0,0,35,33],
+    [91,76,45,51,38,35,33,0,61,0,31,36,35,95,82,46,49,36,34,32,106,59,0,30,37,34],
+    [96,79,47,54,40,37,34,0,64,30,32,38,37,100,85,48,51,38,35,34,104,63,0,31,39,35],
+    [100,82,49,57,42,38,35,0,68,31,33,39,37,103,89,50,54,40,36,36,101,67,0,32,41,36],
+    [0,85,51,59,45,40,37,30,72,32,34,41,38,0,93,52,57,42,38,37,99,70,30,33,43,37],
+    [0,98,54,62,47,42,39,32,75,33,35,43,40,0,96,54,59,44,39,39,96,74,31,34,45,38],
+    [0,92,56,64,50,43,40,34,79,34,36,45,41,0,99,56,61,46,41,41,94,78,32,36,47,39],
+    [0,95,58,66,52,45,42,36,83,36,37,47,42,0,103,59,63,47,43,43,92,81,34,37,49,40],
+    [0,98,60,68,54,47,44,38,86,37,38,49,43,0,106,61,65,49,45,45,89,85,35,39,51,41],
+    [0,101,62,70,57,50,46,40,90,39,40,51,44,0,109,63,67,51,47,47,87,89,37,41,53,42],
+    [0,104,64,73,59,52,48,42,94,41,42,53,45,0,113,65,69,53,49,49,84,92,39,42,56,43],
+    [0,107,66,75,61,54,50,44,97,43,44,56,47,0,115,67,71,55,51,51,82,96,40,44,59,45],
+    [0,110,68,77,62,57,52,46,101,44,54,59,48,0,120,70,74,57,54,53,79,100,42,46,62,46],
+    [0,113,70,79,64,59,54,48,105,47,47,62,49,0,0,72,76,59,56,55,77,103,44,48,65,47],
+    [0,116,72,81,66,61,57,50,108,49,49,65,50,0,0,74,78,62,58,58,74,107,47,50,68,48],
+    [0,119,75,84,68,64,59,52,112,51,51,69,51,0,0,76,80,64,61,60,72,111,49,52,71,49],
+    [0,120,77,86,70,66,62,54,116,53,53,72,52,0,0,78,82,66,63,63,69,114,51,53,74,50],
+    [0,0,79,88,72,69,64,56,119,55,55,75,54,0,0,81,84,68,65,66,67,118,53,55,76,51],
+    [0,0,81,90,74,71,67,58,120,57,56,78,55,0,0,83,86,70,68,68,65,120,55,57,79,52],
+    [0,0,0,92,76,74,69,60,0,59,58,81,56,0,0,0,88,72,70,71,62,0,57,59,83,53],
+    [0,0,0,94,78,76,72,62,0,62,60,85,57,0,0,0,90,75,73,73,60,0,59,60,85,54],
+    [0,0,0,97,80,79,74,64,0,64,62,88,58,0,0,0,92,77,75,76,57,0,61,62,88,55],
+    [0,0,0,99,81,81,77,66,0,66,63,91,59,0,0,0,95,79,77,79,55,0,62,63,91,57],
+    [0,0,0,101,83,84,79,68,0,68,65,94,61,0,0,0,97,81,80,81,52,0,64,65,94,58],
+    [0,0,0,103,85,86,82,70,0,70,67,98,62,0,0,0,99,83,82,84,50,0,66,66,97,59],
+    [0,0,0,105,87,89,84,72,0,72,69,101,63,0,0,0,101,86,84,87,47,0,68,67,100,60],
+    [0,0,0,108,89,91,87,74,0,74,70,104,64,0,0,0,103,88,87,89,45,0,70,69,103,61],
+    [0,0,0,110,91,94,90,76,0,77,72,107,65,0,0,0,105,90,89,92,43,0,72,70,106,62],
+    [0,0,0,112,93,96,92,78,0,79,74,110,66,0,0,0,107,92,92,94,40,0,73,72,109,63],
+    [0,0,0,114,95,99,95,79,0,81,75,114,68,0,0,0,109,94,94,97,38,0,75,73,112,64],
+    [0,0,0,116,97,101,97,81,0,83,77,117,69,0,0,0,111,96,96,100,35,0,77,75,115,65],
+    [0,0,0,119,98,104,100,83,0,85,79,120,70,0,0,0,113,99,99,102,33,0,79,76,118,66],
+    [0,0,0,120,100,106,102,85,0,87,81,0,71,0,0,0,116,101,101,105,30,0,81,78,120,67],
+    [0,0,0,0,102,109,105,87,0,89,82,0,72,0,0,0,118,103,104,107,0,0,83,79,0,69],
+    [0,0,0,0,104,111,107,89,0,91,84,0,73,0,0,0,120,105,106,110,0,0,84,81,0,70],
+    [0,0,0,0,106,114,110,91,0,94,86,0,75,0,0,0,0,107,108,113,0,0,86,82,0,71],
+    [0,0,0,0,108,116,112,93,0,96,87,0,76,0,0,0,0,109,111,115,0,0,88,84,0,72],
+    [0,0,0,0,110,119,115,95,0,98,89,0,77,0,0,0,0,112,113,118,0,0,90,85,0,73],
+    [0,0,0,0,112,120,117,97,0,100,91,0,78,0,0,0,0,114,115,120,0,0,92,87,0,74],
+    [0,0,0,0,114,0,120,99,0,102,93,0,79,0,0,0,0,116,118,0,0,0,94,88,0,75],
+    [0,0,0,0,115,0,0,101,0,104,94,0,80,0,0,0,0,118,120,0,0,0,95,90,0,76],
+    [0,0,0,0,117,0,0,103,0,106,96,0,82,0,0,0,0,120,0,0,0,0,97,91,0,77],
+    [0,0,0,0,119,0,0,105,0,109,98,0,83,0,0,0,0,0,0,0,0,0,99,93,0,78],
+    [0,0,0,0,120,0,0,107,0,111,99,0,84,0,0,0,0,0,0,0,0,0,101,94,0,79],
+    [0,0,0,0,0,0,0,109,0,113,101,0,85,0,0,0,0,0,0,0,0,0,103,96,0,81],
+    [0,0,0,0,0,0,0,0,0,115,103,0,86,0,0,0,0,0,0,0,0,0,105,97,0,82],
+    [0,0,0,0,0,0,0,0,0,117,105,0,87,0,0,0,0,0,0,0,0,0,106,99,0,83],
+    [0,0,0,0,0,0,0,0,0,119,106,0,89,0,0,0,0,0,0,0,0,0,108,100,0,84],
+    [0,0,0,0,0,0,0,0,0,120,108,0,90,0,0,0,0,0,0,0,0,0,110,102,0,85],
+    [0,0,0,0,0,0,0,0,0,0,110,0,91,0,0,0,0,0,0,0,0,0,112,103,0,86],
+    [0,0,0,0,0,0,0,0,0,0,111,0,92,0,0,0,0,0,0,0,0,0,114,105,0,87],
+    [0,0,0,0,0,0,0,0,0,0,113,0,93,0,0,0,0,0,0,0,0,0,115,106,0,88],
+    [0,0,0,0,0,0,0,0,0,0,115,0,94,0,0,0,0,0,0,0,0,0,117,108,0,89],
+    [0,0,0,0,0,0,0,0,0,0,117,0,96,0,0,0,0,0,0,0,0,0,119,109,0,90],
+    [0,0,0,0,0,0,0,0,0,0,118,0,97,0,0,0,0,0,0,0,0,0,120,111,0,91],
+    [0,0,0,0,0,0,0,0,0,0,120,0,98,0,0,0,0,0,0,0,0,0,0,112,0,93],
+    [0,0,0,0,0,0,0,0,0,0,0,0,99,0,0,0,0,0,0,0,0,0,0,113,0,94],
+    [0,0,0,0,0,0,0,0,0,0,0,0,100,0,0,0,0,0,0,0,0,0,0,115,0,95],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,116,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,118,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,119,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,120,0,0],
+]
 
-# Claves de puntuacion por escala derivadas de las formulas del Excel.
-# Formato: {escala: {'V': [items que puntuan si respuesta=V], 'F': [items que puntuan si respuesta=F]}}
-# Los items se identifican por numero de pregunta (1-566).
+# Columnas en _T (0-based): 0=L_H,1=F_H,2=K_H,3=Hs_H,4=D_H,5=Hy_H,6=Pd_H,
+# 7=Mf_H,8=Pa_H,9=Pt_H,10=Sc_H,11=Ma_H,12=Si_H,
+# 13=L_M,14=F_M,15=K_M,16=Hs_M,17=D_M,18=Hy_M,19=Pd_M,20=Mf_M,21=Pa_M,
+# 22=Pt_M,23=Sc_M,24=Ma_M,25=Si_M
+_COL_H = {'L':0,'F':1,'K':2,'Hs':3,'D':4,'Hy':5,'Pd':6,'Mf':7,'Pa':8,'Pt':9,'Sc':10,'Ma':11,'Si':12}
+_COL_M = {'L':13,'F':14,'K':15,'Hs':16,'D':17,'Hy':18,'Pd':19,'Mf':20,'Pa':21,'Pt':22,'Sc':23,'Ma':24,'Si':25}
+
+# ---------------------------------------------------------------------------
+# Claves de puntuacion derivadas de las formulas del Excel
+# {'V': [items que puntuan si respuesta=V], 'F': [items si respuesta=F]}
 SCALE_KEYS = {
     'L': {
         'V': [],
@@ -106,91 +187,40 @@ SCALE_KEYS = {
     },
 }
 
-# Columnas en la hoja Auxiliar (indice 0-based, xlrd):
-# 0=Punt.Brut., 1=L_H, 2=F_H, 3=K_H, 4=Hs_H, 5=D_H, 6=Hy_H, 7=Pd_H, 8=Mf_H,
-# 9=Pa_H, 10=Pt_H, 11=Sc_H, 12=Ma_H, 13=Si_H,
-# 14=L_M, 15=F_M, 16=K_M, 17=Hs_M, 18=D_M, 19=Hy_M, 20=Pd_M, 21=Mf_M,
-# 22=Pa_M, 23=Pt_M, 24=Sc_M, 25=Ma_M, 26=Si_M
-AUX_COL_HOMBRE = {'L':1,'F':2,'K':3,'Hs':4,'D':5,'Hy':6,'Pd':7,'Mf':8,'Pa':9,'Pt':10,'Sc':11,'Ma':12,'Si':13}
-AUX_COL_MUJER  = {'L':14,'F':15,'K':16,'Hs':17,'D':18,'Hy':19,'Pd':20,'Mf':21,'Pa':22,'Pt':23,'Sc':24,'Ma':25,'Si':26}
+# ---------------------------------------------------------------------------
+def _buscar_t(col, adj_raw):
+    raw_int = int(math.floor(adj_raw))
+    if raw_int < 0 or raw_int >= len(_T):
+        return 0
+    v = _T[raw_int][col]
+    return v if v else 0
 
-def cargar_tabla_t(excel_path):
-    import xlrd
-    wb = xlrd.open_workbook(excel_path)
-    ws = wb.sheet_by_name('Auxiliar')
-    # Fila xlrd 78 (0-based) = Punt.Brut.=0 (base del OFFSET en Excel fila 79)
-    base_row = 78
-    tabla = {}
-    for col in range(1, ws.ncols):
-        tabla[col] = {}
-        for raw in range(74):
-            row_idx = base_row - raw
-            if row_idx < 4:
-                break
-            v = ws.cell_value(row_idx, col)
-            if v and v != '':
-                try:
-                    tabla[col][raw] = int(v)
-                except (TypeError, ValueError):
-                    pass
-    return tabla
-
-def puntuar_escala(keys, respuestas):
-    tv = sum(1 for q in keys.get('V', []) if respuestas.get(q) == 'V' or respuestas.get(str(q)) == 'V')
-    tf = sum(1 for q in keys.get('F', []) if respuestas.get(q) == 'F' or respuestas.get(str(q)) == 'F')
+def _puntuar(key, respuestas):
+    tv = sum(1 for q in key.get('V', [])
+             if respuestas.get(q) == 'V' or respuestas.get(str(q)) == 'V')
+    tf = sum(1 for q in key.get('F', [])
+             if respuestas.get(q) == 'F' or respuestas.get(str(q)) == 'F')
     return tv, tf
 
-def buscar_t(tabla, col, adj_raw):
-    raw_int = int(math.floor(adj_raw))
-    return tabla.get(col, {}).get(raw_int, 0)
-
 def calcular(sexo, respuestas):
-    tabla_t = cargar_tabla_t(EXCEL_PATH)
     es_mujer = str(sexo).strip().lower() in ('mujer', 'f', '2')
-    cols = AUX_COL_MUJER if es_mujer else AUX_COL_HOMBRE
+    cols = _COL_M if es_mujer else _COL_H
 
-    tv_L,  tf_L  = puntuar_escala(SCALE_KEYS['L'],  respuestas)
-    tv_F,  tf_F  = puntuar_escala(SCALE_KEYS['F'],  respuestas)
-    tv_K,  tf_K  = puntuar_escala(SCALE_KEYS['K'],  respuestas)
-    tv_Hs, tf_Hs = puntuar_escala(SCALE_KEYS['Hs'], respuestas)
-    tv_D,  tf_D  = puntuar_escala(SCALE_KEYS['D'],  respuestas)
-    tv_Hy, tf_Hy = puntuar_escala(SCALE_KEYS['Hy'], respuestas)
-    tv_Pd, tf_Pd = puntuar_escala(SCALE_KEYS['Pd'], respuestas)
-    tv_Mf, tf_Mf = puntuar_escala(SCALE_KEYS['Mf_M' if es_mujer else 'Mf_H'], respuestas)
-    tv_Pa, tf_Pa = puntuar_escala(SCALE_KEYS['Pa'], respuestas)
-    tv_Pt, tf_Pt = puntuar_escala(SCALE_KEYS['Pt'], respuestas)
-    tv_Sc, tf_Sc = puntuar_escala(SCALE_KEYS['Sc'], respuestas)
-    tv_Ma, tf_Ma = puntuar_escala(SCALE_KEYS['Ma'], respuestas)
-    tv_Si, tf_Si = puntuar_escala(SCALE_KEYS['Si'], respuestas)
+    tv_L,  tf_L  = _puntuar(SCALE_KEYS['L'],  respuestas)
+    tv_F,  tf_F  = _puntuar(SCALE_KEYS['F'],  respuestas)
+    tv_K,  tf_K  = _puntuar(SCALE_KEYS['K'],  respuestas)
+    tv_Hs, tf_Hs = _puntuar(SCALE_KEYS['Hs'], respuestas)
+    tv_D,  tf_D  = _puntuar(SCALE_KEYS['D'],  respuestas)
+    tv_Hy, tf_Hy = _puntuar(SCALE_KEYS['Hy'], respuestas)
+    tv_Pd, tf_Pd = _puntuar(SCALE_KEYS['Pd'], respuestas)
+    tv_Mf, tf_Mf = _puntuar(SCALE_KEYS['Mf_M' if es_mujer else 'Mf_H'], respuestas)
+    tv_Pa, tf_Pa = _puntuar(SCALE_KEYS['Pa'], respuestas)
+    tv_Pt, tf_Pt = _puntuar(SCALE_KEYS['Pt'], respuestas)
+    tv_Sc, tf_Sc = _puntuar(SCALE_KEYS['Sc'], respuestas)
+    tv_Ma, tf_Ma = _puntuar(SCALE_KEYS['Ma'], respuestas)
+    tv_Si, tf_Si = _puntuar(SCALE_KEYS['Si'], respuestas)
 
-    raw_K  = tv_K  + tf_K
-    raw_L  = tv_L  + tf_L
-    raw_F  = tv_F  + tf_F
-    raw_Hs = tv_Hs + tf_Hs
-    raw_D  = tv_D  + tf_D
-    raw_Hy = tv_Hy + tf_Hy
-    raw_Pd = tv_Pd + tf_Pd
-    raw_Mf = tv_Mf + tf_Mf
-    raw_Pa = tv_Pa + tf_Pa
-    raw_Pt = tv_Pt + tf_Pt
-    raw_Sc = tv_Sc + tf_Sc
-    raw_Ma = tv_Ma + tf_Ma
-    raw_Si = tv_Si + tf_Si
-
-    # Puntaje T con correcciones K segun las formulas del Excel
-    t_L  = buscar_t(tabla_t, cols['L'],  raw_L)
-    t_F  = buscar_t(tabla_t, cols['F'],  raw_F)
-    t_K  = buscar_t(tabla_t, cols['K'],  raw_K)
-    t_Hs = buscar_t(tabla_t, cols['Hs'], raw_Hs + 0.5 * raw_K)
-    t_D  = buscar_t(tabla_t, cols['D'],  raw_D)
-    t_Hy = buscar_t(tabla_t, cols['Hy'], raw_Hy)
-    t_Pd = buscar_t(tabla_t, cols['Pd'], raw_Pd + 0.4 * raw_K)
-    t_Mf = buscar_t(tabla_t, cols['Mf'], raw_Mf)
-    t_Pa = buscar_t(tabla_t, cols['Pa'], raw_Pa)
-    t_Pt = buscar_t(tabla_t, cols['Pt'], raw_Pt + raw_K)
-    t_Sc = buscar_t(tabla_t, cols['Sc'], raw_Sc + raw_K)
-    t_Ma = buscar_t(tabla_t, cols['Ma'], raw_Ma + 0.2 * raw_K)
-    t_Si = buscar_t(tabla_t, cols['Si'], raw_Si)
+    rK = tv_K + tf_K
 
     sin_contestar = 0
     for i in range(1, 567):
@@ -198,24 +228,52 @@ def calcular(sexo, respuestas):
         if ans not in ('V', 'F'):
             sin_contestar += 1
 
+    def tb(tv, tf): return tv + tf
+
     return {
         'ok': True,
         'sexo': 'Mujer' if es_mujer else 'Hombre',
         'sin_contestar': sin_contestar,
         'escalas': [
-            {'code':'L',  'nombre':'L — Mentira',               'tv':tv_L,  'tf':tf_L,  'tb':raw_L,  't':t_L},
-            {'code':'F',  'nombre':'F — Infrecuencia',           'tv':tv_F,  'tf':tf_F,  'tb':raw_F,  't':t_F},
-            {'code':'K',  'nombre':'K — Corrección',        'tv':tv_K,  'tf':tf_K,  'tb':raw_K,  't':t_K},
-            {'code':'Hs', 'nombre':'1 — Hipocondria',            'tv':tv_Hs, 'tf':tf_Hs, 'tb':raw_Hs, 't':t_Hs},
-            {'code':'D',  'nombre':'2 — Depresión',         'tv':tv_D,  'tf':tf_D,  'tb':raw_D,  't':t_D},
-            {'code':'Hy', 'nombre':'3 — Histeria',               'tv':tv_Hy, 'tf':tf_Hy, 'tb':raw_Hy, 't':t_Hy},
-            {'code':'Pd', 'nombre':'4 — Psicopatía',        'tv':tv_Pd, 'tf':tf_Pd, 'tb':raw_Pd, 't':t_Pd},
-            {'code':'Mf', 'nombre':'5 — Masculinidad/Feminidad', 'tv':tv_Mf, 'tf':tf_Mf, 'tb':raw_Mf, 't':t_Mf},
-            {'code':'Pa', 'nombre':'6 — Paranoia',               'tv':tv_Pa, 'tf':tf_Pa, 'tb':raw_Pa, 't':t_Pa},
-            {'code':'Pt', 'nombre':'7 — Psicastenia',            'tv':tv_Pt, 'tf':tf_Pt, 'tb':raw_Pt, 't':t_Pt},
-            {'code':'Sc', 'nombre':'8 — Esquizofrenia',          'tv':tv_Sc, 'tf':tf_Sc, 'tb':raw_Sc, 't':t_Sc},
-            {'code':'Ma', 'nombre':'9 — Hipomanía',         'tv':tv_Ma, 'tf':tf_Ma, 'tb':raw_Ma, 't':t_Ma},
-            {'code':'Si', 'nombre':'0 — Introversión Social','tv':tv_Si,'tf':tf_Si, 'tb':raw_Si, 't':t_Si},
+            {'code':'L',  'nombre':'L — Mentira',
+             'tv':tv_L, 'tf':tf_L, 'tb':tb(tv_L,tf_L),
+             't':_buscar_t(cols['L'],  tb(tv_L,tf_L))},
+            {'code':'F',  'nombre':'F — Infrecuencia',
+             'tv':tv_F, 'tf':tf_F, 'tb':tb(tv_F,tf_F),
+             't':_buscar_t(cols['F'],  tb(tv_F,tf_F))},
+            {'code':'K',  'nombre':'K — Correccion',
+             'tv':tv_K, 'tf':tf_K, 'tb':tb(tv_K,tf_K),
+             't':_buscar_t(cols['K'],  rK)},
+            {'code':'Hs', 'nombre':'1 — Hipocondria',
+             'tv':tv_Hs,'tf':tf_Hs,'tb':tb(tv_Hs,tf_Hs),
+             't':_buscar_t(cols['Hs'], tb(tv_Hs,tf_Hs) + 0.5*rK)},
+            {'code':'D',  'nombre':'2 — Depresion',
+             'tv':tv_D, 'tf':tf_D, 'tb':tb(tv_D,tf_D),
+             't':_buscar_t(cols['D'],  tb(tv_D,tf_D))},
+            {'code':'Hy', 'nombre':'3 — Histeria',
+             'tv':tv_Hy,'tf':tf_Hy,'tb':tb(tv_Hy,tf_Hy),
+             't':_buscar_t(cols['Hy'], tb(tv_Hy,tf_Hy))},
+            {'code':'Pd', 'nombre':'4 — Psicopatia',
+             'tv':tv_Pd,'tf':tf_Pd,'tb':tb(tv_Pd,tf_Pd),
+             't':_buscar_t(cols['Pd'], tb(tv_Pd,tf_Pd) + 0.4*rK)},
+            {'code':'Mf', 'nombre':'5 — Masculinidad/Feminidad',
+             'tv':tv_Mf,'tf':tf_Mf,'tb':tb(tv_Mf,tf_Mf),
+             't':_buscar_t(cols['Mf'], tb(tv_Mf,tf_Mf))},
+            {'code':'Pa', 'nombre':'6 — Paranoia',
+             'tv':tv_Pa,'tf':tf_Pa,'tb':tb(tv_Pa,tf_Pa),
+             't':_buscar_t(cols['Pa'], tb(tv_Pa,tf_Pa))},
+            {'code':'Pt', 'nombre':'7 — Psicastenia',
+             'tv':tv_Pt,'tf':tf_Pt,'tb':tb(tv_Pt,tf_Pt),
+             't':_buscar_t(cols['Pt'], tb(tv_Pt,tf_Pt) + rK)},
+            {'code':'Sc', 'nombre':'8 — Esquizofrenia',
+             'tv':tv_Sc,'tf':tf_Sc,'tb':tb(tv_Sc,tf_Sc),
+             't':_buscar_t(cols['Sc'], tb(tv_Sc,tf_Sc) + rK)},
+            {'code':'Ma', 'nombre':'9 — Hipomania',
+             'tv':tv_Ma,'tf':tf_Ma,'tb':tb(tv_Ma,tf_Ma),
+             't':_buscar_t(cols['Ma'], tb(tv_Ma,tf_Ma) + 0.2*rK)},
+            {'code':'Si', 'nombre':'0 — Introversion Social',
+             'tv':tv_Si,'tf':tf_Si,'tb':tb(tv_Si,tf_Si),
+             't':_buscar_t(cols['Si'], tb(tv_Si,tf_Si))},
         ]
     }
 
