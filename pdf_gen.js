@@ -33,17 +33,8 @@ const COLOR_GRIS   = '#555555';
 const COLOR_NEGRO  = '#1a1a1a';
 const COLOR_LINEA  = '#cccccc';
 
-const GRID_COLS    = 10;
-const GRID_ROW_H   = 12;
-const GRID_GAP     = 2;
-const MATRIZ_FILAS_COL = 50;
-const MATRIZ_ROW_H     = 11;
-const MATRIZ_COL_GAP   = 3;
+const MATRIZ_COL_GAP   = 2;
 const TOTAL_PREGUNTAS  = 566;
-const VERT_FILAS   = 50;
-const VERT_ROW_H   = 11;
-const VERT_GAP_COL = 3;
-const TOTAL_ITEMS_MMPI = 566;
 const A4_W         = 595.28;
 const A4_H         = 841.89;
 
@@ -241,69 +232,85 @@ function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   return y + bannerH;
 }
 
-// ── Matriz vertical: columnas de 50 ítems (1-50, 51-100, …) — solo N° y V/F ──
-function totalColumnasMatriz(totalIds) {
-  return Math.ceil(totalIds / MATRIZ_FILAS_COL);
+// ── Matriz vertical dinámica — llena el A4 (N° + V/F) ───────────────────────
+function calcularLayoutMatriz(y0, maxY, W, totalIds) {
+  for (let rowH = 8; rowH <= 10.5; rowH += 0.25) {
+    const filasPorCol = Math.floor((maxY - y0) / rowH);
+    if (filasPorCol < 45) continue;
+    const numCols = Math.ceil(totalIds / filasPorCol);
+    if (numCols < 1 || numCols > 16) continue;
+    const colW = (W - MATRIZ_COL_GAP * Math.max(numCols - 1, 0)) / numCols;
+    if (colW < 24) continue;
+    if (numCols * filasPorCol >= totalIds) {
+      return { rowH: rowH, filasPorCol: filasPorCol, colsPorPagina: numCols };
+    }
+  }
+  const filasPorCol = 57;
+  const rowH = 8.5;
+  const colsPorPagina = Math.max(1, Math.floor((W + MATRIZ_COL_GAP) / (26 + MATRIZ_COL_GAP)));
+  return { rowH: rowH, filasPorCol: filasPorCol, colsPorPagina: colsPorPagina };
 }
 
-function dibujarMatrizRespuestasVertical(doc, x0, y0, W, maxY, resp, totalIds, colDesde, colHasta) {
+function totalColumnasMatriz(totalIds, filasPorCol) {
+  return Math.ceil(totalIds / filasPorCol);
+}
+
+function dibujarMatrizColumnas(doc, x0, y0, W, maxY, resp, totalIds, layout, colDesde, colHasta) {
   const colsEnPagina = colHasta - colDesde;
   const colW = (W - MATRIZ_COL_GAP * Math.max(colsEnPagina - 1, 0)) / colsEnPagina;
-  const numW = Math.min(18, Math.max(14, Math.floor(colW * 0.4)));
-  const boxW = Math.max(10, colW - numW - 2);
+  const numW = Math.min(15, Math.max(12, Math.floor(colW * 0.36)));
+  const boxW = Math.max(9, colW - numW - 1);
+  const rowH = layout.rowH;
+  const filasPorCol = layout.filasPorCol;
 
   for (let ci = colDesde; ci < colHasta; ci++) {
     const cx = x0 + (ci - colDesde) * (colW + MATRIZ_COL_GAP);
-    for (let r = 0; r < MATRIZ_FILAS_COL; r++) {
-      const id = ci * MATRIZ_FILAS_COL + r + 1;
+    for (let r = 0; r < filasPorCol; r++) {
+      const id = ci * filasPorCol + r + 1;
       if (id > totalIds) continue;
-      const cy = y0 + r * MATRIZ_ROW_H;
-      if (cy + MATRIZ_ROW_H > maxY) return false;
+      const cy = y0 + r * rowH;
+      if (cy + rowH > maxY) return;
 
       const ans = resp[id] || resp[String(id)] || '';
-      doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(6.5)
-         .text(String(id), cx, cy + 2, { width: numW, lineBreak: false, align: 'right' });
-      const bx = cx + numW + 2;
-      doc.rect(bx, cy + 1, boxW, 8)
+      doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(6)
+         .text(String(id), cx, cy + 1.5, { width: numW, lineBreak: false, align: 'right' });
+      const bx = cx + numW + 1;
+      doc.rect(bx, cy + 0.5, boxW, rowH - 2)
         .fill(ans === 'V' ? '#e8f5ec' : (ans === 'F' ? '#fdeaea' : '#f4f4f4'))
         .stroke('#cccccc');
       if (ans) {
-        doc.fillColor(ans === 'V' ? '#1a7a3a' : '#7a1a1a').font('Helvetica-Bold').fontSize(6.5)
-           .text(ans, bx, cy + 2, { width: boxW, align: 'center', lineBreak: false });
+        doc.fillColor(ans === 'V' ? '#1a7a3a' : '#7a1a1a').font('Helvetica-Bold').fontSize(6)
+           .text(ans, bx, cy + 1.5, { width: boxW, align: 'center', lineBreak: false });
       }
     }
   }
-  return true;
 }
 
 function dibujarPaginasMatrizRespuestas(doc, evaluacion, resp, x0, W, maxY) {
   const totalIds = TOTAL_PREGUNTAS;
-  const numCols = totalColumnasMatriz(totalIds);
-  const COLS_POR_PAGINA = 6;
+  const yMatriz = 90;
+  const layout = calcularLayoutMatriz(yMatriz, maxY, W, totalIds);
+  const totalCols = totalColumnasMatriz(totalIds, layout.filasPorCol);
+  const colsPorPagina = layout.colsPorPagina;
+  const totalPaginas = Math.ceil(totalCols / colsPorPagina);
 
-  for (let colStart = 0; colStart < numCols; colStart += COLS_POR_PAGINA) {
-    const colEnd = Math.min(colStart + COLS_POR_PAGINA, numCols);
+  for (let p = 0; p < totalPaginas; p++) {
+    const colDesde = p * colsPorPagina;
+    const colHasta = Math.min(colDesde + colsPorPagina, totalCols);
     doc.addPage();
     dibujarCabecera(doc);
-    let y = 78;
-    const esPrimera = colStart === 0;
-    doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(9)
-       .text(esPrimera ? 'MATRIZ DE RESPUESTAS — N° / V o F' : 'MATRIZ DE RESPUESTAS (continuación)',
+    let y = 74;
+    doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(8.5)
+       .text(p === 0 ? 'MATRIZ DE RESPUESTAS — N° / V o F' : 'MATRIZ DE RESPUESTAS (continuación)',
          x0, y, { width: W, lineBreak: false });
-    y += 12;
-    if (esPrimera) {
-      doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
-         .text('566 ítems · Numeración vertical (50 por columna) · V = Verdadero / F = Falso',
-           x0, y, { width: W, lineBreak: false });
-      y += 10;
-    }
-    const itemDesde = colStart * MATRIZ_FILAS_COL + 1;
-    const itemHasta = Math.min(colEnd * MATRIZ_FILAS_COL, totalIds);
-    doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7)
-       .text('Ítems ' + itemDesde + ' — ' + itemHasta + '  ·  ' + (evaluacion.nombres || '—'),
+    y += 9;
+    const itemDesde = colDesde * layout.filasPorCol + 1;
+    const itemHasta = Math.min(colHasta * layout.filasPorCol, totalIds);
+    doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(6.5)
+       .text('Ítems ' + itemDesde + '–' + itemHasta + ' de 566 · V/F · ' + (evaluacion.nombres || '—'),
          x0, y, { width: W, lineBreak: false, ellipsis: true });
-    y += 10;
-    dibujarMatrizRespuestasVertical(doc, x0, y, W, maxY, resp, totalIds, colStart, colEnd);
+    y += 8;
+    dibujarMatrizColumnas(doc, x0, y, W, maxY, resp, totalIds, layout, colDesde, colHasta);
   }
 }
 
@@ -329,7 +336,8 @@ function generarPDFIndividual(evaluacion, preguntas, opts) {
     const completa = opts.completa != null
       ? !!opts.completa
       : (!!evaluacion.completada && stats.total >= 566);
-    const mmpi = calcularMMPI2(evaluacion);
+    const mmpiRaw = calcularMMPI2(evaluacion);
+    const mmpi = normalizarResultadoMMPI(mmpiRaw, evaluacion, completa, stats);
 
     const doc = new PDFDocument({
       size: 'A4',
@@ -354,9 +362,9 @@ function generarPDFIndividual(evaluacion, preguntas, opts) {
     y = dibujarEncabezadoEfectivo(doc, x0, y, W, evaluacion, totalV, totalF) + 10;
 
     if (!completa) {
-      y = dibujarBannerAvance(doc, stats, maxItemRespondido(resp), x0, y, W) + 6;
+      y = dibujarBannerAvance(doc, stats, maxItemRespondido(resp), x0, y, W) + 4;
     }
-    y = dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, { provisional: !completa });
+    y = dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, { completa: completa });
 
     dibujarPaginasMatrizRespuestas(doc, evaluacion, resp, x0, W, maxY);
 
@@ -454,33 +462,94 @@ function generarPDFComisaria(comisaria, evaluaciones) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MMPI-2 Scoring — llama script Python que usa el Excel oficial
+// MMPI-2 Scoring — script Python (Excel) con respaldo de plantilla en servidor
 // ─────────────────────────────────────────────────────────────────────────────
-function calcularMMPI2(evaluacion) {
-  try {
-    const resp = typeof evaluacion.respuestas === 'string'
-      ? JSON.parse(evaluacion.respuestas) : (evaluacion.respuestas || {});
+function resolverSexoMMPI(evaluacion) {
+  const sexoRaw = String((evaluacion && evaluacion.sexo) || '').toLowerCase();
+  const cargoStr = String((evaluacion && evaluacion.cargo) || '').toLowerCase();
+  return (sexoRaw === 'femenino' || sexoRaw === 'mujer' || sexoRaw === 'f')
+    || cargoStr.includes('mujer') || cargoStr.includes('femenin')
+    ? 'Mujer' : 'Hombre';
+}
 
-    // Usar campo sexo explícito; fallback inferir desde cargo
-    const sexoRaw = String(evaluacion.sexo || '').toLowerCase();
-    const cargoStr = String(evaluacion.cargo || '').toLowerCase();
-    const sexo = (sexoRaw === 'femenino' || sexoRaw === 'mujer' || sexoRaw === 'f')
-      || cargoStr.includes('mujer') || cargoStr.includes('femenin')
-      ? 'Mujer' : 'Hombre';
+function plantillaEscalasMMPI() {
+  return ESCALAS_MMPI2.map(function(nombre) {
+    return { nombre: nombre, tv: '—', tf: '—', tb: '—', t: 0, no_calificable: true };
+  });
+}
 
-    const input = JSON.stringify({ sexo, respuestas: resp });
-    const result = spawnSync('py', ['-3', MMPI2_SCRIPT_PATH], {
-      input,
+function normalizarResultadoMMPI(mmpi, evaluacion, completa, stats) {
+  const sexo = resolverSexoMMPI(evaluacion);
+  const respondidos = (stats && stats.total) || 0;
+  const sinC = completa
+    ? ((mmpi && mmpi.sin_contestar) || 0)
+    : Math.max(0, TOTAL_PREGUNTAS - respondidos);
+  const noCalificable = !completa;
+
+  if (mmpi && mmpi.ok && mmpi.escalas && mmpi.escalas.length) {
+    return Object.assign({}, mmpi, {
+      ok: true,
+      sexo: mmpi.sexo || sexo,
+      sin_contestar: sinC,
+      no_calificable: noCalificable,
+      provisional: noCalificable
+    });
+  }
+
+  return {
+    ok: true,
+    no_calificable: true,
+    provisional: false,
+    sin_contestar: sinC,
+    sexo: sexo,
+    motor_error: (mmpi && mmpi.error) || 'Motor de cálculo no disponible en servidor',
+    escalas: plantillaEscalasMMPI()
+  };
+}
+
+function ejecutarScriptMMPI2(input) {
+  const intentos = [
+    ['python3', [MMPI2_SCRIPT_PATH]],
+    ['python', [MMPI2_SCRIPT_PATH]],
+    ['py', ['-3', MMPI2_SCRIPT_PATH]]
+  ];
+  let ultimoError = '';
+  for (let i = 0; i < intentos.length; i++) {
+    const cmd = intentos[i][0];
+    const args = intentos[i].slice(1);
+    const result = spawnSync(cmd, args, {
+      input: input,
       encoding: 'utf8',
       timeout: 120000,
       maxBuffer: 1024 * 1024,
       env: Object.assign({}, process.env, { PYTHONIOENCODING: 'utf-8' })
     });
-
-    if (result.error) throw result.error;
+    if (result.error) {
+      ultimoError = result.error.message || String(result.error);
+      if (result.error.code === 'ENOENT') continue;
+      throw result.error;
+    }
     const out = (result.stdout || '').trim();
-    if (!out) throw new Error('Sin salida del script: ' + (result.stderr || ''));
-    return JSON.parse(out);
+    if (!out) {
+      ultimoError = (result.stderr || '').trim() || 'Sin salida del script';
+      continue;
+    }
+    try {
+      return JSON.parse(out);
+    } catch (e) {
+      ultimoError = 'JSON inválido: ' + e.message;
+    }
+  }
+  throw new Error(ultimoError || 'Python no disponible');
+}
+
+function calcularMMPI2(evaluacion) {
+  try {
+    const resp = typeof evaluacion.respuestas === 'string'
+      ? JSON.parse(evaluacion.respuestas) : (evaluacion.respuestas || {});
+    const sexo = resolverSexoMMPI(evaluacion);
+    const input = JSON.stringify({ sexo: sexo, respuestas: resp });
+    return ejecutarScriptMMPI2(input);
   } catch (e) {
     return { ok: false, error: e.message, escalas: [] };
   }
@@ -496,114 +565,127 @@ function interpretarT(t) {
   return              { label: 'BAJO',          color: '#2980b9' };
 }
 
-// Dibuja tabla de resultados MMPI-2
+// Dibuja tabla de resultados MMPI-2 (siempre muestra las 13 escalas)
 function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, opts) {
   opts = opts || {};
-  if (!mmpi || !mmpi.ok || !mmpi.escalas || !mmpi.escalas.length) {
-    doc.fillColor('#888').font('Helvetica').fontSize(9)
-       .text('Resultados MMPI-2 no disponibles' + (mmpi && mmpi.error ? ': ' + mmpi.error : '') + '.', x0, y);
-    return y + 20;
-  }
+  const escalas = (mmpi && mmpi.escalas && mmpi.escalas.length)
+    ? mmpi.escalas
+    : plantillaEscalasMMPI();
+  const sinC = (mmpi && mmpi.sin_contestar != null) ? mmpi.sin_contestar : TOTAL_PREGUNTAS;
+  const noCalificable = !!(mmpi && mmpi.no_calificable);
+  const provisional = !!(mmpi && mmpi.provisional);
+  const completa = opts.completa !== false && !noCalificable;
 
-  const escalas = mmpi.escalas;
-  const sinC = mmpi.sin_contestar || 0;
-  const provisional = opts.provisional || sinC > 0;
+  let titulo = 'RESULTADOS DEL MMPI-2 — PUNTAJES T ESTÁNDAR';
+  if (noCalificable) titulo = 'PARÁMETROS MMPI-2 — AÚN NO CALIFICABLE';
+  else if (provisional) titulo = 'RESULTADOS MMPI-2 — PUNTAJES T (PROVISIONAL)';
 
-  // Título sección
-  doc.rect(x0, y, W, 16).fill(COLOR_VERDE);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9)
-     .text(provisional
-       ? 'RESULTADOS MMPI-2 — PUNTAJES T (PROVISIONAL)'
-       : 'RESULTADOS DEL MMPI-2 — PUNTAJES T ESTÁNDAR',
-       x0 + 6, y + 4, { width: W - 12, lineBreak: false });
-  y += 16;
+  doc.rect(x0, y, W, 15).fill(noCalificable ? '#7a5c00' : COLOR_VERDE);
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8.5)
+     .text(titulo, x0 + 6, y + 3.5, { width: W - 12, lineBreak: false });
+  y += 15;
 
-  doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
-     .text('Normas: ' + (mmpi.sexo || 'Hombre') + '   •   Ítems sin contestar: ' + sinC
-       + '   •   Punto de corte clínico: T ≥ 65', x0, y, { width: W, lineBreak: false });
-  y += 12;
+  doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7)
+     .text('Normas: ' + ((mmpi && mmpi.sexo) || 'Hombre')
+       + '   •   Ítems sin contestar: ' + sinC
+       + '   •   Corte clínico: T ≥ 65', x0, y, { width: W, lineBreak: false });
+  y += 10;
 
-  if (provisional) {
-    doc.rect(x0, y, W, 20).fill('#fff8e1').stroke('#f0d78c');
-    doc.fillColor('#856404').font('Helvetica-Bold').fontSize(7.5)
-       .text('Evaluación en avance (' + (TOTAL_PREGUNTAS - sinC) + '/566). Resultado calculado con respuestas actuales.',
+  if (noCalificable) {
+    doc.rect(x0, y, W, 26).fill('#fff3cd').stroke('#e6c200');
+    doc.fillColor('#7a5c00').font('Helvetica-Bold').fontSize(7.5)
+       .text('AÚN NO ES CALIFICABLE — La evaluación no está completa (' + (TOTAL_PREGUNTAS - sinC) + '/566).',
          x0 + 6, y + 4, { width: W - 12, lineBreak: false });
     doc.font('Helvetica').fontSize(7)
-       .text('Los puntajes pueden variar al completar y enviar la evaluación.', x0 + 6, y + 12,
-         { width: W - 12, lineBreak: false });
-    y += 22;
+       .text('Debe responder los 566 ítems y enviar con Finalizar y Enviar para obtener calificación oficial.',
+         x0 + 6, y + 13, { width: W - 12, lineBreak: false });
+    if (mmpi && mmpi.motor_error && !provisional) {
+      doc.fillColor('#888').font('Helvetica-Oblique').fontSize(6.5)
+         .text('Cálculo automático no disponible en servidor; se muestran parámetros de referencia.',
+           x0 + 6, y + 20, { width: W - 12, lineBreak: false });
+    }
+    y += 28;
+  } else if (provisional) {
+    doc.rect(x0, y, W, 18).fill('#fff8e1').stroke('#f0d78c');
+    doc.fillColor('#856404').font('Helvetica-Bold').fontSize(7.5)
+       .text('Resultado provisional con respuestas actuales. Puede variar al completar los 566 ítems.',
+         x0 + 6, y + 5, { width: W - 12, lineBreak: false });
+    y += 20;
   }
 
-  // Cabecera tabla
-  const colW  = [120, 32, 32, 38, 42, 70];
-  const heads = ['Escala', 'TV', 'TF', 'Bruto', 'T-score', 'Interpretación'];
-  const rowH  = 14;
+  const colW  = [118, 30, 30, 36, 40, 76];
+  const heads = ['Escala', 'TV', 'TF', 'Bruto', 'T-score', 'Estado / Interpretación'];
+  const rowH  = 13;
 
-  doc.rect(x0, y, W, rowH).fill(COLOR_VERDE);
+  doc.rect(x0, y, W, rowH).fill(noCalificable ? '#7a5c00' : COLOR_VERDE);
   let tx = x0;
   heads.forEach(function(h, i) {
-    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(7.5)
-       .text(h, tx + 3, y + 3, { width: colW[i] - 6, lineBreak: false });
+    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(7)
+       .text(h, tx + 2, y + 3, { width: colW[i] - 4, lineBreak: false });
     tx += colW[i];
   });
   y += rowH;
 
-  // Filas de escalas
   escalas.forEach(function(esc, idx) {
-    if (y + rowH > maxY) return;
-    const inter = interpretarT(esc.t);
+    if (y + rowH > maxY - 4) return;
+    const tieneT = esc.t > 0;
+    const inter = noCalificable && !tieneT
+      ? { label: 'NO CALIFICABLE', color: '#b8860b' }
+      : (noCalificable && tieneT
+        ? { label: 'PROVISIONAL', color: '#856404' }
+        : (tieneT ? interpretarT(esc.t) : { label: '—', color: '#888888' }));
     const bg = idx % 2 === 0 ? '#f7faf7' : '#ffffff';
     doc.rect(x0, y, W, rowH).fill(bg).stroke('#e0e8e0');
 
     tx = x0;
     const celdas = [
       esc.nombre,
-      String(esc.tv),
-      String(esc.tf),
-      String(esc.tb),
-      esc.t > 0 ? String(esc.t) : '—',
-      inter.label
+      esc.tv != null && esc.tv !== '—' ? String(esc.tv) : '—',
+      esc.tf != null && esc.tf !== '—' ? String(esc.tf) : '—',
+      esc.tb != null && esc.tb !== '—' ? String(esc.tb) : '—',
+      tieneT ? String(esc.t) : '—',
+      noCalificable && !tieneT ? 'NO CALIFICABLE' : inter.label
     ];
     celdas.forEach(function(val, i) {
       const isT = (i === 4);
       const isInt = (i === 5);
       const color = isInt ? inter.color : (isT && esc.t >= 65 ? '#c0392b' : COLOR_NEGRO);
       const bold = (i === 0) || (isT && esc.t >= 65) || isInt;
-      doc.fillColor(color).font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(7.5)
-         .text(val, tx + 3, y + 3, { width: colW[i] - 6, lineBreak: false });
+      doc.fillColor(color).font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(7)
+         .text(val, tx + 2, y + 3, { width: colW[i] - 4, lineBreak: false });
       tx += colW[i];
     });
 
-    // Barra visual del T-score (columna interpretación como barra)
-    if (esc.t > 0) {
+    if (tieneT && !noCalificable) {
       const barX = x0 + colW[0] + colW[1] + colW[2] + colW[3] + colW[4] - 2;
       const barW = colW[5] - 4;
-      const barH = rowH - 6;
+      const barH = rowH - 5;
       const pct = Math.min(esc.t / 120, 1);
-      doc.rect(barX, y + 3, barW, barH).fill('#eeeeee');
-      doc.rect(barX, y + 3, barW * pct, barH).fill(inter.color);
+      doc.rect(barX, y + 2.5, barW, barH).fill('#eeeeee');
+      doc.rect(barX, y + 2.5, barW * pct, barH).fill(inter.color);
     }
 
     y += rowH;
   });
 
-  // Leyenda
-  y += 4;
-  const leyenda = [
-    { c: '#c0392b', l: 'Muy elevado (T≥80)' },
-    { c: '#e67e22', l: 'Elevado (T 65-79)' },
-    { c: '#f39c12', l: 'Leve elevación (T 55-64)' },
-    { c: '#27ae60', l: 'Normal (T 45-54)' },
-    { c: '#2980b9', l: 'Bajo (T<45)' },
-  ];
-  let lx = x0;
-  leyenda.forEach(function(it) {
-    doc.rect(lx, y, 8, 8).fill(it.c);
-    doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(6.5)
-       .text(it.l, lx + 10, y + 1, { width: 80, lineBreak: false });
-    lx += 92;
-  });
-  y += 14;
+  if (completa) {
+    y += 3;
+    const leyenda = [
+      { c: '#c0392b', l: 'Muy elevado (T≥80)' },
+      { c: '#e67e22', l: 'Elevado (T 65-79)' },
+      { c: '#f39c12', l: 'Leve (T 55-64)' },
+      { c: '#27ae60', l: 'Normal (T 45-54)' },
+      { c: '#2980b9', l: 'Bajo (T<45)' }
+    ];
+    let lx = x0;
+    leyenda.forEach(function(it) {
+      doc.rect(lx, y, 7, 7).fill(it.c);
+      doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(6)
+         .text(it.l, lx + 9, y, { width: 72, lineBreak: false });
+      lx += 82;
+    });
+    y += 11;
+  }
 
   return y;
 }
@@ -627,6 +709,7 @@ module.exports = {
   generarPDFIndividual,
   generarPDFComisaria,
   calcularMMPI2,
+  normalizarResultadoMMPI,
   interpretarT,
   contarRespuestas,
   formatearArmamentoLegible,

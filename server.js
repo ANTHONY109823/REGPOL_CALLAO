@@ -9,7 +9,7 @@ const path     = require('path');
 const fs       = require('fs');
 const crypto   = require('crypto');
 const { Pool } = require('pg');
-const { generarPDFIndividual, generarPDFComisaria, calcularMMPI2, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido } = require('./pdf_gen');
+const { generarPDFIndividual, generarPDFComisaria, calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido } = require('./pdf_gen');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -1868,9 +1868,9 @@ app.get('/admin/preview-resultado', requireAuth, async (req, res) => {
 
     const stats = contarRespuestas(ev);
     const completa = evaluacionEstaCompleta(ev);
-    const mmpi = calcularMMPI2(ev);
+    const mmpiRaw = calcularMMPI2(ev);
+    const mmpi = normalizarResultadoMMPI(mmpiRaw, ev, completa, stats);
     if (!completa) {
-      mmpi.provisional = true;
       mmpi.max_item = maxItemRespondido(parseRespuestasSafe(ev.respuestas));
     }
 
@@ -1932,8 +1932,8 @@ app.get('/admin/preview-avance', requireAuth, async (req, res) => {
       }
     });
 
-    const mmpi = calcularMMPI2(ev);
-    mmpi.provisional = true;
+    const mmpiRaw = calcularMMPI2(ev);
+    const mmpi = normalizarResultadoMMPI(mmpiRaw, ev, false, stats);
     mmpi.max_item = maxItemRespondido(parseRespuestasSafe(ev.respuestas));
 
     res.json({

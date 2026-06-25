@@ -1299,20 +1299,20 @@ function configurarBtnPdfEfectivo(btnPdf, opts) {
 }
 
 function renderMatrizRespuestasHtml(respMap, totalItems) {
-  var FILAS = 50;
+  var FILAS = 57;
   var numCols = Math.ceil(totalItems / FILAS);
-  var html = '<div style="display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;padding:4px 0;">';
+  var html = '<div style="display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;padding:2px 0;">';
   for (var c = 0; c < numCols; c++) {
-    html += '<div style="flex:0 0 auto;min-width:48px;">';
+    html += '<div style="flex:0 0 auto;min-width:44px;">';
     for (var r = 0; r < FILAS; r++) {
       var id = c * FILAS + r + 1;
       if (id > totalItems) break;
       var ans = (respMap && (respMap[id] || respMap[String(id)])) || '';
       var rc = ans === 'V' ? '#1a7a3a' : (ans === 'F' ? '#7a1a1a' : '#bbb');
       var bg = ans === 'V' ? '#e8f5ec' : (ans === 'F' ? '#fdeaea' : '#f4f4f4');
-      html += '<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px;line-height:1;">'
-        + '<span style="font-weight:700;color:#004d3d;width:24px;font-size:10px;text-align:right;">' + id + '</span>'
-        + '<span style="display:inline-block;min-width:18px;height:15px;border:1px solid #ccc;border-radius:2px;text-align:center;font-size:9px;font-weight:700;color:' + rc + ';background:' + bg + ';line-height:15px;padding:0 2px;">' + escHtml(ans) + '</span>'
+      html += '<div style="display:flex;align-items:center;gap:2px;margin-bottom:1px;line-height:1;">'
+        + '<span style="font-weight:700;color:#004d3d;width:22px;font-size:9px;text-align:right;">' + id + '</span>'
+        + '<span style="display:inline-block;min-width:16px;height:13px;border:1px solid #ccc;border-radius:1px;text-align:center;font-size:8px;font-weight:700;color:' + rc + ';background:' + bg + ';line-height:13px;">' + escHtml(ans) + '</span>'
         + '</div>';
     }
     html += '</div>';
@@ -1323,36 +1323,40 @@ function renderMatrizRespuestasHtml(respMap, totalItems) {
 
 function renderTablaMmpiPreview(wrap, mmpi, completa) {
   if (!wrap) return;
-  if (!mmpi || !mmpi.ok || !(mmpi.escalas || []).length) {
-    wrap.innerHTML = '<p style="color:#888;font-size:12px;">Resultados MMPI-2 no disponibles'
-      + (mmpi && mmpi.error ? ': ' + escHtml(mmpi.error) : '') + '.</p>';
+  if (!mmpi || !(mmpi.escalas || []).length) {
+    wrap.innerHTML = '<p style="color:#888;font-size:12px;">Parámetros MMPI-2 no disponibles'
+      + (mmpi && mmpi.motor_error ? ': ' + escHtml(mmpi.motor_error) : '') + '.</p>';
     return;
   }
+  var noCal = !!mmpi.no_calificable;
   var filas = (mmpi.escalas || []).map(function(esc, i) {
     var bg = i % 2 === 0 ? '#f7faf7' : '#fff';
-    var tc = colorInterpT(esc.t);
+    var tieneT = esc.t > 0;
+    var tc = noCal && !tieneT ? '#b8860b' : (noCal && tieneT ? '#856404' : colorInterpT(esc.t));
+    var estado = noCal && !tieneT ? 'NO CALIFICABLE' : (noCal && tieneT ? 'PROVISIONAL' : labelInterpT(esc.t));
     return '<tr style="background:' + bg + ';">'
       + '<td style="padding:6px 8px;font-size:11px;font-weight:600;">' + escHtml(esc.nombre) + '</td>'
-      + '<td style="padding:6px;text-align:center;font-size:11px;">' + esc.tv + '</td>'
-      + '<td style="padding:6px;text-align:center;font-size:11px;">' + esc.tf + '</td>'
-      + '<td style="padding:6px;text-align:center;font-size:11px;">' + esc.tb + '</td>'
-      + '<td style="padding:6px;text-align:center;font-size:11px;font-weight:700;color:' + (esc.t >= 65 ? '#c0392b' : '#1a1a1a') + ';">' + (esc.t > 0 ? esc.t : '—') + '</td>'
-      + '<td style="padding:6px;font-size:10.5px;font-weight:600;color:' + tc + ';">' + labelInterpT(esc.t) + '</td>'
+      + '<td style="padding:6px;text-align:center;font-size:11px;">' + (esc.tv !== '—' ? esc.tv : '—') + '</td>'
+      + '<td style="padding:6px;text-align:center;font-size:11px;">' + (esc.tf !== '—' ? esc.tf : '—') + '</td>'
+      + '<td style="padding:6px;text-align:center;font-size:11px;">' + (esc.tb !== '—' ? esc.tb : '—') + '</td>'
+      + '<td style="padding:6px;text-align:center;font-size:11px;font-weight:700;color:' + (esc.t >= 65 ? '#c0392b' : '#1a1a1a') + ';">' + (tieneT ? esc.t : '—') + '</td>'
+      + '<td style="padding:6px;font-size:10.5px;font-weight:600;color:' + tc + ';">' + estado + '</td>'
       + '</tr>';
   }).join('');
 
   var encabezado = '<p style="font-size:11px;color:#666;margin:0 0 8px;">Normas: ' + escHtml(mmpi.sexo || 'Hombre')
     + ' — Ítems sin contestar: ' + (mmpi.sin_contestar || 0) + '</p>';
-  if (!completa || mmpi.provisional) {
-    encabezado = '<div style="background:#fff8e1;border:1px solid #ffeeba;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#856404;">'
-      + '<strong>Resultado provisional</strong> — evaluación en avance. Ítems pendientes: <strong>' + (mmpi.sin_contestar || 0) + '</strong>'
-      + (mmpi.max_item ? ' — Último ítem: <strong>' + mmpi.max_item + '</strong>' : '')
+  if (noCal) {
+    encabezado = '<div style="background:#fff3cd;border:1px solid #e6c200;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#7a5c00;">'
+      + '<strong>AÚN NO ES CALIFICABLE</strong> — faltan <strong>' + (mmpi.sin_contestar || 0) + '</strong> ítems ('
+      + (566 - (mmpi.sin_contestar || 0)) + '/566). Complete las 566 respuestas y envíe la evaluación.'
+      + (mmpi.motor_error ? '<br><span style="font-size:11px;color:#888;">' + escHtml(mmpi.motor_error) + '</span>' : '')
       + '</div>' + encabezado;
   }
 
   wrap.innerHTML = encabezado
     + '<div style="overflow-x:auto;"><table class="t" style="font-size:11px;">'
-    + '<thead><tr><th>Escala</th><th>TV</th><th>TF</th><th>Bruto</th><th>T-score</th><th>Interpretación</th></tr></thead>'
+    + '<thead><tr><th>Escala</th><th>TV</th><th>TF</th><th>Bruto</th><th>T-score</th><th>Estado</th></tr></thead>'
     + '<tbody>' + filas + '</tbody></table></div>';
 }
 
