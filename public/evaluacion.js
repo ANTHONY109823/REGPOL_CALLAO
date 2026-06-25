@@ -25,6 +25,7 @@ var ESTADO = {
 };
 var ALERTA_FINAL_MOSTRADA = false;
 var FOTO_BASE64 = '';
+var CAM_STREAM = null;
 
 function toggleAreaOtroEval() {
   if (typeof regpolToggleAreaOtro === 'function') {
@@ -57,10 +58,26 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('f-nacimiento').addEventListener('input', formatearFechaNacimiento);
   document.getElementById('f-nacimiento').addEventListener('blur',  validarFechaNacimiento);
   var fotoInput = document.getElementById('f-foto');
-  var btnFoto = document.getElementById('btn-seleccionar-foto');
+  var fotoCamInput = document.getElementById('f-foto-cam');
+  var btnFotoCam = document.getElementById('btn-foto-camara');
+  var btnFotoGal = document.getElementById('btn-foto-galeria');
   if (fotoInput) fotoInput.addEventListener('change', manejarFotoSeleccionada);
-  if (btnFoto && fotoInput) {
-    btnFoto.addEventListener('click', function() { fotoInput.click(); });
+  if (fotoCamInput) fotoCamInput.addEventListener('change', manejarFotoSeleccionada);
+  if (btnFotoCam) btnFotoCam.addEventListener('click', abrirModalCamara);
+  if (btnFotoGal && fotoInput) {
+    btnFotoGal.addEventListener('click', function() { fotoInput.click(); });
+  }
+  var btnCapturar = document.getElementById('btn-capturar-foto');
+  var btnCancelarCam = document.getElementById('btn-cancelar-camara');
+  var btnCerrarCam = document.getElementById('btn-cerrar-camara');
+  if (btnCapturar) btnCapturar.addEventListener('click', capturarFotoCamara);
+  if (btnCancelarCam) btnCancelarCam.addEventListener('click', cerrarModalCamara);
+  if (btnCerrarCam) btnCerrarCam.addEventListener('click', cerrarModalCamara);
+  var modalCam = document.getElementById('modal-camara-foto');
+  if (modalCam) {
+    modalCam.addEventListener('click', function(ev) {
+      if (ev.target === modalCam) cerrarModalCamara();
+    });
   }
   ['f-cip','f-dni'].forEach(function(id) {
     document.getElementById(id).addEventListener('input', function(e) {
@@ -279,6 +296,93 @@ function comprimirImagenFoto(file, callback) {
   reader.readAsDataURL(file);
 }
 
+function aplicarFotoRegistro(dataUrl, nombreArchivo, inputEl) {
+  var nombreEl = document.getElementById('foto-nombre');
+  if (!dataUrl) {
+    mostrarErrorFoto('No se pudo leer la imagen. Intente con otro archivo JPG o PNG.');
+    if (inputEl) inputEl.value = '';
+    if (nombreEl) { nombreEl.textContent = 'Ningún archivo seleccionado'; nombreEl.classList.remove('ok'); }
+    return;
+  }
+  if (dataUrl.length > 2.8 * 1024 * 1024) {
+    mostrarErrorFoto('La foto comprimida sigue siendo muy grande. Use una imagen más pequeña.');
+    if (inputEl) inputEl.value = '';
+    if (nombreEl) { nombreEl.textContent = 'Ningún archivo seleccionado'; nombreEl.classList.remove('ok'); }
+    return;
+  }
+  FOTO_BASE64 = dataUrl;
+  actualizarPreviewFoto(FOTO_BASE64);
+  limpiarErrorFoto();
+  ocultarAlerta();
+  if (nombreEl) {
+    nombreEl.textContent = (nombreArchivo || 'Foto') + ' — lista';
+    nombreEl.classList.add('ok');
+  }
+}
+
+function abrirModalCamara() {
+  var modal = document.getElementById('modal-camara-foto');
+  var video = document.getElementById('cam-video');
+  var msgErr = document.getElementById('msg-camara-error');
+  if (!modal || !video) return;
+  if (msgErr) { msgErr.style.display = 'none'; msgErr.textContent = ''; }
+  modal.hidden = false;
+  document.body.style.overflow = 'hidden';
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    cerrarModalCamara();
+    var inpCam = document.getElementById('f-foto-cam');
+    if (inpCam) inpCam.click();
+    return;
+  }
+
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: 'user' }, width: { ideal: 1280 }, height: { ideal: 960 } },
+    audio: false
+  }).then(function(stream) {
+    CAM_STREAM = stream;
+    video.srcObject = stream;
+    return video.play();
+  }).catch(function() {
+    cerrarModalCamara();
+    var inpCam = document.getElementById('f-foto-cam');
+    if (inpCam) inpCam.click();
+    else mostrarErrorFoto('No se pudo acceder a la cámara. Use galería o permita el acceso.');
+  });
+}
+
+function cerrarModalCamara() {
+  var modal = document.getElementById('modal-camara-foto');
+  var video = document.getElementById('cam-video');
+  if (CAM_STREAM) {
+    CAM_STREAM.getTracks().forEach(function(t) { t.stop(); });
+    CAM_STREAM = null;
+  }
+  if (video) video.srcObject = null;
+  if (modal) modal.hidden = true;
+  document.body.style.overflow = '';
+}
+
+function capturarFotoCamara() {
+  var video = document.getElementById('cam-video');
+  if (!video || !video.videoWidth) return;
+  var canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  var dataUrl;
+  try {
+    dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+  } catch (e) {
+    mostrarErrorFoto('No se pudo capturar la imagen.');
+    return;
+  }
+  cerrarModalCamara();
+  var nombreEl = document.getElementById('foto-nombre');
+  if (nombreEl) { nombreEl.textContent = 'Procesando captura...'; nombreEl.classList.remove('ok'); }
+  aplicarFotoRegistro(dataUrl, 'captura-camara.jpg', null);
+}
+
 function manejarFotoSeleccionada(e) {
   var file = e.target.files && e.target.files[0];
   var nombreEl = document.getElementById('foto-nombre');
@@ -301,23 +405,7 @@ function manejarFotoSeleccionada(e) {
   }
   if (nombreEl) { nombreEl.textContent = 'Procesando: ' + file.name + '...'; nombreEl.classList.remove('ok'); }
   comprimirImagenFoto(file, function(dataUrl) {
-    if (!dataUrl) {
-      mostrarErrorFoto('No se pudo leer la imagen. Intente con otro archivo JPG o PNG.');
-      e.target.value = '';
-      if (nombreEl) { nombreEl.textContent = 'Ningún archivo seleccionado'; nombreEl.classList.remove('ok'); }
-      return;
-    }
-    if (dataUrl.length > 2.8 * 1024 * 1024) {
-      mostrarErrorFoto('La foto comprimida sigue siendo muy grande. Use una imagen más pequeña.');
-      e.target.value = '';
-      if (nombreEl) { nombreEl.textContent = 'Ningún archivo seleccionado'; nombreEl.classList.remove('ok'); }
-      return;
-    }
-    FOTO_BASE64 = dataUrl;
-    actualizarPreviewFoto(FOTO_BASE64);
-    limpiarErrorFoto();
-    ocultarAlerta();
-    if (nombreEl) { nombreEl.textContent = file.name + ' — lista'; nombreEl.classList.add('ok'); }
+    aplicarFotoRegistro(dataUrl, file.name, e.target);
   });
 }
 
@@ -332,7 +420,10 @@ function actualizarPreviewFoto(src) {
 function quitarFoto() {
   FOTO_BASE64 = '';
   var inp = document.getElementById('f-foto');
+  var inpCam = document.getElementById('f-foto-cam');
   if (inp) inp.value = '';
+  if (inpCam) inpCam.value = '';
+  cerrarModalCamara();
   actualizarPreviewFoto('');
   limpiarErrorFoto();
   var nombreEl = document.getElementById('foto-nombre');

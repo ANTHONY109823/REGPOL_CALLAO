@@ -99,25 +99,63 @@ function resolverEdad(ev) {
   return edad > 0 ? edad : null;
 }
 
+function calcularAnchurasTabla(W) {
+  const ratios = [0.045, 0.36, 0.095, 0.095, 0.115, 0.055, 0.055, 0.12, 0.06];
+  const cols = ratios.map(function(r) { return Math.floor(W * r); });
+  const sum = cols.reduce(function(a, b) { return a + b; }, 0);
+  cols[1] += W - sum;
+  return cols;
+}
+
 function dibujarFilaTabla(doc, x0, y, W, cols, celdas, opts) {
-  const rowH = (opts && opts.rowH) || 16;
   const esHeader = opts && opts.header;
   const par = opts && opts.par;
-  const bg = esHeader ? COLOR_VERDE : (par ? '#f7faf7' : '#ffffff');
+  const minRowH = (opts && opts.rowH) || (esHeader ? 20 : 17);
+  const padX = 4;
+  const padY = esHeader ? 5 : 4;
+  const fontSize = esHeader ? 8.5 : 8;
+  const bg = esHeader ? COLOR_VERDE : (par ? '#f4f8f5' : '#ffffff');
+  const borde = esHeader ? '#3d7a62' : '#cfdad2';
+
+  let rowH = minRowH;
+  if (!esHeader) {
+    celdas.forEach(function(c, i) {
+      doc.font(i === 1 ? 'Helvetica-Bold' : 'Helvetica').fontSize(fontSize);
+      const h = doc.heightOfString(String(c == null ? '—' : c), { width: cols[i] - padX * 2 });
+      rowH = Math.max(rowH, h + padY * 2);
+    });
+  }
+
   doc.rect(x0, y, W, rowH).fill(bg);
-  if (!esHeader) doc.rect(x0, y, W, rowH).stroke('#e0e8e0');
+
+  doc.strokeColor(borde).lineWidth(0.45);
+  let vx = x0;
+  for (let i = 0; i <= cols.length; i++) {
+    doc.moveTo(vx, y).lineTo(vx, y + rowH).stroke();
+    if (i < cols.length) vx += cols[i];
+  }
+  doc.moveTo(x0, y + rowH).lineTo(x0 + W, y + rowH).stroke();
+
   let tx = x0;
   celdas.forEach(function(c, i) {
+    const centrado = i === 0 || i >= 5;
+    const txt = String(c == null ? '—' : c);
     doc.fillColor(esHeader ? '#ffffff' : (i === 0 ? COLOR_VERDE : COLOR_NEGRO))
        .font((esHeader || i === 1) ? 'Helvetica-Bold' : 'Helvetica')
-       .fontSize(esHeader ? 8 : 7.5)
-       .text(String(c == null ? '—' : c), tx + 4, y + (esHeader ? 4 : 3), {
-         width: cols[i] - 8,
-         lineBreak: false,
-         ellipsis: true
-       });
+       .fontSize(fontSize);
+    const textW = cols[i] - padX * 2;
+    const textH = doc.heightOfString(txt, { width: textW });
+    const ty = y + Math.max(padY, (rowH - textH) / 2);
+    doc.text(txt, tx + padX, ty, {
+      width: textW,
+      align: centrado ? 'center' : 'left',
+      lineBreak: !esHeader && i === 1,
+      ellipsis: esHeader || i !== 1
+    });
     tx += cols[i];
   });
+
+  return rowH;
 }
 
 function dibujarCabecera(doc) {
@@ -180,10 +218,10 @@ function formatearGradoDisplay(grado) {
 // ── Encabezado del efectivo — banner plomo con grado, datos y foto ─────────────
 function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   const tieneFoto = ev.foto && String(ev.foto).length > 80;
-  const fotoW = 56;
-  const fotoH = 68;
   const pad = 8;
-  const bannerH = 88;
+  const bannerH = 100;
+  const fotoH = bannerH - pad * 2;
+  const fotoW = Math.round(fotoH * 0.72);
   const textoW = tieneFoto ? W - fotoW - pad * 3 : W - pad * 2;
 
   doc.rect(x0, y, W, bannerH).fill('#ececec').stroke('#c8c8c8');
@@ -196,6 +234,7 @@ function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   })();
   const sexoTxt = String(ev.sexo || '—').toUpperCase();
   const cargoTxt = String(ev.cargo || '—').toUpperCase();
+  const areaTxt = String(ev.area || '—').toUpperCase();
   const armaTxt = formatearArmamentoLegible(ev.armamento || '').toUpperCase();
   const fechaTxt = formatearFechaPDF(ev.fecha);
 
@@ -214,18 +253,25 @@ function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   ty += 10;
   doc.text('CARGO: ' + cargoTxt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
   ty += 10;
+  doc.text('ÁREA: ' + areaTxt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
+  ty += 10;
   doc.text('ARMA: ' + armaTxt, x0 + pad, ty, { width: Math.min(textoW, W * 0.62), lineBreak: false, ellipsis: true });
 
   if (tieneFoto) {
     const fotoX = x0 + W - fotoW - pad;
-    const fotoY = y + (bannerH - fotoH) / 2;
+    const fotoY = y + pad;
     try {
       doc.save();
       doc.rect(fotoX, fotoY, fotoW, fotoH).clip();
-      doc.image(ev.foto, fotoX, fotoY, { fit: [fotoW, fotoH], align: 'center', valign: 'center' });
+      doc.image(ev.foto, fotoX, fotoY, { cover: [fotoW, fotoH] });
       doc.restore();
       doc.rect(fotoX, fotoY, fotoW, fotoH).stroke('#aaaaaa');
-    } catch (e) {}
+    } catch (e) {
+      try {
+        doc.image(ev.foto, fotoX, fotoY, { width: fotoW, height: fotoH });
+        doc.rect(fotoX, fotoY, fotoW, fotoH).stroke('#aaaaaa');
+      } catch (e2) {}
+    }
   }
 
   doc.fillColor('#1a7a3a').font('Helvetica-Bold').fontSize(7.5)
@@ -397,20 +443,19 @@ function generarPDFComisaria(comisaria, evaluaciones) {
   return new Promise(function(resolve) {
     const doc = new PDFDocument({
       size: 'A4',
-      margins: { top: 52, bottom: 38, left: 36, right: 36 },
+      margins: { top: 48, bottom: 34, left: 28, right: 28 },
       autoFirstPage: false
     });
     const chunks = [];
     doc.on('data', function(c) { chunks.push(c); });
     doc.on('end',  function()  { resolve(Buffer.concat(chunks)); });
 
-    const x0 = 36;
-    const W  = A4_W - 72;
-    const rowH = 14;
-    const cols = [20, 118, 44, 44, 54, 18, 18, 34, 22];
+    const x0 = 28;
+    const W  = A4_W - 56;
+    const cols = calcularAnchurasTabla(W);
     const heads = ['N°', 'Apellidos y Nombres', 'CIP', 'DNI', 'Fecha', 'V', 'F', 'Avance', 'Edad'];
-    const marginBottom = 38;
-    const maxRowY = A4_H - marginBottom - 30;
+    const marginBottom = 34;
+    const maxRowY = A4_H - marginBottom - 24;
     const lista = evaluaciones || [];
     let pagina = 0;
 
@@ -423,43 +468,49 @@ function generarPDFComisaria(comisaria, evaluaciones) {
       doc.addPage();
       pagina += 1;
       dibujarCabeceraLista(doc);
-      let startY = 58;
+      let startY = 50;
       if (!esContinuacion) {
         doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(11)
-           .text('LISTADO DE EFECTIVOS EVALUADOS', x0, 56, { align: 'center', width: W, lineBreak: false });
+           .text('LISTADO DE EFECTIVOS EVALUADOS', x0, 50, { align: 'center', width: W, lineBreak: false });
         doc.fillColor(COLOR_ORO).font('Helvetica-Bold').fontSize(10)
-           .text(String(comisaria || '').toUpperCase(), x0, 70, { align: 'center', width: W, lineBreak: false });
-        startY = 84;
+           .text(String(comisaria || '').toUpperCase(), x0, 63, { align: 'center', width: W, lineBreak: false });
+        doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(8)
+           .text('Total: ' + lista.length + ' registro' + (lista.length === 1 ? '' : 's'), x0, 76, { align: 'center', width: W, lineBreak: false });
+        startY = 88;
+      } else {
+        doc.fillColor(COLOR_GRIS).font('Helvetica-Bold').fontSize(8)
+           .text(String(comisaria || '').toUpperCase() + ' — continuación', x0, 54, { align: 'center', width: W, lineBreak: false });
+        startY = 66;
       }
-      dibujarFilaTabla(doc, x0, startY, W, cols, heads, { header: true, rowH: rowH });
-      return startY + rowH;
+      const headerH = dibujarFilaTabla(doc, x0, startY, W, cols, heads, { header: true, rowH: 20 });
+      return startY + headerH;
     }
 
     let rowY = abrirPagina(false);
 
     lista.forEach(function(ev, idx) {
-      if (rowY + rowH > maxRowY) rowY = abrirPagina(true);
       const stats = contarRespuestas(ev);
       const fecha = String(ev.fecha || '—').substring(0, 10);
       const edad = resolverEdad(ev);
-      dibujarFilaTabla(doc, x0, rowY, W, cols, [
+      const fila = [
         String(idx + 1),
-        ev.nombres || '—',
-        ev.cip || '—',
-        ev.dni || '—',
+        String(ev.nombres || '—').toUpperCase(),
+        String(ev.cip || '—').toUpperCase(),
+        String(ev.dni || '—').toUpperCase(),
         fecha,
         String(stats.v),
         String(stats.f),
         stats.total + '/566',
         edad ? String(edad) : '—'
-      ], { par: idx % 2 === 0, rowH: rowH });
-      rowY += rowH;
+      ];
+      if (rowY + 17 > maxRowY) rowY = abrirPagina(true);
+      rowY += dibujarFilaTabla(doc, x0, rowY, W, cols, fila, { par: idx % 2 === 0, rowH: 17 });
     });
 
     if (!lista.length) {
       dibujarFilaTabla(doc, x0, rowY, W, cols,
         ['—', 'Sin registros para este filtro', '—', '—', '—', '—', '—', '—', '—'],
-        { par: false, rowH: rowH });
+        { par: false, rowH: 17 });
     }
 
     cerrarPaginaActual();

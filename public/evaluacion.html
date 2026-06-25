@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css?v=39" />
   <link rel="stylesheet" href="responsive.css?v=1" />
-  <link rel="stylesheet" href="evaluacion.css?v=9" />
+  <link rel="stylesheet" href="evaluacion.css?v=10" />
 </head>
 <body class="body-portal body-bienestar">
 
@@ -184,10 +184,16 @@
         <div class="campo campo-full campo-foto">
           <label for="f-foto">Fotografía del efectivo <span class="req">*</span></label>
           <div class="foto-carga-wrap">
+            <div class="foto-opciones">
+              <button type="button" class="btn-seleccionar-foto" id="btn-foto-camara">
+                <i class="fas fa-camera"></i> Tomar foto ahora
+              </button>
+              <button type="button" class="btn-seleccionar-foto btn-foto-galeria" id="btn-foto-galeria">
+                <i class="fas fa-images"></i> Elegir de galería
+              </button>
+            </div>
             <input type="file" id="f-foto" accept="image/jpeg,image/png,image/webp,image/*,.jpg,.jpeg,.png,.webp" />
-            <button type="button" class="btn-seleccionar-foto" id="btn-seleccionar-foto">
-              <i class="fas fa-camera"></i> Seleccionar fotografía
-            </button>
+            <input type="file" id="f-foto-cam" accept="image/*" capture="user" />
             <span id="foto-nombre" class="foto-nombre-archivo">Ningún archivo seleccionado</span>
             <div id="foto-preview" class="foto-preview" style="display:none;">
               <img id="foto-preview-img" alt="Vista previa de la fotografía" />
@@ -245,6 +251,24 @@
   <small id="subtexto-overlay">Por favor no cierre ni recargue esta página.</small>
 </div>
 
+<!-- MODAL CÁMARA — captura de fotografía en registro -->
+<div id="modal-camara-foto" class="modal-cam-foto" role="dialog" aria-modal="true" aria-labelledby="modal-cam-titulo" hidden>
+  <div class="modal-cam-foto-inner">
+    <div class="modal-cam-foto-header">
+      <h3 id="modal-cam-titulo">Tomar fotografía</h3>
+      <button type="button" class="modal-cam-cerrar" id="btn-cerrar-camara" aria-label="Cerrar">&times;</button>
+    </div>
+    <div class="modal-cam-video-wrap">
+      <video id="cam-video" autoplay playsinline muted></video>
+    </div>
+    <p id="msg-camara-error" class="msg-cam-error" style="display:none;"></p>
+    <div class="modal-cam-acciones">
+      <button type="button" class="btn-eval btn-verde" id="btn-capturar-foto"><i class="fas fa-camera"></i> Capturar</button>
+      <button type="button" class="btn-eval btn-cam-cancelar" id="btn-cancelar-camara">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- FOOTER -->
 <footer class="footer-simple">
   <p>&copy; 2026 -- REGPOL Callao -- Policía Nacional del Perú &nbsp;|&nbsp; Desarrollado por <strong>Ing. Anthony Ccayo -- UNITIC</strong> &nbsp;|&nbsp; <a href="index.html">Volver al Portal</a></p>
@@ -258,7 +282,7 @@
 <script src="divisiones-ui.js?v=1"></script>
 <script src="preguntas.js?v=1"></script>
 <script src="areas-labor.js?v=1"></script>
-<script src="evaluacion.js?v=19"></script>
+<script src="evaluacion.js?v=20"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof regpolPoblarSelectArea === 'function') {
