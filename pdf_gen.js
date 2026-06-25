@@ -4,12 +4,7 @@
 */
 
 const PDFDocument = require('pdfkit');
-const { spawnSync } = require('child_process');
-const path = require('path');
 const PREGUNTAS_DEFAULT = require('./preguntas_data.json');
-
-const MMPI2_EXCEL_PATH = path.join(__dirname, '..', '..', 'Downloads', 'MMPI-2.xls');
-const MMPI2_SCRIPT_PATH = path.join(__dirname, 'mmpi2_score.py');
 
 const ESCALAS_MMPI2 = [
   'L — Mentira',
@@ -802,8 +797,8 @@ function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, opts) {
     y += 20;
   }
 
-  const colW  = [118, 30, 30, 36, 40, 76];
-  const heads = ['Escala', 'TV', 'TF', 'Bruto', 'T-score', 'Estado / Interpretación'];
+  const colW  = [108, 28, 28, 34, 38, 94];
+  const heads = ['Escala', 'TV', 'TF', 'Bruto', 'T-score', 'Estado'];
   const rowH  = 13;
 
   doc.rect(x0, y, W, rowH).fill(noCalificable ? '#7a5c00' : COLOR_VERDE);
@@ -832,27 +827,25 @@ function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, opts) {
       esc.tv != null && esc.tv !== '—' ? String(esc.tv) : '—',
       esc.tf != null && esc.tf !== '—' ? String(esc.tf) : '—',
       esc.tb != null && esc.tb !== '—' ? String(esc.tb) : '—',
-      tieneT ? String(esc.t) : '—',
-      noCalificable && !tieneT ? 'NO CALIFICABLE' : inter.label
+      tieneT ? String(esc.t) : '—'
     ];
     celdas.forEach(function(val, i) {
       const isT = (i === 4);
-      const isInt = (i === 5);
-      const color = isInt ? inter.color : (isT && esc.t >= 65 ? '#c0392b' : COLOR_NEGRO);
-      const bold = (i === 0) || (isT && esc.t >= 65) || isInt;
+      const color = isT && esc.t >= 65 ? '#c0392b' : COLOR_NEGRO;
+      const bold = (i === 0) || (isT && esc.t >= 65);
       doc.fillColor(color).font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(7)
          .text(val, tx + 2, y + 3, { width: colW[i] - 4, lineBreak: false });
       tx += colW[i];
     });
 
+    const estadoX = tx;
+    const estadoLabel = noCalificable && !tieneT ? 'NO CALIFICABLE' : inter.label;
     if (tieneT && !noCalificable) {
-      const barX = x0 + colW[0] + colW[1] + colW[2] + colW[3] + colW[4] - 2;
-      const barW = colW[5] - 4;
-      const barH = rowH - 5;
-      const pct = Math.min(esc.t / 120, 1);
-      doc.rect(barX, y + 2.5, barW, barH).fill('#eeeeee');
-      doc.rect(barX, y + 2.5, barW * pct, barH).fill(inter.color);
+      doc.rect(estadoX + 2, y + 3.5, 5.5, 5.5).fill(inter.color);
     }
+    doc.fillColor(inter.color).font('Helvetica-Bold').fontSize(6.5)
+       .text(estadoLabel, estadoX + (tieneT && !noCalificable ? 10 : 2), y + 3,
+         { width: colW[5] - (tieneT && !noCalificable ? 12 : 4), lineBreak: false });
 
     y += rowH;
   });
