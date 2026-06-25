@@ -329,17 +329,7 @@ async function initDB() {
       'No tener sanciones vigentes.'
     ];
     const reqsCurso = reqsBase.concat(['Haber pasado FEMA del año en curso.']);
-    const reqsCelador = reqsBase.concat(['Contar con uniforme de faena completo.']);
     const seeds = [
-      ['convenio', 'PLAN CELADOR', 'DETALLES DEL CONVENIO', 'fa-shield-alt', JSON.stringify(reqsCelador),
-        '08:00 hrs a 20:00 hrs (12 horas)', 120, 'S/ 75.00', 'Por día efectivamente laborado.',
-        'Abono mediante Planilla de Convenios.', 'Las inscripciones se habilitan del 20 al 25 de cada mes.', 1],
-      ['convenio', 'AMP TERMINALS', 'DETALLES DEL CONVENIO', 'fa-handshake', JSON.stringify(reqsBase),
-        '', 0, '', '', '', 'Las inscripciones se habilitan del 20 al 25 de cada mes.', 2],
-      ['convenio', 'ATU', 'DETALLES DEL CONVENIO', 'fa-car', JSON.stringify(reqsBase),
-        '', 0, '', '', '', 'Las inscripciones se habilitan del 20 al 25 de cada mes.', 3],
-      ['convenio', 'PATRULLAJE INTEGRADO', 'DETALLES DEL CONVENIO', 'fa-users', JSON.stringify(reqsBase),
-        '', 0, '', '', '', 'Las inscripciones se habilitan del 20 al 25 de cada mes.', 4],
       ['curso', 'CURSO SEGURIDAD CIUDADANA', 'DETALLES DEL CURSO', 'fa-graduation-cap', JSON.stringify(reqsCurso),
         '08:00 hrs a 13:00 hrs', 45, '15 DE JUNIO 2025', 'SEIS (06) SEMANAS',
         'Sujeta a modificación por necesidad de servicio', 'Las inscripciones se habilitan del 20 al 25 de abril', 1],
@@ -358,36 +348,10 @@ async function initDB() {
         s
       );
     }
-    console.log('Seed: ' + seeds.length + ' convocatorias insertadas en items_portal.');
+    console.log('Seed: ' + seeds.length + ' cursos insertados en items_portal.');
   }
 
-  // Asegurar los 11 convenios oficiales (inserta solo los faltantes)
-  const conveniosOficiales = [
-    ['ATU (METRO 2 LIMA - CALLAO)', 'Control de transporte público — Metro Línea 2 Lima-Callao', 'fa-bus', 1],
-    ['FELMO', 'Fiscalización y control de transporte', 'fa-gavel', 2],
-    ['PLAN CELADOR', 'Apoyo a las comisarías', 'fa-shield-alt', 3],
-    ['MUNICIPALIDAD PROV. CALLAO', 'Apoyo a la Municipalidad Provincial del Callao', 'fa-landmark', 4],
-    ['MUNICIPALIDAD DISTRITAL VENTANILLA', 'Apoyo a la Municipalidad de Ventanilla', 'fa-building', 5],
-    ['PLUZ ENERGIA (EX ENEL)', 'Seguridad en instalaciones de energía', 'fa-bolt', 6],
-    ['APM-MTC', 'Seguridad del terminal portuario', 'fa-anchor', 7],
-    ['SEDAPAL', 'Apoyo a servicios de agua potable', 'fa-tint', 8],
-    ['ATU FISCALIZACION', 'Fiscalización de transporte urbano', 'fa-car', 9],
-    ['MUNI. DISTR. CARMEN DE LEGUA Y REYNOSO', 'Apoyo a la Municipalidad de Carmen de la Legua', 'fa-building', 10],
-    ['NUEVO INGRESO AEROPUERTO (BY PAS)', 'Seguridad en nuevo ingreso aeroportuario', 'fa-plane', 11]
-  ];
-  const reqsConv = JSON.stringify([
-    'Pertenecer a la REGPOL Callao.',
-    'Encontrarse en situación de Actividad.',
-    'No tener sanciones vigentes.'
-  ]);
-  for (const [titulo, desc, icono, orden] of conveniosOficiales) {
-    await pool.query(
-      `INSERT INTO items_portal(tipo,titulo,descripcion,icono,requisitos,estado,visible,orden,ventana_inscripcion)
-       SELECT 'convenio',$1,$2,$3,$4::jsonb,'DISPONIBLE',TRUE,$5,'Las inscripciones se habilitan del 20 al 25 de cada mes.'
-       WHERE NOT EXISTS (SELECT 1 FROM items_portal WHERE tipo='convenio' AND UPPER(TRIM(titulo))=UPPER(TRIM($1)))`,
-      [titulo, desc, icono, reqsConv, orden]
-    );
-  }
+  await sincronizarConveniosOficiales(pool, true);
 
   // Seed divisiones solo la primera vez (evita 40+ queries en cada reinicio)
   const { rows: divRows } = await pool.query('SELECT COUNT(*) AS t FROM divisiones');
@@ -1488,7 +1452,7 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
     const convItems = await pool.query(
       `SELECT COUNT(*)::int AS convocatorias,
         SUM(CASE WHEN inscripciones_abiertas THEN 1 ELSE 0 END)::int AS abiertas
-       FROM items_portal WHERE tipo='convenio'`);
+       FROM items_portal WHERE tipo='convenio' AND visible=TRUE`);
     const cursoItems = await pool.query(
       `SELECT COUNT(*)::int AS convocatorias,
         SUM(CASE WHEN inscripciones_abiertas THEN 1 ELSE 0 END)::int AS abiertas
@@ -2589,6 +2553,51 @@ function invalidarPortalItemsCache() {
   resultadosPdfCache.clear();
 }
 
+const CONVENIOS_OFICIALES = [
+  ['ATU (METRO 2 LIMA - CALLAO)', 'Control de transporte público — Metro Línea 2 Lima-Callao', 'fa-bus', 1],
+  ['FELMO', 'Fiscalización y control de transporte', 'fa-gavel', 2],
+  ['PLAN CELADOR', 'Apoyo a las comisarías', 'fa-shield-alt', 3],
+  ['MUNICIPALIDAD PROV. CALLAO', 'Apoyo a la Municipalidad Provincial del Callao', 'fa-landmark', 4],
+  ['MUNICIPALIDAD DISTRITAL VENTANILLA', 'Apoyo a la Municipalidad de Ventanilla', 'fa-building', 5],
+  ['PLUZ ENERGIA (EX ENEL)', 'Seguridad en instalaciones de energía', 'fa-bolt', 6],
+  ['APM-MTC', 'Seguridad del terminal portuario', 'fa-anchor', 7],
+  ['SEDAPAL', 'Apoyo a servicios de agua potable', 'fa-tint', 8],
+  ['ATU FISCALIZACION', 'Fiscalización de transporte urbano', 'fa-car', 9],
+  ['MUNI. DISTR. CARMEN DE LEGUA Y REYNOSO', 'Apoyo a la Municipalidad de Carmen de la Legua', 'fa-building', 10],
+  ['NUEVO INGRESO AEROPUERTO (BY PAS)', 'Seguridad en nuevo ingreso aeroportuario', 'fa-plane', 11]
+];
+const REQS_CONV_OFICIAL = JSON.stringify([
+  'Pertenecer a la REGPOL Callao.',
+  'Encontrarse en situación de Actividad.',
+  'No tener sanciones vigentes.'
+]);
+
+async function sincronizarConveniosOficiales(db, invalidarCache = true) {
+  const titulosUpper = CONVENIOS_OFICIALES.map(c => c[0].toUpperCase());
+  for (const [titulo, desc, icono, orden] of CONVENIOS_OFICIALES) {
+    await db.query(
+      `INSERT INTO items_portal(tipo,titulo,descripcion,icono,requisitos,estado,visible,orden,ventana_inscripcion)
+       SELECT 'convenio',$1,$2,$3,$4::jsonb,'DISPONIBLE',TRUE,$5,'Las inscripciones se habilitan del 20 al 25 de cada mes.'
+       WHERE NOT EXISTS (SELECT 1 FROM items_portal WHERE tipo='convenio' AND UPPER(TRIM(titulo))=UPPER(TRIM($1)))`,
+      [titulo, desc, icono, REQS_CONV_OFICIAL, orden]
+    );
+    await db.query(
+      `UPDATE items_portal SET orden=$1, visible=TRUE,
+        descripcion=CASE WHEN TRIM(COALESCE(descripcion,''))='' THEN $2 ELSE descripcion END,
+        icono=CASE WHEN TRIM(COALESCE(icono,'')) IN ('','fa-file') THEN $3 ELSE icono END
+       WHERE tipo='convenio' AND UPPER(TRIM(titulo))=UPPER(TRIM($4))`,
+      [orden, desc, icono, titulo]
+    );
+  }
+  await db.query(
+    `UPDATE items_portal SET visible=FALSE
+     WHERE tipo='convenio' AND UPPER(TRIM(titulo)) NOT IN (${titulosUpper.map((_, i) => `$${i + 1}`).join(',')})`,
+    titulosUpper
+  );
+  if (invalidarCache) invalidarPortalItemsCache();
+  return CONVENIOS_OFICIALES.length;
+}
+
 function invalidarResultadosPdfCache() {
   resultadosPdfCache.clear();
 }
@@ -2762,6 +2771,16 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
        dni||'', grado||'', area||'', arma||'', disponibilidad||'', dia_franco||'',
        feNorm, tiempo_servicio||'']);
     res.json({ ok: true, mensaje: 'Inscripción registrada correctamente.' });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── POST /admin/sync-convenios — asegurar los 11 convenios oficiales ───────────
+app.post('/admin/sync-convenios', requireAuth, async (req, res) => {
+  try {
+    if (req.admin.rol !== 'unitic')
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const total = await sincronizarConveniosOficiales(pool, true);
+    res.json({ ok: true, total });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 

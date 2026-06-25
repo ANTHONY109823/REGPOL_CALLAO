@@ -105,7 +105,9 @@
       font-size:11px;text-transform:uppercase;letter-spacing:.35px;}
     table.t td select,table.t td input[type="text"]{width:100%;min-width:120px;
       padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;box-sizing:border-box;}
-    table.t td .btn-acciones-celda{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
+    table.t td .btn-acciones-celda{display:flex;flex-direction:column;flex-wrap:nowrap;gap:4px;align-items:stretch;max-width:112px;}
+    table.t td .btn-acciones-celda .btn-mini{justify-content:center;width:100%;box-sizing:border-box;font-size:11px;padding:5px 6px;}
+    table.t th.col-acciones,table.t td.col-acciones{min-width:118px;vertical-align:top;}
     table.t td{padding:7px 10px;border-bottom:1px solid #eee;}
     table.t tr:nth-child(even){background:#f7faf7;}
     .badge{padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700;}
@@ -703,6 +705,7 @@
         <h3 id="items-titulo"><i class="fas fa-clipboard-list"></i> Convocatorias</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
           <button class="btn btn-v" onclick="abrirModalItem(null)"><i class="fas fa-plus"></i> Nueva convocatoria</button>
+          <button class="btn btn-o" id="btn-sync-convenios" onclick="syncConveniosOficiales()" style="display:none;"><i class="fas fa-sync"></i> Sincronizar 11 convenios</button>
           <select id="items-filtro-tipo" onchange="cargarItems(this.value)" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
             <option value="">Todos</option>
             <option value="curso">Solo Cursos</option>
@@ -729,6 +732,9 @@
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
           <input type="text" id="inscritos-buscar" placeholder="Buscar por CIP o nombre..." oninput="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:220px;"/>
+          <select id="inscritos-filtro-unidad" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
+            <option value="">Todas las unidades</option>
+          </select>
           <select id="inscritos-filtro-estado" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
             <option value="">Todos</option>
             <option value="pendiente">Pendiente</option>
@@ -2832,6 +2838,8 @@ function cargarItems(tipo){
   else tipo=document.getElementById('items-filtro-tipo').value||'';
   var tipoLabel = tipo==='curso'?'Educación — Cursos':tipo==='convenio'?'Convenios':'Convocatorias';
   document.getElementById('items-titulo').innerHTML='<i class="fas fa-clipboard-list"></i> Gestión: '+tipoLabel;
+  var btnSync=document.getElementById('btn-sync-convenios');
+  if(btnSync) btnSync.style.display=(esUnitic()&&(!tipo||tipo==='convenio'))?'inline-flex':'none';
   var url=API+'/admin/items'+(tipo?'?tipo='+tipo:'');
   document.getElementById('items-tabla').innerHTML='<p style="color:#bbb;font-size:13px;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>';
   fetch(url,{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
@@ -2849,13 +2857,14 @@ function filtrarTablaItems(){
 
 function renderTablaItems(items){
   var el=document.getElementById('items-tabla');
+  items=(items||[]).filter(function(i){ return i.visible!==false; });
   if(!items.length){
-    el.innerHTML='<p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">No hay convocatorias. Pulse "Nueva convocatoria".</p>';
+    el.innerHTML='<p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">No hay convocatorias. Pulse "Nueva convocatoria" o "Sincronizar 11 convenios".</p>';
     return;
   }
   var colorEstado={'DISPONIBLE':'#1a7a3a','EN PROCESO':'#856404','CERRADO':'#c0392b'};
   el.innerHTML='<table class="t"><thead><tr>'
-    +'<th>Tipo</th><th>Título</th><th>Estado</th><th>Vacantes</th><th>Inscritos</th><th>Inscr. abiertas</th><th>Acciones</th>'
+    +'<th>Tipo</th><th>Título</th><th>Estado</th><th>Vacantes</th><th>Inscritos</th><th>Inscr. abiertas</th><th class="col-acciones">Acciones</th>'
     +'</tr></thead><tbody>'
     +items.map(function(item){
       var color=colorEstado[item.estado]||'#444';
@@ -2867,20 +2876,32 @@ function renderTablaItems(items){
         +'<td style="font-weight:600;max-width:260px;">'+escHtml(item.titulo)+'</td>'
         +'<td><span style="color:'+color+';font-weight:700;font-size:12px;">'+escHtml(item.estado)+'</span></td>'
         +'<td style="text-align:center;">'+escHtml(item.vacantes||0)+'</td>'
-        +'<td style="text-align:center;"><strong style="color:#004d3d;">'+escHtml(item.total_inscritos||0)+'</strong>'
-        +(parseInt(item.total_inscritos||0)>0
-          ?'<br/><button class="btn-mini" style="margin-top:3px;" onclick="verInscritos('+item.id+',\''+escJs(item.titulo)+'\')"><i class="fas fa-users"></i> Ver</button>':'')
-        +'</td>'
+        +'<td style="text-align:center;"><strong style="color:#004d3d;">'+escHtml(item.total_inscritos||0)+'</strong></td>'
         +'<td style="text-align:center;">'+badge+'</td>'
-        +'<td><div style="display:flex;gap:5px;flex-wrap:wrap;">'
+        +'<td class="col-acciones"><div class="btn-acciones-celda">'
         +'<button class="btn-mini" onclick="abrirModalItem('+item.id+')"><i class="fas fa-edit"></i> Editar</button>'
-        +'<a class="btn-mini" href="detalle.html?id='+item.id+'&tipo='+escHtml(item.tipo)+'" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Ver</a>'
         +'<button class="btn-mini" onclick="verInscritos('+item.id+',\''+escJs(item.titulo)+'\')"><i class="fas fa-users"></i> Inscritos</button>'
-        +'<button class="btn-mini btn-mini-danger" onclick="eliminarItem('+item.id+')"><i class="fas fa-trash"></i></button>'
+        +(esUnitic()?'<button class="btn-mini btn-mini-danger" onclick="eliminarItem('+item.id+')"><i class="fas fa-trash"></i></button>':'')
         +'</div></td>'
         +'</tr>';
     }).join('')
     +'</tbody></table>';
+}
+
+function syncConveniosOficiales(){
+  if(!esUnitic()){ alert('Solo Super Admin.'); return; }
+  var btn=document.getElementById('btn-sync-convenios');
+  if(btn) btn.disabled=true;
+  fetch(API+'/admin/sync-convenios',{method:'POST',headers:hdr()})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(btn) btn.disabled=false;
+      if(!d.ok){ mostrarAlertaItems(d.error||'Error al sincronizar','error'); return; }
+      mostrarAlertaItems('Listos los '+d.total+' convenios oficiales en el portal.','ok');
+      var tipo=document.getElementById('items-filtro-tipo');
+      cargarItems(tipo?tipo.value:'');
+    })
+    .catch(function(){ if(btn) btn.disabled=false; mostrarAlertaItems('Error de conexión','error'); });
 }
 
 function mostrarAlertaItems(texto,tipo){
@@ -3237,24 +3258,51 @@ function verInscritos(itemId, titulo){
   document.getElementById('inscritos-titulo').innerHTML='<i class="fas fa-users"></i> Inscritos — '+escHtml(titulo);
   document.getElementById('inscritos-buscar').value='';
   document.getElementById('inscritos-filtro-estado').value='';
+  var selUni=document.getElementById('inscritos-filtro-unidad');
+  if(selUni) selUni.innerHTML='<option value="">Todas las unidades</option>';
   document.getElementById('inscritos-tabla').innerHTML='<p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i></p>';
   fetch(API+'/admin/items/'+itemId+'/inscritos',{headers:hdr()})
     .then(function(r){return r.json();}).then(function(d){
       if(!d.ok){document.getElementById('inscritos-tabla').innerHTML='<p style="color:#c00;padding:16px;">'+escHtml(d.error||'Error')+'</p>';return;}
       INSCRITOS_CACHE=d.inscritos||[];
-      renderInscritos(INSCRITOS_CACHE, d.tipo||'convenio');
+      poblarFiltroUnidadesInscritos();
+      renderInscritos(obtenerInscritosFiltrados(), d.tipo||'convenio');
     });
 }
 
-function filtrarInscritos(){
+function poblarFiltroUnidadesInscritos(){
+  var sel=document.getElementById('inscritos-filtro-unidad');
+  if(!sel) return;
+  var counts={};
+  INSCRITOS_CACHE.forEach(function(i){
+    var u=(i.unidad||'').trim()||'(Sin unidad)';
+    counts[u]=(counts[u]||0)+1;
+  });
+  var sorted=Object.keys(counts).sort();
+  var val=sel.value;
+  sel.innerHTML='<option value="">Todas las unidades ('+INSCRITOS_CACHE.length+')</option>'
+    +sorted.map(function(u){
+      var v=u==='(Sin unidad)'?'':u;
+      return '<option value="'+escHtml(v)+'">'+escHtml(u)+' ('+counts[u]+')</option>';
+    }).join('');
+  if(val) sel.value=val;
+}
+
+function obtenerInscritosFiltrados(){
   var txt=(document.getElementById('inscritos-buscar').value||'').toLowerCase();
   var est=document.getElementById('inscritos-filtro-estado').value;
-  var filtrados=INSCRITOS_CACHE.filter(function(i){
+  var unidEl=document.getElementById('inscritos-filtro-unidad');
+  var unid=unidEl?unidEl.value:'';
+  return INSCRITOS_CACHE.filter(function(i){
     var matchTxt=!txt||(i.cip||'').toLowerCase().includes(txt)||(i.nombres||'').toLowerCase().includes(txt)||(i.dni||'').toLowerCase().includes(txt);
     var matchEst=!est||i.estado===est;
-    return matchTxt&&matchEst;
+    var matchUni=!unid||(i.unidad||'')===unid;
+    return matchTxt&&matchEst&&matchUni;
   });
-  renderInscritos(filtrados, INSCRITOS_TIPO_ACTUAL);
+}
+
+function filtrarInscritos(){
+  renderInscritos(obtenerInscritosFiltrados(), INSCRITOS_TIPO_ACTUAL);
 }
 
 var INSCRITOS_TIPO_ACTUAL = 'convenio';
@@ -3529,9 +3577,10 @@ function eliminarInscripcion(){
 }
 
 function exportarInscritos(){
-  if(!INSCRITOS_CACHE.length){alert('No hay inscritos para exportar.');return;}
+  var list=obtenerInscritosFiltrados();
+  if(!list.length){alert('No hay inscritos para exportar con el filtro actual.');return;}
   var rows=[['CIP','Nombres','Unidad','Cargo','Teléfono','Email','Estado','Observación','Fecha']];
-  INSCRITOS_CACHE.forEach(function(i){
+  list.forEach(function(i){
     rows.push([i.cip,i.nombres,i.unidad,i.cargo,i.telefono,i.email,i.estado,i.observacion,
       i.fecha?new Date(i.fecha).toLocaleDateString('es-PE'):'']);
   });

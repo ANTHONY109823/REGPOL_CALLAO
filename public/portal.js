@@ -81,7 +81,7 @@ function appendPortalItems(tipo, containerId) {
   if (!el) return Promise.resolve();
   var base = apiBasePortal();
   if (base === null || base === undefined) base = '';
-  var cacheKey = 'portal_items_' + tipo;
+  var cacheKey = 'portal_items_v2_' + tipo;
   try {
     var raw = sessionStorage.getItem(cacheKey);
     if (raw) {

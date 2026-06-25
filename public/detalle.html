@@ -51,7 +51,7 @@
     .pdf-preview-bar{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:#555;}
     .pdf-preview-bar i{color:#e74c3c;font-size:18px;}
     /* Plantilla banner */
-    .plantilla-banner{background:linear-gradient(135deg,#004d3d,#006b55);border-radius:10px;padding:16px 20px;margin:16px 0;display:flex;align-items:center;gap:14px;color:#fff;}
+    .plantilla-banner{background:linear-gradient(135deg,#004d3d,#006b55);border-radius:10px;padding:16px 20px;margin:16px 0;display:flex;align-items:center;gap:14px;color:#fff;flex-wrap:wrap;}
     .plantilla-banner i.fa-file-pdf{font-size:32px;color:#c8a94a;flex-shrink:0;}
     .plantilla-banner .pb-texto{flex:1;}
     .plantilla-banner .pb-texto strong{display:block;font-size:13px;font-weight:800;margin-bottom:2px;}
@@ -230,15 +230,21 @@ function mostrarFormInscripcion(){
 }
 
 var GRADOS_PNP = [
-  'MAYOR GENERAL PNP','CORONEL PNP','COMANDANTE PNP','MAYOR PNP','CAPITÁN PNP',
-  'TENIENTE PNP','ALFÉREZ PNP','TÉCNICO SUPERIOR PNP','TÉCNICO 1° PNP','TÉCNICO 2° PNP',
-  'TÉCNICO 3° PNP','SUBOFICIAL BRIGADIER PNP','SUBOFICIAL 1° PNP','SUBOFICIAL 2° PNP',
-  'SUBOFICIAL 3° PNP','SUBOFICIAL DE 1RA PNP','SUBOFICIAL DE 2DA PNP','SUBOFICIAL DE 3RA PNP'
+  'CORONEL PNP','COMANDANTE PNP','MAYOR PNP','CAPITAN PNP','TENIENTE PNP','ALFEREZ PNP',
+  'SUPERIOR PNP','BRIGADIER PNP','TECNICO DE 1RA PNP','TECNICO DE 2DA PNP','TECNICO DE 3RA PNP',
+  'SUBOFICIAL DE 1RA PNP','SUBOFICIAL DE 2DA PNP','SUBOFICIAL DE 3RA PNP'
 ];
+
+var CARGOS_OPCIONES = ['ADMINISTRATIVO', 'INVESTIGACION', 'PATRULLAJE'];
 
 function optsGrado(){
   return '<option value="">— Seleccionar grado —</option>'
     + GRADOS_PNP.map(function(g){return '<option value="'+g+'">'+g+'</option>';}).join('');
+}
+
+function optsCargo(){
+  return '<option value="">— Seleccionar cargo —</option>'
+    + CARGOS_OPCIONES.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
 }
 
 function renderFormInscripcion(item){
@@ -265,43 +271,30 @@ function renderFormInscripcion(item){
     +'<div class="fi-group"><label>Unidad / Dependencia *</label>'
     +'<select id="fi-unidad" required><option value="">— Seleccionar —</option></select></div>'
     +'<div class="fi-group"><label>Área / Sección</label>'
-    +'<input type="text" id="fi-area" maxlength="100" placeholder="Ej: DEPINCRI, SIT, DIVPOS"/></div>'
+    +'<input type="text" id="fi-area" maxlength="100" placeholder=""/></div>'
 
-    // ── FILA 4: Cargo
-    +'<div class="fi-group"><label>Cargo</label>'
-    +'<input type="text" id="fi-cargo" maxlength="80" placeholder="Ej: Jefe de guardia, Investigador"/></div>'
+    +'<div class="fi-group"><label>Cargo *</label>'
+    +'<select id="fi-cargo" required>'+optsCargo()+'</select></div>'
 
-    // ── CAMPOS ESPECÍFICOS CONVENIO
     +(esConvenio
-      ? '<div class="fi-group"><label>Arma (Condición laboral) *</label>'
+      ? '<div class="fi-group"><label>Arma (Condición) *</label>'
         +'<select id="fi-arma" required>'
         +'<option value="">— Seleccionar —</option>'
-        +'<option value="ESTADO">Estado (en actividad)</option>'
-        +'<option value="PARTICULAR">Particular / Fuera de actividad</option>'
+        +'<option value="DEL ESTADO">DEL ESTADO</option>'
+        +'<option value="PARTICULAR">PARTICULAR</option>'
         +'</select></div>'
-        +'<div class="disp-box fi-full">'
-        +'<label><i class="fas fa-calendar-check"></i> ¿Cuál es su situación para el servicio? *</label>'
-        +'<div class="disp-opciones">'
-        +'<button type="button" class="disp-btn disp-vac" id="btn-disp-vac" onclick="seleccionarDisp(\'VACACIONES\')">'
-        +'<i class="fas fa-umbrella-beach" style="color:#27ae60;"></i>'
-        +'<strong>ESTOY EN VACACIONES</strong>'
-        +'<span>Ocupa una vacante automáticamente. <strong>No participa</strong> en la rueda del sorteo.</span>'
-        +'</button>'
-        +'<button type="button" class="disp-btn disp-franco" id="btn-disp-franco" onclick="seleccionarDisp(\'FRANCO\')">'
-        +'<i class="fas fa-random" style="color:#2980b9;"></i>'
-        +'<strong>TRABAJO EN MI DÍA DE FRANCO</strong>'
-        +'<span>Entra a la rueda del sorteo público junto con los demás efectivos.</span>'
-        +'</button>'
-        +'</div>'
-        +'<input type="hidden" id="fi-disponibilidad" required/>'
-        +'<div class="disp-aviso" id="disp-aviso" style="display:none;"></div>'
-        +'</div>'
+        +'<div class="fi-group"><label>Situación para el servicio *</label>'
+        +'<select id="fi-disponibilidad" required onchange="toggleDiaFranco(this.value)">'
+        +'<option value="">— Seleccionar —</option>'
+        +'<option value="VACACIONES">VACACIONES</option>'
+        +'<option value="FRANCO">DÍA DE FRANCO</option>'
+        +'</select></div>'
         +'<div class="fi-group" id="fi-dia-franco-box" style="display:none;">'
         +'<label>Día de franco *</label>'
         +'<select id="fi-dia-franco">'
         +'<option value="">— Seleccionar —</option>'
-        +'<option value="PAR">Día PAR</option>'
-        +'<option value="IMPAR">Día IMPAR</option>'
+        +'<option value="PAR">DÍA PAR</option>'
+        +'<option value="IMPAR">DÍA IMPAR</option>'
         +'</select></div>'
       : '')
 
@@ -316,7 +309,7 @@ function renderFormInscripcion(item){
 
     // ── CONTACTO
     +'<div class="fi-group"><label>Teléfono / Celular</label>'
-    +'<input type="tel" id="fi-telefono" maxlength="30" placeholder="Ej: 987654321"/></div>'
+    +'<input type="tel" id="fi-telefono" maxlength="30" placeholder=""/></div>'
     +'<div class="fi-group"><label>Correo electrónico</label>'
     +'<input type="email" id="fi-email" maxlength="100" placeholder="correo@pnp.gob.pe"/></div>'
 
@@ -347,36 +340,15 @@ function renderFormInscripcion(item){
     +'</form>';
 }
 
-function seleccionarDisp(val){
-  var hid = document.getElementById('fi-disponibilidad');
-  if(hid) hid.value = val;
-  var btnVac = document.getElementById('btn-disp-vac');
-  var btnFranco = document.getElementById('btn-disp-franco');
-  var aviso = document.getElementById('disp-aviso');
-  if(btnVac) btnVac.className = 'disp-btn disp-vac'+(val==='VACACIONES'?' sel-vac':'');
-  if(btnFranco) btnFranco.className = 'disp-btn disp-franco'+(val==='FRANCO'?' sel':'');
-  if(aviso){
-    if(val==='VACACIONES'){
-      aviso.style.display='block';
-      aviso.innerHTML='<i class="fas fa-check-circle" style="color:#27ae60;"></i> '
-        +'Al estar en <strong>VACACIONES</strong>, si su inscripción es aprobada ocupará una vacante sin necesidad del sorteo en vivo.';
-    } else if(val==='FRANCO'){
-      aviso.style.display='block';
-      aviso.innerHTML='<i class="fas fa-info-circle" style="color:#2980b9;"></i> '
-        +'Participará en el <strong>sorteo público</strong> si su expediente es verificado y aprobado.';
-    } else {
-      aviso.style.display='none';
-    }
-  }
-  toggleDiaFranco(val);
-}
-
 function toggleDiaFranco(val){
   var box = document.getElementById('fi-dia-franco-box');
   if(!box) return;
   box.style.display = (val==='FRANCO') ? '' : 'none';
   var sel = document.getElementById('fi-dia-franco');
-  if(sel) sel.required = (val==='FRANCO');
+  if(sel){
+    sel.required = (val==='FRANCO');
+    if(val!=='FRANCO') sel.value = '';
+  }
 }
 
 function calcularTiempoServicio(val){
@@ -393,17 +365,22 @@ function calcularTiempoServicio(val){
 }
 
 function renderBannerPlantilla(item){
-  if(!item.plantilla_pdf) return '';
+  var tituloConv = escHtmlD(item.titulo || 'CONVOCATORIA');
+  var btnOficial = item.plantilla_pdf
+    ? '<button type="button" class="btn-desc-plantilla" onclick="descargarPlantilla('+item.id+')" style="margin-left:8px;">'
+      +'<i class="fas fa-download"></i> PLANTILLA DE LA CONVOCATORIA</button>'
+    : '';
   return '<div class="plantilla-banner">'
     +'<i class="fas fa-file-pdf"></i>'
     +'<div class="pb-texto">'
-    +'<strong>PLANTILLA OFICIAL / MODELO</strong>'
-    +'<span>Descargue el formulario modelo, llénelo a mano o digitalmente, fírmelo y adjúntelo junto con los demás documentos en un solo PDF.</span>'
+    +'<strong>MODELO OFICIAL DE INSCRIPCIÓN</strong>'
+    +'<span>Descargue el formulario modelo, complételo (incluya «'+tituloConv+'»), fírmelo y adjúntelo con todos sus documentos en un solo PDF.</span>'
     +'</div>'
-    +'<button type="button" class="btn-desc-plantilla" onclick="descargarPlantilla('+item.id+')">'
-    +'<i class="fas fa-download"></i> DESCARGAR PLANTILLA'
-    +'</button>'
-    +'</div>';
+    +'<div style="display:flex;flex-wrap:wrap;gap:8px;flex-shrink:0;">'
+    +'<a href="plantillas/modelo-inscripcion-regpol.pdf" download="MODELO-INSCRIPCION-REGPOL.pdf" class="btn-desc-plantilla">'
+    +'<i class="fas fa-download"></i> DESCARGAR MODELO PDF</a>'
+    + btnOficial
+    +'</div></div>';
 }
 
 function descargarPlantilla(itemId){
@@ -498,8 +475,8 @@ function enviarInscripcion(e){
   var pdfData = pdfEl ? pdfEl.value : '';
   var pdfNomb = (pdfFile&&pdfFile.files&&pdfFile.files[0]) ? pdfFile.files[0].name : 'requisitos.pdf';
 
-  if(!grado||!cip||!dni||!nombres||!unidad){
-    alerta.textContent='Complete los campos obligatorios: grado, CIP, DNI, nombres y unidad.';
+  if(!grado||!cip||!dni||!nombres||!unidad||!cargo){
+    alerta.textContent='Complete los campos obligatorios: grado, CIP, DNI, nombres, unidad y cargo.';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
   if(ITEM_TIPO==='convenio' && !disponibilidad){
