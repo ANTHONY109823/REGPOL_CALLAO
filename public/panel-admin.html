@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Panel UNITIC — REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <link rel="stylesheet" href="panel-admin.css?v=12"/>
+  <link rel="stylesheet" href="panel-admin.css?v=13"/>
+  <link rel="stylesheet" href="responsive.css?v=1"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{background:#f0f4f0;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;min-height:100vh;}
@@ -228,7 +229,32 @@
       border:1.5px solid #ccc;font-size:12.5px;}
 
     /* ── RESPONSIVE ── */
-    @media(max-width:700px){.sidebar{display:none;} .breakdown-grid{grid-template-columns:1fr;}}
+    @media(max-width:900px){
+      .layout{flex-direction:column;}
+      .sidebar{
+        width:100%;max-height:46vh;overflow-y:auto;overflow-x:hidden;
+        border-right:none;border-bottom:2px solid #c8a94a;flex-shrink:0;
+      }
+      .content{padding:12px;}
+      .top-bar{padding:8px 12px;height:auto;min-height:50px;flex-wrap:wrap;gap:8px;}
+      .top-bar-left h1{font-size:11px;}
+      .top-bar-left{flex-wrap:wrap;gap:8px;}
+      .super-badge{font-size:9px;}
+      .breakdown-grid{grid-template-columns:1fr;}
+      .perm-grid{grid-template-columns:1fr;}
+      .filtros input,.filtros select{min-width:0;flex:1 1 calc(50% - 8px);}
+      #f-bus{flex:1 1 100% !important;min-width:0 !important;}
+      table.t{font-size:11px;}
+      table.t th,table.t td{padding:6px 8px;}
+      .card{padding:14px;}
+      .modal-box{padding:18px;width:min(520px,96vw);}
+    }
+    @media(max-width:560px){
+      .top-user{display:none;}
+      .filtros input,.filtros select{flex:1 1 100%;}
+      .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+      .btn{padding:7px 10px;font-size:11px;}
+    }
 
     /* Evitar flash del menú Super Admin antes de aplicar permisos */
     html.panel-iniciando .top-bar,

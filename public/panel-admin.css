@@ -763,17 +763,20 @@ body.panel-admin-page.autenticado #admin-contenido { display: flex !important; }
   .admin-sidebar {
     width: 100%;
     min-width: 0;
+    max-height: 46vh;
     height: auto;
     position: relative;
+    overflow-y: auto;
+    border-bottom: 2px solid var(--naranja-pnp);
   }
   .sidebar-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
+    flex-wrap: nowrap;
     padding: 10px;
   }
-  .sidebar-item { width: auto; flex: 1 1 140px; padding: 10px 12px; font-size: 12px; }
-  .sidebar-footer { flex-direction: row; flex-wrap: wrap; }
-  .admin-main { max-height: none; padding: 20px 16px 32px; }
+  .sidebar-item { width: 100%; flex: none; }
+  .sidebar-footer { flex-direction: column; }
+  .admin-main { max-height: none; padding: 16px 12px 28px; }
   .kpi-grid-admin { grid-template-columns: 1fr 1fr; }
 }
 

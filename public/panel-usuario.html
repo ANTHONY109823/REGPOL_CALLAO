@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Panel — REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <link rel="stylesheet" href="panel-admin.css?v=8"/>
+  <link rel="stylesheet" href="panel-admin.css?v=13"/>
+  <link rel="stylesheet" href="responsive.css?v=1"/>
   <style>
     *{box-sizing:border-box;}
     body{background:#f0f4f0;font-family:'Segoe UI',sans-serif;margin:0;}
@@ -58,6 +59,16 @@
     .cms-tab-btn.activo{background:#004d3d;color:#fff;}
     /* Sin acceso */
     .sin-acceso{text-align:center;padding:60px 20px;color:#bbb;}
+    @media (max-width: 768px) {
+      .hdr { padding: 10px 14px; flex-wrap: wrap; gap: 8px; }
+      .hdr h1 { font-size: 13px; }
+      .body { margin: 12px auto; padding: 0 10px; }
+      .tabs { gap: 2px; }
+      .tab-btn { padding: 8px 12px; font-size: 12px; flex: 1 1 auto; }
+      .card { padding: 16px; border-radius: 8px; }
+      .filtros input, .filtros select { flex: 1 1 100%; min-width: 0; }
+      table.t { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    }
     .sin-acceso i{font-size:48px;display:block;margin-bottom:16px;}
     .descarga-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
     .descarga-box{border:1.5px solid #c8e6c9;border-radius:8px;padding:14px;}

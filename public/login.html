@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Ingresar — REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link rel="stylesheet" href="responsive.css?v=1"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{min-height:100vh;display:flex;align-items:center;justify-content:center;
@@ -38,6 +39,11 @@
 
     .footer-card{text-align:center;margin-top:20px;color:#bbb;font-size:11px;}
     .footer-card a{color:#004d3d;text-decoration:none;}
+
+    @media (max-width: 480px) {
+      body { padding: 16px; align-items: flex-start; padding-top: 24px; }
+      .card { width: 100%; max-width: 360px; padding: 32px 22px 28px; }
+    }
 
     .spinner-inline{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);
       border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}

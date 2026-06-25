@@ -1,0 +1,191 @@
+/* responsive.css — REGPOL Callao — ajustes móvil / tablet */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* ── Contenedor y tipografía ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .header-flex {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .title-text {
+    text-align: center;
+    flex: 1 1 100%;
+  }
+
+  .logo-pnp,
+  .img-escudo {
+    height: 72px !important;
+  }
+
+  .nav-main ul li a {
+    padding: 0 10px;
+    font-size: 10.5px;
+  }
+
+  .portal-home-content .portal-seccion {
+    padding: 24px 14px 20px;
+    margin-bottom: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .btn-pnp-social {
+    padding: 5px 10px !important;
+    font-size: 10px !important;
+  }
+
+  .social-buttons-group {
+    gap: 4px;
+  }
+
+  .portal-flex {
+    gap: 6px;
+  }
+
+  .title-text .portal-eslogan {
+    font-size: 15px;
+  }
+
+  .title-text .portal-subtitulo {
+    font-size: 10px;
+  }
+}
+
+/* ── Tabla de unidades → tarjetas en móvil ─────────────────── */
+@media (max-width: 640px) {
+  .unidades-seccion-titulo {
+    font-size: 12px;
+    flex-wrap: wrap;
+  }
+
+  .tabla-unidades-wrap {
+    overflow-x: visible;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .tabla-unidades {
+    table-layout: auto;
+  }
+
+  .tabla-unidades colgroup {
+    display: none;
+  }
+
+  .tabla-unidades thead {
+    display: none;
+  }
+
+  .tabla-unidades tbody tr {
+    display: block;
+    margin-bottom: 12px;
+    padding: 14px 16px;
+    border: 1px solid #dce8e3;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0, 77, 61, 0.08);
+  }
+
+  .tabla-unidades tbody tr:hover,
+  .tabla-unidades tbody tr:nth-child(even) {
+    background: #fff;
+  }
+
+  .tabla-unidades tbody td {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    padding: 7px 0;
+    border: none;
+    text-align: left !important;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .tabla-unidades tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 76px;
+    font-size: 9.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.35px;
+    color: #004d3d;
+    line-height: 1.35;
+    padding-top: 2px;
+  }
+
+  .tabla-unidades tbody td.td-num {
+    display: block;
+    padding: 0 0 8px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #edf2ef;
+    font-size: 12px;
+    color: #c8a94a;
+    font-weight: 900;
+  }
+
+  .tabla-unidades tbody td.td-num::before {
+    content: 'N°';
+    flex: 0 0 76px;
+  }
+
+  .tabla-unidades tbody td.td-mapa .btn-mapa {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 12px;
+  }
+}
+
+/* Tablet: scroll horizontal si la tabla no cabe */
+@media (min-width: 641px) and (max-width: 900px) {
+  .tabla-unidades-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabla-unidades {
+    min-width: 620px;
+  }
+}
+
+/* ── Utilidad tablas con scroll ──────────────────────────────── */
+.tabla-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+/* ── Modal novedades ─────────────────────────────────────────── */
+@media (max-width: 560px) {
+  #modal-nov-inner {
+    padding: 16px 18px 22px;
+  }
+
+  .modal-nov-titulo {
+    font-size: 1.1rem;
+  }
+}

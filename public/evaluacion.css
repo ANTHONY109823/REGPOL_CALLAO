@@ -415,9 +415,15 @@
   .info-pagina { order: -1; }
   .admin-grid { grid-template-columns: 1fr; }
   .banner-prog-btns { margin-left: 0; width: 100%; }
+  .form-grid { grid-template-columns: 1fr; }
+  .card-eval { margin-left: 0; margin-right: 0; }
+  .continuar-cip-fila { flex-wrap: wrap; }
+  .continuar-cip-fila input { min-width: 0; flex: 1 1 120px; }
 }
 @media (max-width: 480px) {
   .tabla-preguntas { font-size: 12px; }
   .opciones-si-no label { padding: 5px 9px; font-size: 12px; }
   .bienestar-comisaria-nombre { font-size: 1rem; }
+  .card-header-eval h2 { font-size: 14px; }
+  .foto-preview { width: 100%; max-width: 140px; margin: 0 auto; }
 }

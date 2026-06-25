@@ -803,11 +803,11 @@ function renderUnidadesPublico(data) {
         ? '<a href="tel:' + escHtml(u.telefono) + '" class="tel-link">' + escHtml(u.telefono) + '</a>'
         : '<span class="sin-dato">-</span>';
       html += '<tr>'
-        + '<td class="td-num">' + (i + 1) + '</td>'
-        + '<td class="td-nombre">' + escHtml(u.nombre) + '</td>'
-        + '<td class="td-dir">' + (u.direccion ? escHtml(u.direccion) : '<span class="sin-dato">No disponible</span>') + '</td>'
-        + '<td class="td-tel" style="text-align:center;">' + tel + '</td>'
-        + '<td class="td-mapa" style="text-align:center;">' + mapsBtn + '</td>'
+        + '<td class="td-num" data-label="N°">' + (i + 1) + '</td>'
+        + '<td class="td-nombre" data-label="Unidad">' + escHtml(u.nombre) + '</td>'
+        + '<td class="td-dir" data-label="Dirección">' + (u.direccion ? escHtml(u.direccion) : '<span class="sin-dato">No disponible</span>') + '</td>'
+        + '<td class="td-tel" data-label="Teléfono" style="text-align:center;">' + tel + '</td>'
+        + '<td class="td-mapa" data-label="Mapa" style="text-align:center;">' + mapsBtn + '</td>'
         + '</tr>';
     });
     html += '</tbody></table></div></div>';
