@@ -172,6 +172,19 @@ function formatearFechaPDF(valor) {
   return s.length > 16 ? s.substring(0, 16) : s;
 }
 
+function formatearGradoDisplay(grado) {
+  let g = String(grado || '').trim();
+  if (!g) return '—';
+  g = g.toUpperCase()
+    .replace(/\b1\s*RA\b/g, 'PRIMERA')
+    .replace(/\b2\s*DA\b/g, 'SEGUNDA')
+    .replace(/\b3\s*RA\b/g, 'TERCERA')
+    .replace(/\s+PNP\s*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return g || '—';
+}
+
 // ── Encabezado del efectivo — banner plomo con grado, datos y foto ─────────────
 function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   const tieneFoto = ev.foto && String(ev.foto).length > 80;
@@ -183,26 +196,27 @@ function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
 
   doc.rect(x0, y, W, bannerH).fill('#ececec').stroke('#c8c8c8');
 
-  const gradoTxt = String(ev.grado || '—').toUpperCase();
+  const gradoTxt = formatearGradoDisplay(ev.grado);
   const nombreTxt = String(ev.nombres || '—').toUpperCase();
   const edadTxt = (function() {
     const e = resolverEdad(ev);
-    return e ? e + ' años' : '—';
+    return e ? e + ' AÑOS' : '—';
   })();
-  const sexoTxt = ev.sexo || '—';
-  const cargoTxt = ev.cargo || '—';
-  const armaTxt = formatearArmamentoLegible(ev.armamento || '');
+  const sexoTxt = String(ev.sexo || '—').toUpperCase();
+  const cargoTxt = String(ev.cargo || '—').toUpperCase();
+  const armaTxt = formatearArmamentoLegible(ev.armamento || '').toUpperCase();
   const fechaTxt = formatearFechaPDF(ev.fecha);
 
   let ty = y + pad;
   doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(7.5)
-     .text('GRADO: ' + gradoTxt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
+     .text(gradoTxt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
   ty += 11;
   doc.fillColor(COLOR_NEGRO).font('Helvetica-Bold').fontSize(10.5)
      .text(nombreTxt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
   ty += 13;
   doc.font('Helvetica').fontSize(7.5).fillColor(COLOR_NEGRO)
-     .text('CIP: ' + (ev.cip || '—') + '          DNI: ' + (ev.dni || '—'), x0 + pad, ty, { width: textoW, lineBreak: false });
+     .text('CIP: ' + String(ev.cip || '—').toUpperCase() + '          DNI: ' + String(ev.dni || '—').toUpperCase(),
+       x0 + pad, ty, { width: textoW, lineBreak: false });
   ty += 10;
   doc.text('EDAD: ' + edadTxt + '          SEXO: ' + sexoTxt, x0 + pad, ty, { width: textoW, lineBreak: false });
   ty += 10;
@@ -713,6 +727,7 @@ module.exports = {
   interpretarT,
   contarRespuestas,
   formatearArmamentoLegible,
+  formatearGradoDisplay,
   maxItemRespondido,
   ESCALAS_MMPI2
 };
