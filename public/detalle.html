@@ -121,7 +121,7 @@
 
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=2"></script>
-<script src="portal.js?v=28"></script>
+<script src="portal.js?v=36"></script>
 <script>
 var API_PUBLIC = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var ITEM_ID = null;
@@ -143,46 +143,68 @@ function renderDetalle(item){
   var reqs = Array.isArray(item.requisitos) ? item.requisitos : [];
   var tipoLabel = item.tipo==='curso' ? 'CURSOS' : 'CONVENIOS';
   var tipoHref  = item.tipo==='curso' ? 'cursos.html' : 'convenios.html';
+  var esConvenio = item.tipo === 'convenio';
+  var esCurso = item.tipo === 'curso';
 
   var reqHtml = reqs.length
     ? reqs.map(function(r){return '<li><i class="fas fa-check-circle"></i>'+escHtmlD(r)+'</li>';}).join('')
     : '<li><i class="fas fa-info-circle"></i> Sin requisitos especificados.</li>';
 
   var horarioHtml = '';
-  if(item.horario) horarioHtml += '<div class="info-item"><span>TURNOS / HORARIOS:</span><p>'+escHtmlD(item.horario)+'</p></div>';
-  if(item.vacantes) horarioHtml += '<div class="info-item"><span>VACANTES:</span><p>'+escHtmlD(item.vacantes)+' efectivos</p></div>';
+  if(item.horario) horarioHtml += '<div class="info-item"><span>HORARIO:</span><p>'+escHtmlD(item.horario)+'</p></div>';
+  if(item.vacantes) horarioHtml += '<div class="info-item"><span>VACANTES:</span><p>'+escHtmlD(String(item.vacantes))+' efectivos</p></div>';
   if(item.lugar) horarioHtml += '<div class="info-item"><span>LUGAR:</span><p>'+escHtmlD(item.lugar)+'</p></div>';
 
-  var fechaHtml = '';
-  if(item.fecha_inicio) fechaHtml += '<p class="price">'+escHtmlD(item.fecha_inicio)+'</p>';
-  if(item.duracion)     fechaHtml += '<p>'+escHtmlD(item.duracion)+'</p>';
-  if(item.observaciones) fechaHtml += '<small>*'+escHtmlD(item.observaciones)+'</small>';
+  var terceraCardHtml = '';
+  if(esConvenio && (item.fecha_inicio || item.duracion || item.observaciones)){
+    var benefHtml = '';
+    if(item.fecha_inicio) benefHtml += '<p class="price">'+escHtmlD(item.fecha_inicio)+'</p>';
+    if(item.duracion) benefHtml += '<p>'+escHtmlD(item.duracion)+'</p>';
+    if(item.observaciones) benefHtml += '<small>* '+escHtmlD(item.observaciones)+'</small>';
+    terceraCardHtml = '<div class="card-detalle highlight-card"><div class="icon-circle gold"><i class="fas fa-money-bill-wave"></i></div>'
+      +'<h3>BENEFICIO ECONÓMICO</h3>'+benefHtml+'</div>';
+  } else if(esCurso && (item.fecha_inicio || item.duracion || item.observaciones)){
+    var fechaHtml = '';
+    if(item.fecha_inicio) fechaHtml += '<p class="price">'+escHtmlD(item.fecha_inicio)+'</p>';
+    if(item.duracion) fechaHtml += '<p>'+escHtmlD(item.duracion)+'</p>';
+    if(item.observaciones) fechaHtml += '<small>* '+escHtmlD(item.observaciones)+'</small>';
+    terceraCardHtml = '<div class="card-detalle highlight-card"><div class="icon-circle gold"><i class="fas fa-calendar-alt"></i></div>'
+      +'<h3>FECHA DE INICIO</h3>'+fechaHtml+'</div>';
+  }
 
+  var ventanaTxt = item.ventana_inscripcion || '';
   var accionHtml = '';
   if(item.inscripciones_abiertas){
     accionHtml = '<div class="registro-section">'
       +'<div class="registro-box">'
-      +'<h2>¿Deseas postular?</h2>'
-      +'<p>Completa el formulario de inscripción a continuación.</p>'
+      +'<h2>¿Deseas postular a este '+(esCurso?'curso':'convenio')+'?</h2>'
+      +(ventanaTxt ? '<p>'+escHtmlD(ventanaTxt)+'</p>' : '<p>Complete el formulario de inscripción a continuación.</p>')
+      +'<button type="button" id="btn-mostrar-inscripcion" class="btn-registro-grande" onclick="mostrarFormInscripcion()">'
+      +'<i class="fas fa-edit"></i> REGISTRAR MI INSCRIPCIÓN</button>'
       +'</div>'
+      +'<div id="form-inscripcion-wrap" style="display:none;margin-top:16px;">'
       +renderFormInscripcion(item)
-      +'</div>';
+      +'</div></div>';
   } else if(item.formulario_url && item.formulario_url !== '#'){
     accionHtml = '<div class="registro-section"><div class="registro-box">'
-      +'<h2>¿Deseas postular a esta convocatoria?</h2>'
-      +'<p>Puedes registrar tu inscripción mediante el formulario externo.</p>'
+      +'<h2>¿Deseas postular a este '+(esCurso?'curso':'convenio')+'?</h2>'
+      +(ventanaTxt ? '<p>'+escHtmlD(ventanaTxt)+'</p>' : '<p>Puedes registrar tu inscripción mediante el formulario externo.</p>')
       +'<a href="'+escHtmlD(item.formulario_url)+'" target="_blank" class="btn-registro-grande">'
       +'<i class="fas fa-edit"></i> REGISTRAR MI INSCRIPCIÓN</a>'
       +'</div></div>';
   } else {
-    accionHtml = '<div class="inscripciones-cerradas"><i class="fas fa-lock"></i> Las inscripciones no están habilitadas en este momento.</div>';
+    accionHtml = '<div class="registro-section"><div class="registro-box">'
+      +'<h2>¿Deseas postular a este '+(esCurso?'curso':'convenio')+'?</h2>'
+      +(ventanaTxt ? '<p>'+escHtmlD(ventanaTxt)+'</p>' : '')
+      +'<div class="inscripciones-cerradas" style="margin-top:12px;"><i class="fas fa-lock"></i> Las inscripciones no están habilitadas en este momento.</div>'
+      +'</div></div>';
   }
 
   document.title = escHtmlD(item.titulo) + ' — REGPOL Callao';
   document.getElementById('cuerpo-detalle').innerHTML =
     '<div class="page-intro">'
     +'<h2>'+escHtmlD(item.titulo)+'</h2>'
-    +'<p>'+escHtmlD(item.descripcion || (item.tipo==='curso'?'DETALLES DEL CURSO':'DETALLES DEL CONVENIO'))+'</p>'
+    +'<p>'+escHtmlD(item.descripcion || (esCurso?'DETALLES DEL CURSO':'DETALLES DEL CONVENIO'))+'</p>'
     +estadoBadge(item.estado)
     +'<br/><a href="'+tipoHref+'" class="btn-volver" style="margin-top:12px;">'
     +'<i class="fas fa-chevron-left"></i> VOLVER A '+tipoLabel+'</a>'
@@ -192,12 +214,19 @@ function renderDetalle(item){
     +'<h3>REQUISITOS</h3><ul>'+reqHtml+'</ul></div>'
     +(horarioHtml?'<div class="card-detalle"><div class="icon-circle"><i class="fas fa-clock"></i></div>'
       +'<h3>HORARIOS Y VACANTES</h3>'+horarioHtml+'</div>':'')
-    +(fechaHtml?'<div class="card-detalle highlight-card"><div class="icon-circle gold"><i class="fas fa-calendar-alt"></i></div>'
-      +'<h3>FECHA DE INICIO</h3>'+fechaHtml+'</div>':'')
+    +terceraCardHtml
     +'</div>'
     +accionHtml;
 
   cargarDivisionesPublico();
+}
+
+function mostrarFormInscripcion(){
+  var wrap = document.getElementById('form-inscripcion-wrap');
+  var btn = document.getElementById('btn-mostrar-inscripcion');
+  if(wrap) wrap.style.display = 'block';
+  if(btn) btn.style.display = 'none';
+  if(wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 var GRADOS_PNP = [

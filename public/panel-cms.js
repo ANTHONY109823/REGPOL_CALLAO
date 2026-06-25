@@ -89,12 +89,29 @@ function cambiarTabCMS(tab) {
 // RENDERIZADO GENERAL
 // ═══════════════════════════════════════════════════════════════
 function renderListasCMS() {
-  renderListaEditable('cms-lista-convenios', cmsDataActual.convenios || [], 'convenios');
-  renderListaEditable('cms-lista-cursos',    cmsDataActual.cursos    || [], 'cursos');
+  renderGestionConvocatoriasCMS('cms-lista-convenios', 'convenio');
+  renderGestionConvocatoriasCMS('cms-lista-cursos', 'curso');
   renderListaNovedades('cms-lista-novedades', cmsDataActual.novedades || []);
   renderEditorFotosEncabezado();
   renderEditorCarrusel();
   renderEditorMenu();
+}
+
+function renderGestionConvocatoriasCMS(containerId, tipo) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  var esConv = tipo === 'convenio';
+  var titulo = esConv ? 'Convenios' : 'Cursos';
+  var menuFn = esConv ? "irGestionItems('convenio', document.querySelector('[data-page=items-convenio]'))" : "irGestionItems('curso', document.querySelector('[data-page=items-curso]'))";
+  el.innerHTML = '<div style="background:#f0f7f4;border:2px dashed #004d3d;border-radius:10px;padding:18px 20px;">'
+    + '<div style="font-size:14px;font-weight:800;color:#004d3d;margin-bottom:8px;"><i class="fas fa-clipboard-list"></i> '
+    + titulo + ' — páginas de detalle unificadas</div>'
+    + '<p style="font-size:12.5px;color:#555;line-height:1.55;margin:0 0 12px;">'
+    + 'Las tarjetas del portal y sus páginas de detalle se administran desde <strong>Gestión → '
+    + (esConv ? 'Convenios' : 'Educación') + '</strong> (solo Super Admin). '
+    + 'Los PDF de «Relación de seleccionados» se publican en <strong>Relación de seleccionados (PDF)</strong>.</p>'
+    + '<button type="button" class="btn btn-v" onclick="' + menuFn + '"><i class="fas fa-edit"></i> Ir a gestión de ' + titulo.toLowerCase() + '</button>'
+    + '</div>';
 }
 
 function poblarFormulariosCMS() {

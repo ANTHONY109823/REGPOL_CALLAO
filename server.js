@@ -245,6 +245,7 @@ async function initDB() {
 
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS plantilla_pdf TEXT DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS plantilla_nombre VARCHAR(200) DEFAULT '';
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS ventana_inscripcion VARCHAR(300) DEFAULT '';
 
     CREATE TABLE IF NOT EXISTS sorteos_portal (
       id           SERIAL PRIMARY KEY,
@@ -268,6 +269,18 @@ async function initDB() {
       unidad    VARCHAR(150) DEFAULT '',
       cargo     VARCHAR(80) DEFAULT '',
       orden     SMALLINT DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS resultados_pdf_portal (
+      id          SERIAL PRIMARY KEY,
+      tipo        VARCHAR(20) NOT NULL DEFAULT 'convenio',
+      item_id     INTEGER REFERENCES items_portal(id) ON DELETE SET NULL,
+      titulo      VARCHAR(200) NOT NULL,
+      pdf_data    TEXT DEFAULT '',
+      pdf_nombre  VARCHAR(200) DEFAULT '',
+      publicado   BOOLEAN DEFAULT TRUE,
+      orden       INTEGER DEFAULT 0,
+      creado      TIMESTAMP DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS portal_configuracion (
@@ -305,6 +318,75 @@ async function initDB() {
       );
       console.log('portal_configuracion inicializada desde site-data.json');
     }
+  }
+
+  // Seed convocatorias (convenios/cursos) si la tabla está vacía
+  const { rows: itemRows } = await pool.query('SELECT COUNT(*) AS t FROM items_portal');
+  if (parseInt(itemRows[0].t, 10) === 0) {
+    const reqsBase = [
+      'Pertenecer a la REGPOL Callao.',
+      'Encontrarse en situación de Actividad.',
+      'No tener sanciones vigentes.'
+    ];
+    const reqsCurso = reqsBase.concat(['Haber pasado FEMA del año en curso.']);
+    const reqsCelador = reqsBase.concat(['Contar con uniforme de faena completo.']);
+    const seeds = [
+      ['convenio', 'PLAN CELADOR', 'DETALLES DEL CONVENIO', 'fa-shield-alt', JSON.stringify(reqsCelador),
+        '08:00 hrs a 20:00 hrs (12 horas)', 120, 'S/ 75.00', 'Por día efectivamente laborado.',
+        'Abono mediante Planilla de Convenios.', 'Las inscripciones se habilitan del 20 al 25 de cada mes.', 1],
+      ['convenio', 'AMP TERMINALS', 'DETALLES DEL CONVENIO', 'fa-handshake', JSON.stringify(reqsBase),
+        '', 0, '', '', '', 'Las inscripciones se habilitan del 20 al 25 de cada mes.', 2],
+      ['convenio', 'ATU', 'DETALLES DEL CONVENIO', 'fa-car', JSON.stringify(reqsBase),
+        '', 0, '', '', '', 'Las inscripciones se habilitan del 20 al 25 de cada mes.', 3],
+      ['convenio', 'PATRULLAJE INTEGRADO', 'DETALLES DEL CONVENIO', 'fa-users', JSON.stringify(reqsBase),
+        '', 0, '', '', '', 'Las inscripciones se habilitan del 20 al 25 de cada mes.', 4],
+      ['curso', 'CURSO SEGURIDAD CIUDADANA', 'DETALLES DEL CURSO', 'fa-graduation-cap', JSON.stringify(reqsCurso),
+        '08:00 hrs a 13:00 hrs', 45, '15 DE JUNIO 2025', 'SEIS (06) SEMANAS',
+        'Sujeta a modificación por necesidad de servicio', 'Las inscripciones se habilitan del 20 al 25 de abril', 1],
+      ['curso', 'CURSO ACCIDENTES DE TRÁNSITO', 'DETALLES DEL CURSO', 'fa-car', JSON.stringify(reqsCurso),
+        '08:00 hrs a 13:00 hrs', 45, '15 DE JUNIO 2025', 'SEIS (06) SEMANAS',
+        'Sujeta a modificación por necesidad de servicio', 'Las inscripciones se habilitan del 20 al 25 de abril', 2],
+      ['curso', 'XI CURSO DE INVESTIGACIÓN EN ESCENA DEL CRIMEN', 'DETALLES DEL CURSO', 'fa-book', JSON.stringify(reqsCurso),
+        '08:00 hrs a 13:00 hrs', 45, '15 DE JUNIO 2025', 'SEIS (06) SEMANAS',
+        'Sujeta a modificación por necesidad de servicio', 'Las inscripciones se habilitan del 20 al 25 de abril', 3]
+    ];
+    for (const s of seeds) {
+      await pool.query(
+        `INSERT INTO items_portal(tipo,titulo,descripcion,icono,requisitos,horario,vacantes,
+          fecha_inicio,duracion,observaciones,ventana_inscripcion,orden,visible)
+         VALUES($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,$11,$12,TRUE)`,
+        s
+      );
+    }
+    console.log('Seed: ' + seeds.length + ' convocatorias insertadas en items_portal.');
+  }
+
+  // Asegurar los 11 convenios oficiales (inserta solo los faltantes)
+  const conveniosOficiales = [
+    ['ATU (METRO 2 LIMA - CALLAO)', 'Control de transporte público — Metro Línea 2 Lima-Callao', 'fa-bus', 1],
+    ['FELMO', 'Fiscalización y control de transporte', 'fa-gavel', 2],
+    ['PLAN CELADOR', 'Apoyo a las comisarías', 'fa-shield-alt', 3],
+    ['MUNICIPALIDAD PROV. CALLAO', 'Apoyo a la Municipalidad Provincial del Callao', 'fa-landmark', 4],
+    ['MUNICIPALIDAD DISTRITAL VENTANILLA', 'Apoyo a la Municipalidad de Ventanilla', 'fa-building', 5],
+    ['PLUZ ENERGIA (EX ENEL)', 'Seguridad en instalaciones de energía', 'fa-bolt', 6],
+    ['APM-MTC', 'Seguridad del terminal portuario', 'fa-anchor', 7],
+    ['SEDAPAL', 'Apoyo a servicios de agua potable', 'fa-tint', 8],
+    ['ATU FISCALIZACION', 'Fiscalización de transporte urbano', 'fa-car', 9],
+    ['MUNI. DISTR. CARMEN DE LEGUA Y REYNOSO', 'Apoyo a la Municipalidad de Carmen de la Legua', 'fa-building', 10],
+    ['NUEVO INGRESO AEROPUERTO (BY PAS)', 'Seguridad en nuevo ingreso aeroportuario', 'fa-plane', 11]
+  ];
+  const reqsConv = JSON.stringify([
+    'Pertenecer a la REGPOL Callao.',
+    'Encontrarse en situación de Actividad.',
+    'No tener sanciones vigentes.'
+  ]);
+  for (const [titulo, desc, icono, orden] of conveniosOficiales) {
+    await pool.query(
+      `INSERT INTO items_portal(tipo,titulo,descripcion,icono,requisitos,estado,visible,orden,ventana_inscripcion)
+       SELECT 'convenio',$1,$2,$3,$4::jsonb,'DISPONIBLE',TRUE,$5,'Las inscripciones se habilitan del 20 al 25 de cada mes.'
+       WHERE NOT EXISTS (SELECT 1 FROM items_portal WHERE tipo='convenio' AND UPPER(TRIM(titulo))=UPPER(TRIM($1)))`,
+      [titulo, desc, icono, reqsConv, orden]
+    );
   }
 
   // Seed divisiones solo la primera vez (evita 40+ queries en cada reinicio)
@@ -2256,6 +2338,10 @@ app.get('/portal/items/:id/plantilla', async (req, res) => {
 // ── GET /admin/sorteos ─────────────────────────────────────────────────────────
 app.get('/admin/sorteos', requireAuth, async (req, res) => {
   try {
+    const perms = normalizarPermisos(req.admin.permisos);
+    const esU = req.admin.rol === 'unitic';
+    if (!esU && !perms.includes('cms_convenios') && !perms.includes('cms_cursos'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const r = await pool.query(
       'SELECT s.*, i.titulo AS item_titulo, i.tipo AS item_tipo FROM sorteos_portal s LEFT JOIN items_portal i ON i.id=s.item_id ORDER BY s.orden,s.id DESC');
     const result = [];
@@ -2263,7 +2349,7 @@ app.get('/admin/sorteos', requireAuth, async (req, res) => {
       const row = { ...s };
       const resList = await pool.query('SELECT * FROM resultados_sorteo WHERE sorteo_id=$1 ORDER BY orden,id', [s.id]);
       row.resultados = resList.rows;
-      result.push(row);
+      if (esU || puedeGestionarSorteos(req.admin, row.item_tipo || 'convenio')) result.push(row);
     }
     res.json({ ok: true, sorteos: result });
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -2272,18 +2358,11 @@ app.get('/admin/sorteos', requireAuth, async (req, res) => {
 // ── POST /admin/sorteos ────────────────────────────────────────────────────────
 app.post('/admin/sorteos', requireAuth, async (req, res) => {
   try {
-    if (req.admin.rol !== 'unitic' && !normalizarPermisos(req.admin.permisos).some(p => ['cms_cursos','cms_convenios'].includes(p)))
-      return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const { tipo, titulo, descripcion, fecha_sorteo, imagen, item_id, publicado, orden } = req.body;
+    const itemTipo = item_id ? await tipoItemPortal(item_id) : 'convenio';
+    if (!puedeGestionarSorteos(req.admin, itemTipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso para gestionar sorteos de esta área.' });
     if (!titulo) return res.json({ ok: false, error: 'Título obligatorio' });
-    if (req.admin.rol !== 'unitic' && (tipo || 'proximo') !== 'resultado')
-      return res.status(403).json({ ok: false, error: 'Solo puede publicar resultados en la web.' });
-    if (item_id) {
-      const it = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [item_id]);
-      const itemTipo = it.rows[0]?.tipo;
-      if (itemTipo && !puedeGestionarItem(req.admin, itemTipo))
-        return res.status(403).json({ ok: false, error: 'Sin permiso para esta convocatoria.' });
-    }
     const r = await pool.query(
       `INSERT INTO sorteos_portal(tipo,titulo,descripcion,fecha_sorteo,imagen,item_id,publicado,orden)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
@@ -2296,24 +2375,14 @@ app.post('/admin/sorteos', requireAuth, async (req, res) => {
 // ── PUT /admin/sorteos/:id ─────────────────────────────────────────────────────
 app.put('/admin/sorteos/:id', requireAuth, async (req, res) => {
   try {
+    const itemTipo = await tipoSorteoItem(req.params.id);
+    if (!puedeGestionarSorteos(req.admin, itemTipo || 'convenio'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso para gestionar este sorteo.' });
     const { tipo, titulo, descripcion, fecha_sorteo, imagen, item_id, publicado, orden } = req.body;
-    if (req.admin.rol !== 'unitic') {
-      if ((tipo || 'proximo') !== 'resultado')
-        return res.status(403).json({ ok: false, error: 'Solo puede publicar resultados en la web.' });
-      const actual = await pool.query(
-        'SELECT s.tipo, i.tipo AS item_tipo FROM sorteos_portal s LEFT JOIN items_portal i ON i.id=s.item_id WHERE s.id=$1',
-        [req.params.id]
-      );
-      const row = actual.rows[0];
-      if (!row) return res.json({ ok: false, error: 'Sorteo no encontrado' });
-      const itemTipo = row.item_tipo;
-      if (itemTipo && !puedeGestionarItem(req.admin, itemTipo))
-        return res.status(403).json({ ok: false, error: 'Sin permiso para este resultado.' });
-      if (item_id) {
-        const it = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [item_id]);
-        if (it.rows[0]?.tipo && !puedeGestionarItem(req.admin, it.rows[0].tipo))
-          return res.status(403).json({ ok: false, error: 'Sin permiso para esta convocatoria.' });
-      }
+    if (item_id) {
+      const nuevoTipo = await tipoItemPortal(item_id);
+      if (!puedeGestionarSorteos(req.admin, nuevoTipo))
+        return res.status(403).json({ ok: false, error: 'Sin permiso para esta convocatoria.' });
     }
     await pool.query(
       `UPDATE sorteos_portal SET tipo=$1,titulo=$2,descripcion=$3,fecha_sorteo=$4,
@@ -2328,6 +2397,9 @@ app.put('/admin/sorteos/:id', requireAuth, async (req, res) => {
 // ── DELETE /admin/sorteos/:id ──────────────────────────────────────────────────
 app.delete('/admin/sorteos/:id', requireAuth, async (req, res) => {
   try {
+    const itemTipo = await tipoSorteoItem(req.params.id);
+    if (!puedeGestionarSorteos(req.admin, itemTipo || 'convenio'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso para eliminar este sorteo.' });
     await pool.query('DELETE FROM sorteos_portal WHERE id=$1', [req.params.id]);
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -2336,6 +2408,9 @@ app.delete('/admin/sorteos/:id', requireAuth, async (req, res) => {
 // ── POST /admin/sorteos/:id/resultados — guardar lista de resultados ───────────
 app.post('/admin/sorteos/:id/resultados', requireAuth, async (req, res) => {
   try {
+    const itemTipo = await tipoSorteoItem(req.params.id);
+    if (!puedeGestionarSorteos(req.admin, itemTipo || 'convenio'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const { resultados } = req.body;
     await pool.query('DELETE FROM resultados_sorteo WHERE sorteo_id=$1', [req.params.id]);
     if (Array.isArray(resultados) && resultados.length) {
@@ -2355,6 +2430,9 @@ app.post('/admin/sorteos/:id/importar-inscritos', requireAuth, async (req, res) 
   try {
     const { item_id } = req.body;
     if (!item_id) return res.json({ ok: false, error: 'item_id requerido' });
+    const itemTipo = await tipoItemPortal(item_id);
+    if (!puedeGestionarSorteos(req.admin, itemTipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const insc = await pool.query(
       `SELECT cip,nombres,unidad,cargo FROM inscripciones
        WHERE item_id=$1 AND estado IN ('aprobado','ganador')
@@ -2407,7 +2485,7 @@ app.get('/admin/stats-gestion', requireAuth, async (req, res) => {
     const tipo = req.query.tipo || '';
     if (!['convenio', 'curso'].includes(tipo))
       return res.json({ ok: false, error: 'tipo inválido' });
-    if (!puedeGestionarItem(req.admin, tipo))
+    if (!puedeGestionarItem(req.admin, tipo) && !puedePublicarResultadosPdf(req.admin, tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
 
     const itemsR = await pool.query(
@@ -2447,11 +2525,40 @@ app.get('/admin/stats-gestion', requireAuth, async (req, res) => {
 
 // ── Helpers de permisos para items ────────────────────────────────────────────
 function puedeGestionarItem(admin, tipo) {
+  return admin.rol === 'unitic';
+}
+
+function puedePublicarResultadosPdf(admin, tipo) {
   if (admin.rol === 'unitic') return true;
   const perms = normalizarPermisos(admin.permisos);
   if (tipo === 'convenio') return perms.includes('cms_convenios');
-  if (tipo === 'curso')    return perms.includes('cms_cursos');
+  if (tipo === 'curso') return perms.includes('cms_cursos');
   return false;
+}
+
+function puedeOperarInscritos(admin, tipo) {
+  if (admin.rol === 'unitic') return true;
+  return puedePublicarResultadosPdf(admin, tipo);
+}
+
+function puedeGestionarSorteos(admin, itemTipo) {
+  if (admin.rol === 'unitic') return true;
+  const perms = normalizarPermisos(admin.permisos);
+  if (itemTipo === 'curso') return perms.includes('cms_cursos');
+  return perms.includes('cms_convenios');
+}
+
+async function tipoItemPortal(itemId) {
+  if (!itemId) return null;
+  const r = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [itemId]);
+  return r.rows[0]?.tipo || null;
+}
+
+async function tipoSorteoItem(sorteoId) {
+  const r = await pool.query(
+    'SELECT i.tipo FROM sorteos_portal s LEFT JOIN items_portal i ON i.id=s.item_id WHERE s.id=$1',
+    [sorteoId]);
+  return r.rows[0]?.tipo || null;
 }
 
 // ── GET /portal/items — público ───────────────────────────────────────────────
@@ -2474,13 +2581,142 @@ app.get('/portal/items', async (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
+const resultadosPdfCache = new Map();
+const RESULTADOS_PDF_CACHE_MS = 120000;
+
 function invalidarPortalItemsCache() {
   portalItemsCache.clear();
+  resultadosPdfCache.clear();
+}
+
+function invalidarResultadosPdfCache() {
+  resultadosPdfCache.clear();
 }
 
 function invalidarUnidadesPublicoCache() {
   unidadesPublicoCache = null;
 }
+
+// ── GET /portal/resultados-pdf — público (lista sin PDF) ─────────────────────
+app.get('/portal/resultados-pdf', async (req, res) => {
+  try {
+    const tipo = req.query.tipo || 'convenio';
+    const cacheKey = 'pdf_' + tipo;
+    const cached = resultadosPdfCache.get(cacheKey);
+    if (cached && cached.exp > Date.now()) return res.json(cached.data);
+    const r = await pool.query(
+      `SELECT r.id, r.titulo, r.pdf_nombre, r.orden, r.item_id, i.titulo AS item_titulo
+       FROM resultados_pdf_portal r
+       LEFT JOIN items_portal i ON i.id = r.item_id
+       WHERE r.publicado=TRUE AND r.tipo=$1 AND r.pdf_data IS NOT NULL AND r.pdf_data<>''
+       ORDER BY r.orden, r.id DESC`,
+      [tipo]);
+    const payload = { ok: true, resultados: r.rows };
+    resultadosPdfCache.set(cacheKey, { data: payload, exp: Date.now() + RESULTADOS_PDF_CACHE_MS });
+    res.json(payload);
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── GET /portal/resultados-pdf/:id — público (PDF para ver/descargar) ─────────
+app.get('/portal/resultados-pdf/:id', async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT id, titulo, pdf_data, pdf_nombre FROM resultados_pdf_portal
+       WHERE id=$1 AND publicado=TRUE AND pdf_data IS NOT NULL AND pdf_data<>''`,
+      [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ ok: false, error: 'No encontrado' });
+    res.json({ ok: true, resultado: r.rows[0] });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── GET /admin/resultados-pdf ─────────────────────────────────────────────────
+app.get('/admin/resultados-pdf', requireAuth, async (req, res) => {
+  try {
+    const tipo = req.query.tipo || 'convenio';
+    if (!puedePublicarResultadosPdf(req.admin, tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const r = await pool.query(
+      `SELECT r.id, r.tipo, r.titulo, r.pdf_nombre, r.publicado, r.orden, r.item_id, r.creado,
+              i.titulo AS item_titulo,
+              CASE WHEN r.pdf_data IS NOT NULL AND r.pdf_data<>'' THEN true ELSE false END AS tiene_pdf
+       FROM resultados_pdf_portal r
+       LEFT JOIN items_portal i ON i.id = r.item_id
+       WHERE r.tipo=$1
+       ORDER BY r.orden, r.id DESC`,
+      [tipo]);
+    res.json({ ok: true, resultados: r.rows });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── POST /admin/resultados-pdf ────────────────────────────────────────────────
+app.post('/admin/resultados-pdf', requireAuth, async (req, res) => {
+  try {
+    const { tipo, item_id, titulo, pdf_data, pdf_nombre, publicado, orden } = req.body;
+    const t = tipo || 'convenio';
+    if (!puedePublicarResultadosPdf(req.admin, t))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    if (!titulo || !titulo.trim()) return res.json({ ok: false, error: 'El título es obligatorio.' });
+    if (!pdf_data) return res.json({ ok: false, error: 'Debe adjuntar un archivo PDF.' });
+    if (pdf_data.length > 12 * 1024 * 1024)
+      return res.json({ ok: false, error: 'El PDF no debe superar 10 MB.' });
+    const r = await pool.query(
+      `INSERT INTO resultados_pdf_portal(tipo,item_id,titulo,pdf_data,pdf_nombre,publicado,orden)
+       VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+      [t, item_id || null, titulo.trim().toUpperCase(), pdf_data, pdf_nombre || 'resultado.pdf',
+       publicado !== false, parseInt(orden) || 0]);
+    invalidarResultadosPdfCache();
+    res.json({ ok: true, id: r.rows[0].id });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── PUT /admin/resultados-pdf/:id ─────────────────────────────────────────────
+app.put('/admin/resultados-pdf/:id', requireAuth, async (req, res) => {
+  try {
+    const cur = await pool.query('SELECT tipo FROM resultados_pdf_portal WHERE id=$1', [req.params.id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    if (!puedePublicarResultadosPdf(req.admin, cur.rows[0].tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const { item_id, titulo, pdf_data, pdf_nombre, publicado, orden } = req.body;
+    if (!titulo || !titulo.trim()) return res.json({ ok: false, error: 'El título es obligatorio.' });
+    if (pdf_data && pdf_data.length > 12 * 1024 * 1024)
+      return res.json({ ok: false, error: 'El PDF no debe superar 10 MB.' });
+    const curPdf = await pool.query('SELECT pdf_data, pdf_nombre FROM resultados_pdf_portal WHERE id=$1', [req.params.id]);
+    const pdfFinal = pdf_data || curPdf.rows[0].pdf_data;
+    const nomFinal = pdf_nombre || curPdf.rows[0].pdf_nombre;
+    if (!pdfFinal) return res.json({ ok: false, error: 'Debe adjuntar un archivo PDF.' });
+    await pool.query(
+      `UPDATE resultados_pdf_portal SET item_id=$1,titulo=$2,pdf_data=$3,pdf_nombre=$4,publicado=$5,orden=$6
+       WHERE id=$7`,
+      [item_id || null, titulo.trim().toUpperCase(), pdfFinal, nomFinal,
+       publicado !== false, parseInt(orden) || 0, req.params.id]);
+    invalidarResultadosPdfCache();
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── DELETE /admin/resultados-pdf/:id — solo Super Admin ───────────────────────
+app.delete('/admin/resultados-pdf/:id', requireAuth, async (req, res) => {
+  try {
+    const cur = await pool.query('SELECT tipo FROM resultados_pdf_portal WHERE id=$1', [req.params.id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    if (!puedePublicarResultadosPdf(req.admin, cur.rows[0].tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso para eliminar este resultado.' });
+    await pool.query('DELETE FROM resultados_pdf_portal WHERE id=$1', [req.params.id]);
+    invalidarResultadosPdfCache();
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── GET /admin/resultados-pdf/:id/pdf — vista previa admin ────────────────────
+app.get('/admin/resultados-pdf/:id/pdf', requireAuth, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT tipo, titulo, pdf_data, pdf_nombre FROM resultados_pdf_portal WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ ok: false, error: 'No encontrado' });
+    if (!puedePublicarResultadosPdf(req.admin, r.rows[0].tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    res.json({ ok: true, resultado: r.rows[0] });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
 
 // ── GET /portal/items/:id — público (detalle completo) ────────────────────────
 app.get('/portal/items/:id', async (req, res) => {
@@ -2533,19 +2769,18 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
 app.get('/admin/items', requireAuth, async (req, res) => {
   try {
     const { tipo } = req.query;
-    if (tipo && !puedeGestionarItem(req.admin, tipo))
-      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const esU = req.admin.rol === 'unitic';
+    if (!esU) {
+      if (!tipo || !puedePublicarResultadosPdf(req.admin, tipo))
+        return res.status(403).json({ ok: false, error: 'Sin permiso' });
+      const r = await pool.query(
+        'SELECT id, tipo, titulo, estado FROM items_portal WHERE tipo=$1 AND visible=TRUE ORDER BY orden, id',
+        [tipo]);
+      return res.json({ ok: true, items: r.rows });
+    }
     let q = 'SELECT i.*, (SELECT COUNT(*) FROM inscripciones n WHERE n.item_id=i.id) AS total_inscritos FROM items_portal i WHERE 1=1';
     const args = [];
-    if (req.admin.rol !== 'unitic') {
-      const perms = normalizarPermisos(req.admin.permisos);
-      const tipos = [];
-      if (perms.includes('cms_cursos'))     tipos.push('curso');
-      if (perms.includes('cms_convenios'))  tipos.push('convenio');
-      if (!tipos.length) return res.json({ ok: true, items: [] });
-      q += ` AND i.tipo = ANY($${args.length+1}::text[])`;
-      args.push(tipos);
-    } else if (tipo) {
+    if (tipo) {
       q += ` AND i.tipo=$${args.length+1}`;
       args.push(tipo);
     }
@@ -2559,19 +2794,19 @@ app.get('/admin/items', requireAuth, async (req, res) => {
 app.post('/admin/items', requireAuth, async (req, res) => {
   try {
     const { tipo, titulo, descripcion, estado, icono, color, requisitos, horario,
-            vacantes, fecha_inicio, duracion, lugar, observaciones,
+            vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
             formulario_url, inscripciones_abiertas, visible, orden } = req.body;
     if (!puedeGestionarItem(req.admin, tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     if (!titulo) return res.json({ ok: false, error: 'El título es obligatorio.' });
     const r = await pool.query(
       `INSERT INTO items_portal(tipo,titulo,descripcion,estado,icono,color,requisitos,horario,
-        vacantes,fecha_inicio,duracion,lugar,observaciones,formulario_url,inscripciones_abiertas,visible,orden)
-       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id`,
+        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden)
+       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id`,
       [tipo, titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
        horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
-       lugar||'', observaciones||'', formulario_url||'',
+       lugar||'', observaciones||'', ventana_inscripcion||'', formulario_url||'',
        !!inscripciones_abiertas, visible!==false, parseInt(orden)||0]);
     invalidarPortalItemsCache();
     res.json({ ok: true, id: r.rows[0].id });
@@ -2586,17 +2821,17 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
     if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const { titulo, descripcion, estado, icono, color, requisitos, horario,
-            vacantes, fecha_inicio, duracion, lugar, observaciones,
+            vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
             formulario_url, inscripciones_abiertas, visible, orden } = req.body;
     await pool.query(
       `UPDATE items_portal SET titulo=$1,descripcion=$2,estado=$3,icono=$4,color=$5,
         requisitos=$6::jsonb,horario=$7,vacantes=$8,fecha_inicio=$9,duracion=$10,
-        lugar=$11,observaciones=$12,formulario_url=$13,inscripciones_abiertas=$14,
-        visible=$15,orden=$16,actualizado=NOW() WHERE id=$17`,
+        lugar=$11,observaciones=$12,ventana_inscripcion=$13,formulario_url=$14,inscripciones_abiertas=$15,
+        visible=$16,orden=$17,actualizado=NOW() WHERE id=$18`,
       [titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
        horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
-       lugar||'', observaciones||'', formulario_url||'',
+       lugar||'', observaciones||'', ventana_inscripcion||'', formulario_url||'',
        !!inscripciones_abiertas, visible!==false, parseInt(orden)||0, req.params.id]);
     invalidarPortalItemsCache();
     res.json({ ok: true });
@@ -2621,7 +2856,7 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
   try {
     const cur = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [req.params.id]);
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
-    if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
+    if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const r = await pool.query(
       `SELECT id,item_id,cip,dni,grado,nombres,unidad,area,cargo,telefono,email,
@@ -2641,7 +2876,7 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
       'SELECT tipo,titulo,vacantes,horario,duracion,lugar,fecha_inicio,descripcion FROM items_portal WHERE id=$1',
       [req.params.id]);
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
-    if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
+    if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const r = await pool.query(
       `SELECT id,cip,dni,grado,nombres,unidad,area,cargo,disponibilidad,dia_franco,tiempo_servicio,estado
@@ -2658,7 +2893,7 @@ app.put('/admin/inscripciones/:id', requireAuth, async (req, res) => {
       'SELECT n.item_id, i.tipo FROM inscripciones n JOIN items_portal i ON i.id=n.item_id WHERE n.id=$1',
       [req.params.id]);
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
-    if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
+    if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const { estado, observacion } = req.body;
     await pool.query(

@@ -87,7 +87,7 @@ function appendPortalItems(tipo, containerId) {
     if (raw) {
       var c = JSON.parse(raw);
       if (c.exp > Date.now() && c.items && c.items.length) {
-        el.innerHTML = (el.innerHTML || '') + c.items.map(htmlTarjetaPortalItem).join('');
+        el.innerHTML = c.items.map(htmlTarjetaPortalItem).join('');
         return Promise.resolve();
       }
     }
@@ -97,20 +97,16 @@ function appendPortalItems(tipo, containerId) {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.ok || !d.items || !d.items.length) {
-        if (!el.innerHTML.trim()) {
-          el.innerHTML = '<p class="texto-vacio">No hay ' + tipo + 's publicados actualmente.</p>';
-        }
+        el.innerHTML = '<p class="texto-vacio">No hay ' + tipo + 's publicados actualmente.</p>';
         return;
       }
       try {
         sessionStorage.setItem(cacheKey, JSON.stringify({ items: d.items, exp: Date.now() + 180000 }));
       } catch (e) {}
-      el.innerHTML = (el.innerHTML || '') + d.items.map(htmlTarjetaPortalItem).join('');
+      el.innerHTML = d.items.map(htmlTarjetaPortalItem).join('');
     })
     .catch(function() {
-      if (!el.innerHTML.trim()) {
-        el.innerHTML = '<p class="texto-vacio">No hay ' + tipo + 's publicados actualmente.</p>';
-      }
+      el.innerHTML = '<p class="texto-vacio">No hay ' + tipo + 's publicados actualmente.</p>';
     });
 }
 
@@ -254,15 +250,17 @@ function aplicarPortalConfig(config, data) {
   if (config.renderLabor) renderNuestraLabor(data, config.renderLabor);
   if (config.renderNovedades) renderNovedades(data, config.renderNovedades, config.limiteNovedades);
   if (config.renderConvenios) {
-    renderTarjetas(data.convenios, config.renderConvenios);
+    var elConv = document.getElementById(config.renderConvenios);
+    if (elConv) elConv.innerHTML = '';
     appendPortalItems('convenio', config.renderConvenios);
   }
   if (config.renderCursos) {
-    renderTarjetas(data.cursos, config.renderCursos);
+    var elCur = document.getElementById(config.renderCursos);
+    if (elCur) elCur.innerHTML = '';
     appendPortalItems('curso', config.renderCursos);
   }
-  if (config.renderConveniosPdf) renderPdfList(data.conveniosPdf, config.renderConveniosPdf);
-  if (config.renderCursosPdf) renderPdfList(data.cursosPdf, config.renderCursosPdf);
+  if (config.renderConveniosPdf) cargarResultadosPdfPortal('convenio', config.renderConveniosPdf);
+  if (config.renderCursosPdf) cargarResultadosPdfPortal('curso', config.renderCursosPdf);
   if (config.actualizarFecha) actualizarFechaPortal(data);
   if (config.actualizarCarrusel) actualizarCarrusel(data);
   initPortalNav((config && config.activeNav) || portalActiveNavId);
@@ -612,19 +610,119 @@ function renderTarjetas(items, containerId) {
 }
 
 function renderPdfList(items, containerId) {
+  cargarResultadosPdfPortal(containerId.indexOf('curso') >= 0 ? 'curso' : 'convenio', containerId);
+}
+
+function cargarResultadosPdfPortal(tipo, containerId) {
   var el = document.getElementById(containerId);
   if (!el) return;
+  var base = apiBasePortal();
+  if (base === null || base === undefined) base = '';
+  fetch((base || '') + '/portal/resultados-pdf?tipo=' + encodeURIComponent(tipo))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      renderPdfCajas(d.ok && d.resultados ? d.resultados : [], containerId, tipo);
+    })
+    .catch(function() {
+      if (el) el.innerHTML = '<p class="texto-vacio">No hay documentos publicados.</p>';
+    });
+}
+
+function renderPdfCajas(items, containerId, tipo) {
+  var el = document.getElementById(containerId);
+  var secId = tipo === 'curso' ? 'section-pdf-cursos' : 'section-pdf-convenios';
+  var sec = document.getElementById(secId);
+  if (!el) return;
   if (!items || !items.length) {
-    el.innerHTML = '<p class="texto-vacio">No hay documentos publicados.</p>';
+    el.innerHTML = '';
+    if (sec) sec.style.display = 'none';
     return;
   }
+  if (sec) sec.style.display = '';
   el.innerHTML = items.map(function(item) {
-    return '<div class="grid-pdf-modern"><div class="pdf-item">' +
-      '<i class="fas fa-file-pdf" style="font-size:30px;color:#e74c3c;"></i>' +
-      '<div><h5>' + escHtml(item.titulo) + '</h5>' +
-      '<a href="' + escHtml(item.url || '#') + '" class="btn-download" target="_blank" rel="noopener">DESCARGAR PDF</a>' +
-      '</div></div></div>';
+    return '<div class="grid-pdf-modern"><div class="pdf-item pdf-item-caja">' +
+      '<i class="fas fa-file-pdf pdf-item-icono"></i>' +
+      '<div class="pdf-item-body">' +
+      '<h5>' + escHtml(item.titulo) + '</h5>' +
+      (item.item_titulo ? '<p class="pdf-item-sub">' + escHtml(item.item_titulo) + '</p>' : '') +
+      '<div class="pdf-item-acciones">' +
+      '<button type="button" class="btn-pdf-ver" onclick="verPdfPortal(' + item.id + ')">' +
+      '<i class="fas fa-eye"></i> VER PDF</button>' +
+      '<button type="button" class="btn-pdf-desc" onclick="descargarPdfPortal(' + item.id + ')">' +
+      '<i class="fas fa-download"></i> DESCARGAR</button>' +
+      '</div></div></div></div>';
   }).join('');
+}
+
+function verPdfPortal(id, titulo) {
+  var base = apiBasePortal();
+  fetch((base || '') + '/portal/resultados-pdf/' + id)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok || !d.resultado || !d.resultado.pdf_data) {
+        alert('No se pudo cargar el PDF.');
+        return;
+      }
+      abrirModalPdfPortal(d.resultado.pdf_data, titulo || d.resultado.titulo || 'Documento PDF');
+    })
+    .catch(function() { alert('Error de conexión.'); });
+}
+
+function descargarPdfPortal(id) {
+  var base = apiBasePortal();
+  fetch((base || '') + '/portal/resultados-pdf/' + id)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok || !d.resultado || !d.resultado.pdf_data) {
+        alert('No se pudo descargar el PDF.');
+        return;
+      }
+      descargarDataUrlPdf(d.resultado.pdf_data, d.resultado.pdf_nombre || 'resultado.pdf');
+    });
+}
+
+function descargarDataUrlPdf(dataUrl, nombre) {
+  var a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = nombre || 'documento.pdf';
+  a.click();
+}
+
+function abrirModalPdfPortal(dataUrl, titulo) {
+  var modal = document.getElementById('modal-pdf-portal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-pdf-portal';
+    modal.className = 'modal-pdf-portal';
+    modal.innerHTML = '<div class="modal-pdf-portal-box">' +
+      '<div class="modal-pdf-portal-head">' +
+      '<strong id="modal-pdf-portal-titulo"></strong>' +
+      '<button type="button" onclick="cerrarModalPdfPortal()" aria-label="Cerrar">&times;</button>' +
+      '</div>' +
+      '<iframe id="modal-pdf-portal-frame" title="Vista previa PDF"></iframe>' +
+      '<div class="modal-pdf-portal-foot">' +
+      '<button type="button" class="btn-pdf-desc" id="modal-pdf-portal-desc"><i class="fas fa-download"></i> DESCARGAR PDF</button>' +
+      '</div></div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) cerrarModalPdfPortal();
+    });
+  }
+  document.getElementById('modal-pdf-portal-titulo').textContent = titulo || 'Documento PDF';
+  document.getElementById('modal-pdf-portal-frame').src = dataUrl;
+  var btnDesc = document.getElementById('modal-pdf-portal-desc');
+  btnDesc.onclick = function() { descargarDataUrlPdf(dataUrl, (titulo || 'documento') + '.pdf'); };
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarModalPdfPortal() {
+  var modal = document.getElementById('modal-pdf-portal');
+  if (!modal) return;
+  modal.classList.remove('open');
+  var frame = document.getElementById('modal-pdf-portal-frame');
+  if (frame) frame.src = 'about:blank';
+  document.body.style.overflow = '';
 }
 
 
@@ -946,14 +1044,6 @@ function initPortalInicio() {
     renderResena: 'contenido-resena',
     renderLabor: 'contenido-labor'
   }).then(function(data) {
-    if (data && data.conveniosPdf && data.conveniosPdf.length) {
-      var s = document.getElementById('section-pdf-convenios');
-      if (s) s.style.display = '';
-    }
-    if (data && data.cursosPdf && data.cursosPdf.length) {
-      var s2 = document.getElementById('section-pdf-cursos');
-      if (s2) s2.style.display = '';
-    }
     cargarSorteosPortal();
     cargarUnidadesPublico();
     var hash = navDesdeHash();

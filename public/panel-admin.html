@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
@@ -366,14 +366,14 @@
           <i class="fas fa-chevron-down"></i>
         </div>
         <div class="sb-group-body">
-          <div class="sb-item" data-page="items-convenio" onclick="irGestionItems('convenio',this)">
+          <div class="sb-item" data-page="items-convenio" data-rol-unitic onclick="irGestionItems('convenio',this)">
             <i class="fas fa-list-alt"></i> CONVOCATORIAS E INSCRITOS
           </div>
           <div class="sb-item" data-page="sorteos" onclick="irGestionSorteos(this)">
             <i class="fas fa-trophy"></i> SORTEOS Y RESULTADOS
           </div>
-          <div class="sb-item" data-page="resultados-web-convenio" onclick="irPublicarResultados('convenio',this)">
-            <i class="fas fa-globe"></i> PUBLICAR RESULTADOS (WEB)
+          <div class="sb-item" data-page="resultados-pdf" onclick="irResultadosPdf('convenio',this)">
+            <i class="fas fa-file-pdf"></i> RELACIÓN DE SELECCIONADOS (PDF)
           </div>
         </div>
       </div>
@@ -384,11 +384,11 @@
           <i class="fas fa-chevron-down"></i>
         </div>
         <div class="sb-group-body">
-          <div class="sb-item" data-page="items-curso" onclick="irGestionItems('curso',this)">
+          <div class="sb-item" data-page="items-curso" data-rol-unitic onclick="irGestionItems('curso',this)">
             <i class="fas fa-list-alt"></i> CONVOCATORIAS E INSCRITOS
           </div>
-          <div class="sb-item" data-page="resultados-web-curso" onclick="irPublicarResultados('curso',this)">
-            <i class="fas fa-globe"></i> PUBLICAR RESULTADOS (WEB)
+          <div class="sb-item" data-page="resultados-pdf" onclick="irResultadosPdf('curso',this)">
+            <i class="fas fa-file-pdf"></i> RELACIÓN DE SELECCIONADOS (PDF)
           </div>
         </div>
       </div>
@@ -615,19 +615,11 @@
 
         <!-- PANEL: Convenios -->
         <div id="cms-panel-convenios" class="cms-panel">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <strong style="color:#004d3d;">Convenios (tarjetas en la web)</strong>
-            <button class="btn btn-v" onclick="agregarConvenioCMS()"><i class="fas fa-plus"></i> Nuevo</button>
-          </div>
           <div id="cms-lista-convenios"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
         </div>
 
         <!-- PANEL: Cursos -->
         <div id="cms-panel-cursos" class="cms-panel">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <strong style="color:#004d3d;">Cursos (tarjetas en la web)</strong>
-            <button class="btn btn-v" onclick="agregarCursoCMS()"><i class="fas fa-plus"></i> Nuevo</button>
-          </div>
           <div id="cms-lista-cursos"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
         </div>
 
@@ -753,6 +745,22 @@
       </div>
     </div>
 
+    <!-- RESULTADOS PDF (Relación de seleccionados) -->
+    <div id="page-resultados-pdf" class="page">
+      <div class="card">
+        <h3 id="rpdf-titulo"><i class="fas fa-file-pdf" style="color:#e74c3c;"></i> Relación de seleccionados</h3>
+        <p id="rpdf-ayuda" style="font-size:12.5px;color:#666;margin:-4px 0 16px;line-height:1.55;">
+          Publique los PDF de resultados que aparecerán en el portal web. Los efectivos podrán ver el documento antes de descargarlo.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+          <button class="btn btn-o" onclick="abrirModalResultadoPdf(null)"><i class="fas fa-plus"></i> Publicar nuevo PDF</button>
+          <button class="btn btn-v" onclick="cargarResultadosPdfAdmin()"><i class="fas fa-sync"></i> Actualizar</button>
+        </div>
+        <div id="rpdf-alerta" class="alerta" style="display:none;"></div>
+        <div id="rpdf-lista"><p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">Cargando...</p></div>
+      </div>
+    </div>
+
     <!-- SORTEOS / RESULTADOS -->
     <div id="page-sorteos" class="page">
       <div class="card">
@@ -855,12 +863,12 @@
         <input type="number" id="mi-vacantes" min="0" placeholder="0" value="0"/>
       </div>
       <div>
-        <label>Fecha de inicio</label>
-        <input type="text" id="mi-fecha-inicio" placeholder="Ej: 15 DE JULIO 2026" maxlength="100"/>
+        <label>Fecha de inicio / Beneficio económico</label>
+        <input type="text" id="mi-fecha-inicio" placeholder="Curso: 15 DE JUNIO 2025 | Convenio: S/ 75.00" maxlength="100"/>
       </div>
       <div>
-        <label>Duración</label>
-        <input type="text" id="mi-duracion" placeholder="Ej: SEIS (06) SEMANAS" maxlength="100"/>
+        <label>Duración / Detalle del beneficio</label>
+        <input type="text" id="mi-duracion" placeholder="Curso: SEIS (06) SEMANAS | Convenio: Por día laborado" maxlength="100"/>
       </div>
       <div>
         <label>Turnos / Horarios</label>
@@ -877,6 +885,10 @@
       <div style="grid-column:1/-1;">
         <label>Requisitos (uno por línea)</label>
         <textarea id="mi-requisitos" rows="4" placeholder="Pertenecer a la REGPOL Callao.&#10;Encontrarse en situación de Actividad.&#10;No tener sanciones vigentes."></textarea>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label>Ventana de inscripción (texto visible en el portal)</label>
+        <input type="text" id="mi-ventana-inscripcion" placeholder="Ej: Las inscripciones se habilitan del 20 al 25 de cada mes." maxlength="300"/>
       </div>
       <div style="grid-column:1/-1;">
         <label>URL de formulario externo (opcional)</label>
@@ -924,6 +936,51 @@
     <div class="modal-footer" style="margin-top:16px;">
       <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-item')">Cancelar</button>
       <button class="btn btn-v" onclick="guardarItem()"><i class="fas fa-save"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Resultado PDF (relación de seleccionados) -->
+<div id="modal-resultado-pdf" class="modal">
+  <div class="modal-box" style="width:640px;max-height:92vh;overflow-y:auto;">
+    <h3><i class="fas fa-file-pdf" style="color:#e74c3c;"></i> <span id="mrp-titulo-modal">Publicar PDF de resultados</span></h3>
+    <input type="hidden" id="mrp-id"/>
+    <input type="hidden" id="mrp-tipo"/>
+    <div style="display:grid;gap:10px;">
+      <div>
+        <label>Convocatoria vinculada</label>
+        <select id="mrp-item-id" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
+          <option value="">— Sin vincular —</option>
+        </select>
+      </div>
+      <div>
+        <label>Título del documento *</label>
+        <input type="text" id="mrp-titulo" placeholder="Ej: PLAN CELADOR - ABRIL 2026" maxlength="200"
+               style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;"/>
+      </div>
+      <div>
+        <label>Archivo PDF *</label>
+        <input type="file" id="mrp-file" accept="application/pdf" onchange="cargarPdfResultado(this)"
+               style="width:100%;padding:7px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;"/>
+        <input type="hidden" id="mrp-pdf-data"/>
+        <div id="mrp-pdf-info" style="display:none;margin-top:8px;font-size:12px;color:#555;">
+          <i class="fas fa-file-pdf" style="color:#e74c3c;"></i> <span id="mrp-pdf-nombre"></span>
+        </div>
+      </div>
+      <div id="mrp-preview-wrap" style="display:none;">
+        <label style="font-size:12px;font-weight:700;color:#004d3d;display:block;margin-bottom:6px;">Vista previa</label>
+        <iframe id="mrp-preview-frame" title="Vista previa PDF" style="width:100%;height:320px;border:1.5px solid #ccc;border-radius:8px;background:#f5f5f5;"></iframe>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#f0f7f0;border-radius:7px;">
+        <input type="checkbox" id="mrp-publicado" checked style="width:18px;height:18px;accent-color:#004d3d;"/>
+        <label for="mrp-publicado" style="font-size:13px;font-weight:700;color:#004d3d;cursor:pointer;margin:0;">
+          Publicar en el portal web
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer" style="margin-top:16px;">
+      <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-resultado-pdf')">Cancelar</button>
+      <button class="btn btn-v" onclick="guardarResultadoPdf()"><i class="fas fa-save"></i> Guardar y publicar</button>
     </div>
   </div>
 </div>
@@ -1096,7 +1153,7 @@
       </div>
       <div class="perm-box">
         <div class="pb-title">Convenios</div>
-        <label><input type="checkbox" value="cms_convenios" class="perm-chk"> Gestionar convocatorias, inscritos y sorteos</label>
+        <label><input type="checkbox" value="cms_convenios" class="perm-chk"> Sorteos, inscritos operativos y PDF de resultados (convenios)</label>
         <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Solo operaciones de convenios. No edita el portal web.</p>
       </div>
       <div class="perm-box">
@@ -1659,8 +1716,17 @@ function verAvance(cip) {
 function puedeGestionPsicologia(){
   return esUnitic()||(SESION&&SESION.rol==='bienestar')||tienePermiso('evaluaciones')||tienePermiso('descargas');
 }
-function puedeGestionConvenios(){ return esUnitic()||tienePermiso('cms_convenios'); }
-function puedeGestionCursos(){ return esUnitic()||tienePermiso('cms_cursos'); }
+function puedeGestionarConvocatorias(){ return esUnitic(); }
+function puedeGestionarSorteosConvenio(){ return esUnitic() || tienePermiso('cms_convenios'); }
+function puedeOperarInscritosConvenio(){ return esUnitic() || tienePermiso('cms_convenios'); }
+function puedePublicarResultadosPdf(tipo){
+  if (esUnitic()) return true;
+  if (tipo === 'convenio') return tienePermiso('cms_convenios');
+  if (tipo === 'curso') return tienePermiso('cms_cursos');
+  return false;
+}
+function puedeGestionConvenios(){ return puedeGestionarConvocatorias() || puedeGestionarSorteosConvenio(); }
+function puedeGestionCursos(){ return puedeGestionarConvocatorias() || puedePublicarResultadosPdf('curso'); }
 
 function aplicarPermisosSidebar(s){
   if (typeof regpolAplicarPermisosPanel === 'function') regpolAplicarPermisosPanel(s);
@@ -1685,27 +1751,34 @@ function aplicarRestriccionFiltroItems(){
 }
 
 function irGestionItems(tipo, el){
-  if (tipo === 'convenio' && !puedeGestionConvenios()) { alert('Sin acceso a gestión de convenios.'); return; }
-  if (tipo === 'curso' && !puedeGestionCursos()) { alert('Sin acceso a gestión de cursos.'); return; }
+  if (!puedeGestionarConvocatorias()) { alert('Solo el Super Admin gestiona convocatorias e inscritos.'); return; }
+  if (tipo === 'convenio' && !esUnitic()) { alert('Sin acceso.'); return; }
+  if (tipo === 'curso' && !esUnitic()) { alert('Sin acceso.'); return; }
   ir('items', el);
   cargarItems(tipo);
 }
 
 function irGestionSorteos(el){
-  if (!puedeGestionConvenios()) { alert('Los sorteos corresponden a la gestión de convenios.'); return; }
+  if (!puedeGestionarSorteosConvenio()) { alert('Sin acceso a sorteos de convenios.'); return; }
   SORTEOS_MODO = 'completo';
   SORTEOS_TIPO_FILTRO = 'convenio';
   ir('sorteos', el);
   aplicarModoSorteosUI();
 }
 
+var RESULTADOS_PDF_TIPO = 'convenio';
+var RESULTADOS_PDF_CACHE = [];
+var ITEMS_PDF_SELECT_CACHE = [];
+
+function irResultadosPdf(tipo, el){
+  if (!puedePublicarResultadosPdf(tipo)) { alert('Sin acceso para publicar resultados.'); return; }
+  RESULTADOS_PDF_TIPO = tipo || 'convenio';
+  ir('resultados-pdf', el);
+  cargarResultadosPdfAdmin();
+}
+
 function irPublicarResultados(tipo, el){
-  if (tipo === 'convenio' && !puedeGestionConvenios()) { alert('Sin acceso a convenios.'); return; }
-  if (tipo === 'curso' && !puedeGestionCursos()) { alert('Sin acceso a educación/cursos.'); return; }
-  SORTEOS_MODO = 'solo-resultados';
-  SORTEOS_TIPO_FILTRO = tipo;
-  ir('sorteos', el);
-  aplicarModoSorteosUI();
+  irResultadosPdf(tipo, el);
 }
 
 function iniciarPanel(s){
@@ -1722,9 +1795,10 @@ function ir(page, el){
   if(page==='preguntas'&&!puedeVerPreguntas()){alert('Sin acceso. Las preguntas solo las gestiona Psicología/Bienestar o Super Admin.');return;}
   if(page==='evaluaciones'&&!puedeVerEvaluaciones()){alert('Sin acceso a evaluaciones.');return;}
   if(page==='descargas'&&!puedeVerDescargas()){alert('Sin acceso a respuestas.');return;}
-  if(page==='items'&&!puedeGestionConvenios()&&!puedeGestionCursos()){alert('Sin acceso a convocatorias.');return;}
-  if(page==='sorteos'&&!puedeGestionConvenios()&&!puedeGestionCursos()){alert('Sin acceso a resultados publicados.');return;}
-  if(page==='inscritos'&&!puedeGestionConvenios()&&!puedeGestionCursos()){alert('Sin acceso a inscripciones.');return;}
+  if(page==='items'&&!esUnitic()){alert('Solo el Super Admin gestiona convocatorias.');return;}
+  if(page==='sorteos'&&!puedeGestionarSorteosConvenio()){alert('Sin acceso a sorteos de convenios.');return;}
+  if(page==='resultados-pdf'&&!puedePublicarResultadosPdf(RESULTADOS_PDF_TIPO)){alert('Sin acceso a publicación de resultados.');return;}
+  if(page==='inscritos'&&!puedeOperarInscritosConvenio()){alert('Sin acceso a inscritos de convenios.');return;}
   if((page==='usuarios'||page==='divisiones')&&!esUnitic()){alert('Solo el Super Admin puede acceder a esta sección.');return;}
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
   var pg=document.getElementById('page-'+page);
@@ -1746,6 +1820,7 @@ function ir(page, el){
   if(page==='dashboard')           cargarDashboard(!ya);
   if(page==='divisiones' && !ya)   cargarDivisiones();
   if(page==='items' && !ya)        { aplicarRestriccionFiltroItems(); cargarItems(); }
+  if(page==='resultados-pdf' && !ya){ cargarResultadosPdfAdmin(); }
   if(page==='sorteos')             { aplicarModoSorteosUI(); cargarItemsSorteo(SORTEOS_TIPO_FILTRO||'convenio'); cargarSorteos(); }
   panelPaginasCargadas[page] = true;
 }
@@ -2358,7 +2433,7 @@ function aplicarModoSorteosUI(){
   if (toolbarSolo) toolbarSolo.style.display = solo ? '' : 'none';
   if (ayuda) {
     ayuda.style.display = solo ? '' : 'none';
-    ayuda.textContent = 'Única publicación permitida en el portal web para su área. Los resultados aparecerán en la página principal.';
+    ayuda.textContent = 'Publique los resultados en el portal web. Los documentos aparecerán en la sección de convenios de la página principal.';
   }
   if (titulo) {
     titulo.innerHTML = solo
@@ -2559,7 +2634,7 @@ function mostrarAlertaSorteos(texto,tipo){
 }
 
 function abrirModalSorteo(id, tipoForzado){
-  if (!esUnitic() || SORTEOS_MODO === 'solo-resultados') tipoForzado = 'resultado';
+  if (SORTEOS_MODO === 'solo-resultados') tipoForzado = 'resultado';
   if(!ITEMS_SORTEO_CACHE.length){
     cargarItemsSorteo(SORTEOS_TIPO_FILTRO || 'convenio').then(function(){ abrirModalSorteo(id, tipoForzado); });
     return;
@@ -2681,7 +2756,7 @@ function eliminarFilaResultado(i){
 
 function guardarSorteo(){
   var id=val('ms-id'), tipo=val('ms-tipo');
-  if (!esUnitic() || SORTEOS_MODO === 'solo-resultados') tipo = 'resultado';
+  if (SORTEOS_MODO === 'solo-resultados') tipo = 'resultado';
   var titulo=val('ms-titulo-val').trim();
   if(!titulo){alert('El título es obligatorio.');return;}
   var body={
@@ -2799,6 +2874,7 @@ function renderTablaItems(items){
         +'<td style="text-align:center;">'+badge+'</td>'
         +'<td><div style="display:flex;gap:5px;flex-wrap:wrap;">'
         +'<button class="btn-mini" onclick="abrirModalItem('+item.id+')"><i class="fas fa-edit"></i> Editar</button>'
+        +'<a class="btn-mini" href="detalle.html?id='+item.id+'&tipo='+escHtml(item.tipo)+'" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Ver</a>'
         +'<button class="btn-mini" onclick="verInscritos('+item.id+',\''+escJs(item.titulo)+'\')"><i class="fas fa-users"></i> Inscritos</button>'
         +'<button class="btn-mini btn-mini-danger" onclick="eliminarItem('+item.id+')"><i class="fas fa-trash"></i></button>'
         +'</div></td>'
@@ -2830,6 +2906,7 @@ function abrirModalItem(id){
   document.getElementById('mi-lugar').value='';
   document.getElementById('mi-observaciones').value='';
   document.getElementById('mi-requisitos').value='';
+  document.getElementById('mi-ventana-inscripcion').value='';
   document.getElementById('mi-formulario-url').value='';
   document.getElementById('mi-inscripciones-abiertas').checked=false;
   document.getElementById('mi-visible').checked=true;
@@ -2869,6 +2946,7 @@ function poblarModalItem(item){
   document.getElementById('mi-observaciones').value=item.observaciones||'';
   var reqs=Array.isArray(item.requisitos)?item.requisitos:[];
   document.getElementById('mi-requisitos').value=reqs.join('\n');
+  document.getElementById('mi-ventana-inscripcion').value=item.ventana_inscripcion||'';
   document.getElementById('mi-formulario-url').value=item.formulario_url||'';
   document.getElementById('mi-inscripciones-abiertas').checked=!!item.inscripciones_abiertas;
   document.getElementById('mi-visible').checked=item.visible!==false;
@@ -2907,6 +2985,7 @@ function guardarItem(){
     duracion:val('mi-duracion'),
     lugar:val('mi-lugar'),
     observaciones:val('mi-observaciones'),
+    ventana_inscripcion:val('mi-ventana-inscripcion'),
     formulario_url:val('mi-formulario-url'),
     inscripciones_abiertas:document.getElementById('mi-inscripciones-abiertas').checked,
     visible:document.getElementById('mi-visible').checked,
@@ -2942,6 +3021,212 @@ function eliminarItem(id){
     .then(function(r){return r.json();}).then(function(d){
       if(d.ok){ cargarItems(); mostrarAlertaItems('Convocatoria eliminada.','ok'); }
       else alert('Error: '+(d.error||''));
+    });
+}
+
+// ── RESULTADOS PDF (RELACIÓN DE SELECCIONADOS) ────────────────────────────────
+function mostrarAlertaRpdf(texto, tipo){
+  var el = document.getElementById('rpdf-alerta');
+  if (!el) return;
+  el.textContent = texto;
+  el.style.display = 'block';
+  el.className = 'alerta ' + (tipo === 'ok' ? 'alerta-exito' : 'alerta-error') + ' visible';
+  setTimeout(function(){ el.style.display = 'none'; }, 5000);
+}
+
+function cargarResultadosPdfAdmin(){
+  var tipo = RESULTADOS_PDF_TIPO || 'convenio';
+  var titulo = document.getElementById('rpdf-titulo');
+  var ayuda = document.getElementById('rpdf-ayuda');
+  if (titulo) {
+    titulo.innerHTML = '<i class="fas fa-file-pdf" style="color:#e74c3c;"></i> Relación de seleccionados — '
+      + (tipo === 'curso' ? 'Educación (Cursos)' : 'Convenios');
+  }
+  if (ayuda) {
+    ayuda.textContent = esUnitic()
+      ? 'Gestione los PDF de resultados publicados en el portal. Los efectivos pueden ver el documento antes de descargarlo.'
+      : 'Gestione sorteos en vivo, flyers y la relación de seleccionados en PDF para convenios.';
+  }
+  document.getElementById('rpdf-lista').innerHTML = '<p style="color:#bbb;font-size:13px;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>';
+  var promItems = fetch(API + '/admin/items?tipo=' + tipo, { headers: hdr() }).then(function(r){ return r.json(); });
+  Promise.all([
+    fetch(API + '/admin/resultados-pdf?tipo=' + tipo, { headers: hdr() }).then(function(r){ return r.json(); }),
+    promItems
+  ]).then(function(arr){
+    var d = arr[0], itemsD = arr[1];
+    if (!d.ok) { mostrarAlertaRpdf('Error: ' + (d.error || ''), 'error'); return; }
+    RESULTADOS_PDF_CACHE = d.resultados || [];
+    ITEMS_PDF_SELECT_CACHE = (itemsD && itemsD.items) ? itemsD.items : [];
+    renderListaResultadosPdf(RESULTADOS_PDF_CACHE);
+  }).catch(function(){ mostrarAlertaRpdf('Error de conexión.', 'error'); });
+}
+
+function renderListaResultadosPdf(lista){
+  var el = document.getElementById('rpdf-lista');
+  if (!lista.length) {
+    el.innerHTML = '<p style="color:#bbb;font-size:13px;text-align:center;padding:32px;">No hay PDF publicados. Use «Publicar nuevo PDF».</p>';
+    return;
+  }
+  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">'
+    + lista.map(function(r){
+      var badge = r.publicado
+        ? '<span class="badge ok" style="font-size:10px;">PUBLICADO</span>'
+        : '<span class="badge pend" style="font-size:10px;">BORRADOR</span>';
+      return '<div style="background:#fff;border:1.5px solid #e0e8e0;border-left:4px solid #e74c3c;border-radius:10px;padding:16px;">'
+        + '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;">'
+        + '<i class="fas fa-file-pdf" style="font-size:32px;color:#e74c3c;flex-shrink:0;"></i>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-size:13px;font-weight:800;color:#333;line-height:1.35;">' + escHtml(r.titulo) + '</div>'
+        + (r.item_titulo ? '<div style="font-size:11px;color:#888;margin-top:3px;">' + escHtml(r.item_titulo) + '</div>' : '')
+        + '<div style="margin-top:6px;">' + badge + '</div>'
+        + '</div></div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:6px;">'
+        + '<button class="btn-mini" onclick="verPdfResultadoAdmin(' + r.id + ')"><i class="fas fa-eye"></i> Ver PDF</button>'
+        + '<button class="btn-mini" onclick="abrirModalResultadoPdf(' + r.id + ')"><i class="fas fa-edit"></i> Editar</button>'
+        + (puedePublicarResultadosPdf(RESULTADOS_PDF_TIPO) ? '<button class="btn-mini btn-mini-danger" onclick="eliminarResultadoPdf(' + r.id + ')"><i class="fas fa-trash"></i></button>' : '')
+        + '</div></div>';
+    }).join('') + '</div>';
+}
+
+function llenarSelectItemsPdf(){
+  var sel = document.getElementById('mrp-item-id');
+  if (!sel) return;
+  var tipo = document.getElementById('mrp-tipo').value || RESULTADOS_PDF_TIPO;
+  var items = ITEMS_PDF_SELECT_CACHE.filter(function(i){ return i.tipo === tipo; });
+  if (!items.length && esUnitic()) {
+    fetch(API + '/admin/items?tipo=' + tipo, { headers: hdr() }).then(function(r){ return r.json(); }).then(function(d){
+      ITEMS_PDF_SELECT_CACHE = d.items || [];
+      llenarSelectItemsPdf();
+    });
+    return;
+  }
+  sel.innerHTML = '<option value="">— Sin vincular —</option>'
+    + items.map(function(i){
+      return '<option value="' + i.id + '">' + escHtml(i.titulo) + '</option>';
+    }).join('');
+}
+
+function abrirModalResultadoPdf(id){
+  document.getElementById('mrp-id').value = id || '';
+  document.getElementById('mrp-tipo').value = RESULTADOS_PDF_TIPO || 'convenio';
+  document.getElementById('mrp-titulo').value = '';
+  document.getElementById('mrp-file').value = '';
+  document.getElementById('mrp-pdf-data').value = '';
+  document.getElementById('mrp-publicado').checked = true;
+  document.getElementById('mrp-pdf-info').style.display = 'none';
+  document.getElementById('mrp-preview-wrap').style.display = 'none';
+  document.getElementById('mrp-titulo-modal').textContent = id ? 'Editar PDF de resultados' : 'Publicar PDF de resultados';
+  llenarSelectItemsPdf();
+  if (!id) {
+    document.getElementById('modal-resultado-pdf').classList.add('open');
+    return;
+  }
+  var row = RESULTADOS_PDF_CACHE.find(function(r){ return r.id === id; });
+  if (row) {
+    poblarModalResultadoPdf(row);
+    return;
+  }
+  fetch(API + '/admin/resultados-pdf?tipo=' + (RESULTADOS_PDF_TIPO || 'convenio'), { headers: hdr() })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var item = (d.resultados || []).find(function(x){ return x.id === id; });
+      if (item) poblarModalResultadoPdf(item);
+      else alert('No se pudo cargar el registro.');
+    });
+}
+
+function poblarModalResultadoPdf(row){
+  document.getElementById('mrp-id').value = row.id;
+  document.getElementById('mrp-tipo').value = row.tipo || RESULTADOS_PDF_TIPO;
+  document.getElementById('mrp-titulo').value = row.titulo || '';
+  document.getElementById('mrp-publicado').checked = row.publicado !== false;
+  document.getElementById('mrp-pdf-data').value = '';
+  document.getElementById('mrp-file').value = '';
+  if (row.tiene_pdf) {
+    document.getElementById('mrp-pdf-nombre').textContent = row.pdf_nombre || 'documento.pdf';
+    document.getElementById('mrp-pdf-info').style.display = 'block';
+  }
+  llenarSelectItemsPdf();
+  setTimeout(function(){
+    var sel = document.getElementById('mrp-item-id');
+    if (sel && row.item_id) sel.value = String(row.item_id);
+  }, 100);
+  document.getElementById('modal-resultado-pdf').classList.add('open');
+}
+
+function cargarPdfResultado(input){
+  var file = input.files && input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { alert('El PDF no debe superar 10 MB.'); input.value = ''; return; }
+  if (file.type !== 'application/pdf') { alert('Solo se aceptan archivos PDF.'); input.value = ''; return; }
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var data = e.target.result;
+    document.getElementById('mrp-pdf-data').value = data;
+    document.getElementById('mrp-pdf-nombre').textContent = file.name + ' (' + Math.round(file.size / 1024) + ' KB)';
+    document.getElementById('mrp-pdf-info').style.display = 'block';
+    var frame = document.getElementById('mrp-preview-frame');
+    var wrap = document.getElementById('mrp-preview-wrap');
+    if (frame && wrap) {
+      frame.src = data;
+      wrap.style.display = 'block';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function verPdfResultadoAdmin(id){
+  fetch(API + '/admin/resultados-pdf/' + id + '/pdf', { headers: hdr() })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d.ok || !d.resultado || !d.resultado.pdf_data) { alert('No hay PDF disponible.'); return; }
+      var w = window.open('', '_blank');
+      if (w) {
+        w.document.write('<iframe src="' + d.resultado.pdf_data + '" style="width:100%;height:100%;border:none;" title="PDF"></iframe>');
+        w.document.title = d.resultado.titulo || 'PDF';
+      }
+    });
+}
+
+function guardarResultadoPdf(){
+  var id = val('mrp-id');
+  var tipo = val('mrp-tipo') || RESULTADOS_PDF_TIPO;
+  var titulo = val('mrp-titulo').trim();
+  if (!titulo) { alert('El título es obligatorio.'); return; }
+  var pdfData = document.getElementById('mrp-pdf-data').value;
+  var fileEl = document.getElementById('mrp-file');
+  if (!id && !pdfData) { alert('Debe adjuntar un archivo PDF.'); return; }
+  var body = {
+    tipo: tipo,
+    item_id: val('mrp-item-id') ? parseInt(val('mrp-item-id'), 10) : null,
+    titulo: titulo,
+    publicado: document.getElementById('mrp-publicado').checked,
+    orden: 0
+  };
+  if (pdfData) {
+    body.pdf_data = pdfData;
+    body.pdf_nombre = (fileEl.files && fileEl.files[0]) ? fileEl.files[0].name : 'resultado.pdf';
+  }
+  var url = id ? API + '/admin/resultados-pdf/' + id : API + '/admin/resultados-pdf';
+  var method = id ? 'PUT' : 'POST';
+  fetch(url, { method: method, headers: hdr(), body: JSON.stringify(body) })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d.ok) { alert('Error: ' + (d.error || '')); return; }
+      cerrarModal('modal-resultado-pdf');
+      cargarResultadosPdfAdmin();
+      mostrarAlertaRpdf('PDF guardado y publicado en el portal.', 'ok');
+    });
+}
+
+function eliminarResultadoPdf(id){
+  if (!puedePublicarResultadosPdf(RESULTADOS_PDF_TIPO)) return;
+  if (!confirm('¿Eliminar este PDF de resultados del portal?')) return;
+  fetch(API + '/admin/resultados-pdf/' + id, { method: 'DELETE', headers: hdr() })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.ok) { cargarResultadosPdfAdmin(); mostrarAlertaRpdf('PDF eliminado.', 'ok'); }
+      else alert('Error: ' + (d.error || ''));
     });
 }
 
