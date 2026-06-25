@@ -94,18 +94,6 @@ function maxItemRespondido(resp) {
   return max;
 }
 
-function plantillaEscalasPendientes(sexo) {
-  return {
-    ok: false,
-    incompleta: true,
-    sexo: sexo || 'Hombre',
-    sin_contestar: 566,
-    escalas: ESCALAS_MMPI2.map(function(nombre) {
-      return { nombre: nombre, tv: '—', tf: '—', tb: '—', t: 0, pendiente: true };
-    })
-  };
-}
-
 function resolverEdad(ev) {
   if (!ev) return null;
   const e = parseInt(ev.edad, 10);
