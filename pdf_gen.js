@@ -222,7 +222,10 @@ function calcularAnchosTablaMmpi(W) {
 function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   const tieneFoto = ev.foto && String(ev.foto).length > 80;
   const pad = 10;
-  const bannerH = 110;
+  const dataFs = 8.5;
+  const lineH = 11;
+  const footerH = 14;
+  const bannerH = pad + lineH * 7 + 6 + footerH + pad;
   const fotoH = bannerH - pad * 2;
   const fotoW = Math.round(fotoH * 0.72);
   const textoW = tieneFoto ? W - fotoW - pad * 3 : W - pad * 2;
@@ -241,24 +244,22 @@ function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   const armaTxt = formatearArmamentoLegible(ev.armamento || '').toUpperCase();
   const fechaTxt = formatearFechaPDF(ev.fecha);
 
+  const lineas = [
+    gradoTxt,
+    nombreTxt,
+    'CIP: ' + String(ev.cip || '—').toUpperCase() + '          DNI: ' + String(ev.dni || '—').toUpperCase(),
+    'EDAD: ' + edadTxt + '          SEXO: ' + sexoTxt,
+    'CARGO: ' + cargoTxt,
+    'ÁREA: ' + areaTxt,
+    'ARMA: ' + armaTxt
+  ];
+
   let ty = y + pad;
-  doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(8)
-     .text(gradoTxt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
-  ty += 12;
-  doc.fillColor(COLOR_NEGRO).font('Helvetica-Bold').fontSize(11)
-     .text(nombreTxt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
-  ty += 14;
-  doc.font('Helvetica').fontSize(8).fillColor(COLOR_NEGRO)
-     .text('CIP: ' + String(ev.cip || '—').toUpperCase() + '          DNI: ' + String(ev.dni || '—').toUpperCase(),
-       x0 + pad, ty, { width: textoW, lineBreak: false });
-  ty += 11;
-  doc.text('EDAD: ' + edadTxt + '          SEXO: ' + sexoTxt, x0 + pad, ty, { width: textoW, lineBreak: false });
-  ty += 11;
-  doc.text('CARGO: ' + cargoTxt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
-  ty += 11;
-  doc.text('ÁREA: ' + areaTxt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
-  ty += 11;
-  doc.text('ARMA: ' + armaTxt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
+  doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(dataFs);
+  lineas.forEach(function(txt) {
+    doc.text(txt, x0 + pad, ty, { width: textoW, lineBreak: false, ellipsis: true });
+    ty += lineH;
+  });
 
   if (tieneFoto) {
     const fotoX = x0 + W - fotoW - pad;
@@ -277,13 +278,12 @@ function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
     }
   }
 
-  const footY = y + bannerH - pad - 1;
-  doc.fillColor('#1a7a3a').font('Helvetica-Bold').fontSize(8)
-     .text('V: ' + totalV, x0 + pad, footY, { lineBreak: false });
-  doc.fillColor('#7a1a1a')
-     .text('F: ' + totalF, x0 + pad + 38, footY, { lineBreak: false });
-  doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(8)
-     .text('FECHA: ' + fechaTxt, x0 + pad + 76, footY, { width: Math.max(80, textoW - 76), lineBreak: false });
+  const footY = y + bannerH - pad - footerH;
+  doc.strokeColor('#c8c8c8').lineWidth(0.5)
+     .moveTo(x0 + pad, footY).lineTo(x0 + W - pad, footY).stroke();
+  doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(dataFs)
+     .text('V: ' + totalV + '          F: ' + totalF + '          FECHA: ' + fechaTxt,
+       x0 + pad, footY + 4, { width: textoW, lineBreak: false });
 
   return y + bannerH;
 }
@@ -758,6 +758,30 @@ function interpretarT(t) {
   return              { label: 'BAJO',          color: '#2980b9' };
 }
 
+function dibujarLeyendaMmpi(doc, x0, y, W) {
+  const items = [
+    { c: '#c0392b', l: 'Muy elevado (T≥80)' },
+    { c: '#e67e22', l: 'Elevado (T 65-79)' },
+    { c: '#f39c12', l: 'Leve (T 55-64)' },
+    { c: '#27ae60', l: 'Normal (T 45-54)' },
+    { c: '#2980b9', l: 'Bajo (T<45)' },
+    { c: '#856404', l: 'Provisional / No calificable' }
+  ];
+  const cols = 3;
+  const rowH = 11;
+  const colW = W / cols;
+  items.forEach(function(it, i) {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const lx = x0 + col * colW;
+    const ly = y + row * rowH;
+    doc.rect(lx, ly + 1, 6, 6).fill(it.c);
+    doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(7)
+       .text(it.l, lx + 9, ly, { width: colW - 12, lineBreak: false });
+  });
+  return y + Math.ceil(items.length / cols) * rowH + 4;
+}
+
 // Dibuja tabla de resultados MMPI-2 (siempre muestra las 13 escalas)
 function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, opts) {
   opts = opts || {};
@@ -777,13 +801,15 @@ function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, opts) {
   doc.rect(x0, y, W, tituloH).fill(COLOR_VERDE);
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9.5)
      .text(titulo, x0 + 8, y + 4.5, { width: W - 16, lineBreak: false });
-  y += tituloH;
+  y += tituloH + 2;
 
-  doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(8)
+  const subH = 14;
+  doc.rect(x0, y, W, subH).fill('#f0f4f2');
+  doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(7.5)
      .text('Normas: ' + ((mmpi && mmpi.sexo) || 'Hombre')
        + '   •   Ítems sin contestar: ' + sinC
-       + '   •   Corte clínico: T ≥ 65', x0, y, { width: W, lineBreak: false });
-  y += 12;
+       + '   •   Corte clínico: T ≥ 65', x0 + 6, y + 3.5, { width: W - 12, lineBreak: false });
+  y += subH + 4;
 
   if (noCalificable && !opts.omitirAvisoIncompleto) {
     doc.rect(x0, y, W, 22).fill('#fff3cd').stroke('#e6c200');
@@ -837,11 +863,8 @@ function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, opts) {
       tieneT ? String(esc.t) : '—'
     ];
     celdas.forEach(function(val, i) {
-      const isT = (i === 4);
       const centrado = i >= 1 && i <= 4;
-      const color = isT && esc.t >= 65 ? '#c0392b' : COLOR_NEGRO;
-      const bold = (i === 0) || (isT && esc.t >= 65);
-      doc.fillColor(color).font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(8)
+      doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(8)
          .text(val, tx + 4, y + 4, { width: colW[i] - 8, align: centrado ? 'center' : 'left', lineBreak: false });
       doc.strokeColor(borde).lineWidth(0.35).moveTo(tx + colW[i], y).lineTo(tx + colW[i], y + rowH).stroke();
       tx += colW[i];
@@ -850,7 +873,7 @@ function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, opts) {
     const estadoX = tx;
     const estadoLabel = noCalificable && !tieneT ? 'NO CALIFICABLE' : inter.label;
     doc.rect(estadoX + 4, y + 5, 6, 6).fill(inter.color);
-    doc.fillColor(inter.color).font('Helvetica-Bold').fontSize(7.5)
+    doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(7.5)
        .text(estadoLabel, estadoX + 13, y + 4, { width: colW[5] - 16, lineBreak: false });
 
     y += rowH;
@@ -858,22 +881,7 @@ function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, opts) {
 
   if (completa || provisional || noCalificable) {
     y += 4;
-    const leyenda = [
-      { c: '#c0392b', l: 'Muy elevado (T≥80)' },
-      { c: '#e67e22', l: 'Elevado (T 65-79)' },
-      { c: '#f39c12', l: 'Leve (T 55-64)' },
-      { c: '#27ae60', l: 'Normal (T 45-54)' },
-      { c: '#2980b9', l: 'Bajo (T<45)' },
-      { c: '#856404', l: 'Provisional / No calificable' }
-    ];
-    let lx = x0;
-    leyenda.forEach(function(it) {
-      doc.rect(lx, y, 8, 8).fill(it.c);
-      doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7)
-         .text(it.l, lx + 10, y + 0.5, { width: 88, lineBreak: false });
-      lx += 96;
-    });
-    y += 12;
+    y = dibujarLeyendaMmpi(doc, x0, y, W);
   }
 
   return y;

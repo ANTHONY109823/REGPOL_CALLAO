@@ -1375,20 +1375,19 @@ function htmlFotoBannerEfectivo(foto) {
 
 function htmlBannerEfectivo(e) {
   var edad = e.edad ? (e.edad + ' AÑOS') : '—';
+  var dataStyle = 'font-size:12px;color:#1a1a1a;line-height:1.55;font-weight:400;';
   return '<div style="flex:1;min-width:0;">'
-    + '<div style="font-size:12px;font-weight:700;color:#004d3d;margin-bottom:3px;">' + escHtml(formatearGradoDisplay(e.grado)) + '</div>'
-    + '<div style="font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:8px;line-height:1.25;">' + escHtml(String(e.nombres || '—').toUpperCase()) + '</div>'
-    + '<div style="font-size:12px;color:#333;line-height:1.6;">'
-    + 'CIP: <strong>' + escHtml(String(e.cip || '—').toUpperCase()) + '</strong> &nbsp; DNI: <strong>' + escHtml(String(e.dni || '—').toUpperCase()) + '</strong><br>'
+    + '<div style="' + dataStyle + '">' + escHtml(formatearGradoDisplay(e.grado)) + '</div>'
+    + '<div style="' + dataStyle + 'margin-bottom:2px;">' + escHtml(String(e.nombres || '—').toUpperCase()) + '</div>'
+    + '<div style="' + dataStyle + '">'
+    + 'CIP: ' + escHtml(String(e.cip || '—').toUpperCase()) + ' &nbsp; DNI: ' + escHtml(String(e.dni || '—').toUpperCase()) + '<br>'
     + 'EDAD: ' + escHtml(String(edad).toUpperCase()) + ' &nbsp; SEXO: ' + escHtml(String(e.sexo || '—').toUpperCase()) + '<br>'
     + 'CARGO: ' + escHtml(String(e.cargo || '—').toUpperCase()) + '<br>'
     + 'ÁREA: ' + escHtml(String(e.area || '—').toUpperCase()) + '<br>'
     + 'ARMA: ' + escHtml(String(textoArmamento(e.armamento) || '—').toUpperCase())
     + '</div>'
-    + '<div style="font-size:11px;color:#555;margin-top:8px;padding-top:6px;border-top:1px solid #d8d8d8;">'
-    + '<span style="color:#1a7a3a;font-weight:700;">V: ' + (e.v || 0) + '</span> &nbsp; '
-    + '<span style="color:#7a1a1a;font-weight:700;">F: ' + (e.f || 0) + '</span> &nbsp; '
-    + '<span>FECHA: ' + escHtml(String(e.fecha || '—').toUpperCase()) + '</span></div>'
+    + '<div style="' + dataStyle + 'margin-top:8px;padding-top:6px;border-top:1px solid #d8d8d8;">'
+    + 'V: ' + (e.v || 0) + ' &nbsp; F: ' + (e.f || 0) + ' &nbsp; FECHA: ' + escHtml(String(e.fecha || '—').toUpperCase()) + '</div>'
     + '</div>' + htmlFotoBannerEfectivo(e.foto);
 }
 
@@ -1462,12 +1461,12 @@ function renderTablaMmpiPreview(wrap, mmpi, completa, opts) {
     var tc = noCal && !tieneT ? '#b8860b' : (noCal && tieneT ? '#856404' : colorInterpT(esc.t));
     var estado = noCal && !tieneT ? 'NO CALIFICABLE' : (noCal && tieneT ? 'PROVISIONAL' : labelInterpT(esc.t));
     return '<tr style="background:' + bg + ';">'
-      + '<td style="padding:8px 10px;font-size:12px;font-weight:600;border-bottom:1px solid #e0e8e0;">' + escHtml(esc.nombre) + '</td>'
-      + '<td style="padding:8px;text-align:center;font-size:12px;border-bottom:1px solid #e0e8e0;">' + (esc.tv !== '—' ? esc.tv : '—') + '</td>'
-      + '<td style="padding:8px;text-align:center;font-size:12px;border-bottom:1px solid #e0e8e0;">' + (esc.tf !== '—' ? esc.tf : '—') + '</td>'
-      + '<td style="padding:8px;text-align:center;font-size:12px;border-bottom:1px solid #e0e8e0;">' + (esc.tb !== '—' ? esc.tb : '—') + '</td>'
-      + '<td style="padding:8px;text-align:center;font-size:12px;font-weight:700;border-bottom:1px solid #e0e8e0;color:' + (esc.t >= 65 ? '#c0392b' : '#1a1a1a') + ';">' + (tieneT ? esc.t : '—') + '</td>'
-      + '<td style="padding:8px 10px;font-size:11.5px;font-weight:700;border-bottom:1px solid #e0e8e0;color:' + tc + ';">'
+      + '<td style="padding:8px 10px;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;">' + escHtml(esc.nombre) + '</td>'
+      + '<td style="padding:8px;text-align:center;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;">' + (esc.tv !== '—' ? esc.tv : '—') + '</td>'
+      + '<td style="padding:8px;text-align:center;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;">' + (esc.tf !== '—' ? esc.tf : '—') + '</td>'
+      + '<td style="padding:8px;text-align:center;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;">' + (esc.tb !== '—' ? esc.tb : '—') + '</td>'
+      + '<td style="padding:8px;text-align:center;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;">' + (tieneT ? esc.t : '—') + '</td>'
+      + '<td style="padding:8px 10px;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;">'
       + '<span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:' + tc + ';margin-right:6px;vertical-align:middle;"></span>'
       + estado + '</td>'
       + '</tr>';
