@@ -1298,48 +1298,61 @@ function configurarBtnPdfEfectivo(btnPdf, opts) {
   }
 }
 
+function renderMatrizRespuestasHtml(respMap, totalItems) {
+  var FILAS = 50;
+  var numCols = Math.ceil(totalItems / FILAS);
+  var html = '<div style="display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;padding:4px 0;">';
+  for (var c = 0; c < numCols; c++) {
+    html += '<div style="flex:0 0 auto;min-width:48px;">';
+    for (var r = 0; r < FILAS; r++) {
+      var id = c * FILAS + r + 1;
+      if (id > totalItems) break;
+      var ans = (respMap && (respMap[id] || respMap[String(id)])) || '';
+      var rc = ans === 'V' ? '#1a7a3a' : (ans === 'F' ? '#7a1a1a' : '#bbb');
+      var bg = ans === 'V' ? '#e8f5ec' : (ans === 'F' ? '#fdeaea' : '#f4f4f4');
+      html += '<div style="display:flex;align-items:center;gap:3px;margin-bottom:2px;line-height:1;">'
+        + '<span style="font-weight:700;color:#004d3d;width:24px;font-size:10px;text-align:right;">' + id + '</span>'
+        + '<span style="display:inline-block;min-width:18px;height:15px;border:1px solid #ccc;border-radius:2px;text-align:center;font-size:9px;font-weight:700;color:' + rc + ';background:' + bg + ';line-height:15px;padding:0 2px;">' + escHtml(ans) + '</span>'
+        + '</div>';
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
 function renderTablaMmpiPreview(wrap, mmpi, completa) {
   if (!wrap) return;
-  if (!mmpi || !(mmpi.escalas || []).length) {
+  if (!mmpi || !mmpi.ok || !(mmpi.escalas || []).length) {
     wrap.innerHTML = '<p style="color:#888;font-size:12px;">Resultados MMPI-2 no disponibles'
       + (mmpi && mmpi.error ? ': ' + escHtml(mmpi.error) : '') + '.</p>';
     return;
   }
   var filas = (mmpi.escalas || []).map(function(esc, i) {
     var bg = i % 2 === 0 ? '#f7faf7' : '#fff';
-    if (completa) {
-      var tc = colorInterpT(esc.t);
-      return '<tr style="background:' + bg + ';">'
-        + '<td style="padding:6px 8px;font-size:11px;font-weight:600;">' + escHtml(esc.nombre) + '</td>'
-        + '<td style="padding:6px;text-align:center;font-size:11px;">' + esc.tv + '</td>'
-        + '<td style="padding:6px;text-align:center;font-size:11px;">' + esc.tf + '</td>'
-        + '<td style="padding:6px;text-align:center;font-size:11px;">' + esc.tb + '</td>'
-        + '<td style="padding:6px;text-align:center;font-size:11px;font-weight:700;color:' + (esc.t >= 65 ? '#c0392b' : '#1a1a1a') + ';">' + (esc.t > 0 ? esc.t : '—') + '</td>'
-        + '<td style="padding:6px;font-size:10.5px;font-weight:600;color:' + tc + ';">' + labelInterpT(esc.t) + '</td>'
-        + '</tr>';
-    }
+    var tc = colorInterpT(esc.t);
     return '<tr style="background:' + bg + ';">'
       + '<td style="padding:6px 8px;font-size:11px;font-weight:600;">' + escHtml(esc.nombre) + '</td>'
-      + '<td style="padding:6px;text-align:center;font-size:11px;color:#999;">—</td>'
-      + '<td style="padding:6px;text-align:center;font-size:11px;color:#999;">—</td>'
-      + '<td style="padding:6px;text-align:center;font-size:11px;color:#999;">—</td>'
-      + '<td style="padding:6px;text-align:center;font-size:11px;color:#999;">—</td>'
-      + '<td style="padding:6px;font-size:10.5px;font-weight:700;color:#b8860b;">PENDIENTE</td>'
+      + '<td style="padding:6px;text-align:center;font-size:11px;">' + esc.tv + '</td>'
+      + '<td style="padding:6px;text-align:center;font-size:11px;">' + esc.tf + '</td>'
+      + '<td style="padding:6px;text-align:center;font-size:11px;">' + esc.tb + '</td>'
+      + '<td style="padding:6px;text-align:center;font-size:11px;font-weight:700;color:' + (esc.t >= 65 ? '#c0392b' : '#1a1a1a') + ';">' + (esc.t > 0 ? esc.t : '—') + '</td>'
+      + '<td style="padding:6px;font-size:10.5px;font-weight:600;color:' + tc + ';">' + labelInterpT(esc.t) + '</td>'
       + '</tr>';
   }).join('');
 
-  var encabezado = completa
-    ? '<p style="font-size:11px;color:#666;margin:0 0 8px;">Normas: ' + escHtml(mmpi.sexo || 'Hombre') + ' — Ítems sin contestar: ' + (mmpi.sin_contestar || 0) + '</p>'
-    : '<div style="background:#fff8e1;border:1px solid #ffeeba;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#856404;">'
-      + '<strong>Evaluación incompleta.</strong> Los puntajes T se calcularán al completar las 566 respuestas. '
-      + 'Ítems pendientes: <strong>' + (mmpi.sin_contestar || 0) + '</strong>'
-      + (mmpi.max_item ? ' — Último ítem contestado: <strong>' + mmpi.max_item + '</strong>' : '')
-      + '</div>';
+  var encabezado = '<p style="font-size:11px;color:#666;margin:0 0 8px;">Normas: ' + escHtml(mmpi.sexo || 'Hombre')
+    + ' — Ítems sin contestar: ' + (mmpi.sin_contestar || 0) + '</p>';
+  if (!completa || mmpi.provisional) {
+    encabezado = '<div style="background:#fff8e1;border:1px solid #ffeeba;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#856404;">'
+      + '<strong>Resultado provisional</strong> — evaluación en avance. Ítems pendientes: <strong>' + (mmpi.sin_contestar || 0) + '</strong>'
+      + (mmpi.max_item ? ' — Último ítem: <strong>' + mmpi.max_item + '</strong>' : '')
+      + '</div>' + encabezado;
+  }
 
-  var colEstado = completa ? 'Interpretación' : 'Estado';
   wrap.innerHTML = encabezado
     + '<div style="overflow-x:auto;"><table class="t" style="font-size:11px;">'
-    + '<thead><tr><th>Escala</th><th>TV</th><th>TF</th><th>Bruto</th><th>T-score</th><th>' + colEstado + '</th></tr></thead>'
+    + '<thead><tr><th>Escala</th><th>TV</th><th>TF</th><th>Bruto</th><th>T-score</th><th>Interpretación</th></tr></thead>'
     + '<tbody>' + filas + '</tbody></table></div>';
 }
 
@@ -1563,16 +1576,13 @@ function verResultadoEval(id) {
           + '</div>' + fotoHtml;
       }
 
-      if (!d.completa) {
-        renderTablaMmpiPreview(wrap, d.mmpi, false);
-        configurarBtnPdfEfectivo(btnPdf, { id: id, total: e.total_resp, completa: false });
-        return;
+      configurarBtnPdfEfectivo(btnPdf, { id: id, total: e.total_resp, completa: d.completa });
+      renderTablaMmpiPreview(wrap, d.mmpi || {}, d.completa);
+      if (wrap && d.resp_map) {
+        wrap.innerHTML += '<h4 style="font-size:12px;color:#004d3d;margin:16px 0 8px;">Matriz de respuestas (N° / V o F)</h4>'
+          + '<div style="border:1px solid #e0e8e0;border-radius:8px;padding:10px;max-height:42vh;overflow:auto;">'
+          + renderMatrizRespuestasHtml(d.resp_map, 566) + '</div>';
       }
-
-      configurarBtnPdfEfectivo(btnPdf, { id: id, total: e.total_resp, completa: true });
-
-      var mmpi = d.mmpi || {};
-      renderTablaMmpiPreview(wrap, mmpi, true);
     })
     .catch(function() {
       if (banner) banner.innerHTML = '<p style="color:#c0392b;margin:0;">Error de conexión.</p>';
@@ -1617,17 +1627,13 @@ function verAvance(cip) {
           + '</div>' + fotoHtml;
       }
       var pct = av.pct || pctAvance(e.total_resp);
-      var filas = (d.respuestas || []).map(function(r, i) {
-        var bg = i % 2 === 0 ? '#f7faf7' : '#fff';
-        var rc = r.respuesta === 'V' ? '#1a7a3a' : '#7a1a1a';
-        return '<tr style="background:' + bg + ';">'
-          + '<td style="padding:6px 8px;font-weight:700;color:#004d3d;width:42px;">' + r.numero + '</td>'
-          + '<td style="padding:6px 8px;font-size:12px;">' + escHtml(r.texto) + '</td>'
-          + '<td style="padding:6px 8px;text-align:center;font-weight:700;color:' + rc + ';width:36px;">' + r.respuesta + '</td>'
-          + '</tr>';
-      }).join('');
       if (wrap) {
-        wrap.innerHTML = '<div style="background:#fff8e1;border:1px solid #ffeeba;border-radius:8px;padding:12px 14px;margin-bottom:12px;">'
+        var matrizHtml = renderMatrizRespuestasHtml(d.resp_map || {}, 566);
+        wrap.innerHTML = '';
+        if (d.mmpi) {
+          renderTablaMmpiPreview(wrap, d.mmpi, false);
+        }
+        wrap.innerHTML += '<div style="background:#fff8e1;border:1px solid #ffeeba;border-radius:8px;padding:12px 14px;margin:12px 0;">'
           + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'
           + '<strong style="color:#856404;font-size:13px;">Avance: ' + (av.total || e.total_resp || 0) + ' / 566 (' + pct + '%)</strong>'
           + '<span style="font-size:12px;color:#666;">Bloque ' + (av.bloque || 1) + ' / ' + (av.bloques || 12) + '</span>'
@@ -1635,12 +1641,9 @@ function verAvance(cip) {
           + '<div style="background:#e9ecef;border-radius:6px;height:10px;overflow:hidden;">'
           + '<div style="background:linear-gradient(90deg,#004d3d,#1a7a3a);height:100%;width:' + pct + '%;"></div>'
           + '</div></div>'
-          + '<p style="font-size:12px;color:#666;margin:0 0 8px;"><strong>' + (d.respuestas || []).length + '</strong> respuestas registradas. En el PDF verá los parámetros MMPI-2 como <strong>PENDIENTE</strong> y la matriz de ítems hasta el último contestado.</p>'
-          + '<div style="overflow-x:auto;max-height:52vh;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">'
-          + '<table class="t" style="font-size:12px;margin:0;"><thead><tr>'
-          + '<th style="width:42px;">N°</th><th>Pregunta</th><th style="width:36px;">R</th>'
-          + '</tr></thead><tbody>' + (filas || '<tr><td colspan="3" style="text-align:center;padding:14px;color:#bbb;">Sin respuestas</td></tr>') + '</tbody></table>'
-          + '</div>';
+          + '<h4 style="font-size:12px;color:#004d3d;margin:0 0 8px;">Matriz de respuestas — N° / V o F (566 ítems, columnas de 50)</h4>'
+          + '<div style="border:1px solid #e0e8e0;border-radius:8px;padding:10px;max-height:42vh;overflow:auto;">'
+          + matrizHtml + '</div>';
       }
       configurarBtnPdfEfectivo(btnPdf, { cip: e.cip, total: e.total_resp, completa: false });
     })

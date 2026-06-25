@@ -9,7 +9,7 @@ const path     = require('path');
 const fs       = require('fs');
 const crypto   = require('crypto');
 const { Pool } = require('pg');
-const { generarPDFIndividual, generarPDFComisaria, calcularMMPI2, interpretarT, contarRespuestas, formatearArmamentoLegible, plantillaEscalasPendientes, maxItemRespondido } = require('./pdf_gen');
+const { generarPDFIndividual, generarPDFComisaria, calcularMMPI2, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido } = require('./pdf_gen');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -1868,17 +1868,11 @@ app.get('/admin/preview-resultado', requireAuth, async (req, res) => {
 
     const stats = contarRespuestas(ev);
     const completa = evaluacionEstaCompleta(ev);
-    const sexoRaw = String(ev.sexo || '').toLowerCase();
-    const cargoStr = String(ev.cargo || '').toLowerCase();
-    const sexoNorm = (sexoRaw === 'femenino' || sexoRaw === 'mujer' || sexoRaw === 'f')
-      || cargoStr.includes('mujer') || cargoStr.includes('femenin')
-      ? 'Mujer' : 'Hombre';
-    const mmpi = completa
-      ? calcularMMPI2(ev)
-      : Object.assign({}, plantillaEscalasPendientes(sexoNorm), {
-          sin_contestar: Math.max(0, 566 - stats.total),
-          max_item: maxItemRespondido(parseRespuestasSafe(ev.respuestas))
-        });
+    const mmpi = calcularMMPI2(ev);
+    if (!completa) {
+      mmpi.provisional = true;
+      mmpi.max_item = maxItemRespondido(parseRespuestasSafe(ev.respuestas));
+    }
 
     res.json({
       ok: true,
@@ -1901,7 +1895,8 @@ app.get('/admin/preview-resultado', requireAuth, async (req, res) => {
         v: stats.v,
         f: stats.f
       },
-      mmpi
+      mmpi,
+      resp_map: parseRespuestasSafe(ev.respuestas)
     });
   } catch (e) {
     res.json({ ok: false, error: e.message });
@@ -1933,9 +1928,13 @@ app.get('/admin/preview-avance', requireAuth, async (req, res) => {
     pregsR.rows.forEach(function(p) {
       const r = resp[p.numero] || resp[String(p.numero)];
       if (r === 'V' || r === 'F') {
-        filas.push({ numero: p.numero, texto: p.texto, respuesta: r });
+        filas.push({ numero: p.numero, respuesta: r });
       }
     });
+
+    const mmpi = calcularMMPI2(ev);
+    mmpi.provisional = true;
+    mmpi.max_item = maxItemRespondido(parseRespuestasSafe(ev.respuestas));
 
     res.json({
       ok: true,
@@ -1962,7 +1961,9 @@ app.get('/admin/preview-avance', requireAuth, async (req, res) => {
         bloque: parseInt(ev.bloque_max, 10) || Math.min(12, Math.ceil(stats.total / 50) || 1),
         bloques: 12
       },
-      respuestas: filas
+      respuestas: filas,
+      resp_map: resp,
+      mmpi
     });
   } catch (e) {
     res.json({ ok: false, error: e.message });

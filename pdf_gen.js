@@ -36,6 +36,14 @@ const COLOR_LINEA  = '#cccccc';
 const GRID_COLS    = 10;
 const GRID_ROW_H   = 12;
 const GRID_GAP     = 2;
+const MATRIZ_FILAS_COL = 50;
+const MATRIZ_ROW_H     = 11;
+const MATRIZ_COL_GAP   = 3;
+const TOTAL_PREGUNTAS  = 566;
+const VERT_FILAS   = 50;
+const VERT_ROW_H   = 11;
+const VERT_GAP_COL = 3;
+const TOTAL_ITEMS_MMPI = 566;
 const A4_W         = 595.28;
 const A4_H         = 841.89;
 
@@ -245,38 +253,70 @@ function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   return y + bannerH;
 }
 
-// ── Matriz compacta N° + respuesta (10 columnas) ──────────────────────────────
-function dibujarGrillaCompacta(doc, x0, y0, W, maxY, resp, desdeId, totalIds) {
-  const colW = (W - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
-  const filaInicio = Math.floor((desdeId - 1) / GRID_COLS);
-  let id = desdeId;
+// ── Matriz vertical: columnas de 50 ítems (1-50, 51-100, …) — solo N° y V/F ──
+function totalColumnasMatriz(totalIds) {
+  return Math.ceil(totalIds / MATRIZ_FILAS_COL);
+}
 
-  while (id <= totalIds) {
-    const col = (id - 1) % GRID_COLS;
-    const fila = Math.floor((id - 1) / GRID_COLS) - filaInicio;
-    const cy = y0 + fila * GRID_ROW_H;
+function dibujarMatrizRespuestasVertical(doc, x0, y0, W, maxY, resp, totalIds, colDesde, colHasta) {
+  const colsEnPagina = colHasta - colDesde;
+  const colW = (W - MATRIZ_COL_GAP * Math.max(colsEnPagina - 1, 0)) / colsEnPagina;
+  const numW = Math.min(18, Math.max(14, Math.floor(colW * 0.4)));
+  const boxW = Math.max(10, colW - numW - 2);
 
-    if (cy + GRID_ROW_H > maxY) break;
+  for (let ci = colDesde; ci < colHasta; ci++) {
+    const cx = x0 + (ci - colDesde) * (colW + MATRIZ_COL_GAP);
+    for (let r = 0; r < MATRIZ_FILAS_COL; r++) {
+      const id = ci * MATRIZ_FILAS_COL + r + 1;
+      if (id > totalIds) continue;
+      const cy = y0 + r * MATRIZ_ROW_H;
+      if (cy + MATRIZ_ROW_H > maxY) return false;
 
-    const cx = x0 + col * (colW + GRID_GAP);
-    const r = resp[id] || resp[String(id)] || '';
-
-    doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(6.5)
-       .text(String(id), cx + 1, cy + 2, { width: 12, lineBreak: false });
-
-    const bx = cx + 14;
-    const bw = colW - 15;
-    doc.rect(bx, cy + 1, bw, 9)
-       .fill(r === 'V' ? '#d4edda' : (r === 'F' ? '#f8d7da' : '#f5f5f5'))
-       .stroke('#bbbbbb');
-    if (r) {
-      doc.fillColor(r === 'V' ? '#1a7a3a' : '#7a1a1a').font('Helvetica-Bold').fontSize(6.5)
-         .text(r, bx, cy + 2, { width: bw, align: 'center', lineBreak: false });
+      const ans = resp[id] || resp[String(id)] || '';
+      doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(6.5)
+         .text(String(id), cx, cy + 2, { width: numW, lineBreak: false, align: 'right' });
+      const bx = cx + numW + 2;
+      doc.rect(bx, cy + 1, boxW, 8)
+        .fill(ans === 'V' ? '#e8f5ec' : (ans === 'F' ? '#fdeaea' : '#f4f4f4'))
+        .stroke('#cccccc');
+      if (ans) {
+        doc.fillColor(ans === 'V' ? '#1a7a3a' : '#7a1a1a').font('Helvetica-Bold').fontSize(6.5)
+           .text(ans, bx, cy + 2, { width: boxW, align: 'center', lineBreak: false });
+      }
     }
-    id++;
   }
+  return true;
+}
 
-  return id;
+function dibujarPaginasMatrizRespuestas(doc, evaluacion, resp, x0, W, maxY) {
+  const totalIds = TOTAL_PREGUNTAS;
+  const numCols = totalColumnasMatriz(totalIds);
+  const COLS_POR_PAGINA = 6;
+
+  for (let colStart = 0; colStart < numCols; colStart += COLS_POR_PAGINA) {
+    const colEnd = Math.min(colStart + COLS_POR_PAGINA, numCols);
+    doc.addPage();
+    dibujarCabecera(doc);
+    let y = 78;
+    const esPrimera = colStart === 0;
+    doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(9)
+       .text(esPrimera ? 'MATRIZ DE RESPUESTAS — N° / V o F' : 'MATRIZ DE RESPUESTAS (continuación)',
+         x0, y, { width: W, lineBreak: false });
+    y += 12;
+    if (esPrimera) {
+      doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
+         .text('566 ítems · Numeración vertical (50 por columna) · V = Verdadero / F = Falso',
+           x0, y, { width: W, lineBreak: false });
+      y += 10;
+    }
+    const itemDesde = colStart * MATRIZ_FILAS_COL + 1;
+    const itemHasta = Math.min(colEnd * MATRIZ_FILAS_COL, totalIds);
+    doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7)
+       .text('Ítems ' + itemDesde + ' — ' + itemHasta + '  ·  ' + (evaluacion.nombres || '—'),
+         x0, y, { width: W, lineBreak: false, ellipsis: true });
+    y += 10;
+    dibujarMatrizRespuestasVertical(doc, x0, y, W, maxY, resp, totalIds, colStart, colEnd);
+  }
 }
 
 // ── Pies de página en todas las hojas (bufferPages) ───────────────────────────
@@ -301,8 +341,7 @@ function generarPDFIndividual(evaluacion, preguntas, opts) {
     const completa = opts.completa != null
       ? !!opts.completa
       : (!!evaluacion.completada && stats.total >= 566);
-    const mmpi = completa ? calcularMMPI2(evaluacion) : null;
-    const maxId = completa ? 566 : maxItemRespondido(resp);
+    const mmpi = calcularMMPI2(evaluacion);
 
     const doc = new PDFDocument({
       size: 'A4',
@@ -326,44 +365,12 @@ function generarPDFIndividual(evaluacion, preguntas, opts) {
     let y = 78;
     y = dibujarEncabezadoEfectivo(doc, x0, y, W, evaluacion, totalV, totalF) + 10;
 
-    if (completa) {
-      y = dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY);
-    } else {
-      y = dibujarBannerAvance(doc, stats, maxId, x0, y, W) + 8;
-      y = dibujarResultadosMMPI2Pendiente(doc, stats, evaluacion, x0, y, W, maxY);
+    if (!completa) {
+      y = dibujarBannerAvance(doc, stats, maxItemRespondido(resp), x0, y, W) + 6;
     }
+    y = dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, { provisional: !completa });
 
-    if (maxId > 0) {
-      const TITULO_H = 14;
-      const CONT_H = 16;
-      const MIN_FILAS = 5;
-      const tituloMatriz = completa
-        ? 'MATRIZ DE RESPUESTAS — ÍTEM / V o F'
-        : ('RESPUESTAS REGISTRADAS — ÍTems 1 a ' + maxId + ' (V o F)');
-      let gridId = 1;
-      let espacioDisponible = maxY - y;
-      if (espacioDisponible >= TITULO_H + GRID_ROW_H * MIN_FILAS) {
-        y += 8;
-        doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(9)
-           .text(tituloMatriz, x0, y, { width: W, lineBreak: false });
-        y += TITULO_H;
-        gridId = dibujarGrillaCompacta(doc, x0, y, W, maxY, resp, gridId, maxId);
-      }
-      let paginasVacias = 0;
-      while (gridId <= maxId && paginasVacias < 2) {
-        const prevId = gridId;
-        doc.addPage();
-        dibujarCabecera(doc);
-        y = 78;
-        doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(8)
-           .text('Matriz de respuestas (continuación) — ' + (evaluacion.nombres || '—'),
-                 x0, y, { width: W, lineBreak: false, ellipsis: true });
-        y += CONT_H;
-        gridId = dibujarGrillaCompacta(doc, x0, y, W, maxY, resp, gridId, maxId);
-        if (gridId === prevId) paginasVacias++;
-        else paginasVacias = 0;
-      }
-    }
+    dibujarPaginasMatrizRespuestas(doc, evaluacion, resp, x0, W, maxY);
 
     aplicarPiesEnTodas(doc);
     doc.end();
@@ -502,27 +509,42 @@ function interpretarT(t) {
 }
 
 // Dibuja tabla de resultados MMPI-2
-function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY) {
+function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, opts) {
+  opts = opts || {};
   if (!mmpi || !mmpi.ok || !mmpi.escalas || !mmpi.escalas.length) {
     doc.fillColor('#888').font('Helvetica').fontSize(9)
-       .text('Resultados MMPI-2 no disponibles.', x0, y);
+       .text('Resultados MMPI-2 no disponibles' + (mmpi && mmpi.error ? ': ' + mmpi.error : '') + '.', x0, y);
     return y + 20;
   }
 
   const escalas = mmpi.escalas;
+  const sinC = mmpi.sin_contestar || 0;
+  const provisional = opts.provisional || sinC > 0;
 
   // Título sección
   doc.rect(x0, y, W, 16).fill(COLOR_VERDE);
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9)
-     .text('RESULTADOS DEL MMPI-2 — PUNTAJES T ESTÁNDAR', x0 + 6, y + 4,
-           { width: W - 12, lineBreak: false });
+     .text(provisional
+       ? 'RESULTADOS MMPI-2 — PUNTAJES T (PROVISIONAL)'
+       : 'RESULTADOS DEL MMPI-2 — PUNTAJES T ESTÁNDAR',
+       x0 + 6, y + 4, { width: W - 12, lineBreak: false });
   y += 16;
 
-  // Subtítulo sexo y sin contestar
-  const sinC = mmpi.sin_contestar || 0;
   doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
-     .text(`Normas: ${mmpi.sexo || 'Hombre'}   •   Ítems sin contestar: ${sinC}   •   Punto de corte clínico: T ≥ 65`, x0, y, { width: W, lineBreak: false });
+     .text('Normas: ' + (mmpi.sexo || 'Hombre') + '   •   Ítems sin contestar: ' + sinC
+       + '   •   Punto de corte clínico: T ≥ 65', x0, y, { width: W, lineBreak: false });
   y += 12;
+
+  if (provisional) {
+    doc.rect(x0, y, W, 20).fill('#fff8e1').stroke('#f0d78c');
+    doc.fillColor('#856404').font('Helvetica-Bold').fontSize(7.5)
+       .text('Evaluación en avance (' + (TOTAL_PREGUNTAS - sinC) + '/566). Resultado calculado con respuestas actuales.',
+         x0 + 6, y + 4, { width: W - 12, lineBreak: false });
+    doc.font('Helvetica').fontSize(7)
+       .text('Los puntajes pueden variar al completar y enviar la evaluación.', x0 + 6, y + 12,
+         { width: W - 12, lineBreak: false });
+    y += 22;
+  }
 
   // Cabecera tabla
   const colW  = [120, 32, 32, 38, 42, 70];
@@ -613,60 +635,6 @@ function dibujarBannerAvance(doc, stats, maxId, x0, y, W) {
   return y + bannerH;
 }
 
-function dibujarResultadosMMPI2Pendiente(doc, stats, evaluacion, x0, y, W, maxY) {
-  const sexoRaw = String(evaluacion.sexo || '').toLowerCase();
-  const cargoStr = String(evaluacion.cargo || '').toLowerCase();
-  const sexo = (sexoRaw === 'femenino' || sexoRaw === 'mujer' || sexoRaw === 'f')
-    || cargoStr.includes('mujer') || cargoStr.includes('femenin')
-    ? 'Mujer' : 'Hombre';
-  const pendientes = Math.max(0, 566 - (stats.total || 0));
-
-  doc.rect(x0, y, W, 16).fill('#7a6a2a');
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9)
-     .text('PARÁMETROS MMPI-2 — PENDIENTES DE CÁLCULO', x0 + 6, y + 4, { width: W - 12, lineBreak: false });
-  y += 16;
-
-  doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
-     .text('Normas: ' + sexo + '   •   Ítems sin contestar: ' + pendientes
-       + '   •   Los puntajes T se calcularán al completar las 566 respuestas y enviar la evaluación.',
-       x0, y, { width: W, lineBreak: false });
-  y += 14;
-
-  const colW  = [120, 32, 32, 38, 42, 70];
-  const heads = ['Escala', 'TV', 'TF', 'Bruto', 'T-score', 'Estado'];
-  const rowH  = 14;
-
-  doc.rect(x0, y, W, rowH).fill('#7a6a2a');
-  let tx = x0;
-  heads.forEach(function(h, i) {
-    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(7.5)
-       .text(h, tx + 3, y + 3, { width: colW[i] - 6, lineBreak: false });
-    tx += colW[i];
-  });
-  y += rowH;
-
-  ESCALAS_MMPI2.forEach(function(nombre, idx) {
-    if (y + rowH > maxY) return;
-    const bg = idx % 2 === 0 ? '#fffdf5' : '#ffffff';
-    doc.rect(x0, y, W, rowH).fill(bg).stroke('#e8e0c8');
-    tx = x0;
-    const celdas = [nombre, '—', '—', '—', '—', 'PENDIENTE'];
-    celdas.forEach(function(val, i) {
-      const color = i === 5 ? '#b8860b' : '#888888';
-      doc.fillColor(color).font(i === 0 ? 'Helvetica-Bold' : 'Helvetica').fontSize(7.5)
-         .text(val, tx + 3, y + 3, { width: colW[i] - 6, lineBreak: false });
-      tx += colW[i];
-    });
-    y += rowH;
-  });
-
-  y += 6;
-  doc.fillColor('#856404').font('Helvetica-Oblique').fontSize(7)
-     .text('Nota: documento de avance parcial. No constituye resultado clínico definitivo.',
-       x0, y, { width: W, lineBreak: false });
-  return y + 12;
-}
-
 module.exports = {
   generarPDFIndividual,
   generarPDFComisaria,
@@ -674,7 +642,6 @@ module.exports = {
   interpretarT,
   contarRespuestas,
   formatearArmamentoLegible,
-  plantillaEscalasPendientes,
   maxItemRespondido,
   ESCALAS_MMPI2
 };
