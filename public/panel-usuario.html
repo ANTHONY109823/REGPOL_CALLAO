@@ -535,9 +535,7 @@ function cargarEval(pag) {
         } else {
           badge=comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+total+'/566</span>';
         }
-        var pdf=r.id && !r.solo_progreso
-          ?'<a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;">PDF</a>'
-          :'<span style="color:#bbb;font-size:10px;">Sin PDF</span>';
+        var pdf = linkPdfEval(r);
         return '<tr'+(r.solo_progreso?' style="background:#fffdf5;"':'')+'><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
           +'<td style="font-size:11px;">'+escHtml(r.unidad||r.comisaria||'—')+'</td>'
           +'<td style="font-size:11px;">'+escHtml(r.fecha)+'</td><td>'+badge+'</td><td>'+pdf+'</td><td>'+btnEliminarEvalUsuario(r)+'</td></tr>';
@@ -673,9 +671,7 @@ function vistaPreviaDescargaU(filtro, selId, prefijo) {
       var badge = r.enCurso
         ? '<span class="badge" style="background:#fff3cd;color:#856404;">En curso</span>'
         : (r.comp ? '<span class="badge ok">Completo</span>' : '<span class="badge pend">Parcial</span>');
-      var pdf = r.id
-        ? '<a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;">PDF</a>'
-        : '<span style="color:#bbb;font-size:11px;">—</span>';
+      var pdf = linkPdfEval({ id: r.id, cip: r.cip, total_resp: r.total });
       return '<tr><td style="text-align:center;font-weight:700;">'+(i+1)+'</td><td><strong>'+escHtml(r.nombres)+'</strong></td>'
         +'<td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni)+'</td><td style="font-size:11px;">'+escHtml(r.fecha)+'</td>'
         +'<td style="text-align:center;">'+r.bloque+'/12</td><td>'+r.total+'/566</td><td>'+badge+'</td><td>'+pdf+'</td></tr>';
@@ -707,14 +703,14 @@ function buscarPersonaU(){
         filas.push('<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td>'
           +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+escHtml(r.fecha)+'</td>'
           +'<td>'+(comp?'<span class="badge ok">Enviado</span>':'<span class="badge pend">'+r.total_resp+'/566</span>')+'</td>'
-          +'<td><a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;">PDF</a></td></tr>');
+          +'<td>'+linkPdfEval(r)+'</td></tr>');
       });
       if(d.progreso && !(d.evaluaciones||[]).some(function(e){return e.completada;})){
         var p=d.progreso, pt=parseInt(p.total_resp,10)||0;
         filas.push('<tr style="background:#fffdf5;"><td><strong>'+escHtml(p.nombres)+'</strong></td><td>'+escHtml(p.cip)+'</td>'
           +'<td style="font-size:11px;">'+escHtml(p.comisaria||p.unidad)+'</td><td style="font-size:11px;">'+escHtml(p.fecha)+'</td>'
           +'<td><span class="badge" style="background:#fff3cd;color:#856404;">'+pt+'/566 sin enviar</span></td>'
-          +'<td style="font-size:10px;color:#888;">Falta Finalizar</td></tr>');
+          +'<td>'+linkPdfEval({ cip: p.cip, total_resp: pt })+'</td></tr>');
       }
       if(!filas.length){tbody.innerHTML='<tr><td colspan="6" style="color:#bbb;padding:12px;text-align:center;">Sin resultados.</td></tr>';return;}
       tbody.innerHTML=filas.join('');
@@ -731,14 +727,22 @@ function buscarPersonaU(){
       var badge=r.solo_progreso
         ?'<span class="badge" style="background:#fff3cd;color:#856404;">'+total+'/566 sin enviar</span>'
         :(comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+total+'/566</span>');
-      var pdf=r.id && !r.solo_progreso
-        ?'<a href="'+API+'/pdf/efectivo?id='+r.id+'&token='+encodeURIComponent(TOKEN)+'" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;">PDF</a>'
-        :'<span style="color:#bbb;font-size:10px;">—</span>';
+      var pdf = linkPdfEval(r);
       return '<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td>'
         +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+r.fecha+'</td>'
         +'<td>'+badge+'</td><td>'+pdf+'</td></tr>';
     }).join('');
   });
+}
+
+function linkPdfEval(r) {
+  var total = parseInt(r.total_resp, 10) || 0;
+  if (total < 1) return '<span style="color:#bbb;font-size:10px;">Sin PDF</span>';
+  var url = r.id
+    ? API + '/pdf/efectivo?id=' + r.id + '&token=' + encodeURIComponent(TOKEN)
+    : (r.cip ? API + '/pdf/efectivo?cip=' + encodeURIComponent(r.cip) + '&token=' + encodeURIComponent(TOKEN) : '');
+  if (!url) return '<span style="color:#bbb;font-size:10px;">Sin PDF</span>';
+  return '<a href="' + url + '" target="_blank" class="btn btn-r" style="font-size:11px;padding:3px 8px;text-decoration:none;">PDF</a>';
 }
 
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}

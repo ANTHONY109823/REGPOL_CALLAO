@@ -9,7 +9,7 @@ const path     = require('path');
 const fs       = require('fs');
 const crypto   = require('crypto');
 const { Pool } = require('pg');
-const { generarPDFIndividual, generarPDFComisaria, calcularMMPI2, interpretarT, contarRespuestas, formatearArmamentoLegible } = require('./pdf_gen');
+const { generarPDFIndividual, generarPDFComisaria, calcularMMPI2, interpretarT, contarRespuestas, formatearArmamentoLegible, plantillaEscalasPendientes, maxItemRespondido } = require('./pdf_gen');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -1810,6 +1810,14 @@ app.get('/descargar', requireAuth, async (req, res) => {
   }
 });
 
+function parseRespuestasSafe(respuestas) {
+  try {
+    return typeof respuestas === 'string' ? JSON.parse(respuestas || '{}') : (respuestas || {});
+  } catch (e) {
+    return {};
+  }
+}
+
 function evaluacionEstaCompleta(ev) {
   if (!ev) return false;
   const stats = contarRespuestas(ev);
@@ -1860,7 +1868,17 @@ app.get('/admin/preview-resultado', requireAuth, async (req, res) => {
 
     const stats = contarRespuestas(ev);
     const completa = evaluacionEstaCompleta(ev);
-    const mmpi = completa ? calcularMMPI2(ev) : { ok: false, escalas: [], error: 'Evaluación incompleta' };
+    const sexoRaw = String(ev.sexo || '').toLowerCase();
+    const cargoStr = String(ev.cargo || '').toLowerCase();
+    const sexoNorm = (sexoRaw === 'femenino' || sexoRaw === 'mujer' || sexoRaw === 'f')
+      || cargoStr.includes('mujer') || cargoStr.includes('femenin')
+      ? 'Mujer' : 'Hombre';
+    const mmpi = completa
+      ? calcularMMPI2(ev)
+      : Object.assign({}, plantillaEscalasPendientes(sexoNorm), {
+          sin_contestar: Math.max(0, 566 - stats.total),
+          max_item: maxItemRespondido(parseRespuestasSafe(ev.respuestas))
+        });
 
     res.json({
       ok: true,
@@ -1951,24 +1969,36 @@ app.get('/admin/preview-avance', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /pdf/efectivo?id=N | ?cip= (solo evaluación 100% completa) ─────────────
+// ── GET /pdf/efectivo?id=N | ?cip= — PDF individual (completo o avance parcial) ─
 app.get('/pdf/efectivo', requireAuth, async (req, res) => {
   try {
     const id  = parseInt(req.query.id);
     const cip = (req.query.cip || '').trim();
     if (!id && !cip) return res.status(400).json({ error: 'id o cip requerido' });
 
-    const ev = await cargarEvaluacionAdmin({ id: id || null, cip: cip || null }, req.admin);
+    let ev = null;
+    if (id) {
+      ev = await cargarEvaluacionAdmin({ id: id || null, cip: null }, req.admin);
+    } else {
+      ev = await cargarAvancePorCip(cip, req.admin);
+      if (!ev) {
+        ev = await cargarEvaluacionAdmin({ cip }, req.admin);
+      }
+    }
     if (!ev) return res.status(404).json({ error: 'No encontrado' });
-    if (!evaluacionEstaCompleta(ev)) {
-      return res.status(403).json({ error: 'Solo se puede descargar evaluaciones completadas al 100% con resultado MMPI-2' });
+
+    const stats = contarRespuestas(ev);
+    if (stats.total < 1) {
+      return res.status(403).json({ error: 'No hay respuestas registradas para generar el PDF' });
     }
 
+    const completa = evaluacionEstaCompleta(ev);
     const pregsR = await pool.query('SELECT numero AS id, texto FROM preguntas WHERE activa=TRUE ORDER BY orden,numero');
-    const buf = await generarPDFIndividual(ev, pregsR.rows, { soloResultados: true });
+    const buf = await generarPDFIndividual(ev, pregsR.rows, { completa });
     const nom = (ev.nombres||'efectivo').replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+    const suf = completa ? 'ResultadoMMPI2' : 'AvanceEvaluacion';
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${nom}_ResultadoMMPI2.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${nom}_${suf}.pdf"`);
     res.send(buf);
   } catch (e) {
     res.status(500).json({ error: e.message });

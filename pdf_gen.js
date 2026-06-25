@@ -11,6 +11,22 @@ const PREGUNTAS_DEFAULT = require('./preguntas_data.json');
 const MMPI2_EXCEL_PATH = path.join(__dirname, '..', '..', 'Downloads', 'MMPI-2.xls');
 const MMPI2_SCRIPT_PATH = path.join(__dirname, 'mmpi2_score.py');
 
+const ESCALAS_MMPI2 = [
+  'L — Mentira',
+  'F — Infrecuencia',
+  'K — Corrección',
+  '1 — Hipocondría',
+  '2 — Depresión',
+  '3 — Histeria',
+  '4 — Psicopatía',
+  '5 — Masculinidad/Feminidad',
+  '6 — Paranoia',
+  '7 — Psicastenia',
+  '8 — Esquizofrenia',
+  '9 — Hipomanía',
+  '0 — Introversión Social'
+];
+
 const COLOR_VERDE  = '#004d3d';
 const COLOR_ORO    = '#c8a94a';
 const COLOR_GRIS   = '#555555';
@@ -40,11 +56,46 @@ function contarRespuestas(ev) {
     return {
       total: vals.length,
       v: vals.filter(function(k) { return r[k] === 'V'; }).length,
-      f: vals.filter(function(k) { return r[k] === 'F'; }).length
+      f: vals.filter(function(k) { return r[k] === 'F'; }).length,
+      respuestas: r
     };
   } catch (e) {
-    return { total: 0, v: 0, f: 0 };
+    return { total: 0, v: 0, f: 0, respuestas: {} };
   }
+}
+
+function parseRespuestas(evaluacion) {
+  try {
+    return typeof evaluacion.respuestas === 'string'
+      ? JSON.parse(evaluacion.respuestas || '{}')
+      : (evaluacion.respuestas || {});
+  } catch (e) {
+    return {};
+  }
+}
+
+function maxItemRespondido(resp) {
+  let max = 0;
+  Object.keys(resp || {}).forEach(function(k) {
+    const v = resp[k];
+    if (v === 'V' || v === 'F') {
+      const n = parseInt(k, 10);
+      if (!isNaN(n) && n > max) max = n;
+    }
+  });
+  return max;
+}
+
+function plantillaEscalasPendientes(sexo) {
+  return {
+    ok: false,
+    incompleta: true,
+    sexo: sexo || 'Hombre',
+    sin_contestar: 566,
+    escalas: ESCALAS_MMPI2.map(function(nombre) {
+      return { nombre: nombre, tv: '—', tf: '—', tb: '—', t: 0, pendiente: true };
+    })
+  };
 }
 
 function resolverEdad(ev) {
@@ -244,9 +295,14 @@ function aplicarPiesEnTodas(doc) {
 // ─────────────────────────────────────────────────────────────────────────────
 function generarPDFIndividual(evaluacion, preguntas, opts) {
   opts = opts || {};
-  var soloResultados = opts.soloResultados !== false;
   return new Promise(function(resolve) {
-    const mmpi = calcularMMPI2(evaluacion);
+    const resp = parseRespuestas(evaluacion);
+    const stats = contarRespuestas(evaluacion);
+    const completa = opts.completa != null
+      ? !!opts.completa
+      : (!!evaluacion.completada && stats.total >= 566);
+    const mmpi = completa ? calcularMMPI2(evaluacion) : null;
+    const maxId = completa ? 566 : maxItemRespondido(resp);
 
     const doc = new PDFDocument({
       size: 'A4',
@@ -258,14 +314,8 @@ function generarPDFIndividual(evaluacion, preguntas, opts) {
     doc.on('data', function(c) { chunks.push(c); });
     doc.on('end',  function()  { resolve(Buffer.concat(chunks)); });
 
-    let resp = {};
-    try {
-      resp = typeof evaluacion.respuestas === 'string'
-        ? JSON.parse(evaluacion.respuestas) : (evaluacion.respuestas || {});
-    } catch (e) {}
-
-    const totalV = Object.values(resp).filter(function(v) { return v === 'V'; }).length;
-    const totalF = Object.values(resp).filter(function(v) { return v === 'F'; }).length;
+    const totalV = stats.v;
+    const totalF = stats.f;
     const m  = { left: 40, right: 40, top: 75, bottom: 45 };
     const W  = A4_W - m.left - m.right;
     const x0 = m.left;
@@ -275,24 +325,32 @@ function generarPDFIndividual(evaluacion, preguntas, opts) {
     dibujarCabecera(doc);
     let y = 78;
     y = dibujarEncabezadoEfectivo(doc, x0, y, W, evaluacion, totalV, totalF) + 10;
-    y = dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY);
 
-    if (!soloResultados) {
-      const totalIds = (preguntas || PREGUNTAS_DEFAULT).length;
-      let gridId = 1;
+    if (completa) {
+      y = dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY);
+    } else {
+      y = dibujarBannerAvance(doc, stats, maxId, x0, y, W) + 8;
+      y = dibujarResultadosMMPI2Pendiente(doc, stats, evaluacion, x0, y, W, maxY);
+    }
+
+    if (maxId > 0) {
       const TITULO_H = 14;
       const CONT_H = 16;
       const MIN_FILAS = 5;
-      const espacioDisponible = maxY - y;
+      const tituloMatriz = completa
+        ? 'MATRIZ DE RESPUESTAS — ÍTEM / V o F'
+        : ('RESPUESTAS REGISTRADAS — ÍTems 1 a ' + maxId + ' (V o F)');
+      let gridId = 1;
+      let espacioDisponible = maxY - y;
       if (espacioDisponible >= TITULO_H + GRID_ROW_H * MIN_FILAS) {
         y += 8;
         doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(9)
-           .text('MATRIZ DE RESPUESTAS — ÍTEM / V o F', x0, y, { width: W, lineBreak: false });
+           .text(tituloMatriz, x0, y, { width: W, lineBreak: false });
         y += TITULO_H;
-        gridId = dibujarGrillaCompacta(doc, x0, y, W, maxY, resp, gridId, totalIds);
+        gridId = dibujarGrillaCompacta(doc, x0, y, W, maxY, resp, gridId, maxId);
       }
       let paginasVacias = 0;
-      while (gridId <= totalIds && paginasVacias < 2) {
+      while (gridId <= maxId && paginasVacias < 2) {
         const prevId = gridId;
         doc.addPage();
         dibujarCabecera(doc);
@@ -301,7 +359,7 @@ function generarPDFIndividual(evaluacion, preguntas, opts) {
            .text('Matriz de respuestas (continuación) — ' + (evaluacion.nombres || '—'),
                  x0, y, { width: W, lineBreak: false, ellipsis: true });
         y += CONT_H;
-        gridId = dibujarGrillaCompacta(doc, x0, y, W, maxY, resp, gridId, totalIds);
+        gridId = dibujarGrillaCompacta(doc, x0, y, W, maxY, resp, gridId, maxId);
         if (gridId === prevId) paginasVacias++;
         else paginasVacias = 0;
       }
@@ -540,4 +598,83 @@ function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY) {
   return y;
 }
 
-module.exports = { generarPDFIndividual, generarPDFComisaria, calcularMMPI2, interpretarT, contarRespuestas, formatearArmamentoLegible };
+function dibujarBannerAvance(doc, stats, maxId, x0, y, W) {
+  const pendientes = Math.max(0, 566 - (stats.total || 0));
+  const pct = Math.min(100, Math.round(((stats.total || 0) / 566) * 100));
+  const bannerH = 34;
+  doc.rect(x0, y, W, bannerH).fill('#fff8e1').stroke('#f0d78c');
+  doc.fillColor('#856404').font('Helvetica-Bold').fontSize(9)
+     .text('EVALUACIÓN INCOMPLETA — Avance: ' + (stats.total || 0) + '/566 (' + pct + '%)', x0 + 8, y + 6, { width: W - 16, lineBreak: false });
+  doc.font('Helvetica').fontSize(7.5)
+     .text('Respondidos: V=' + (stats.v || 0) + '  F=' + (stats.f || 0)
+       + '  |  Pendientes: ' + pendientes + ' ítems'
+       + (maxId > 0 ? '  |  Último ítem contestado: ' + maxId : ''),
+       x0 + 8, y + 19, { width: W - 16, lineBreak: false });
+  return y + bannerH;
+}
+
+function dibujarResultadosMMPI2Pendiente(doc, stats, evaluacion, x0, y, W, maxY) {
+  const sexoRaw = String(evaluacion.sexo || '').toLowerCase();
+  const cargoStr = String(evaluacion.cargo || '').toLowerCase();
+  const sexo = (sexoRaw === 'femenino' || sexoRaw === 'mujer' || sexoRaw === 'f')
+    || cargoStr.includes('mujer') || cargoStr.includes('femenin')
+    ? 'Mujer' : 'Hombre';
+  const pendientes = Math.max(0, 566 - (stats.total || 0));
+
+  doc.rect(x0, y, W, 16).fill('#7a6a2a');
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9)
+     .text('PARÁMETROS MMPI-2 — PENDIENTES DE CÁLCULO', x0 + 6, y + 4, { width: W - 12, lineBreak: false });
+  y += 16;
+
+  doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
+     .text('Normas: ' + sexo + '   •   Ítems sin contestar: ' + pendientes
+       + '   •   Los puntajes T se calcularán al completar las 566 respuestas y enviar la evaluación.',
+       x0, y, { width: W, lineBreak: false });
+  y += 14;
+
+  const colW  = [120, 32, 32, 38, 42, 70];
+  const heads = ['Escala', 'TV', 'TF', 'Bruto', 'T-score', 'Estado'];
+  const rowH  = 14;
+
+  doc.rect(x0, y, W, rowH).fill('#7a6a2a');
+  let tx = x0;
+  heads.forEach(function(h, i) {
+    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(7.5)
+       .text(h, tx + 3, y + 3, { width: colW[i] - 6, lineBreak: false });
+    tx += colW[i];
+  });
+  y += rowH;
+
+  ESCALAS_MMPI2.forEach(function(nombre, idx) {
+    if (y + rowH > maxY) return;
+    const bg = idx % 2 === 0 ? '#fffdf5' : '#ffffff';
+    doc.rect(x0, y, W, rowH).fill(bg).stroke('#e8e0c8');
+    tx = x0;
+    const celdas = [nombre, '—', '—', '—', '—', 'PENDIENTE'];
+    celdas.forEach(function(val, i) {
+      const color = i === 5 ? '#b8860b' : '#888888';
+      doc.fillColor(color).font(i === 0 ? 'Helvetica-Bold' : 'Helvetica').fontSize(7.5)
+         .text(val, tx + 3, y + 3, { width: colW[i] - 6, lineBreak: false });
+      tx += colW[i];
+    });
+    y += rowH;
+  });
+
+  y += 6;
+  doc.fillColor('#856404').font('Helvetica-Oblique').fontSize(7)
+     .text('Nota: documento de avance parcial. No constituye resultado clínico definitivo.',
+       x0, y, { width: W, lineBreak: false });
+  return y + 12;
+}
+
+module.exports = {
+  generarPDFIndividual,
+  generarPDFComisaria,
+  calcularMMPI2,
+  interpretarT,
+  contarRespuestas,
+  formatearArmamentoLegible,
+  plantillaEscalasPendientes,
+  maxItemRespondido,
+  ESCALAS_MMPI2
+};
