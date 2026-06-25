@@ -1268,14 +1268,7 @@ function textoArmamento(arm) {
 
 function formatearGradoDisplay(grado) {
   var g = String(grado || '').trim();
-  if (!g) return '—';
-  return g.toUpperCase()
-    .replace(/\b1\s*RA\b/g, 'PRIMERA')
-    .replace(/\b2\s*DA\b/g, 'SEGUNDA')
-    .replace(/\b3\s*RA\b/g, 'TERCERA')
-    .replace(/\s+PNP\s*$/i, '')
-    .replace(/\s+/g, ' ')
-    .trim() || '—';
+  return g ? g.toUpperCase() : '—';
 }
 
 function htmlBannerEfectivo(e, fotoHtml) {

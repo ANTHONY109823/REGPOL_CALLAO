@@ -173,16 +173,8 @@ function formatearFechaPDF(valor) {
 }
 
 function formatearGradoDisplay(grado) {
-  let g = String(grado || '').trim();
-  if (!g) return '—';
-  g = g.toUpperCase()
-    .replace(/\b1\s*RA\b/g, 'PRIMERA')
-    .replace(/\b2\s*DA\b/g, 'SEGUNDA')
-    .replace(/\b3\s*RA\b/g, 'TERCERA')
-    .replace(/\s+PNP\s*$/i, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return g || '—';
+  const g = String(grado || '').trim();
+  return g ? g.toUpperCase() : '—';
 }
 
 // ── Encabezado del efectivo — banner plomo con grado, datos y foto ─────────────
