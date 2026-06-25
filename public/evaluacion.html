@@ -157,6 +157,34 @@
           </select>
           <span class="msg-error">Seleccione su cargo.</span>
         </div>
+        <div class="campo">
+          <label for="f-area">Área <span class="req">*</span></label>
+          <select id="f-area" class="select-eval" onchange="toggleAreaOtroEval()">
+            <option value="">-- Seleccionar área --</option>
+            <option value="JEFE DE UNIDAD">JEFE DE UNIDAD</option>
+            <option value="OFICIAL DE PERMANENCIA">OFICIAL DE PERMANENCIA</option>
+            <option value="FAMILIA">FAMILIA</option>
+            <option value="DELITOS">DELITOS</option>
+            <option value="TRANSITO">TRANSITO</option>
+            <option value="OPC">OPC</option>
+            <option value="GUARDIA PREVENCION">GUARDIA PREVENCION</option>
+            <option value="ARMERIA">ARMERIA</option>
+            <option value="COPIA CERITIFICADA">COPIA CERITIFICADA</option>
+            <option value="LOGISTICA">LOGISTICA</option>
+            <option value="MESA DE PARTES">MESA DE PARTES</option>
+            <option value="ADMINISTRACION">ADMINISTRACION</option>
+            <option value="MORAL Y DISCIPLINA">MORAL Y DISCIPLINA</option>
+            <option value="PERSONAL">PERSONAL</option>
+            <option value="PATRULLAJE MOTORIZADO">PATRULLAJE MOTORIZADO</option>
+            <option value="PATRULLAJE A PIE">PATRULLAJE A PIE</option>
+            <option value="OTRO">OTRO (especificar)</option>
+          </select>
+          <div id="f-area-otro-box" style="display:none;margin-top:8px;">
+            <input type="text" id="f-area-otro" class="select-eval" maxlength="120" placeholder="Especifique el área..." style="width:100%;"/>
+            <span class="msg-error">Indique el área.</span>
+          </div>
+          <span class="msg-error">Seleccione su área.</span>
+        </div>
         <div class="campo campo-full">
           <label>Arma</label>
           <div class="check-group">
@@ -246,7 +274,7 @@
 <script src="comisarias.js?v=2"></script>
 <script src="divisiones-ui.js?v=1"></script>
 <script src="preguntas.js?v=1"></script>
-<script src="evaluacion.js?v=16"></script>
+<script src="evaluacion.js?v=18"></script>
 </body>
 </html>
 

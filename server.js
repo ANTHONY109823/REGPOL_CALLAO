@@ -142,6 +142,7 @@ async function initDB() {
     ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS sexo VARCHAR(20);
     ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS armamento TEXT;
     ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS grado VARCHAR(80);
+    ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS area VARCHAR(120);
     CREATE INDEX IF NOT EXISTS idx_eval_comisaria ON evaluaciones(comisaria);
     CREATE INDEX IF NOT EXISTS idx_eval_unidad    ON evaluaciones(unidad);
 
@@ -170,8 +171,7 @@ async function initDB() {
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS dni VARCHAR(20);
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS fecha_nac DATE;
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS edad SMALLINT;
-
-    CREATE TABLE IF NOT EXISTS divisiones (
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS area VARCHAR(120);
       id     SERIAL PRIMARY KEY,
       nombre VARCHAR(120) UNIQUE NOT NULL,
       orden  SMALLINT DEFAULT 0
@@ -838,7 +838,7 @@ app.delete('/admin/preguntas/:id', requireAuth, async (req, res) => {
 // ── POST /guardar ─────────────────────────────────────────────────────────────
 app.post('/guardar', async (req, res) => {
   try {
-    const { comisaria, unidad, nombres, cip, dni, fecha_nac, edad, cargo, grado, sexo, armamento, foto, respuestas, completada } = req.body;
+    const { comisaria, unidad, nombres, cip, dni, fecha_nac, edad, cargo, area, grado, sexo, armamento, foto, respuestas, completada } = req.body;
     if (!nombres || !cip) return res.json({ ok: false, error: 'Faltan datos obligatorios' });
     const edadFinal = parseInt(edad) || calcularEdadDesdeISO(fecha_nac) || 0;
     const totalResp = contarRespuestasObj(respuestas).total;
@@ -859,18 +859,18 @@ app.post('/guardar', async (req, res) => {
       await pool.query(
         `UPDATE evaluaciones SET comisaria=$1, unidad=$2, nombres=$3, dni=$4, fecha_nac=$5, edad=$6,
          cargo=$7, foto=COALESCE(NULLIF($8,''), foto), respuestas=$9, completada=$10, bloque_max=$11,
-         sexo=$12, armamento=$13, grado=$14, fecha=NOW() WHERE id=$15`,
+         sexo=$12, armamento=$13, grado=$14, area=$15, fecha=NOW() WHERE id=$16`,
         [comisaria || '', unidad || '', nombres || '', dni || '', fecha_nac || null,
          edadFinal, cargo || '', foto || '', respuestas || {}, !!completada, totalResp,
-         sexo || '', armamentoStr, grado || '', exist.rows[0].id]
+         sexo || '', armamentoStr, grado || '', area || '', exist.rows[0].id]
       );
     } else {
       await pool.query(
-        `INSERT INTO evaluaciones (comisaria,unidad,nombres,cip,dni,fecha_nac,edad,cargo,sexo,armamento,foto,grado,respuestas,completada,bloque_max)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+        `INSERT INTO evaluaciones (comisaria,unidad,nombres,cip,dni,fecha_nac,edad,cargo,sexo,armamento,foto,grado,area,respuestas,completada,bloque_max)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
         [comisaria || '', unidad || '', nombres || '', cip || '', dni || '',
          fecha_nac || null, edadFinal, cargo || '', sexo || '', armamentoStr,
-         foto || '', grado || '', respuestas || {}, !!completada, totalResp]
+         foto || '', grado || '', area || '', respuestas || {}, !!completada, totalResp]
       );
     }
 
@@ -891,7 +891,7 @@ app.post('/guardar', async (req, res) => {
 // ── POST /progreso (guardar bloque parcial) ────────────────────────────────────
 app.post('/progreso', async (req, res) => {
   try {
-    const { cip, nombres, comisaria, unidad, cargo, grado, sexo, armamento, foto, bloque, total, respuestas, dni, fecha_nac, edad } = req.body;
+    const { cip, nombres, comisaria, unidad, cargo, area, grado, sexo, armamento, foto, bloque, total, respuestas, dni, fecha_nac, edad } = req.body;
     const clave = (cip || 'anonimo').toLowerCase().trim();
     const armamentoStr = Array.isArray(armamento) ? armamento.join(', ') : (armamento || '');
     const totalCalc = contarRespuestasObj(respuestas).total;
@@ -913,6 +913,7 @@ app.post('/progreso', async (req, res) => {
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS dni VARCHAR(20)`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS fecha_nac DATE`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS edad SMALLINT`).catch(()=>{});
+    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS area VARCHAR(120)`).catch(()=>{});
     await pool.query(
       `INSERT INTO progresos (clave,cip,nombres,comisaria,unidad,bloque_max,total_resp,respuestas,actualizado)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
@@ -924,9 +925,10 @@ app.post('/progreso', async (req, res) => {
     await pool.query(
       `UPDATE progresos SET cargo=$2, sexo=$3, armamento=$4,
          foto=COALESCE(NULLIF($5,''),foto), grado=COALESCE(NULLIF($6,''),grado),
-         dni=COALESCE(NULLIF($7,''),dni), fecha_nac=COALESCE($8,fecha_nac), edad=COALESCE($9,edad)
+         dni=COALESCE(NULLIF($7,''),dni), fecha_nac=COALESCE($8,fecha_nac), edad=COALESCE($9,edad),
+         area=COALESCE(NULLIF($10,''),area)
        WHERE clave=$1`,
-      [clave, cargo||'', sexo||'', armamentoStr, foto||'', grado||'', dni||'', fecha_nac || null, edadFinal]
+      [clave, cargo||'', sexo||'', armamentoStr, foto||'', grado||'', dni||'', fecha_nac || null, edadFinal, area||'']
     ).catch(()=>{});
     res.json({ ok: true });
   } catch (e) {
@@ -1018,7 +1020,7 @@ app.get('/progreso', async (req, res) => {
     res.json({
       ok: true, encontrado: true,
       cip: row.cip, nombres: row.nombres, comisaria: row.comisaria, unidad: row.unidad,
-      grado: row.grado || '', cargo: row.cargo || '', sexo: row.sexo || '',
+      grado: row.grado || '', cargo: row.cargo || '', area: row.area || '', sexo: row.sexo || '',
       dni: row.dni || '', edad: resolverEdadFila(row), fecha_nac: fechaNac,
       armamento: row.armamento || '', foto: row.foto || '',
       bloque: row.bloque_max, total: totalCalc, respuestas: row.respuestas,
@@ -1137,6 +1139,7 @@ async function fusionarProgresoEnEvaluacion(ev) {
       total_resp: totalP,
       grado: prog.grado || ev.grado,
       cargo: prog.cargo || ev.cargo,
+      area: prog.area || ev.area,
       sexo: prog.sexo || ev.sexo,
       armamento: prog.armamento || ev.armamento,
       foto: prog.foto || ev.foto

@@ -26,6 +26,47 @@ var ESTADO = {
 var ALERTA_FINAL_MOSTRADA = false;
 var FOTO_BASE64 = '';
 
+function toggleAreaOtroEval() {
+  var sel = document.getElementById('f-area');
+  var box = document.getElementById('f-area-otro-box');
+  var inp = document.getElementById('f-area-otro');
+  var show = sel && sel.value === 'OTRO';
+  if (box) box.style.display = show ? '' : 'none';
+  if (inp && !show) inp.value = '';
+}
+
+function obtenerAreaEvaluacion() {
+  var sel = document.getElementById('f-area');
+  if (!sel) return '';
+  if (sel.value === 'OTRO') {
+    var otro = document.getElementById('f-area-otro');
+    return otro ? otro.value.trim() : '';
+  }
+  return sel.value.trim();
+}
+
+function restaurarAreaEvaluacion(valor) {
+  var sel = document.getElementById('f-area');
+  if (!sel) return;
+  if (!valor) {
+    sel.value = '';
+    toggleAreaOtroEval();
+    return;
+  }
+  var conocida = false;
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === valor && valor !== 'OTRO') { conocida = true; break; }
+  }
+  if (conocida) {
+    sel.value = valor;
+  } else {
+    sel.value = 'OTRO';
+    var otro = document.getElementById('f-area-otro');
+    if (otro) otro.value = valor;
+  }
+  toggleAreaOtroEval();
+}
+
 /* ================================================================
    INICIO — cargar preguntas desde API
 ================================================================ */
@@ -372,6 +413,19 @@ function validarRegistro() {
     if (!c.test(el.value)){el.classList.add('invalido'); if(!err) err=c.msg;}
     else el.classList.add('valido');
   });
+  var areaVal = obtenerAreaEvaluacion();
+  var areaSel = document.getElementById('f-area');
+  var areaOtro = document.getElementById('f-area-otro');
+  if (areaSel) areaSel.classList.remove('invalido', 'valido');
+  if (areaOtro) areaOtro.classList.remove('invalido', 'valido');
+  if (!areaVal) {
+    if (areaSel) areaSel.classList.add('invalido');
+    if (areaSel && areaSel.value === 'OTRO' && areaOtro) areaOtro.classList.add('invalido');
+    if (!err) err = (areaSel && areaSel.value === 'OTRO') ? 'Indique el área en el campo Otro.' : 'Seleccione su área.';
+  } else {
+    if (areaSel) areaSel.classList.add('valido');
+    if (areaOtro && areaSel && areaSel.value === 'OTRO') areaOtro.classList.add('valido');
+  }
   var campoFoto = document.querySelector('.campo-foto');
   var inpFoto = document.getElementById('f-foto');
   if (campoFoto) campoFoto.classList.remove('invalido');
@@ -424,6 +478,7 @@ function construirPayloadProgreso() {
     sexo:      (document.getElementById('f-sexo')||{value:''}).value||'',
     grado:     (document.getElementById('f-grado')||{value:''}).value||'',
     cargo:     (document.getElementById('f-cargo')||{}).value||'',
+    area:      obtenerAreaEvaluacion(),
     armamento: obtenerArmamento(),
     foto:      FOTO_BASE64 || '',
     bloque:    ESTADO.bloqueActual || 1,
@@ -459,6 +514,7 @@ function construirPayloadGuardar(completada) {
     sexo:      (document.getElementById('f-sexo')||{value:''}).value.trim(),
     grado:     (document.getElementById('f-grado')||{value:''}).value.trim(),
     cargo:     document.getElementById('f-cargo').value.trim(),
+    area:      obtenerAreaEvaluacion(),
     armamento: obtenerArmamento(),
     foto:      FOTO_BASE64 || '',
     respuestas: ESTADO.respuestas,
@@ -791,6 +847,7 @@ function continuarConCIP() {
     if (data.sexo) { var sel = document.getElementById('f-sexo'); if(sel) sel.value = data.sexo; }
     if (data.grado) { var g = document.getElementById('f-grado'); if(g) g.value = data.grado; }
     if (data.cargo) document.getElementById('f-cargo').value = data.cargo;
+    if (data.area) restaurarAreaEvaluacion(data.area);
     restaurarArmamentoDesdeData(data);
     if (data.foto) { FOTO_BASE64 = data.foto; actualizarPreviewFoto(data.foto); }
     seleccionarComisariaEnSelect('f-unidad', data.unidad || data.comisaria || '');
@@ -882,6 +939,7 @@ function restaurarProgreso() {
   if(data.sexo){ var sel=document.getElementById('f-sexo'); if(sel) sel.value=data.sexo; }
   if(data.grado){ var g=document.getElementById('f-grado'); if(g) g.value=data.grado; }
   if(data.cargo) document.getElementById('f-cargo').value=data.cargo;
+  if(data.area) restaurarAreaEvaluacion(data.area);
   restaurarArmamentoDesdeData(data);
   if(data.foto) { FOTO_BASE64 = data.foto; actualizarPreviewFoto(data.foto); }
   seleccionarComisariaEnSelect('f-unidad', data.unidad || data.comisaria || '');
@@ -951,7 +1009,9 @@ function enviarEvaluacion() {
 }
 
 function limpiarFormulario() {
-  ['f-unidad','f-grado','f-nombres','f-cip','f-dni','f-nacimiento','f-sexo','f-cargo'].forEach(function(id){var el=document.getElementById(id);if(el) el.value='';});
+  ['f-unidad','f-grado','f-nombres','f-cip','f-dni','f-nacimiento','f-sexo','f-cargo','f-area'].forEach(function(id){var el=document.getElementById(id);if(el) el.value='';});
+  var areaOtro=document.getElementById('f-area-otro'); if(areaOtro) areaOtro.value='';
+  toggleAreaOtroEval();
   var chkP=document.getElementById('f-arm-particular'); if(chkP) chkP.checked=false;
   var chkE=document.getElementById('f-arm-estado'); if(chkE) chkE.checked=false;
   FOTO_BASE64 = '';

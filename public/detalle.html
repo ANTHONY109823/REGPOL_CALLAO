@@ -237,14 +237,45 @@ var GRADOS_PNP = [
 
 var CARGOS_OPCIONES = ['ADMINISTRATIVO', 'INVESTIGACION', 'PATRULLAJE'];
 
-function optsGrado(){
-  return '<option value="">— Seleccionar grado —</option>'
-    + GRADOS_PNP.map(function(g){return '<option value="'+g+'">'+g+'</option>';}).join('');
-}
+var AREAS_OPCIONES = [
+  'JEFE DE UNIDAD', 'OFICIAL DE PERMANENCIA', 'FAMILIA', 'DELITOS', 'TRANSITO', 'OPC',
+  'GUARDIA PREVENCION', 'ARMERIA', 'COPIA CERITIFICADA', 'LOGISTICA', 'MESA DE PARTES',
+  'ADMINISTRACION', 'MORAL Y DISCIPLINA', 'PERSONAL', 'PATRULLAJE MOTORIZADO', 'PATRULLAJE A PIE'
+];
 
 function optsCargo(){
   return '<option value="">— Seleccionar cargo —</option>'
     + CARGOS_OPCIONES.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
+}
+
+function optsArea(){
+  return '<option value="">— Seleccionar área —</option>'
+    + AREAS_OPCIONES.map(function(a){return '<option value="'+a+'">'+a+'</option>';}).join('')
+    + '<option value="OTRO">OTRO (especificar)</option>';
+}
+
+function toggleAreaOtroInscripcion() {
+  var sel = document.getElementById('fi-area');
+  var box = document.getElementById('fi-area-otro-box');
+  var inp = document.getElementById('fi-area-otro');
+  var show = sel && sel.value === 'OTRO';
+  if (box) box.style.display = show ? '' : 'none';
+  if (inp) { inp.required = !!show; if (!show) inp.value = ''; }
+}
+
+function obtenerAreaInscripcion() {
+  var sel = document.getElementById('fi-area');
+  if (!sel) return '';
+  if (sel.value === 'OTRO') {
+    var otro = document.getElementById('fi-area-otro');
+    return otro ? otro.value.trim() : '';
+  }
+  return sel.value.trim();
+}
+
+function optsGrado(){
+  return '<option value="">— Seleccionar grado —</option>'
+    + GRADOS_PNP.map(function(g){return '<option value="'+g+'">'+g+'</option>';}).join('');
 }
 
 function renderFormInscripcion(item){
@@ -270,8 +301,12 @@ function renderFormInscripcion(item){
     // ── FILA 3: Unidad + Área
     +'<div class="fi-group"><label>Unidad / Dependencia *</label>'
     +'<select id="fi-unidad" required><option value="">— Seleccionar —</option></select></div>'
-    +'<div class="fi-group"><label>Área / Sección</label>'
-    +'<input type="text" id="fi-area" maxlength="100" placeholder=""/></div>'
+    +'<div class="fi-group"><label>Área *</label>'
+    +'<select id="fi-area" required onchange="toggleAreaOtroInscripcion()">'+optsArea()+'</select></div>'
+    +'<div class="fi-group fi-full" id="fi-area-otro-box" style="display:none;">'
+    +'<label>Especifique el área *</label>'
+    +'<input type="text" id="fi-area-otro" maxlength="120" placeholder=""/>'
+    +'</div>'
 
     +'<div class="fi-group"><label>Cargo *</label>'
     +'<select id="fi-cargo" required>'+optsCargo()+'</select></div>'
@@ -457,7 +492,7 @@ function enviarInscripcion(e){
   var grado   = v('fi-grado');
   var nombres = v('fi-nombres');
   var unidad  = v('fi-unidad');
-  var area    = v('fi-area');
+  var area    = obtenerAreaInscripcion();
   var cargo   = v('fi-cargo');
   var tel     = v('fi-telefono');
   var email   = v('fi-email');
@@ -475,8 +510,13 @@ function enviarInscripcion(e){
   var pdfData = pdfEl ? pdfEl.value : '';
   var pdfNomb = (pdfFile&&pdfFile.files&&pdfFile.files[0]) ? pdfFile.files[0].name : 'requisitos.pdf';
 
-  if(!grado||!cip||!dni||!nombres||!unidad||!cargo){
-    alerta.textContent='Complete los campos obligatorios: grado, CIP, DNI, nombres, unidad y cargo.';
+  if(!grado||!cip||!dni||!nombres||!unidad||!cargo||!area){
+    var selArea = document.getElementById('fi-area');
+    if (selArea && selArea.value === 'OTRO' && !area) {
+      alerta.textContent='Seleccionó OTRO: indique el área en el cuadro de texto.';
+    } else {
+      alerta.textContent='Complete los campos obligatorios: grado, CIP, DNI, nombres, unidad, cargo y área.';
+    }
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
   if(ITEM_TIPO==='convenio' && !disponibilidad){
