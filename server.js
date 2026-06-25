@@ -2756,6 +2756,8 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       fecha_egreso, tiempo_servicio
     } = req.body;
     if (!cip || !nombres) return res.json({ ok: false, error: 'CIP y nombres son obligatorios.' });
+    if (!area || !String(area).trim()) return res.json({ ok: false, error: 'El área es obligatoria.' });
+    if (!cargo || !String(cargo).trim()) return res.json({ ok: false, error: 'El cargo es obligatorio.' });
     const dup = await pool.query(
       'SELECT id FROM inscripciones WHERE item_id=$1 AND cip=$2', [req.params.id, cip]);
     if (dup.rows.length)

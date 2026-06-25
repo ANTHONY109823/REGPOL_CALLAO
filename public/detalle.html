@@ -122,6 +122,7 @@
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=2"></script>
 <script src="portal.js?v=36"></script>
+<script src="areas-labor.js?v=1"></script>
 <script>
 var API_PUBLIC = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var ITEM_ID = null;
@@ -237,40 +238,27 @@ var GRADOS_PNP = [
 
 var CARGOS_OPCIONES = ['ADMINISTRATIVO', 'INVESTIGACION', 'PATRULLAJE'];
 
-var AREAS_OPCIONES = [
-  'JEFE DE UNIDAD', 'OFICIAL DE PERMANENCIA', 'FAMILIA', 'DELITOS', 'TRANSITO', 'OPC',
-  'GUARDIA PREVENCION', 'ARMERIA', 'COPIA CERITIFICADA', 'LOGISTICA', 'MESA DE PARTES',
-  'ADMINISTRACION', 'MORAL Y DISCIPLINA', 'PERSONAL', 'PATRULLAJE MOTORIZADO', 'PATRULLAJE A PIE'
-];
-
 function optsCargo(){
   return '<option value="">— Seleccionar cargo —</option>'
     + CARGOS_OPCIONES.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
 }
 
 function optsArea(){
-  return '<option value="">— Seleccionar área —</option>'
-    + AREAS_OPCIONES.map(function(a){return '<option value="'+a+'">'+a+'</option>';}).join('')
-    + '<option value="OTRO">OTRO (especificar)</option>';
+  return typeof regpolHtmlOpcionesArea === 'function'
+    ? regpolHtmlOpcionesArea('— Seleccionar área —')
+    : '<option value="">— Seleccionar área —</option>';
 }
 
 function toggleAreaOtroInscripcion() {
-  var sel = document.getElementById('fi-area');
-  var box = document.getElementById('fi-area-otro-box');
-  var inp = document.getElementById('fi-area-otro');
-  var show = sel && sel.value === 'OTRO';
-  if (box) box.style.display = show ? '' : 'none';
-  if (inp) { inp.required = !!show; if (!show) inp.value = ''; }
+  if (typeof regpolToggleAreaOtro === 'function') {
+    regpolToggleAreaOtro('fi-area', 'fi-area-otro-box', 'fi-area-otro');
+  }
 }
 
 function obtenerAreaInscripcion() {
+  if (typeof regpolObtenerArea === 'function') return regpolObtenerArea('fi-area', 'fi-area-otro');
   var sel = document.getElementById('fi-area');
-  if (!sel) return '';
-  if (sel.value === 'OTRO') {
-    var otro = document.getElementById('fi-area-otro');
-    return otro ? otro.value.trim() : '';
-  }
-  return sel.value.trim();
+  return sel ? sel.value.trim() : '';
 }
 
 function optsGrado(){
@@ -558,6 +546,7 @@ function enviarInscripcion(e){
       if(prev) prev.style.display='none';
       var diaBox=document.getElementById('fi-dia-franco-box');
       if(diaBox) diaBox.style.display='none';
+      toggleAreaOtroInscripcion();
     } else {
       alerta.textContent=d.error||'Error al procesar la inscripción.';
       alerta.className='fi-alerta error'; alerta.style.display='block';

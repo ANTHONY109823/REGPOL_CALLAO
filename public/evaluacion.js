@@ -27,43 +27,24 @@ var ALERTA_FINAL_MOSTRADA = false;
 var FOTO_BASE64 = '';
 
 function toggleAreaOtroEval() {
-  var sel = document.getElementById('f-area');
-  var box = document.getElementById('f-area-otro-box');
-  var inp = document.getElementById('f-area-otro');
-  var show = sel && sel.value === 'OTRO';
-  if (box) box.style.display = show ? '' : 'none';
-  if (inp && !show) inp.value = '';
+  if (typeof regpolToggleAreaOtro === 'function') {
+    regpolToggleAreaOtro('f-area', 'f-area-otro-box', 'f-area-otro');
+  }
 }
 
 function obtenerAreaEvaluacion() {
+  if (typeof regpolObtenerArea === 'function') return regpolObtenerArea('f-area', 'f-area-otro');
   var sel = document.getElementById('f-area');
-  if (!sel) return '';
-  if (sel.value === 'OTRO') {
-    var otro = document.getElementById('f-area-otro');
-    return otro ? otro.value.trim() : '';
-  }
-  return sel.value.trim();
+  return sel ? sel.value.trim() : '';
 }
 
 function restaurarAreaEvaluacion(valor) {
-  var sel = document.getElementById('f-area');
-  if (!sel) return;
-  if (!valor) {
-    sel.value = '';
-    toggleAreaOtroEval();
+  if (typeof regpolRestaurarArea === 'function') {
+    regpolRestaurarArea('f-area', 'f-area-otro', 'f-area-otro-box', valor);
     return;
   }
-  var conocida = false;
-  for (var i = 0; i < sel.options.length; i++) {
-    if (sel.options[i].value === valor && valor !== 'OTRO') { conocida = true; break; }
-  }
-  if (conocida) {
-    sel.value = valor;
-  } else {
-    sel.value = 'OTRO';
-    var otro = document.getElementById('f-area-otro');
-    if (otro) otro.value = valor;
-  }
+  var sel = document.getElementById('f-area');
+  if (sel && valor) sel.value = valor;
   toggleAreaOtroEval();
 }
 

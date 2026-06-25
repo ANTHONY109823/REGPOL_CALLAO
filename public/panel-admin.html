@@ -764,6 +764,9 @@
           <select id="inscritos-filtro-unidad" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
             <option value="">Todas las unidades</option>
           </select>
+          <select id="inscritos-filtro-area" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
+            <option value="">Todas las áreas</option>
+          </select>
           <select id="inscritos-filtro-estado" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
             <option value="">Todos</option>
             <option value="pendiente">Pendiente</option>
@@ -3290,12 +3293,15 @@ function verInscritos(itemId, titulo){
   document.getElementById('inscritos-filtro-estado').value='';
   var selUni=document.getElementById('inscritos-filtro-unidad');
   if(selUni) selUni.innerHTML='<option value="">Todas las unidades</option>';
+  var selArea=document.getElementById('inscritos-filtro-area');
+  if(selArea) selArea.innerHTML='<option value="">Todas las áreas</option>';
   document.getElementById('inscritos-tabla').innerHTML='<p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i></p>';
   fetch(API+'/admin/items/'+itemId+'/inscritos',{headers:hdr()})
     .then(function(r){return r.json();}).then(function(d){
       if(!d.ok){document.getElementById('inscritos-tabla').innerHTML='<p style="color:#c00;padding:16px;">'+escHtml(d.error||'Error')+'</p>';return;}
       INSCRITOS_CACHE=d.inscritos||[];
       poblarFiltroUnidadesInscritos();
+      poblarFiltroAreasInscritos();
       renderInscritos(obtenerInscritosFiltrados(), d.tipo||'convenio');
     });
 }
@@ -3318,16 +3324,37 @@ function poblarFiltroUnidadesInscritos(){
   if(val) sel.value=val;
 }
 
+function poblarFiltroAreasInscritos(){
+  var sel=document.getElementById('inscritos-filtro-area');
+  if(!sel) return;
+  var counts={};
+  INSCRITOS_CACHE.forEach(function(i){
+    var a=(i.area||'').trim()||'(Sin área)';
+    counts[a]=(counts[a]||0)+1;
+  });
+  var sorted=Object.keys(counts).sort();
+  var val=sel.value;
+  sel.innerHTML='<option value="">Todas las áreas ('+INSCRITOS_CACHE.length+')</option>'
+    +sorted.map(function(a){
+      var v=a==='(Sin área)'?'':a;
+      return '<option value="'+escHtml(v)+'">'+escHtml(a)+' ('+counts[a]+')</option>';
+    }).join('');
+  if(val) sel.value=val;
+}
+
 function obtenerInscritosFiltrados(){
   var txt=(document.getElementById('inscritos-buscar').value||'').toLowerCase();
   var est=document.getElementById('inscritos-filtro-estado').value;
   var unidEl=document.getElementById('inscritos-filtro-unidad');
   var unid=unidEl?unidEl.value:'';
+  var areaEl=document.getElementById('inscritos-filtro-area');
+  var areaF=areaEl?areaEl.value:'';
   return INSCRITOS_CACHE.filter(function(i){
     var matchTxt=!txt||(i.cip||'').toLowerCase().includes(txt)||(i.nombres||'').toLowerCase().includes(txt)||(i.dni||'').toLowerCase().includes(txt);
     var matchEst=!est||i.estado===est;
     var matchUni=!unid||(i.unidad||'')===unid;
-    return matchTxt&&matchEst&&matchUni;
+    var matchArea=!areaF||(i.area||'')===areaF;
+    return matchTxt&&matchEst&&matchUni&&matchArea;
   });
 }
 
@@ -3387,7 +3414,7 @@ function renderInscritos(list, tipo){
 
   document.getElementById('inscritos-tabla').innerHTML=
     '<div style="overflow-x:auto;"><table class="t" style="min-width:900px;"><thead><tr>'
-    +'<th>#</th><th>Grado</th><th>CIP</th><th>DNI</th><th>Apellidos y Nombres</th><th>Unidad/Área</th>'
+    +'<th>#</th><th>Grado</th><th>CIP</th><th>DNI</th><th>Apellidos y Nombres</th><th>Unidad</th><th>Área</th>'
     +(esConvenio?'<th>Disponib.</th>':'<th>T. Servicio</th>')
     +'<th>PDF</th><th>Estado</th><th>Fecha</th><th>Acciones</th>'
     +'</tr></thead><tbody>'
@@ -3408,7 +3435,8 @@ function renderInscritos(list, tipo){
         +'<td style="font-weight:700;">'+escHtml(ins.cip||'')+'</td>'
         +'<td style="font-size:11.5px;">'+escHtml(ins.dni||'')+'</td>'
         +'<td style="font-weight:600;">'+escHtml(ins.nombres||'')+'</td>'
-        +'<td style="font-size:11px;">'+escHtml(ins.unidad||'')+(ins.area?'<br/><span style="color:#888;">'+escHtml(ins.area)+'</span>':'')+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(ins.unidad||'')+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(ins.area||'—')+'</td>'
         +'<td>'+dispBadge+'</td>'
         +'<td style="text-align:center;">'+(ins.tiene_pdf
           ?'<button class="btn-mini" style="background:#e74c3c;color:#fff;" title="Ver PDF" onclick="verPdfInscripcion('+ins.id+')"><i class="fas fa-file-pdf"></i></button>'
@@ -3609,9 +3637,9 @@ function eliminarInscripcion(){
 function exportarInscritos(){
   var list=obtenerInscritosFiltrados();
   if(!list.length){alert('No hay inscritos para exportar con el filtro actual.');return;}
-  var rows=[['CIP','Nombres','Unidad','Cargo','Teléfono','Email','Estado','Observación','Fecha']];
+  var rows=[['CIP','Nombres','Unidad','Área','Cargo','Teléfono','Email','Estado','Observación','Fecha']];
   list.forEach(function(i){
-    rows.push([i.cip,i.nombres,i.unidad,i.cargo,i.telefono,i.email,i.estado,i.observacion,
+    rows.push([i.cip,i.nombres,i.unidad,i.area,i.cargo,i.telefono,i.email,i.estado,i.observacion,
       i.fecha?new Date(i.fecha).toLocaleDateString('es-PE'):'']);
   });
   var csv=rows.map(function(r){return r.map(function(c){return '"'+(c||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
