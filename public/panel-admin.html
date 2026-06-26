@@ -429,6 +429,9 @@
     <!-- PORTAL WEB (solo Super Admin — contenido visible en la página pública) -->
     <div class="sb-section" id="sb-sec-portal" data-rol-unitic>
       <div class="sb-section-label">Portal Web</div>
+      <div class="sb-item" data-page="menu-publicacion" onclick="ir('menu-publicacion',this)" style="background:rgba(200,169,74,.12);border-left:3px solid #c8a94a;">
+        <i class="fas fa-toggle-on" style="color:#c8a94a;"></i> MENÚ PUBLICADO EN WEB
+      </div>
       <div class="sb-item" onclick="irCMS('carrusel',this)"><i class="fas fa-home"></i> INICIO / CARRUSEL</div>
       <div class="sb-item" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> NOVEDADES</div>
       <div class="sb-item" onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> CONVENIOS (WEB)</div>
@@ -607,6 +610,18 @@
           <i class="fas fa-plus"></i> Nueva división
         </button>
         <div id="div-lista"></div>
+      </div>
+    </div>
+
+    <!-- PUBLICACIÓN DEL MENÚ (Super Admin) -->
+    <div id="page-menu-publicacion" class="page">
+      <div class="card">
+        <h3 style="margin:0 0 8px;color:#004d3d;font-size:17px;border:none;padding:0;">
+          <i class="fas fa-toggle-on" style="color:#c8a94a;"></i> Publicación del menú de navegación
+        </h3>
+        <p style="font-size:13px;color:#666;margin:0 0 18px;">Controle qué secciones del portal son visibles para el público mientras termina el desarrollo.</p>
+        <div id="alerta-menu-publicacion" class="alerta" style="display:none;margin-bottom:14px;"></div>
+        <div id="menu-publicacion-editor"><p style="color:#bbb;font-size:13px;">Cargando menús...</p></div>
       </div>
     </div>
 
@@ -1288,9 +1303,9 @@
 
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=6"></script>
-<script src="portal.js?v=40"></script>
+<script src="portal.js?v=42"></script>
 <script src="divisiones-ui.js?v=3"></script>
-<script src="panel-cms.js?v=14"></script>
+<script src="panel-cms.js?v=15"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[], SESION=null;
@@ -1900,7 +1915,7 @@ function ir(page, el){
   if(page==='resultados-pdf'&&!puedePublicarResultadosPdf(RESULTADOS_PDF_TIPO)){alert('Sin acceso a publicación de resultados.');return;}
   if(page==='inscritos'&&!puedeOperarInscritosConvenio()){alert('Sin acceso a inscritos de convenios.');return;}
   if(page==='consulta-cip'&&!puedeConsultarCip()){alert('Sin acceso a consulta por CIP.');return;}
-  if((page==='usuarios'||page==='divisiones')&&!esUnitic()){alert('Solo el Super Admin puede acceder a esta sección.');return;}
+  if((page==='usuarios'||page==='divisiones'||page==='menu-publicacion')&&!esUnitic()){alert('Solo el Super Admin puede acceder a esta sección.');return;}
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
   var pg=document.getElementById('page-'+page);
   if(pg) pg.classList.add('on');
@@ -1922,6 +1937,7 @@ function ir(page, el){
   if(page==='divisiones' && !ya)   cargarDivisiones();
   if(page==='items' && !ya)        { aplicarRestriccionFiltroItems(); cargarItems(); }
   if(page==='resultados-pdf' && !ya){ cargarResultadosPdfAdmin(); }
+  if(page==='menu-publicacion'){ cargarPaginaMenuPublicacion(); }
   if(page==='sorteos')             { aplicarModoSorteosUI(); cargarItemsSorteo(SORTEOS_TIPO_FILTRO||'convenio'); cargarSorteos(); }
   panelPaginasCargadas[page] = true;
 }

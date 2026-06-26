@@ -33,10 +33,14 @@ var REGPOL_NAV_FALLBACK = [
 
 var portalActiveNavId = '';
 var _scrollNavListo = false;
+var portalNavOcultosCache = [];
 
-function obtenerPortalNav() {
+function obtenerPortalNav(ocultos) {
+  var ocultosList = ocultos || portalNavOcultosCache || [];
   var base = (window.REGPOL_NAV && window.REGPOL_NAV.length) ? window.REGPOL_NAV : REGPOL_NAV_FALLBACK;
-  return base.filter(function(item) { return item.id !== 'consulta'; });
+  return base.filter(function(item) {
+    return item.id !== 'consulta' && ocultosList.indexOf(item.id) === -1;
+  });
 }
 
 function escHtml(str) {
@@ -250,21 +254,32 @@ function aplicarPortalConfig(config, data) {
   if (config.renderLabor) renderNuestraLabor(data, config.renderLabor);
   if (config.renderBienestar) renderBienestarPolicial(data, config.renderBienestar);
   if (config.renderNovedades) renderNovedades(data, config.renderNovedades, config.limiteNovedades);
-  if (config.renderConvenios) {
+  if (config.renderConvenios && (!data.navOcultos || data.navOcultos.indexOf('convenios') === -1)) {
     var elConv = document.getElementById(config.renderConvenios);
     if (elConv) elConv.innerHTML = '';
     appendPortalItems('convenio', config.renderConvenios);
+  } else if (config.renderConvenios) {
+    var elConvHide = document.getElementById(config.renderConvenios);
+    if (elConvHide && elConvHide.closest('section')) elConvHide.closest('section').style.display = 'none';
   }
-  if (config.renderCursos) {
+  if (config.renderCursos && (!data.navOcultos || data.navOcultos.indexOf('cursos') === -1)) {
     var elCur = document.getElementById(config.renderCursos);
     if (elCur) elCur.innerHTML = '';
     appendPortalItems('curso', config.renderCursos);
+  } else if (config.renderCursos) {
+    var elCurHide = document.getElementById(config.renderCursos);
+    if (elCurHide && elCurHide.closest('section')) elCurHide.closest('section').style.display = 'none';
   }
-  if (config.renderConveniosPdf) cargarResultadosPdfPortal('convenio', config.renderConveniosPdf);
-  if (config.renderCursosPdf) cargarResultadosPdfPortal('curso', config.renderCursosPdf);
+  if (config.renderConveniosPdf && (!data.navOcultos || data.navOcultos.indexOf('convenios') === -1)) {
+    cargarResultadosPdfPortal('convenio', config.renderConveniosPdf);
+  }
+  if (config.renderCursosPdf && (!data.navOcultos || data.navOcultos.indexOf('cursos') === -1)) {
+    cargarResultadosPdfPortal('curso', config.renderCursosPdf);
+  }
   if (config.actualizarFecha) actualizarFechaPortal(data);
   if (config.actualizarCarrusel) actualizarCarrusel(data);
-  initPortalNav((config && config.activeNav) || portalActiveNavId);
+  if (data.navOcultos) portalNavOcultosCache = data.navOcultos;
+  initPortalNav((config && config.activeNav) || portalActiveNavId, data.navOcultos || []);
   if (data.navOcultos && data.navOcultos.length) aplicarNavOcultos(data.navOcultos);
 }
 
@@ -402,13 +417,14 @@ function initPortalScrollNav() {
   initPortalStickyNav();
 }
 
-function initPortalNav(activeId) {
+function initPortalNav(activeId, ocultos) {
   if (activeId) portalActiveNavId = activeId;
   else activeId = portalActiveNavId;
+  if (ocultos) portalNavOcultosCache = ocultos;
   aplicarEncabezadoMarca(obtenerSiteDataSync());
   var ul = document.querySelector('.nav-main ul');
   if (!ul) return;
-  var navItems = obtenerPortalNav();
+  var navItems = obtenerPortalNav(portalNavOcultosCache);
   ul.innerHTML = navItems.map(function(item) {
     var cls = item.id === activeId ? ' class="activo"' : '';
     var icon = item.icon ? '<i class="fas ' + item.icon + '"></i> ' : '';
@@ -1087,16 +1103,25 @@ function initPortalInicio() {
 }
 
 function aplicarNavOcultos(ocultos) {
-  if (!ocultos || !ocultos.length) return;
+  if (!ocultos) ocultos = [];
+  portalNavOcultosCache = ocultos;
+  var mapaSecciones = {
+    inicio: 'inicio',
+    novedades: 'novedades',
+    convenios: 'convenios',
+    cursos: 'cursos',
+    bienestar: 'bienestar',
+    resena: 'resena',
+    labor: 'labor',
+    unidades: 'unidades'
+  };
+  Object.keys(mapaSecciones).forEach(function(id) {
+    var sec = document.getElementById(mapaSecciones[id]);
+    if (sec) sec.style.display = ocultos.indexOf(id) !== -1 ? 'none' : '';
+  });
   document.querySelectorAll('[data-nav-id]').forEach(function(el) {
-    if (ocultos.indexOf(el.getAttribute('data-nav-id')) !== -1) {
-      el.style.display = 'none';
-    }
+    var id = el.getAttribute('data-nav-id');
+    el.style.display = ocultos.indexOf(id) !== -1 ? 'none' : '';
   });
-  obtenerPortalNav().forEach(function(item) {
-    if (ocultos.indexOf(item.id) !== -1) {
-      var link = document.querySelector('a[href="' + item.href + '"]');
-      if (link && link.closest('li')) link.closest('li').style.display = 'none';
-    }
-  });
+  initPortalNav(portalActiveNavId, ocultos);
 }

@@ -361,34 +361,65 @@ function guardarHeroTexto() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// MENÚ (HERO LINKS Y VISIBILIDAD)
+// MENÚ (VISIBILIDAD EN LA WEB PÚBLICA)
 // ═══════════════════════════════════════════════════════════════
-function renderEditorMenu() {
-  var el = document.getElementById('editor-menu');
-  if (!el) return;
-  var ocultos = cmsDataActual.navOcultos || [];
-  var nav = (window.REGPOL_NAV && window.REGPOL_NAV.length) ? window.REGPOL_NAV : [];
+function listaNavPortalCMS() {
+  if (typeof obtenerPortalNav === 'function') {
+    return (window.REGPOL_NAV && window.REGPOL_NAV.length) ? window.REGPOL_NAV : [];
+  }
+  return (window.REGPOL_NAV && window.REGPOL_NAV.length) ? window.REGPOL_NAV : [];
+}
 
-  var html = '<p style="font-size:12px;color:#666;margin-bottom:14px;">Activa o desactiva elementos del menú de navegación del portal. Los cambios aplican al publicar.</p>';
+function htmlEditorMenuPublicacion(containerPrefix) {
+  var prefix = containerPrefix || 'menu-pub';
+  var ocultos = (cmsDataActual && cmsDataActual.navOcultos) ? cmsDataActual.navOcultos : [];
+  var nav = listaNavPortalCMS().filter(function(item) { return item.id !== 'consulta'; });
+
+  var html = '<p style="font-size:13px;color:#444;margin-bottom:16px;line-height:1.55;">'
+    + '<strong>Marque los ítems que desea publicar</strong> en el menú superior del portal. '
+    + 'Los desmarcados no aparecerán en la web ni en las secciones del inicio hasta que los active.</p>';
+
   html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">';
   nav.forEach(function(item) {
-    var oculto = ocultos.indexOf(item.id) !== -1;
-    html += '<label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1.5px solid #e0e8e0;border-radius:7px;cursor:pointer;background:' + (oculto ? '#fff5f5' : '#f7faf7') + ';">'
-      + '<input type="checkbox" data-nav-id="' + escHtml(item.id) + '" ' + (!oculto ? 'checked' : '') + ' style="width:16px;height:16px;accent-color:#004d3d;"/>'
-      + '<i class="fas ' + escHtml(item.icon || 'fa-circle') + '" style="color:#004d3d;width:16px;text-align:center;"></i>'
-      + '<span style="font-size:13px;font-weight:600;">' + escHtml(item.label) + '</span>'
-      + '<span style="font-size:11px;color:#aaa;margin-left:auto;">' + escHtml(item.href) + '</span>'
+    var publicado = ocultos.indexOf(item.id) === -1;
+    html += '<label style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:12px 14px;border:2px solid '
+      + (publicado ? '#a5d6a7' : '#e0e0e0') + ';border-radius:10px;cursor:pointer;background:'
+      + (publicado ? '#f7faf7' : '#fafafa') + ';">'
+      + '<input type="checkbox" class="' + prefix + '-chk" data-nav-id="' + escHtml(item.id) + '" '
+      + (publicado ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:#004d3d;"/>'
+      + '<span style="font-size:14px;font-weight:700;color:#004d3d;">'
+      + '<i class="fas ' + escHtml(item.icon || 'fa-circle') + '" style="margin-right:8px;color:#c8a94a;"></i>'
+      + escHtml(item.label) + '</span>'
+      + '<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:'
+      + (publicado ? '#d4edda;color:#1a5c32' : '#f8d7da;color:#842029') + ';">'
+      + (publicado ? 'PUBLICADO' : 'OCULTO') + '</span>'
       + '</label>';
   });
   html += '</div>';
 
-  html += '<hr style="margin:16px 0;border:none;border-top:1.5px solid #e0e8e0;"/>'
+  html += '<div style="background:#fffdf5;border:1.5px solid #c8a94a;border-radius:10px;padding:14px;margin-bottom:18px;font-size:12px;color:#666;">'
+    + '<i class="fas fa-info-circle" style="color:#c8a94a;"></i> '
+    + 'Ejemplo: desmarque <strong>CONVENIOS</strong> y <strong>CURSOS</strong> mientras termina esas secciones. '
+    + 'El resto del portal seguirá visible.</div>';
+
+  html += '<button type="button" class="btn btn-v" style="font-size:14px;padding:12px 22px;" onclick="guardarMenuPublicacionWeb()">'
+    + '<i class="fas fa-globe"></i> GUARDAR Y PUBLICAR EN LA WEB</button>';
+
+  return html;
+}
+
+function renderEditorMenu() {
+  var el = document.getElementById('editor-menu');
+  if (!el) return;
+  var html = htmlEditorMenuPublicacion('cms-menu');
+
+  html += '<hr style="margin:20px 0;border:none;border-top:1.5px solid #e0e8e0;"/>'
     + '<strong style="color:#004d3d;font-size:13px;display:block;margin-bottom:10px;"><i class="fas fa-link"></i> Accesos rápidos de la portada</strong>'
     + '<p style="font-size:11px;color:#888;margin-bottom:12px;">Textos de las tarjetas de acceso rápido en la página de inicio.</p>';
 
-  var accesos = cmsDataActual.accesosRapidos || [
-    { titulo: 'CONVENIOS DE TRABAJO', descripcion: 'Consulta las últimas convocatorias vigentes para el personal policial', href: 'convenios.html' },
-    { titulo: 'CURSOS POLICIALES',    descripcion: 'Nuevas vacantes y capacitaciones especializadas programadas para este mes',  href: 'cursos.html' }
+  var accesos = (cmsDataActual && cmsDataActual.accesosRapidos) ? cmsDataActual.accesosRapidos : [
+    { titulo: 'CONVENIOS DE TRABAJO', descripcion: 'Consulta las últimas convocatorias vigentes para el personal policial' },
+    { titulo: 'CURSOS POLICIALES', descripcion: 'Nuevas vacantes y capacitaciones especializadas programadas para este mes' }
   ];
   accesos.forEach(function(a, i) {
     html += '<div style="border:1.5px solid #e0e8e0;border-radius:8px;padding:12px;margin-bottom:10px;">'
@@ -399,30 +430,57 @@ function renderEditorMenu() {
       + '</div>';
   });
 
-  html += '<button class="btn btn-v" onclick="guardarConfigMenu()"><i class="fas fa-save"></i> Guardar configuración de menú</button>';
-
   el.innerHTML = html;
 }
 
-function guardarConfigMenu() {
+function renderMenuPublicacionPagina() {
+  var el = document.getElementById('menu-publicacion-editor');
+  if (!el) return;
+  el.innerHTML = htmlEditorMenuPublicacion('menu-pub');
+}
+
+function guardarMenuPublicacionWeb() {
   var ocultos = [];
-  document.querySelectorAll('[data-nav-id]').forEach(function(chk) {
+  document.querySelectorAll('.menu-pub-chk, .cms-menu-chk').forEach(function(chk) {
     if (!chk.checked) ocultos.push(chk.getAttribute('data-nav-id'));
   });
+  if (!cmsDataActual) cmsDataActual = {};
   cmsDataActual.navOcultos = ocultos;
-
   var accesos = [];
   var i = 0;
   while (document.getElementById('cms-acceso-titulo-' + i)) {
     accesos.push({
-      titulo:      document.getElementById('cms-acceso-titulo-' + i).value.trim(),
-      descripcion: document.getElementById('cms-acceso-desc-'   + i).value.trim()
+      titulo: document.getElementById('cms-acceso-titulo-' + i).value.trim(),
+      descripcion: document.getElementById('cms-acceso-desc-' + i).value.trim()
     });
     i++;
   }
   if (accesos.length) cmsDataActual.accesosRapidos = accesos;
-
   guardarSitioWeb();
+  renderMenuPublicacionPagina();
+  renderEditorMenu();
+}
+
+function cargarPaginaMenuPublicacion() {
+  if (!esUnitic()) { alert('Solo el Super Admin puede publicar el menú del portal.'); return; }
+  var pintar = function() {
+    renderMenuPublicacionPagina();
+  };
+  if (cmsDataActual) {
+    pintar();
+    return;
+  }
+  if (!CMS_INICIADO) {
+    CMS_INICIADO = true;
+    initCMS();
+    setTimeout(pintar, 400);
+    return;
+  }
+  pintar();
+}
+
+function guardarConfigMenu() {
+  guardarMenuPublicacionWeb();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -858,12 +916,21 @@ function restaurarSiteDefault() {
 // MODAL CMS — helpers
 // ═══════════════════════════════════════════════════════════════
 function mostrarAlertaCMS(texto, tipo) {
-  var el = document.getElementById('alerta-cms');
-  if (!el) return;
-  el.textContent = texto;
-  el.style.display = 'block';
-  el.className = 'alerta alerta-' + (tipo === 'ok' ? 'exito' : 'error') + ' visible';
-  setTimeout(function() { el.style.display = 'none'; el.classList.remove('visible'); }, 5000);
+  ['alerta-cms', 'alerta-menu-publicacion'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = texto;
+    el.style.display = 'block';
+    el.className = 'alerta alerta-' + (tipo === 'ok' ? 'exito' : 'error') + ' visible';
+  });
+  setTimeout(function() {
+    ['alerta-cms', 'alerta-menu-publicacion'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.style.display = 'none';
+      el.classList.remove('visible');
+    });
+  }, 5000);
 }
 
 function abrirCmsModal(titulo, htmlBody, onGuardar) {
