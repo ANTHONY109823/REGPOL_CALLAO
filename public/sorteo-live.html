@@ -340,10 +340,13 @@ function persistirGanadorUno(g){
   return fetch(API+'/admin/items/'+ITEM_ID+'/aplicar-sorteo',{
     method:'POST', headers:HDR,
     body:JSON.stringify({ ganadores:[{id:g.id, tipo:g.tipo||'sorteo'}], reservas:[] })
-  }).then(function(r){ return r.json(); }).then(function(d){
-    if(!d.ok) throw new Error(d.error||'Error al registrar ganador');
-    marcarEstadoLocal(g.id, 'ganador');
-    return d;
+  }).then(function(r){
+    return r.json().then(function(d){
+      if(!r.ok || !d.ok) throw new Error((d && d.error) || ('Error HTTP '+r.status));
+      if((d.ganadores|0) < 1) throw new Error('No se actualizó el estado en base de datos. Recargue candidatos e intente de nuevo.');
+      marcarEstadoLocal(g.id, 'ganador');
+      return d;
+    });
   });
 }
 
@@ -501,6 +504,11 @@ function actualizarUI(){
   if(completo) {
     document.getElementById('btn-guardar').style.display = '';
     persistirReservasSiCompleto().catch(function(e){ console.error(e); });
+    if(!SORTEO_PERSISTIDO && GANADORES.length){
+      persistirResultadosSorteo().catch(function(e){
+        console.error('Error al sincronizar ganadores:', e);
+      });
+    }
   }
 }
 

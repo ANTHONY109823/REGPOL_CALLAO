@@ -925,6 +925,42 @@ function dibujarPiePortal(doc, pagina, totalPaginas) {
            doc.page.width - 100, y + 2, { align: 'right', width: 60, lineBreak: false });
 }
 
+function extraerUniformeDeRequisitos(requisitos) {
+  let reqs = requisitos;
+  if (typeof reqs === 'string') {
+    try { reqs = JSON.parse(reqs); } catch (e) { reqs = []; }
+  }
+  if (!Array.isArray(reqs)) return '';
+  const hit = reqs.find(function(r) {
+    return /uniforme/i.test(String(r || ''));
+  });
+  return hit ? String(hit) : '';
+}
+
+const DEFAULTS_CONSTANCIA_CONVENIO = {
+  'PLAN CELADOR': {
+    uniforme: 'Uniforme de faena completo (camisa, pantalón, correa y fornitura reglamentaria).',
+    lugar: 'Dependencia o comisaría asignada — confirmar punto de formación diaria en Oficina de Convenios.',
+    horario: '08:00 a 20:00 hrs (12 horas por turno).',
+    contactos: 'Oficina de Convenios — REGPOL Callao | WhatsApp: 927 577 686.'
+  }
+};
+
+function detallesConstanciaConvenio(item) {
+  const titulo = String(item.titulo || '').trim().toUpperCase();
+  const defs = DEFAULTS_CONSTANCIA_CONVENIO[titulo] || {};
+  const uniformeReq = extraerUniformeDeRequisitos(item.requisitos);
+  return {
+    uniforme: String(item.uniforme || '').trim() || uniformeReq || defs.uniforme || 'Uniforme reglamentario de faena completo y documento de identidad.',
+    lugar: String(item.lugar || '').trim() || defs.lugar || 'Oficina gestora — REGPOL Callao (confirmar con el área).',
+    horario: String(item.horario || '').trim() || defs.horario || 'Por confirmar — consulte con el área correspondiente.',
+    contactos: String(item.contactos_responsables || '').trim() || defs.contactos || 'Oficina de Convenios — REGPOL Callao | WhatsApp: 927 577 686.',
+    beneficio: String(item.fecha_inicio || '').trim(),
+    detalleBeneficio: String(item.duracion || '').trim(),
+    observaciones: String(item.observaciones || '').trim()
+  };
+}
+
 function generarPDFConstanciaVacante(inscripcion, item) {
   return new Promise(function(resolve) {
     const doc = new PDFDocument({
@@ -996,19 +1032,34 @@ function generarPDFConstanciaVacante(inscripcion, item) {
     textoBloque('Denominación: ' + (item.titulo || '—'));
     textoBloque('Vacantes del proceso: ' + (item.vacantes != null ? String(item.vacantes) : '—'));
     textoBloque('Fecha de inscripción: ' + formatearFechaPDF(inscripcion.fecha));
+    const det = detallesConstanciaConvenio(item);
+    if (!esCurso && det.beneficio) {
+      textoBloque('Beneficio económico: ' + det.beneficio + (det.detalleBeneficio ? ' — ' + det.detalleBeneficio : ''));
+    }
     y += 4;
 
-    seccion('PRESENTACIÓN Y HORARIO');
-    const lugar = item.lugar || 'Oficina gestora — REGPOL Callao (confirmar con el área)';
-    const horario = item.horario || 'Por confirmar — consulte con el área correspondiente';
-    textoBloque('Lugar de presentación: ' + lugar);
-    textoBloque('Horario: ' + horario);
+    seccion('UNIFORME Y PRESENTACIÓN');
+    textoBloque('Uniforme autorizado: ' + det.uniforme);
+    textoBloque('Documentación: CIP, DNI y constancia impresa o digital al momento de presentarse.');
+    y += 4;
+
+    seccion('LUGAR DE FORMACIÓN / PRESENTACIÓN DIARIA');
+    textoBloque('Lugar donde debe presentarse cada día: ' + det.lugar);
     textoBloque('Fecha de inicio: ' + (item.fecha_inicio || 'Por confirmar'));
     textoBloque('Duración / período: ' + (item.duracion || '—'));
     if (inscripcion.disponibilidad) {
       textoBloque('Disponibilidad declarada: ' + inscripcion.disponibilidad
         + (inscripcion.dia_franco ? ' — Día franco: ' + inscripcion.dia_franco : ''));
     }
+    y += 4;
+
+    seccion('HORARIO DE SERVICIO');
+    textoBloque('Horario asignado: ' + det.horario);
+    y += 4;
+
+    seccion('CONTACTOS DE RESPONSABLES');
+    textoBloque(det.contactos);
+    if (det.observaciones) textoBloque('Indicaciones adicionales: ' + det.observaciones);
     y += 4;
 
     seccion('RESPONSABILIDADES Y COMPROMISOS');

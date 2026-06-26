@@ -147,10 +147,12 @@ function renderResultados(lista) {
         + '<p><strong><i class="fas fa-check-circle" style="color:#1a7a3a;"></i> Usted ocupa vacante en esta convocatoria.</strong> '
         + 'Descargue o visualice la constancia con lugar de presentación, horario y responsabilidades. Preséntela en la oficina indicada.</p>'
         + '<div class="consulta-meta">'
-        + (ins.lugar ? '<div><span>Lugar</span>' + escC(ins.lugar) + '</div>' : '')
-        + (ins.horario ? '<div><span>Horario</span>' + escC(ins.horario) + '</div>' : '')
-        + (ins.fecha_inicio ? '<div><span>Inicio</span>' + escC(ins.fecha_inicio) + '</div>' : '')
-        + (ins.duracion ? '<div><span>Duración</span>' + escC(ins.duracion) + '</div>' : '')
+        + (ins.lugar ? '<div><span>Lugar de formación diaria</span>' + escC(ins.lugar) + '</div>' : '')
+        + (ins.horario ? '<div><span>Horario de servicio</span>' + escC(ins.horario) + '</div>' : '')
+        + (ins.uniforme ? '<div><span>Uniforme</span>' + escC(ins.uniforme) + '</div>' : '')
+        + (ins.contactos_responsables ? '<div><span>Contactos responsables</span>' + escC(ins.contactos_responsables) + '</div>' : '')
+        + (ins.fecha_inicio ? '<div><span>Beneficio / inicio</span>' + escC(ins.fecha_inicio) + '</div>' : '')
+        + (ins.duracion ? '<div><span>Detalle</span>' + escC(ins.duracion) + '</div>' : '')
         + '</div>'
         + '<div class="constancia-acciones">'
         + '<button type="button" class="btn-pdf-ver" onclick="verConstancia(' + ins.id + ')"><i class="fas fa-eye"></i> VER CONSTANCIA</button>'

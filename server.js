@@ -217,6 +217,8 @@ async function initDB() {
     );
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS formulario_url VARCHAR(500) DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS inscripciones_abiertas BOOLEAN DEFAULT FALSE;
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS uniforme VARCHAR(300) DEFAULT '';
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS contactos_responsables TEXT DEFAULT '';
 
     CREATE TABLE IF NOT EXISTS inscripciones (
       id          SERIAL PRIMARY KEY,
@@ -2388,6 +2390,9 @@ app.post('/admin/sorteos/:id/resultados', requireAuth, async (req, res) => {
           'INSERT INTO resultados_sorteo(sorteo_id,cip,nombres,unidad,cargo,orden) VALUES($1,$2,$3,$4,$5,$6)',
           [req.params.id, r.cip||'', r.nombres||'', r.unidad||'', r.cargo||'', i]);
       }
+      const sorteoRow = await pool.query('SELECT item_id FROM sorteos_portal WHERE id=$1', [req.params.id]);
+      const itemId = sorteoRow.rows[0]?.item_id;
+      if (itemId) await sincronizarGanadoresSorteoEnItem(itemId, resultados);
     }
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -2543,6 +2548,37 @@ function sqlCipIgual(campo) {
   return `regexp_replace(${campo}, '[^0-9]', '', 'g')`;
 }
 
+async function cipEnResultadosSorteoItem(itemId, cipDigits) {
+  const r = await pool.query(
+    `SELECT 1 FROM resultados_sorteo rs
+     JOIN sorteos_portal s ON s.id = rs.sorteo_id
+     WHERE s.item_id = $1 AND ${sqlCipIgual('rs.cip')} = $2
+     LIMIT 1`,
+    [itemId, cipDigits]);
+  return r.rows.length > 0;
+}
+
+async function marcarInscripcionGanadorPorCip(itemId, cipDigits, observacion) {
+  const obs = observacion || 'Seleccionado en sorteo público';
+  const r = await pool.query(
+    `UPDATE inscripciones SET estado='ganador', observacion=$1
+     WHERE item_id=$2 AND ${sqlCipIgual('cip')}=$3
+       AND estado IN ('aprobado','verificado','ganador','reserva')`,
+    [obs, itemId, cipDigits]);
+  return r.rowCount;
+}
+
+async function sincronizarGanadoresSorteoEnItem(itemId, resultados) {
+  if (!itemId || !Array.isArray(resultados)) return 0;
+  let n = 0;
+  for (const res of resultados) {
+    const cipNorm = normalizarCipDigits(res.cip);
+    if (!cipNorm) continue;
+    n += await marcarInscripcionGanadorPorCip(itemId, cipNorm);
+  }
+  return n;
+}
+
 function oficinaGestoraInscripcion(tipo) {
   if (tipo === 'curso') return 'Oficina de Educación Policial — REGPOL Callao';
   return 'Oficina de Convenios — REGPOL Callao';
@@ -2589,23 +2625,33 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
               TO_CHAR(n.fecha, 'DD/MM/YYYY HH24:MI') AS fecha,
               n.area AS area_postulante, n.disponibilidad, n.dia_franco,
               i.id AS item_id, i.tipo, i.titulo, i.horario, i.lugar, i.fecha_inicio, i.duracion,
-              i.descripcion, i.observaciones AS item_observaciones, i.vacantes
+              i.descripcion, i.observaciones AS item_observaciones, i.vacantes,
+              i.uniforme, i.contactos_responsables, i.requisitos
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
        WHERE ${sqlCipIgual('n.cip')} = $1 AND i.visible = TRUE
        ORDER BY n.fecha DESC`,
       [cip]);
-    const inscripciones = r.rows.map(function(row) {
-      return {
+    const inscripciones = [];
+    for (const row of r.rows) {
+      let estado = row.estado;
+      if (estado !== 'ganador') {
+        const enSorteo = await cipEnResultadosSorteoItem(row.item_id, cip);
+        if (enSorteo) {
+          await marcarInscripcionGanadorPorCip(row.item_id, cip);
+          estado = 'ganador';
+        }
+      }
+      inscripciones.push({
         id: row.id,
         cip: row.cip,
         nombres: row.nombres,
         unidad: row.unidad,
         cargo: row.cargo,
         grado: row.grado,
-        estado: row.estado,
-        estado_legible: etiquetaEstadoPublico(row.estado, row.tipo),
-        ubicacion_tramite: ubicacionTramitePublico(row.estado),
+        estado: estado,
+        estado_legible: etiquetaEstadoPublico(estado, row.tipo),
+        ubicacion_tramite: ubicacionTramitePublico(estado),
         oficina_gestora: oficinaGestoraInscripcion(row.tipo),
         observacion: row.observacion || '',
         fecha: row.fecha,
@@ -2620,10 +2666,12 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
         fecha_inicio: row.fecha_inicio || '',
         duracion: row.duracion || '',
         vacantes: row.vacantes,
-        es_ganador: row.estado === 'ganador',
-        puede_descargar_constancia: row.estado === 'ganador'
-      };
-    });
+        uniforme: row.uniforme || '',
+        contactos_responsables: row.contactos_responsables || '',
+        es_ganador: estado === 'ganador',
+        puede_descargar_constancia: estado === 'ganador'
+      });
+    }
     res.json({ ok: true, cip, total: inscripciones.length, inscripciones });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
@@ -2637,13 +2685,23 @@ app.get('/portal/inscripciones/:id/constancia-vacante', async (req, res) => {
     if (!id) return res.json({ ok: false, error: 'Inscripción no válida.' });
     const r = await pool.query(
       `SELECT n.*, i.tipo, i.titulo, i.descripcion, i.requisitos, i.horario, i.lugar,
-              i.fecha_inicio, i.duracion, i.observaciones, i.vacantes
+              i.fecha_inicio, i.duracion, i.observaciones, i.vacantes,
+              i.uniforme, i.contactos_responsables
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
-       WHERE n.id = $1 AND ${sqlCipIgual('n.cip')} = $2 AND n.estado = 'ganador' AND i.visible = TRUE`,
+       WHERE n.id = $1 AND ${sqlCipIgual('n.cip')} = $2 AND i.visible = TRUE`,
       [id, cip]);
     if (!r.rows.length) {
-      return res.json({ ok: false, error: 'No se encontró constancia de vacante para este CIP.' });
+      return res.json({ ok: false, error: 'No se encontró inscripción para este CIP.' });
+    }
+    if (r.rows[0].estado !== 'ganador') {
+      const enSorteo = await cipEnResultadosSorteoItem(r.rows[0].item_id, cip);
+      if (enSorteo) {
+        await marcarInscripcionGanadorPorCip(r.rows[0].item_id, cip);
+        r.rows[0].estado = 'ganador';
+      } else {
+        return res.json({ ok: false, error: 'No se encontró constancia de vacante para este CIP.' });
+      }
     }
     const row = r.rows[0];
     const buf = await generarPDFConstanciaVacante(row, row);
@@ -2686,6 +2744,12 @@ app.post('/admin/items/:id/aplicar-sorteo', requireAuth, async (req, res) => {
          WHERE id=$2 AND item_id=$3 AND estado IN ('aprobado','ganador','verificado')`,
         [obs, insId, itemId]);
       if (r.rowCount) nGan++;
+    }
+    if (ganadores.length && nGan === 0) {
+      return res.json({
+        ok: false,
+        error: 'No se pudo marcar ningún ganador. Verifique que los inscritos sigan en estado aprobado.'
+      });
     }
     for (const rid of reservas) {
       const insId = parseInt(rid, 10);
@@ -2994,19 +3058,20 @@ app.post('/admin/items', requireAuth, async (req, res) => {
   try {
     const { tipo, titulo, descripcion, estado, icono, color, requisitos, horario,
             vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
-            formulario_url, inscripciones_abiertas, visible, orden } = req.body;
+            formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables } = req.body;
     if (!puedeGestionarItem(req.admin, tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     if (!titulo) return res.json({ ok: false, error: 'El título es obligatorio.' });
     const r = await pool.query(
       `INSERT INTO items_portal(tipo,titulo,descripcion,estado,icono,color,requisitos,horario,
-        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden)
-       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id`,
+        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden,uniforme,contactos_responsables)
+       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING id`,
       [tipo, titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
        horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
        lugar||'', observaciones||'', ventana_inscripcion||'', formulario_url||'',
-       !!inscripciones_abiertas, visible!==false, parseInt(orden)||0]);
+       !!inscripciones_abiertas, visible!==false, parseInt(orden)||0,
+       uniforme||'', contactos_responsables||'']);
     invalidarPortalItemsCache();
     res.json({ ok: true, id: r.rows[0].id });
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -3021,17 +3086,18 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const { titulo, descripcion, estado, icono, color, requisitos, horario,
             vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
-            formulario_url, inscripciones_abiertas, visible, orden } = req.body;
+            formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables } = req.body;
     await pool.query(
       `UPDATE items_portal SET titulo=$1,descripcion=$2,estado=$3,icono=$4,color=$5,
         requisitos=$6::jsonb,horario=$7,vacantes=$8,fecha_inicio=$9,duracion=$10,
         lugar=$11,observaciones=$12,ventana_inscripcion=$13,formulario_url=$14,inscripciones_abiertas=$15,
-        visible=$16,orden=$17,actualizado=NOW() WHERE id=$18`,
+        visible=$16,orden=$17,uniforme=$18,contactos_responsables=$19,actualizado=NOW() WHERE id=$20`,
       [titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
        horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
        lugar||'', observaciones||'', ventana_inscripcion||'', formulario_url||'',
-       !!inscripciones_abiertas, visible!==false, parseInt(orden)||0, req.params.id]);
+       !!inscripciones_abiertas, visible!==false, parseInt(orden)||0,
+       uniforme||'', contactos_responsables||'', req.params.id]);
     invalidarPortalItemsCache();
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }

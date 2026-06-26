@@ -954,8 +954,16 @@
         <input type="text" id="mi-horario" placeholder="Ej: Turno mañana 08:00-13:00 / Turno tarde 14:00-18:00" maxlength="200"/>
       </div>
       <div>
-        <label>Lugar</label>
-        <input type="text" id="mi-lugar" placeholder="Ej: Escuela PNP Callao" maxlength="200"/>
+        <label>Lugar de formación / presentación diaria</label>
+        <input type="text" id="mi-lugar" placeholder="Ej: Comisaría asignada o punto de concentración diario" maxlength="200"/>
+      </div>
+      <div>
+        <label>Uniforme autorizado</label>
+        <input type="text" id="mi-uniforme" placeholder="Ej: Uniforme de faena completo" maxlength="300"/>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label>Contactos de responsables (teléfonos, WhatsApp, nombres)</label>
+        <textarea id="mi-contactos" rows="2" placeholder="Ej: Oficina de Convenios — 927 577 686&#10;Responsable operativo — 980 121 440"></textarea>
       </div>
       <div style="grid-column:1/-1;">
         <label>Observaciones</label>
@@ -3012,6 +3020,8 @@ function abrirModalItem(id){
   document.getElementById('mi-duracion').value='';
   document.getElementById('mi-horario').value='';
   document.getElementById('mi-lugar').value='';
+  document.getElementById('mi-uniforme').value='';
+  document.getElementById('mi-contactos').value='';
   document.getElementById('mi-observaciones').value='';
   document.getElementById('mi-requisitos').value='';
   document.getElementById('mi-ventana-inscripcion').value='';
@@ -3051,6 +3061,8 @@ function poblarModalItem(item){
   document.getElementById('mi-duracion').value=item.duracion||'';
   document.getElementById('mi-horario').value=item.horario||'';
   document.getElementById('mi-lugar').value=item.lugar||'';
+  document.getElementById('mi-uniforme').value=item.uniforme||'';
+  document.getElementById('mi-contactos').value=item.contactos_responsables||'';
   document.getElementById('mi-observaciones').value=item.observaciones||'';
   var reqs=Array.isArray(item.requisitos)?item.requisitos:[];
   document.getElementById('mi-requisitos').value=reqs.join('\n');
@@ -3092,6 +3104,8 @@ function guardarItem(){
     fecha_inicio:val('mi-fecha-inicio'),
     duracion:val('mi-duracion'),
     lugar:val('mi-lugar'),
+    uniforme:val('mi-uniforme'),
+    contactos_responsables:val('mi-contactos'),
     observaciones:val('mi-observaciones'),
     ventana_inscripcion:val('mi-ventana-inscripcion'),
     formulario_url:val('mi-formulario-url'),
