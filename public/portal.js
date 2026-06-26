@@ -36,8 +36,16 @@ var portalActiveNavId = '';
 var _scrollNavListo = false;
 
 function obtenerPortalNav() {
-  if (window.REGPOL_NAV && window.REGPOL_NAV.length) return window.REGPOL_NAV;
-  return REGPOL_NAV_FALLBACK;
+  var base = (window.REGPOL_NAV && window.REGPOL_NAV.length)
+    ? window.REGPOL_NAV.slice()
+    : REGPOL_NAV_FALLBACK.slice();
+  var consultaItem = { id: 'consulta', href: 'consulta.html', label: 'CONSULTA CIP', icon: 'fa-search' };
+  if (!base.some(function(item) { return item.id === 'consulta'; })) {
+    var idx = base.findIndex(function(item) { return item.id === 'cursos'; });
+    if (idx >= 0) base.splice(idx + 1, 0, consultaItem);
+    else base.push(consultaItem);
+  }
+  return base;
 }
 
 function escHtml(str) {
@@ -318,7 +326,7 @@ function marcarNavActivo(activeId) {
 
 function navDesdeHash() {
   var h = (location.hash || '').replace('#', '').trim();
-  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'bienestar', 'resena', 'labor', 'unidades'];
+  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'consulta', 'bienestar', 'resena', 'labor', 'unidades'];
   return ids.indexOf(h) >= 0 ? h : '';
 }
 
@@ -382,7 +390,7 @@ function initPortalScrollNav() {
       if (history.pushState) history.pushState(null, '', '#' + hash);
     });
   }
-  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'bienestar', 'resena', 'labor', 'unidades'];
+  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'consulta', 'bienestar', 'resena', 'labor', 'unidades'];
   var ticking = false;
   function onScroll() {
     if (ticking) return;

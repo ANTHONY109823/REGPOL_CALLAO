@@ -390,6 +390,9 @@
           <div class="sb-item" data-page="resultados-pdf" onclick="irResultadosPdf('convenio',this)">
             <i class="fas fa-file-pdf"></i> RELACIÓN DE SELECCIONADOS (PDF)
           </div>
+          <div class="sb-item" data-page="consulta-cip" onclick="ir('consulta-cip',this)">
+            <i class="fas fa-search"></i> CONSULTA POR CIP
+          </div>
         </div>
       </div>
 
@@ -404,6 +407,9 @@
           </div>
           <div class="sb-item" data-page="resultados-pdf" onclick="irResultadosPdf('curso',this)">
             <i class="fas fa-file-pdf"></i> RELACIÓN DE SELECCIONADOS (PDF)
+          </div>
+          <div class="sb-item" data-page="consulta-cip" onclick="ir('consulta-cip',this)">
+            <i class="fas fa-search"></i> CONSULTA POR CIP
           </div>
         </div>
       </div>
@@ -762,6 +768,28 @@
         </div>
         <div id="items-alerta" class="alerta" style="display:none;"></div>
         <div id="items-tabla"><p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">Seleccione un tipo para cargar.</p></div>
+      </div>
+    </div>
+
+    <!-- CONSULTA POR CIP (convenios / cursos) -->
+    <div id="page-consulta-cip" class="page">
+      <div class="card">
+        <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-search"></i> Consulta por CIP</h3>
+        <p style="font-size:13px;color:#666;margin-bottom:16px;line-height:1.5;">
+          Misma consulta pública del portal web. El postulante ingresa su CIP para ver el estado del expediente y, si ocupó vacante, descargar la constancia.
+          <a href="consulta.html" target="_blank" rel="noopener" style="color:#004d3d;font-weight:700;margin-left:4px;">Abrir página pública <i class="fas fa-external-link-alt"></i></a>
+        </p>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:16px;">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#004d3d;display:block;margin-bottom:4px;">CIP del efectivo</label>
+            <input type="text" id="panel-consulta-cip" inputmode="numeric" maxlength="12" placeholder="Ej: 31590992"
+              style="padding:9px 12px;border:1.5px solid #ccc;border-radius:6px;font-size:14px;min-width:200px;"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();consultarCipPanel();}">
+          </div>
+          <button type="button" class="btn btn-v" id="btn-panel-consulta-cip" onclick="consultarCipPanel()"><i class="fas fa-search"></i> Consultar</button>
+        </div>
+        <div id="panel-consulta-alerta" style="display:none;padding:10px 12px;border-radius:7px;font-size:13px;margin-bottom:12px;"></div>
+        <div id="panel-consulta-resultados"></div>
       </div>
     </div>
 
@@ -1251,8 +1279,8 @@
 </div>
 
 <script src="api-config.js?v=2"></script>
-<script src="portal-data.js?v=2"></script>
-<script src="portal.js?v=32"></script>
+<script src="portal-data.js?v=6"></script>
+<script src="portal.js?v=40"></script>
 <script src="divisiones-ui.js?v=3"></script>
 <script src="panel-cms.js?v=14"></script>
 <script>
@@ -1782,6 +1810,7 @@ function puedeGestionPsicologia(){
 function puedeGestionarConvocatorias(){ return esUnitic(); }
 function puedeGestionarSorteosConvenio(){ return esUnitic() || tienePermiso('cms_convenios'); }
 function puedeOperarInscritosConvenio(){ return esUnitic() || tienePermiso('cms_convenios'); }
+function puedeConsultarCip(){ return esUnitic() || tienePermiso('cms_convenios') || tienePermiso('cms_cursos'); }
 function puedePublicarResultadosPdf(tipo){
   if (esUnitic()) return true;
   if (tipo === 'convenio') return tienePermiso('cms_convenios');
@@ -1862,6 +1891,7 @@ function ir(page, el){
   if(page==='sorteos'&&!puedeGestionarSorteosConvenio()){alert('Sin acceso a sorteos de convenios.');return;}
   if(page==='resultados-pdf'&&!puedePublicarResultadosPdf(RESULTADOS_PDF_TIPO)){alert('Sin acceso a publicación de resultados.');return;}
   if(page==='inscritos'&&!puedeOperarInscritosConvenio()){alert('Sin acceso a inscritos de convenios.');return;}
+  if(page==='consulta-cip'&&!puedeConsultarCip()){alert('Sin acceso a consulta por CIP.');return;}
   if((page==='usuarios'||page==='divisiones')&&!esUnitic()){alert('Solo el Super Admin puede acceder a esta sección.');return;}
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
   var pg=document.getElementById('page-'+page);
@@ -3492,6 +3522,106 @@ function etiquetaEstadoInscripcion(estado, esConvenio){
     rechazado:'Rechazado'
   };
   return mapa[estado] || estado;
+}
+
+var PANEL_CIP_CONSULTA = '';
+
+function panelConsultaAlerta(msg, tipo) {
+  var el = document.getElementById('panel-consulta-alerta');
+  if (!el) return;
+  if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
+  el.style.display = 'block';
+  el.textContent = msg;
+  el.style.background = tipo === 'error' ? '#f8d7da' : (tipo === 'ok' ? '#d4edda' : '#e8f4fd');
+  el.style.color = tipo === 'error' ? '#842029' : (tipo === 'ok' ? '#1a5c32' : '#0c5460');
+  el.style.border = '1px solid ' + (tipo === 'error' ? '#f5c2c7' : (tipo === 'ok' ? '#a5d6a7' : '#b8daff'));
+}
+
+function renderConsultaPanel(lista) {
+  var wrap = document.getElementById('panel-consulta-resultados');
+  if (!wrap) return;
+  if (!lista || !lista.length) {
+    wrap.innerHTML = '<p style="color:#888;font-size:13px;text-align:center;padding:24px;">No hay inscripciones con ese CIP.</p>';
+    return;
+  }
+  wrap.innerHTML = lista.map(function(ins) {
+    var html = '<div style="border:1.5px solid #e0e8e0;border-radius:10px;padding:16px;margin-bottom:12px;background:' + (ins.es_ganador ? '#fffdf5' : '#fff') + ';">'
+      + '<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;">' + escHtml(ins.tipo === 'curso' ? 'Curso' : 'Convenio') + '</div>'
+      + '<div style="font-size:15px;font-weight:700;color:#004d3d;margin:4px 0 8px;">' + escHtml(ins.convocatoria) + '</div>'
+      + '<span class="badge badge-estado" style="background:#fff3cd;color:#856404;font-size:11.5px;padding:4px 10px;">' + escHtml(ins.estado_legible) + '</span>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px 14px;margin-top:12px;font-size:13px;color:#1a1a1a;">'
+      + '<div><span style="display:block;font-size:10px;font-weight:800;color:#004d3d;">ÁREA GESTORA</span>' + escHtml(ins.oficina_gestora) + '</div>'
+      + '<div><span style="display:block;font-size:10px;font-weight:800;color:#004d3d;">TRÁMITE</span>' + escHtml(ins.ubicacion_tramite) + '</div>'
+      + '<div><span style="display:block;font-size:10px;font-weight:800;color:#004d3d;">FECHA</span>' + escHtml(ins.fecha || '—') + '</div>'
+      + '<div><span style="display:block;font-size:10px;font-weight:800;color:#004d3d;">POSTULANTE</span>' + escHtml(ins.nombres) + '</div>'
+      + '</div>';
+    if (ins.es_ganador) {
+      html += '<div style="margin-top:12px;padding:12px;background:#f7faf7;border:1px solid #c8e6c9;border-radius:8px;">'
+        + '<p style="font-size:13px;color:#333;margin:0 0 10px;"><strong>Vacante ocupada.</strong> Puede ver o descargar la constancia para el postulante.</p>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
+        + '<button type="button" class="btn btn-v" onclick="verConstanciaPanel(' + ins.id + ')"><i class="fas fa-eye"></i> Ver constancia</button>'
+        + '<button type="button" class="btn btn-o" onclick="descargarConstanciaPanel(' + ins.id + ')"><i class="fas fa-download"></i> Descargar PDF</button>'
+        + '</div></div>';
+    }
+    html += '</div>';
+    return html;
+  }).join('');
+}
+
+function consultarCipPanel() {
+  var cip = (document.getElementById('panel-consulta-cip').value || '').trim().replace(/\s/g, '');
+  if (!/^\d{6,12}$/.test(cip)) {
+    panelConsultaAlerta('Ingrese un CIP válido (6 a 12 dígitos).', 'error');
+    return;
+  }
+  PANEL_CIP_CONSULTA = cip;
+  var btn = document.getElementById('btn-panel-consulta-cip');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
+  panelConsultaAlerta('', '');
+  document.getElementById('panel-consulta-resultados').innerHTML = '<p style="text-align:center;padding:20px;color:#888;"><i class="fas fa-spinner fa-spin"></i> Buscando...</p>';
+  fetch(API + '/portal/consulta-inscripcion?cip=' + encodeURIComponent(cip))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) {
+        panelConsultaAlerta(d.error || 'Error al consultar.', 'error');
+        document.getElementById('panel-consulta-resultados').innerHTML = '';
+        return;
+      }
+      panelConsultaAlerta(d.total ? ('Se encontraron ' + d.total + ' inscripción(es).') : 'Sin inscripciones para este CIP.', d.total ? 'ok' : 'info');
+      renderConsultaPanel(d.inscripciones || []);
+    })
+    .catch(function() {
+      panelConsultaAlerta('Error de conexión. Verifique que el servidor esté actualizado en Railway.', 'error');
+      document.getElementById('panel-consulta-resultados').innerHTML = '';
+    })
+    .finally(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-search"></i> Consultar';
+    });
+}
+
+function verConstanciaPanel(id) {
+  if (!PANEL_CIP_CONSULTA) return;
+  fetch(API + '/portal/inscripciones/' + id + '/constancia-vacante?cip=' + encodeURIComponent(PANEL_CIP_CONSULTA))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok || !d.pdf) { alert(d.error || 'No se pudo cargar la constancia.'); return; }
+      if (typeof abrirModalPdfPortal === 'function') abrirModalPdfPortal(d.pdf, d.titulo || 'Constancia');
+      else window.open(d.pdf, '_blank');
+    })
+    .catch(function() { alert('Error de conexión.'); });
+}
+
+function descargarConstanciaPanel(id) {
+  if (!PANEL_CIP_CONSULTA) return;
+  fetch(API + '/portal/inscripciones/' + id + '/constancia-vacante?cip=' + encodeURIComponent(PANEL_CIP_CONSULTA))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok || !d.pdf) { alert(d.error || 'No se pudo descargar.'); return; }
+      if (typeof descargarDataUrlPdf === 'function') descargarDataUrlPdf(d.pdf, d.nombre || 'constancia.pdf');
+    })
+    .catch(function() { alert('Error de conexión.'); });
 }
 
 function verificarInscripcion(id){
