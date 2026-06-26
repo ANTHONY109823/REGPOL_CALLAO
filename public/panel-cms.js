@@ -370,6 +370,29 @@ function listaNavPortalCMS() {
   return (window.REGPOL_NAV && window.REGPOL_NAV.length) ? window.REGPOL_NAV : [];
 }
 
+function contenedorMenuPublicacionActivo() {
+  var pageMenu = document.getElementById('page-menu-publicacion');
+  if (pageMenu && pageMenu.classList.contains('on')) {
+    return document.getElementById('menu-publicacion-editor');
+  }
+  var editorMenu = document.getElementById('editor-menu');
+  if (editorMenu && editorMenu.querySelector('input[data-nav-id]')) return editorMenu;
+  return null;
+}
+
+function recolectarNavOcultosDesdeFormulario() {
+  var root = contenedorMenuPublicacionActivo();
+  if (!root) {
+    return (cmsDataActual && Array.isArray(cmsDataActual.navOcultos))
+      ? cmsDataActual.navOcultos.slice() : [];
+  }
+  var ocultos = [];
+  root.querySelectorAll('input[type="checkbox"][data-nav-id]').forEach(function(chk) {
+    if (!chk.checked) ocultos.push(chk.getAttribute('data-nav-id'));
+  });
+  return ocultos;
+}
+
 function htmlEditorMenuPublicacion(containerPrefix) {
   var prefix = containerPrefix || 'menu-pub';
   var ocultos = (cmsDataActual && cmsDataActual.navOcultos) ? cmsDataActual.navOcultos : [];
@@ -440,12 +463,8 @@ function renderMenuPublicacionPagina() {
 }
 
 function guardarMenuPublicacionWeb() {
-  var ocultos = [];
-  document.querySelectorAll('.menu-pub-chk, .cms-menu-chk').forEach(function(chk) {
-    if (!chk.checked) ocultos.push(chk.getAttribute('data-nav-id'));
-  });
   if (!cmsDataActual) cmsDataActual = {};
-  cmsDataActual.navOcultos = ocultos;
+  cmsDataActual.navOcultos = recolectarNavOcultosDesdeFormulario();
   var accesos = [];
   var i = 0;
   while (document.getElementById('cms-acceso-titulo-' + i)) {
@@ -456,9 +475,12 @@ function guardarMenuPublicacionWeb() {
     i++;
   }
   if (accesos.length) cmsDataActual.accesosRapidos = accesos;
-  guardarSitioWeb();
-  renderMenuPublicacionPagina();
-  renderEditorMenu();
+  guardarSitioWeb(function(ok) {
+    if (ok) {
+      renderMenuPublicacionPagina();
+      renderEditorMenu();
+    }
+  });
 }
 
 function cargarPaginaMenuPublicacion() {
@@ -836,11 +858,17 @@ function recolectarDatosCMS() {
   } else if (cmsDataActual.fotosEncabezado) {
     data.fotosEncabezado = cmsDataActual.fotosEncabezado.filter(function(f) { return !!(f && String(f).trim()); });
   }
+  data.navOcultos = recolectarNavOcultosDesdeFormulario();
   return data;
 }
 
-function guardarSitioWeb() {
+function guardarSitioWeb(onComplete) {
+  if (!cmsDataActual) cmsDataActual = {};
+  var navPrevio = Array.isArray(cmsDataActual.navOcultos) ? cmsDataActual.navOcultos.slice() : [];
   cmsDataActual = recolectarDatosCMS();
+  if (!contenedorMenuPublicacionActivo()) {
+    cmsDataActual.navOcultos = navPrevio;
+  }
   cmsDataActual.actualizacion = fechaActualizacionHoy();
   cmsDataActual.cmsPublicadoEn = new Date().toISOString();
   setVal('cms-actualizacion', cmsDataActual.actualizacion);
@@ -849,10 +877,12 @@ function guardarSitioWeb() {
   var token = (typeof TOKEN !== 'undefined' && TOKEN) ? TOKEN : '';
   if (!base) {
     mostrarAlertaCMS('No hay URL del servidor configurada. No se pudo publicar.', 'error');
+    if (typeof onComplete === 'function') onComplete(false);
     return;
   }
   if (!token) {
     mostrarAlertaCMS('Sesión expirada. Vuelva a ingresar al panel.', 'error');
+    if (typeof onComplete === 'function') onComplete(false);
     return;
   }
   mostrarAlertaCMS('Publicando en el servidor...', 'ok');
@@ -862,14 +892,17 @@ function guardarSitioWeb() {
     body: JSON.stringify(cmsDataActual)
   }).then(function(r) { return r.json().then(function(d) { return { status: r.status, data: d }; }); })
     .then(function(res) {
-      if (res.data && res.data.ok) {
+      var ok = !!(res.data && res.data.ok);
+      if (ok) {
         mostrarAlertaCMS('¡Publicado en el servidor! Los visitantes verán los cambios al recargar (Ctrl+F5).', 'ok');
       } else {
         mostrarAlertaCMS('No se publicó: ' + ((res.data && res.data.error) || ('error HTTP ' + res.status)), 'error');
       }
+      if (typeof onComplete === 'function') onComplete(ok);
     })
     .catch(function() {
       mostrarAlertaCMS('Sin conexión al servidor. Los cambios quedaron solo en este navegador.', 'error');
+      if (typeof onComplete === 'function') onComplete(false);
     });
 }
 
