@@ -218,6 +218,8 @@ var SORTEANDO = false;
 var DRUM_POS = 0;
 var ITEM_H = 48;
 var IDS_GANADOS = {};
+var SORTEO_PERSISTIDO = false;
+var RESERVAS_PERSISTIDAS = false;
 
 if(!SESION || !SESION.token){
   document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;"><div style="background:#002d24;border:2px solid #c8a94a;border-radius:16px;padding:40px;text-align:center;"><h2>Acceso restringido</h2><p style="margin:16px 0;color:#aaa;">Inicie sesión como administrador.</p><a href="login.html" style="background:#c8a94a;color:#002d24;padding:12px 24px;border-radius:8px;font-weight:700;text-decoration:none;">INGRESAR</a></div></div>';
@@ -303,6 +305,66 @@ function renderListaTotalLive(){
   }).join('');
 }
 
+function marcarEstadoLocal(id, estado){
+  [TODOS_CAND, LISTA_APROBADOS, RUEDA_CAND].forEach(function(arr){
+    arr.forEach(function(c){ if(c.id===id) c.estado=estado; });
+  });
+}
+
+function persistirResultadosSorteo(){
+  if(SORTEO_PERSISTIDO || !ITEM_ID || !GANADORES.length) return Promise.resolve();
+  var idsGan = GANADORES.map(function(g){ return g.id; });
+  var reservas = TODOS_CAND.filter(function(c){
+    return c.estado==='aprobado' && idsGan.indexOf(c.id)<0;
+  }).map(function(c){ return c.id; });
+  return fetch(API+'/admin/items/'+ITEM_ID+'/aplicar-sorteo',{
+    method:'POST', headers:HDR,
+    body:JSON.stringify({
+      ganadores: GANADORES.map(function(g){
+        return {id:g.id, tipo:g.tipo||'sorteo'};
+      }),
+      reservas: reservas
+    })
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(!d.ok) throw new Error(d.error||'No se pudo guardar en el sistema');
+    SORTEO_PERSISTIDO = true;
+    RESERVAS_PERSISTIDAS = true;
+    GANADORES.forEach(function(g){ marcarEstadoLocal(g.id, 'ganador'); });
+    reservas.forEach(function(id){ marcarEstadoLocal(id, 'reserva'); });
+    return d;
+  });
+}
+
+function persistirGanadorUno(g){
+  if(!ITEM_ID || !g || !g.id) return Promise.resolve();
+  return fetch(API+'/admin/items/'+ITEM_ID+'/aplicar-sorteo',{
+    method:'POST', headers:HDR,
+    body:JSON.stringify({ ganadores:[{id:g.id, tipo:g.tipo||'sorteo'}], reservas:[] })
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(!d.ok) throw new Error(d.error||'Error al registrar ganador');
+    marcarEstadoLocal(g.id, 'ganador');
+    return d;
+  });
+}
+
+function persistirReservasSiCompleto(){
+  if(RESERVAS_PERSISTIDAS || !ITEM_ID) return Promise.resolve();
+  var idsGan = GANADORES.map(function(g){ return g.id; });
+  var reservas = TODOS_CAND.filter(function(c){
+    return c.estado==='aprobado' && idsGan.indexOf(c.id)<0;
+  }).map(function(c){ return c.id; });
+  if(!reservas.length){ RESERVAS_PERSISTIDAS = true; return Promise.resolve(); }
+  return fetch(API+'/admin/items/'+ITEM_ID+'/aplicar-sorteo',{
+    method:'POST', headers:HDR,
+    body:JSON.stringify({ ganadores:[], reservas:reservas })
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(!d.ok) throw new Error(d.error||'Error al registrar reservas');
+    RESERVAS_PERSISTIDAS = true;
+    reservas.forEach(function(id){ marcarEstadoLocal(id, 'reserva'); });
+    return d;
+  });
+}
+
 function iniciarSorteo(){
   if(!LISTA_APROBADOS.length) return;
 
@@ -322,6 +384,7 @@ function iniciarSorteo(){
     var g = {id:c.id,grado:c.grado,nombres:c.nombres,unidad:c.unidad,area:c.area,cip:c.cip,tipo:'vacaciones',nro:GANADORES.length+1};
     GANADORES.push(g);
     IDS_GANADOS[c.id] = g;
+    persistirGanadorUno(g).catch(function(e){ console.error(e); alert('No se pudo registrar vacante automática: '+(e.message||'')); });
   });
 
   VACANTES_RUEDA = Math.max(0, VACANTES - GANADORES.length);
@@ -402,6 +465,11 @@ function registrarGanadorSorteo(ganador, idx){
   renderListaTotalLive();
   renderGanadores();
   buildDrum();
+
+  persistirGanadorUno(g).catch(function(e){
+    console.error(e);
+    alert('Ganador sorteado en pantalla, pero no se guardó en el sistema: '+(e.message||''));
+  });
 }
 
 function cerrarFlash(){
@@ -430,7 +498,10 @@ function actualizarUI(){
   document.getElementById('rp-vacantes').textContent = GANADORES.length+' / '+VACANTES;
   document.getElementById('drum-stats').textContent = RUEDA_CAND.length+' en rueda · '+VACANTES_RUEDA+' por sortear';
 
-  if(completo) document.getElementById('btn-guardar').style.display = '';
+  if(completo) {
+    document.getElementById('btn-guardar').style.display = '';
+    persistirReservasSiCompleto().catch(function(e){ console.error(e); });
+  }
 }
 
 function renderGanadores(){
@@ -456,39 +527,24 @@ function guardarResultados(){
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
-  var promesas = [];
-  var idsGan = GANADORES.map(function(g){ return g.id; });
-
-  GANADORES.forEach(function(g){
-    promesas.push(fetch(API+'/admin/inscripciones/'+g.id,{
-      method:'PUT', headers:HDR,
-      body:JSON.stringify({estado:'ganador', observacion: g.tipo==='vacaciones' ? 'Vacante automática por vacaciones' : 'Seleccionado en sorteo público'})
-    }));
-  });
-
-  TODOS_CAND.filter(function(c){ return c.estado==='aprobado' && idsGan.indexOf(c.id)<0; }).forEach(function(c){
-    promesas.push(fetch(API+'/admin/inscripciones/'+c.id,{
-      method:'PUT', headers:HDR,
-      body:JSON.stringify({estado:'reserva', observacion:'No seleccionado en el sorteo'})
-    }));
-  });
-
-  Promise.all(promesas).then(function(){
+  persistirResultadosSorteo().then(function(){
     if(SORTEO_ID){
       return fetch(API+'/admin/sorteos/'+SORTEO_ID+'/resultados',{
         method:'POST', headers:HDR,
         body:JSON.stringify({resultados:GANADORES.map(function(g){
           return {cip:g.cip||'', nombres:nombreCompleto(g), unidad:g.unidad||'', cargo:g.area||''};
         })})
+      }).then(function(r){ return r.json(); }).then(function(d){
+        if(!d.ok) throw new Error(d.error||'Error al publicar resultados');
       });
     }
   }).then(function(){
     btn.innerHTML = '<i class="fas fa-check"></i> Resultados guardados';
     setTimeout(function(){ window.location.href='panel-admin.html'; }, 2000);
-  }).catch(function(){
+  }).catch(function(e){
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-save"></i> GUARDAR Y PUBLICAR RESULTADOS';
-    alert('Error al guardar.');
+    alert('Error al guardar: '+(e.message||'revise conexión con el servidor'));
   });
 }
 </script>

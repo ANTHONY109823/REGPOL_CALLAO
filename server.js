@@ -2529,10 +2529,18 @@ async function tipoSorteoItem(sorteoId) {
   return r.rows[0]?.tipo || null;
 }
 
+function normalizarCipDigits(cip) {
+  const d = String(cip || '').replace(/\D/g, '');
+  if (d.length < 6 || d.length > 12) return null;
+  return d;
+}
+
 function normalizarCipConsulta(cip) {
-  const s = String(cip || '').trim().replace(/\s/g, '');
-  if (!/^\d{6,12}$/.test(s)) return null;
-  return s;
+  return normalizarCipDigits(cip);
+}
+
+function sqlCipIgual(campo) {
+  return `regexp_replace(${campo}, '[^0-9]', '', 'g')`;
 }
 
 function oficinaGestoraInscripcion(tipo) {
@@ -2584,7 +2592,7 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
               i.descripcion, i.observaciones AS item_observaciones, i.vacantes
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
-       WHERE n.cip = $1 AND i.visible = TRUE
+       WHERE ${sqlCipIgual('n.cip')} = $1 AND i.visible = TRUE
        ORDER BY n.fecha DESC`,
       [cip]);
     const inscripciones = r.rows.map(function(row) {
@@ -2632,7 +2640,7 @@ app.get('/portal/inscripciones/:id/constancia-vacante', async (req, res) => {
               i.fecha_inicio, i.duracion, i.observaciones, i.vacantes
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
-       WHERE n.id = $1 AND n.cip = $2 AND n.estado = 'ganador' AND i.visible = TRUE`,
+       WHERE n.id = $1 AND ${sqlCipIgual('n.cip')} = $2 AND n.estado = 'ganador' AND i.visible = TRUE`,
       [id, cip]);
     if (!r.rows.length) {
       return res.json({ ok: false, error: 'No se encontró constancia de vacante para este CIP.' });
@@ -2652,6 +2660,43 @@ app.get('/portal/inscripciones/:id/constancia-vacante', async (req, res) => {
       nombre,
       titulo
     });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── POST /admin/items/:id/aplicar-sorteo — persistir ganadores y reservas ─────
+app.post('/admin/items/:id/aplicar-sorteo', requireAuth, async (req, res) => {
+  try {
+    const itemId = parseInt(req.params.id, 10);
+    const cur = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [itemId]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'Convocatoria no encontrada' });
+    if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const ganadores = Array.isArray(req.body.ganadores) ? req.body.ganadores : [];
+    const reservas = Array.isArray(req.body.reservas) ? req.body.reservas : [];
+    let nGan = 0;
+    let nRes = 0;
+    for (const g of ganadores) {
+      const insId = parseInt(g.id, 10);
+      if (!insId) continue;
+      const obs = g.tipo === 'vacaciones'
+        ? 'Vacante automática por vacaciones'
+        : 'Seleccionado en sorteo público';
+      const r = await pool.query(
+        `UPDATE inscripciones SET estado='ganador', observacion=$1
+         WHERE id=$2 AND item_id=$3 AND estado IN ('aprobado','ganador','verificado')`,
+        [obs, insId, itemId]);
+      if (r.rowCount) nGan++;
+    }
+    for (const rid of reservas) {
+      const insId = parseInt(rid, 10);
+      if (!insId) continue;
+      const r = await pool.query(
+        `UPDATE inscripciones SET estado='reserva', observacion='No seleccionado en el sorteo'
+         WHERE id=$1 AND item_id=$2 AND estado='aprobado'`,
+        [insId, itemId]);
+      if (r.rowCount) nRes++;
+    }
+    res.json({ ok: true, ganadores: nGan, reservas: nRes });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -2882,11 +2927,14 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       dni, grado, area, arma, disponibilidad, dia_franco,
       fecha_egreso, tiempo_servicio
     } = req.body;
-    if (!cip || !nombres) return res.json({ ok: false, error: 'CIP y nombres son obligatorios.' });
+    const cipNorm = normalizarCipDigits(cip);
+    if (!cipNorm) return res.json({ ok: false, error: 'CIP inválido.' });
+    if (!nombres) return res.json({ ok: false, error: 'CIP y nombres son obligatorios.' });
     if (!area || !String(area).trim()) return res.json({ ok: false, error: 'El área es obligatoria.' });
     if (!cargo || !String(cargo).trim()) return res.json({ ok: false, error: 'El cargo es obligatorio.' });
     const dup = await pool.query(
-      'SELECT id FROM inscripciones WHERE item_id=$1 AND cip=$2', [req.params.id, cip]);
+      `SELECT id FROM inscripciones WHERE item_id=$1 AND ${sqlCipIgual('cip')}=$2`,
+      [req.params.id, cipNorm]);
     if (dup.rows.length)
       return res.json({ ok: false, error: 'Ya existe una inscripción con ese CIP para esta convocatoria.' });
     const pdfBase64 = pdf_requisitos || '';
@@ -2898,7 +2946,7 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
          (item_id,cip,nombres,unidad,cargo,telefono,email,pdf_requisitos,pdf_nombre,
           dni,grado,area,arma,disponibilidad,dia_franco,fecha_egreso,tiempo_servicio)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
-      [req.params.id, cip, nombres, unidad||'', cargo||'', telefono||'', email||'',
+      [req.params.id, cipNorm, nombres, unidad||'', cargo||'', telefono||'', email||'',
        pdfBase64, pdf_nombre||'requisitos.pdf',
        dni||'', grado||'', area||'', arma||'', disponibilidad||'', dia_franco||'',
        feNorm, tiempo_servicio||'']);
