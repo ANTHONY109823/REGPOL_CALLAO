@@ -101,6 +101,13 @@ function normalizarFilasPDFGrupo(rows) {
 }
 
 // ── Inicializar tablas + seed ──────────────────────────────────────────────────
+async function migrarColumnasPortal() {
+  await pool.query(`
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS uniforme VARCHAR(300) DEFAULT '';
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS contactos_responsables TEXT DEFAULT '';
+  `);
+}
+
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS admins (
@@ -172,6 +179,8 @@ async function initDB() {
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS fecha_nac DATE;
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS edad SMALLINT;
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS area VARCHAR(120);
+
+    CREATE TABLE IF NOT EXISTS divisiones (
       id     SERIAL PRIMARY KEY,
       nombre VARCHAR(120) UNIQUE NOT NULL,
       orden  SMALLINT DEFAULT 0
@@ -3186,7 +3195,8 @@ app.delete('/admin/inscripciones/:id', requireAuth, async (req, res) => {
 let dbListo = false;
 
 function iniciarDB() {
-  return initDB()
+  return migrarColumnasPortal()
+    .then(function() { return initDB(); })
     .then(function() {
       dbListo = true;
       console.log('PostgreSQL listo.');
