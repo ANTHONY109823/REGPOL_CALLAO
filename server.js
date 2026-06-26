@@ -9,7 +9,7 @@ const path     = require('path');
 const fs       = require('fs');
 const crypto   = require('crypto');
 const { Pool } = require('pg');
-const { generarPDFIndividual, generarPDFComisaria, calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido } = require('./pdf_gen');
+const { generarPDFIndividual, generarPDFComisaria, generarPDFConstanciaVacante, calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido } = require('./pdf_gen');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -242,6 +242,7 @@ async function initDB() {
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS dia_franco VARCHAR(10) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS fecha_egreso DATE;
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS tiempo_servicio VARCHAR(50) DEFAULT '';
+    CREATE INDEX IF NOT EXISTS idx_inscripciones_cip ON inscripciones(cip);
 
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS plantilla_pdf TEXT DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS plantilla_nombre VARCHAR(200) DEFAULT '';
@@ -2527,6 +2528,132 @@ async function tipoSorteoItem(sorteoId) {
     [sorteoId]);
   return r.rows[0]?.tipo || null;
 }
+
+function normalizarCipConsulta(cip) {
+  const s = String(cip || '').trim().replace(/\s/g, '');
+  if (!/^\d{6,12}$/.test(s)) return null;
+  return s;
+}
+
+function oficinaGestoraInscripcion(tipo) {
+  if (tipo === 'curso') return 'Oficina de Educación Policial — REGPOL Callao';
+  return 'Oficina de Convenios — REGPOL Callao';
+}
+
+function etiquetaEstadoPublico(estado, tipo) {
+  const esConv = tipo === 'convenio';
+  const mapa = {
+    pendiente: esConv
+      ? 'Expediente recibido — en revisión por Convenios'
+      : 'Inscripción recibida — en revisión por Educación Policial',
+    verificado: 'Expediente verificado — pendiente de aprobación final',
+    aprobado: esConv
+      ? 'Aprobado — habilitado para sorteo o lista de méritos'
+      : 'Aprobado — en lista de selección',
+    ganador: esConv
+      ? 'VACANTE OCUPADA — seleccionado en convocatoria'
+      : 'SELECCIONADO — vacante asignada en curso',
+    reserva: 'Lista de reserva — no ocupó vacante en esta convocatoria',
+    rechazado: 'Expediente no admitido — revise observaciones'
+  };
+  return mapa[estado] || estado;
+}
+
+function ubicacionTramitePublico(estado) {
+  const mapa = {
+    pendiente: 'Bandeja de recepción del área gestora',
+    verificado: 'Revisión técnica del expediente',
+    aprobado: 'Lista de habilitados / proceso de sorteo o selección',
+    ganador: 'Proceso concluido — constancia de vacante disponible',
+    reserva: 'Archivo de lista de reserva',
+    rechazado: 'Expediente cerrado — no procede'
+  };
+  return mapa[estado] || 'En proceso';
+}
+
+// ── GET /portal/consulta-inscripcion?cip= — consulta pública por CIP ─────────
+app.get('/portal/consulta-inscripcion', async (req, res) => {
+  try {
+    const cip = normalizarCipConsulta(req.query.cip);
+    if (!cip) return res.json({ ok: false, error: 'Ingrese un CIP válido (solo números, 6 a 12 dígitos).' });
+    const r = await pool.query(
+      `SELECT n.id, n.cip, n.nombres, n.unidad, n.cargo, n.grado, n.estado, n.observacion,
+              TO_CHAR(n.fecha, 'DD/MM/YYYY HH24:MI') AS fecha,
+              n.area AS area_postulante, n.disponibilidad, n.dia_franco,
+              i.id AS item_id, i.tipo, i.titulo, i.horario, i.lugar, i.fecha_inicio, i.duracion,
+              i.descripcion, i.observaciones AS item_observaciones, i.vacantes
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE n.cip = $1 AND i.visible = TRUE
+       ORDER BY n.fecha DESC`,
+      [cip]);
+    const inscripciones = r.rows.map(function(row) {
+      return {
+        id: row.id,
+        cip: row.cip,
+        nombres: row.nombres,
+        unidad: row.unidad,
+        cargo: row.cargo,
+        grado: row.grado,
+        estado: row.estado,
+        estado_legible: etiquetaEstadoPublico(row.estado, row.tipo),
+        ubicacion_tramite: ubicacionTramitePublico(row.estado),
+        oficina_gestora: oficinaGestoraInscripcion(row.tipo),
+        observacion: row.observacion || '',
+        fecha: row.fecha,
+        area_postulante: row.area_postulante || '',
+        disponibilidad: row.disponibilidad || '',
+        dia_franco: row.dia_franco || '',
+        item_id: row.item_id,
+        tipo: row.tipo,
+        convocatoria: row.titulo,
+        horario: row.horario || '',
+        lugar: row.lugar || '',
+        fecha_inicio: row.fecha_inicio || '',
+        duracion: row.duracion || '',
+        vacantes: row.vacantes,
+        es_ganador: row.estado === 'ganador',
+        puede_descargar_constancia: row.estado === 'ganador'
+      };
+    });
+    res.json({ ok: true, cip, total: inscripciones.length, inscripciones });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── GET /portal/inscripciones/:id/constancia-vacante?cip= — PDF ganador ───────
+app.get('/portal/inscripciones/:id/constancia-vacante', async (req, res) => {
+  try {
+    const cip = normalizarCipConsulta(req.query.cip);
+    if (!cip) return res.json({ ok: false, error: 'CIP inválido.' });
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.json({ ok: false, error: 'Inscripción no válida.' });
+    const r = await pool.query(
+      `SELECT n.*, i.tipo, i.titulo, i.descripcion, i.requisitos, i.horario, i.lugar,
+              i.fecha_inicio, i.duracion, i.observaciones, i.vacantes
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE n.id = $1 AND n.cip = $2 AND n.estado = 'ganador' AND i.visible = TRUE`,
+      [id, cip]);
+    if (!r.rows.length) {
+      return res.json({ ok: false, error: 'No se encontró constancia de vacante para este CIP.' });
+    }
+    const row = r.rows[0];
+    const buf = await generarPDFConstanciaVacante(row, row);
+    const titulo = 'Constancia — ' + (row.titulo || 'Vacante');
+    const nombre = 'Constancia_' + row.cip + '.pdf';
+    if (req.query.download === '1') {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="' + nombre + '"');
+      return res.send(buf);
+    }
+    res.json({
+      ok: true,
+      pdf: 'data:application/pdf;base64,' + buf.toString('base64'),
+      nombre,
+      titulo
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
 
 // ── GET /portal/items — público ───────────────────────────────────────────────
 app.get('/portal/items', async (req, res) => {

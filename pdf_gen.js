@@ -902,9 +902,186 @@ function dibujarBannerAvance(doc, stats, maxId, x0, y, W) {
   return y + bannerH;
 }
 
+function dibujarCabeceraPortal(doc, subtitulo) {
+  doc.rect(0, 0, doc.page.width, 70).fill(COLOR_VERDE);
+  doc.rect(0, 70, doc.page.width, 3).fill(COLOR_ORO);
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(13)
+     .text('POLICÍA NACIONAL DEL PERÚ', 40, 14, { align: 'center', width: doc.page.width - 80, lineBreak: false });
+  doc.font('Helvetica').fontSize(10)
+     .text('REGIÓN POLICIAL CALLAO — UNITIC', 40, 30, { align: 'center', width: doc.page.width - 80, lineBreak: false });
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(COLOR_ORO)
+     .text(subtitulo, 40, 46, { align: 'center', width: doc.page.width - 80, lineBreak: false });
+}
+
+function dibujarPiePortal(doc, pagina, totalPaginas) {
+  const altoPie = 28;
+  const y = yPieSeguro(doc, altoPie);
+  doc.rect(0, y - 5, doc.page.width, altoPie + 8).fill('#eeeeee');
+  doc.rect(0, y - 5, doc.page.width, 2).fill(COLOR_ORO);
+  doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
+     .text('REGPOL CALLAO — UNITIC 2026 — Constancia de vacante / selección',
+           40, y + 2, { align: 'left', width: 350, lineBreak: false });
+  doc.text('Pág. ' + pagina + ' / ' + totalPaginas,
+           doc.page.width - 100, y + 2, { align: 'right', width: 60, lineBreak: false });
+}
+
+function generarPDFConstanciaVacante(inscripcion, item) {
+  return new Promise(function(resolve) {
+    const doc = new PDFDocument({
+      size: 'A4',
+      margins: { top: 75, bottom: 45, left: 40, right: 40 },
+      autoFirstPage: false,
+      bufferPages: true
+    });
+    const chunks = [];
+    doc.on('data', function(c) { chunks.push(c); });
+    doc.on('end', function() { resolve(Buffer.concat(chunks)); });
+
+    const m = { left: 40, right: 40, top: 75, bottom: 45 };
+    const W = A4_W - m.left - m.right;
+    const x0 = m.left;
+    const maxY = A4_H - m.bottom - 20;
+    let y = 78;
+
+    const esCurso = item.tipo === 'curso';
+    const tituloDoc = esCurso
+      ? 'CONSTANCIA DE SELECCIÓN — CURSO DE CAPACITACIÓN'
+      : 'CONSTANCIA DE VACANTE OCUPADA — CONVENIO';
+
+    doc.addPage();
+    dibujarCabeceraPortal(doc, tituloDoc);
+
+    doc.rect(x0, y, W, 22).fill('#ececec').stroke('#c8c8c8');
+    doc.fillColor(COLOR_NEGRO).font('Helvetica-Bold').fontSize(11)
+       .text(tituloDoc, x0 + 10, y + 6, { width: W - 20, align: 'center', lineBreak: false });
+    y += 30;
+
+    const dataFs = 9;
+    const lineH = 13;
+    const lineas = [
+      'CIP: ' + String(inscripcion.cip || '—'),
+      'DNI: ' + String(inscripcion.dni || '—'),
+      'GRADO: ' + formatearGradoDisplay(inscripcion.grado),
+      'APELLIDOS Y NOMBRES: ' + String(inscripcion.nombres || '—').toUpperCase(),
+      'UNIDAD: ' + String(inscripcion.unidad || '—').toUpperCase(),
+      'CARGO: ' + String(inscripcion.cargo || '—').toUpperCase()
+    ];
+    doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(dataFs);
+    lineas.forEach(function(txt) {
+      doc.text(txt, x0, y, { width: W, lineBreak: false, ellipsis: true });
+      y += lineH;
+    });
+    y += 8;
+
+    function seccion(titulo) {
+      if (y > maxY - 40) {
+        doc.addPage();
+        dibujarCabeceraPortal(doc, tituloDoc);
+        y = 78;
+      }
+      doc.rect(x0, y, W, 18).fill(COLOR_VERDE);
+      doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9)
+         .text(titulo, x0 + 8, y + 5, { width: W - 16, lineBreak: false });
+      y += 22;
+    }
+
+    function textoBloque(txt) {
+      doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(dataFs)
+         .text(txt, x0, y, { width: W, lineBreak: true });
+      y += doc.heightOfString(txt, { width: W }) + 4;
+    }
+
+    seccion('CONVOCATORIA');
+    textoBloque('Tipo: ' + (esCurso ? 'Curso de capacitación' : 'Convenio interinstitucional'));
+    textoBloque('Denominación: ' + (item.titulo || '—'));
+    textoBloque('Vacantes del proceso: ' + (item.vacantes != null ? String(item.vacantes) : '—'));
+    textoBloque('Fecha de inscripción: ' + formatearFechaPDF(inscripcion.fecha));
+    y += 4;
+
+    seccion('PRESENTACIÓN Y HORARIO');
+    const lugar = item.lugar || 'Oficina gestora — REGPOL Callao (confirmar con el área)';
+    const horario = item.horario || 'Por confirmar — consulte con el área correspondiente';
+    textoBloque('Lugar de presentación: ' + lugar);
+    textoBloque('Horario: ' + horario);
+    textoBloque('Fecha de inicio: ' + (item.fecha_inicio || 'Por confirmar'));
+    textoBloque('Duración / período: ' + (item.duracion || '—'));
+    if (inscripcion.disponibilidad) {
+      textoBloque('Disponibilidad declarada: ' + inscripcion.disponibilidad
+        + (inscripcion.dia_franco ? ' — Día franco: ' + inscripcion.dia_franco : ''));
+    }
+    y += 4;
+
+    seccion('RESPONSABILIDADES Y COMPROMISOS');
+    let reqs = item.requisitos;
+    if (typeof reqs === 'string') {
+      try { reqs = JSON.parse(reqs); } catch (e) { reqs = []; }
+    }
+    if (!Array.isArray(reqs)) reqs = [];
+    const bullets = reqs.slice();
+    if (item.descripcion && String(item.descripcion).trim()) {
+      bullets.push(String(item.descripcion).trim());
+    }
+    bullets.push('Cumplir con las disposiciones del Reglamento de la PNP y las normas del convenio o curso.');
+    bullets.push('Presentarse puntualmente en el lugar y horario indicados con uniforme reglamentario y documento de identidad.');
+    bullets.push(esCurso
+      ? 'Mantener conducta intachable durante todo el programa de capacitación.'
+      : 'Desempeñar las funciones asignadas conforme al convenio y a las directivas del área.');
+
+    bullets.forEach(function(b, idx) {
+      if (y > maxY - 20) {
+        doc.addPage();
+        dibujarCabeceraPortal(doc, tituloDoc);
+        y = 78;
+      }
+      const linea = (idx + 1) + '. ' + b;
+      doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(8.5)
+         .text(linea, x0 + 4, y, { width: W - 8, lineBreak: true });
+      y += doc.heightOfString(linea, { width: W - 8 }) + 3;
+    });
+
+    if (item.observaciones) {
+      y += 6;
+      if (y > maxY - 30) {
+        doc.addPage();
+        dibujarCabeceraPortal(doc, tituloDoc);
+        y = 78;
+      }
+      const obs = 'Observaciones: ' + item.observaciones;
+      doc.fillColor(COLOR_GRIS).font('Helvetica-Oblique').fontSize(8)
+         .text(obs, x0, y, { width: W, lineBreak: true });
+      y += doc.heightOfString(obs, { width: W }) + 4;
+    }
+
+    y += 10;
+    if (y > maxY - 55) {
+      doc.addPage();
+      dibujarCabeceraPortal(doc, tituloDoc);
+      y = 78;
+    }
+    doc.rect(x0, y, W, 52).fill('#f7faf7').stroke('#cfdad2');
+    doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(8.5)
+       .text('El presente documento acredita la ocupación de vacante. Preséntelo impreso o en formato digital al momento de su incorporación.',
+         x0 + 10, y + 8, { width: W - 20, lineBreak: true });
+    const oficina = esCurso
+      ? 'Oficina de Educación Policial — REGPOL Callao'
+      : 'Oficina de Convenios — REGPOL Callao';
+    doc.font('Helvetica-Bold').fontSize(8.5)
+       .text(oficina, x0 + 10, y + 34, { width: W - 20, lineBreak: false });
+
+    const range = doc.bufferedPageRange();
+    for (let i = range.start; i < range.start + range.count; i++) {
+      doc.switchToPage(i);
+      dibujarPiePortal(doc, i - range.start + 1, range.count);
+    }
+
+    doc.end();
+  });
+}
+
 module.exports = {
   generarPDFIndividual,
   generarPDFComisaria,
+  generarPDFConstanciaVacante,
   calcularMMPI2,
   normalizarResultadoMMPI,
   interpretarT,

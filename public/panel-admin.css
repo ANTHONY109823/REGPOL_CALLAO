@@ -281,9 +281,22 @@ body.panel-admin-page.autenticado #admin-contenido { display: flex !important; }
   color: white;
   border: none;
   border-radius: 6px;
+  padding: 6px 12px;
+  min-height: 32px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.cms-item-acciones .btn-mini {
   width: 34px;
   height: 34px;
-  cursor: pointer;
+  min-height: 34px;
+  padding: 0;
+  justify-content: center;
 }
 .btn-mini-danger { background: var(--error); }
 .cms-toolbar { margin-bottom: 12px; }

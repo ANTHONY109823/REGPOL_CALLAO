@@ -558,7 +558,8 @@ function enviarInscripcion(e){
     })
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok){
-      alerta.textContent='✓ Inscripción registrada. El área correspondiente revisará su expediente y se comunicará con usted.';
+      alerta.innerHTML='✓ Inscripción registrada. El área correspondiente revisará su expediente. '
+        +'<a href="consulta.html?cip='+encodeURIComponent(cip)+'" style="color:#004d3d;font-weight:700;">Consultar estado con su CIP</a>.';
       alerta.className='fi-alerta ok'; alerta.style.display='block';
       document.getElementById('form-inscripcion').reset();
       initCamposInscripcion();

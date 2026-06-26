@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consulta de inscripción — REGPOL Callao</title>
+  <link rel="stylesheet" href="style.css?v=39">
+  <link rel="stylesheet" href="responsive.css?v=1">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    .consulta-hero{background:linear-gradient(135deg,#004d3d,#006b55);border-radius:12px;padding:28px 24px;color:#fff;margin-bottom:24px;}
+    .consulta-hero h2{font-size:20px;margin:0 0 8px;font-weight:800;}
+    .consulta-hero p{margin:0;font-size:13.5px;opacity:.92;line-height:1.5;}
+    .consulta-form{background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:24px;margin-bottom:24px;}
+    .consulta-form label{font-size:12px;font-weight:700;color:#004d3d;display:block;margin-bottom:6px;}
+    .consulta-form input{width:100%;max-width:280px;padding:11px 12px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;letter-spacing:1px;}
+    .consulta-form input:focus{border-color:#004d3d;outline:none;}
+    .consulta-form .row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
+    .btn-consultar{background:#004d3d;color:#fff;border:none;padding:12px 22px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;}
+    .btn-consultar:hover{background:#006b55;}
+    .btn-consultar:disabled{opacity:.6;cursor:not-allowed;}
+    .consulta-alerta{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none;}
+    .consulta-alerta.error{background:#f8d7da;color:#842029;display:block;}
+    .consulta-alerta.info{background:#e8f4fd;color:#0c5460;display:block;}
+    .consulta-card{background:#fff;border:1.5px solid #e0e8e0;border-radius:12px;padding:20px;margin-bottom:16px;}
+    .consulta-card.ganador{border-color:#c8a94a;background:#fffdf5;}
+    .consulta-card h3{color:#004d3d;font-size:15px;margin:0 0 4px;}
+    .consulta-card .tipo{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;}
+    .consulta-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:14px 0;font-size:13px;color:#333;}
+    .consulta-meta span{display:block;font-size:10px;font-weight:800;color:#004d3d;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;}
+    .estado-chip{display:inline-block;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;margin-top:8px;}
+    .estado-pendiente,.estado-verificado,.estado-aprobado{background:#fff3cd;color:#856404;}
+    .estado-ganador{background:#d4edda;color:#1a5c32;}
+    .estado-reserva{background:#e9ecef;color:#495057;}
+    .estado-rechazado{background:#f8d7da;color:#842029;}
+    .constancia-box{background:#f7faf7;border:1px solid #c8e6c9;border-radius:10px;padding:16px;margin-top:14px;}
+    .constancia-box p{font-size:13px;color:#444;margin:0 0 12px;line-height:1.5;}
+    .constancia-acciones{display:flex;flex-wrap:wrap;gap:10px;}
+    .btn-pdf-ver,.btn-pdf-desc{background:#004d3d;color:#fff;border:none;padding:9px 16px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+    .btn-pdf-desc{background:#c8a94a;color:#002d24;}
+    .obs-box{background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#856404;margin-top:10px;}
+    .sin-resultados{text-align:center;padding:40px 20px;color:#888;font-size:14px;}
+  </style>
+</head>
+<body class="body-cursos">
+
+<div class="header-social-portal">
+  <div class="container portal-flex">
+    <a href="login.html" class="btn-pnp-social ingresar"><i class="fas fa-sign-in-alt"></i> INGRESAR</a>
+    <div class="social-buttons-group">
+      <a href="https://www.facebook.com/region.policial.callao.2025" target="_blank" class="btn-pnp-social fb"><i class="fab fa-facebook"></i> Facebook</a>
+      <a href="https://www.tiktok.com/@regionpolicialcallao" target="_blank" class="btn-pnp-social tk"><i class="fab fa-tiktok"></i> TikTok</a>
+      <a href="https://wa.me/51927577686" target="_blank" class="btn-pnp-social wa"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+    </div>
+  </div>
+</div>
+
+<header class="main-header">
+  <div class="container header-flex">
+    <div class="logo-container">
+      <img src="img/regpol-callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90">
+    </div>
+    <div class="title-text">
+      <h1 class="portal-eslogan">REGIÓN POLICIAL CALLAO</h1>
+      <p class="portal-subtitulo">UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p>
+    </div>
+  </div>
+</header>
+
+<nav class="nav-main"><div class="container"><ul></ul></div></nav>
+
+<main class="container content-area">
+  <div class="consulta-hero">
+    <h2><i class="fas fa-search"></i> Consulta de inscripción</h2>
+    <p>Ingrese su CIP para verificar el estado de su expediente, el área que lo gestiona y —si ocupó vacante— descargar la constancia para presentar en la oficina correspondiente.</p>
+  </div>
+
+  <div class="consulta-form">
+    <form id="form-consulta" onsubmit="consultarCip(event)">
+      <div class="row">
+        <div>
+          <label for="input-cip">CIP del efectivo policial</label>
+          <input type="text" id="input-cip" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="Ej: 31590992" required autocomplete="off">
+        </div>
+        <button type="submit" class="btn-consultar" id="btn-consultar"><i class="fas fa-search"></i> CONSULTAR</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="consulta-alerta" class="consulta-alerta"></div>
+  <div id="consulta-resultados"></div>
+
+  <a href="index.html" class="btn-volver" style="display:inline-flex;margin-top:8px;"><i class="fas fa-arrow-left"></i> Volver al portal</a>
+</main>
+
+<footer class="portal-footer">
+  <p>&copy; 2026 Región Policial Callao - UNITIC | Todos los derechos reservados</p>
+</footer>
+
+<script src="api-config.js?v=2"></script>
+<script src="portal-data.js?v=2"></script>
+<script src="portal.js?v=37"></script>
+<script>
+var API_PUBLIC = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
+var CIP_CONSULTA = '';
+
+function escC(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function getParamCip() {
+  return new URLSearchParams(window.location.search).get('cip') || '';
+}
+
+function mostrarAlerta(msg, tipo) {
+  var el = document.getElementById('consulta-alerta');
+  el.textContent = msg;
+  el.className = 'consulta-alerta ' + (tipo || 'info');
+  el.style.display = msg ? 'block' : 'none';
+}
+
+function renderResultados(lista) {
+  var wrap = document.getElementById('consulta-resultados');
+  if (!lista || !lista.length) {
+    wrap.innerHTML = '<div class="sin-resultados"><i class="fas fa-inbox" style="font-size:32px;color:#ccc;display:block;margin-bottom:12px;"></i>'
+      + 'No se encontraron inscripciones registradas con este CIP.</div>';
+    return;
+  }
+  wrap.innerHTML = lista.map(function(ins) {
+    var esGan = ins.es_ganador;
+    var chipCls = 'estado-chip estado-' + escC(ins.estado || 'pendiente');
+  var html = '<div class="consulta-card' + (esGan ? ' ganador' : '') + '">'
+      + '<div class="tipo">' + escC(ins.tipo === 'curso' ? 'Curso' : 'Convenio') + '</div>'
+      + '<h3>' + escC(ins.convocatoria) + '</h3>'
+      + '<span class="' + chipCls + '">' + escC(ins.estado_legible) + '</span>'
+      + '<div class="consulta-meta">'
+      + '<div><span>Área gestora</span>' + escC(ins.oficina_gestora) + '</div>'
+      + '<div><span>Ubicación del trámite</span>' + escC(ins.ubicacion_tramite) + '</div>'
+      + '<div><span>Fecha de inscripción</span>' + escC(ins.fecha || '—') + '</div>'
+      + '<div><span>Postulante</span>' + escC(ins.nombres) + '</div>'
+      + '</div>';
+    if (ins.observacion && ins.estado === 'rechazado') {
+      html += '<div class="obs-box"><strong>Observación:</strong> ' + escC(ins.observacion) + '</div>';
+    }
+    if (esGan) {
+      html += '<div class="constancia-box">'
+        + '<p><strong><i class="fas fa-check-circle" style="color:#1a7a3a;"></i> Usted ocupa vacante en esta convocatoria.</strong> '
+        + 'Descargue o visualice la constancia con lugar de presentación, horario y responsabilidades. Preséntela en la oficina indicada.</p>'
+        + '<div class="consulta-meta">'
+        + (ins.lugar ? '<div><span>Lugar</span>' + escC(ins.lugar) + '</div>' : '')
+        + (ins.horario ? '<div><span>Horario</span>' + escC(ins.horario) + '</div>' : '')
+        + (ins.fecha_inicio ? '<div><span>Inicio</span>' + escC(ins.fecha_inicio) + '</div>' : '')
+        + (ins.duracion ? '<div><span>Duración</span>' + escC(ins.duracion) + '</div>' : '')
+        + '</div>'
+        + '<div class="constancia-acciones">'
+        + '<button type="button" class="btn-pdf-ver" onclick="verConstancia(' + ins.id + ')"><i class="fas fa-eye"></i> VER CONSTANCIA</button>'
+        + '<button type="button" class="btn-pdf-desc" onclick="descargarConstancia(' + ins.id + ')"><i class="fas fa-download"></i> DESCARGAR PDF</button>'
+        + '</div></div>';
+    }
+    html += '</div>';
+    return html;
+  }).join('');
+}
+
+function consultarCip(e) {
+  if (e) e.preventDefault();
+  var cip = (document.getElementById('input-cip').value || '').trim().replace(/\s/g, '');
+  if (!/^\d{6,12}$/.test(cip)) {
+    mostrarAlerta('Ingrese un CIP válido (solo números, 6 a 12 dígitos).', 'error');
+    return;
+  }
+  CIP_CONSULTA = cip;
+  var btn = document.getElementById('btn-consultar');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
+  mostrarAlerta('', '');
+  document.getElementById('consulta-resultados').innerHTML = '<p class="loading-msg"><i class="fas fa-spinner fa-spin"></i> Buscando...</p>';
+
+  fetch(API_PUBLIC + '/portal/consulta-inscripcion?cip=' + encodeURIComponent(cip))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) {
+        mostrarAlerta(d.error || 'Error al consultar.', 'error');
+        document.getElementById('consulta-resultados').innerHTML = '';
+        return;
+      }
+      if (d.total === 0) {
+        mostrarAlerta('No hay inscripciones registradas con el CIP ' + cip + '.', 'info');
+      } else {
+        mostrarAlerta('Se encontraron ' + d.total + ' inscripción(es) para el CIP ' + cip + '.', 'info');
+      }
+      renderResultados(d.inscripciones || []);
+      if (history.replaceState) {
+        history.replaceState(null, '', 'consulta.html?cip=' + encodeURIComponent(cip));
+      }
+    })
+    .catch(function() {
+      mostrarAlerta('Error de conexión. Verifique su internet e intente nuevamente.', 'error');
+      document.getElementById('consulta-resultados').innerHTML = '';
+    })
+    .finally(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-search"></i> CONSULTAR';
+    });
+}
+
+function verConstancia(id) {
+  if (!CIP_CONSULTA) return;
+  fetch(API_PUBLIC + '/portal/inscripciones/' + id + '/constancia-vacante?cip=' + encodeURIComponent(CIP_CONSULTA))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok || !d.pdf) {
+        alert(d.error || 'No se pudo cargar la constancia.');
+        return;
+      }
+      abrirModalPdfPortal(d.pdf, d.titulo || 'Constancia de vacante');
+    })
+    .catch(function() { alert('Error de conexión.'); });
+}
+
+function descargarConstancia(id) {
+  if (!CIP_CONSULTA) return;
+  fetch(API_PUBLIC + '/portal/inscripciones/' + id + '/constancia-vacante?cip=' + encodeURIComponent(CIP_CONSULTA))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok || !d.pdf) {
+        alert(d.error || 'No se pudo descargar la constancia.');
+        return;
+      }
+      descargarDataUrlPdf(d.pdf, d.nombre || 'constancia.pdf');
+    })
+    .catch(function() { alert('Error de conexión.'); });
+}
+
+initPortalPagina({ activeNav: 'consulta', showPageHero: false });
+
+var cipIni = getParamCip();
+if (cipIni) {
+  document.getElementById('input-cip').value = cipIni;
+  consultarCip();
+}
+</script>
+</body>
+</html>

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Panel UNITIC — REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <link rel="stylesheet" href="panel-admin.css?v=13"/>
+  <link rel="stylesheet" href="panel-admin.css?v=14"/>
   <link rel="stylesheet" href="responsive.css?v=1"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
@@ -173,13 +173,26 @@
     .cms-item-info strong{display:block;font-size:12.5px;color:#004d3d;}
     .cms-item-info span{display:block;font-size:11px;color:#888;margin-top:2px;}
     .cms-item-acciones{display:flex;gap:5px;}
-    .btn-mini{padding:4px 8px;border:1.5px solid #004d3d;background:#fff;color:#004d3d;
-      border-radius:5px;cursor:pointer;font-size:11px;}
+    .btn-mini{padding:6px 12px;border:1.5px solid #004d3d;background:#fff;color:#004d3d;
+      border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;
+      width:auto;height:auto;min-height:32px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
     .btn-mini:hover{background:#004d3d;color:#fff;}
     .btn-mini-danger{border-color:#c0392b;color:#c0392b;}
     .btn-mini-danger:hover{background:#c0392b;color:#fff;}
     .btn-mini-ok{border-color:#1a7a3a;color:#1a7a3a;}
     .btn-mini-ok:hover{background:#1a7a3a;color:#fff;}
+    .btn-mini-solid{background:#004d3d;color:#fff;border-color:#004d3d;}
+    .btn-mini-solid:hover{background:#006b55;color:#fff;}
+    .btn-mini-azul{background:#2980b9;color:#fff;border-color:#2980b9;}
+    .btn-mini-azul:hover{background:#2471a3;color:#fff;}
+    .btn-mini-pdf{background:#c0392b;color:#fff;border-color:#c0392b;min-width:38px;justify-content:center;}
+    .btn-mini-pdf:hover{background:#a93226;color:#fff;}
+    table.t-inscritos td{color:#1a1a1a;font-size:12.5px;}
+    table.t-inscritos td.col-num{color:#555;font-size:12px;}
+    table.t-inscritos td.col-fecha{color:#1a1a1a;font-weight:600;font-size:12.5px;white-space:nowrap;}
+    table.t-inscritos .badge-estado{padding:5px 11px;font-size:11.5px;font-weight:700;border-radius:12px;display:inline-block;}
+    table.t-inscritos td.col-acciones{min-width:220px;white-space:nowrap;}
+    table.t-inscritos td.col-acciones .btn-mini{margin:2px 3px 2px 0;}
     .cms-parrafo-item{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px;}
     .cms-parrafo-num{font-size:11px;font-weight:800;color:#004d3d;min-width:22px;padding-top:10px;}
     .cms-textarea{width:100%;padding:8px;border:1.5px solid #ccc;border-radius:6px;
@@ -3424,44 +3437,44 @@ function renderInscritos(list, tipo){
   var bgEst   ={pendiente:'#fff3cd',verificado:'#d4edda',ganador:'#fff8e1',aprobado:'#fff8e1',rechazado:'#f8d7da',reserva:'#e9ecef'};
 
   document.getElementById('inscritos-tabla').innerHTML=
-    '<div style="overflow-x:auto;"><table class="t" style="min-width:900px;"><thead><tr>'
+    '<div style="overflow-x:auto;"><table class="t t-inscritos" style="min-width:900px;"><thead><tr>'
     +'<th>#</th><th>Grado</th><th>CIP</th><th>DNI</th><th>Apellidos y Nombres</th><th>Unidad</th><th>Área</th>'
     +(esConvenio?'<th>Disponib.</th>':'<th>T. Servicio</th>')
-    +'<th>PDF</th><th>Estado</th><th>Fecha</th><th>Acciones</th>'
+    +'<th>PDF</th><th>Estado</th><th>Fecha</th><th class="col-acciones">Acciones</th>'
     +'</tr></thead><tbody>'
     +list.map(function(ins,idx){
-      var c=colorEst[ins.estado]||'#444';
+      var c=colorEst[ins.estado]||'#1a1a1a';
       var bg=bgEst[ins.estado]||'#fff';
-      var fecha=ins.fecha?new Date(ins.fecha).toLocaleDateString('es-PE'):'';
+      var fecha=ins.fecha?new Date(ins.fecha).toLocaleDateString('es-PE'):'—';
       var dispBadge='';
       if(esConvenio){
-        if(ins.disponibilidad==='VACACIONES') dispBadge='<span class="badge ok" style="background:#d4edda;color:#1a7a3a;">VAC</span>';
-        else if(ins.disponibilidad==='FRANCO') dispBadge='<span class="badge" style="background:#cce5ff;color:#004085;">' +(ins.dia_franco||'')+'</span>';
+        if(ins.disponibilidad==='VACACIONES') dispBadge='<span class="badge ok" style="background:#d4edda;color:#1a7a3a;font-size:11.5px;">VAC</span>';
+        else if(ins.disponibilidad==='FRANCO') dispBadge='<span class="badge" style="background:#cce5ff;color:#004085;font-size:11.5px;">' +(ins.dia_franco||'')+'</span>';
       } else {
-        dispBadge='<span style="font-size:11px;color:#555;">'+escHtml(ins.tiempo_servicio||'—')+'</span>';
+        dispBadge='<span style="font-size:12px;color:#1a1a1a;">'+escHtml(ins.tiempo_servicio||'—')+'</span>';
       }
       return '<tr>'
-        +'<td style="color:#aaa;font-size:11px;">'+(idx+1)+'</td>'
-        +'<td style="font-size:11px;font-weight:600;">'+escHtml(ins.grado||'')+'</td>'
-        +'<td style="font-weight:700;">'+escHtml(ins.cip||'')+'</td>'
-        +'<td style="font-size:11.5px;">'+escHtml(ins.dni||'')+'</td>'
+        +'<td class="col-num">'+(idx+1)+'</td>'
+        +'<td style="font-weight:600;">'+escHtml(ins.grado||'')+'</td>'
+        +'<td style="font-weight:700;color:#004d3d;">'+escHtml(ins.cip||'')+'</td>'
+        +'<td>'+escHtml(ins.dni||'')+'</td>'
         +'<td style="font-weight:600;">'+escHtml(ins.nombres||'')+'</td>'
-        +'<td style="font-size:11px;">'+escHtml(ins.unidad||'')+'</td>'
-        +'<td style="font-size:11px;">'+escHtml(ins.area||'—')+'</td>'
+        +'<td>'+escHtml(ins.unidad||'')+'</td>'
+        +'<td>'+escHtml(ins.area||'—')+'</td>'
         +'<td>'+dispBadge+'</td>'
         +'<td style="text-align:center;">'+(ins.tiene_pdf
-          ?'<button class="btn-mini" style="background:#e74c3c;color:#fff;" title="Ver PDF" onclick="verPdfInscripcion('+ins.id+')"><i class="fas fa-file-pdf"></i></button>'
-          :'<span style="color:#bbb;font-size:11px;">—</span>')+'</td>'
-        +'<td><span class="badge" style="background:'+bg+';color:'+c+';font-size:10px;">'+escHtml(etiquetaEstadoInscripcion(ins.estado, esConvenio))+'</span></td>'
-        +'<td style="font-size:11px;color:#888;">'+fecha+'</td>'
-        +'<td style="white-space:nowrap;">'
+          ?'<button type="button" class="btn-mini btn-mini-pdf" title="Ver PDF del expediente" onclick="verPdfInscripcion('+ins.id+')"><i class="fas fa-file-pdf"></i> PDF</button>'
+          :'<span style="color:#888;font-size:12px;">—</span>')+'</td>'
+        +'<td><span class="badge badge-estado" style="background:'+bg+';color:'+c+';">'+escHtml(etiquetaEstadoInscripcion(ins.estado, esConvenio))+'</span></td>'
+        +'<td class="col-fecha">'+fecha+'</td>'
+        +'<td class="col-acciones">'
         +(ins.estado==='pendiente'
-          ?'<button class="btn-mini btn-mini-ok" title="Verificar expediente" onclick="verificarInscripcion('+ins.id+')"><i class="fas fa-check-double"></i> Verificar</button> '
+          ?'<button type="button" class="btn-mini btn-mini-solid" title="Verificar expediente" onclick="verificarInscripcion('+ins.id+')"><i class="fas fa-check-double"></i> Verificar</button> '
           :'')
         +(esConvenio && ins.estado==='verificado'
-          ?'<button class="btn-mini" style="background:#2980b9;color:#fff;" title="Aprobar para sorteo" onclick="aprobarParaSorteo('+ins.id+')"><i class="fas fa-user-check"></i> Aprobar</button> '
+          ?'<button type="button" class="btn-mini btn-mini-azul" title="Aprobar para sorteo" onclick="aprobarParaSorteo('+ins.id+')"><i class="fas fa-user-check"></i> Aprobar</button> '
           :'')
-        +'<button class="btn-mini" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i></button>'
+        +'<button type="button" class="btn-mini btn-mini-solid" title="Editar inscripción" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i> Editar</button>'
         +'</td>'
         +'</tr>';
     }).join('')
