@@ -98,8 +98,8 @@
 </footer>
 
 <script src="api-config.js?v=2"></script>
-<script src="portal-data.js?v=6"></script>
-<script src="portal.js?v=40"></script>
+<script src="portal-data.js?v=7"></script>
+<script src="portal.js?v=41"></script>
 <script>
 var API_PUBLIC = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var CIP_CONSULTA = '';
@@ -232,7 +232,7 @@ function descargarConstancia(id) {
     .catch(function() { alert('Error de conexión.'); });
 }
 
-initPortalPagina({ activeNav: 'consulta', showPageHero: false });
+initPortalPagina({ activeNav: 'convenios', showPageHero: false });
 
 var cipIni = getParamCip();
 if (cipIni) {

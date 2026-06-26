@@ -25,7 +25,6 @@ var REGPOL_NAV_FALLBACK = [
   { id: 'novedades', href: 'index.html#novedades', label: 'NOVEDADES' },
   { id: 'convenios', href: 'index.html#convenios', label: 'CONVENIOS' },
   { id: 'cursos',    href: 'index.html#cursos',    label: 'CURSOS' },
-  { id: 'consulta',  href: 'consulta.html',        label: 'CONSULTA CIP',       icon: 'fa-search' },
   { id: 'bienestar', href: 'index.html#bienestar', label: 'BIENESTAR',          icon: 'fa-heart' },
   { id: 'resena',    href: 'index.html#resena',    label: 'RESE\u00d1A HIST\u00d3RICA' },
   { id: 'labor',     href: 'index.html#labor',    label: 'NUESTRA LABOR' },
@@ -36,16 +35,8 @@ var portalActiveNavId = '';
 var _scrollNavListo = false;
 
 function obtenerPortalNav() {
-  var base = (window.REGPOL_NAV && window.REGPOL_NAV.length)
-    ? window.REGPOL_NAV.slice()
-    : REGPOL_NAV_FALLBACK.slice();
-  var consultaItem = { id: 'consulta', href: 'consulta.html', label: 'CONSULTA CIP', icon: 'fa-search' };
-  if (!base.some(function(item) { return item.id === 'consulta'; })) {
-    var idx = base.findIndex(function(item) { return item.id === 'cursos'; });
-    if (idx >= 0) base.splice(idx + 1, 0, consultaItem);
-    else base.push(consultaItem);
-  }
-  return base;
+  var base = (window.REGPOL_NAV && window.REGPOL_NAV.length) ? window.REGPOL_NAV : REGPOL_NAV_FALLBACK;
+  return base.filter(function(item) { return item.id !== 'consulta'; });
 }
 
 function escHtml(str) {
@@ -326,7 +317,7 @@ function marcarNavActivo(activeId) {
 
 function navDesdeHash() {
   var h = (location.hash || '').replace('#', '').trim();
-  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'consulta', 'bienestar', 'resena', 'labor', 'unidades'];
+  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'bienestar', 'resena', 'labor', 'unidades'];
   return ids.indexOf(h) >= 0 ? h : '';
 }
 
@@ -390,7 +381,7 @@ function initPortalScrollNav() {
       if (history.pushState) history.pushState(null, '', '#' + hash);
     });
   }
-  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'consulta', 'bienestar', 'resena', 'labor', 'unidades'];
+  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'bienestar', 'resena', 'labor', 'unidades'];
   var ticking = false;
   function onScroll() {
     if (ticking) return;
