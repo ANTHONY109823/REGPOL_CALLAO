@@ -26,6 +26,7 @@ var ESTADO = {
 var ALERTA_FINAL_MOSTRADA = false;
 var FOTO_BASE64 = '';
 var CAM_STREAM = null;
+var UNIDAD_ADMIN_DEFAULT = 'UNIDADES ADM.';
 
 function toggleAreaOtroEval() {
   if (typeof regpolToggleAreaOtro === 'function') {
@@ -201,6 +202,62 @@ function cargarPreguntas() {
 function obtenerComisariaEvaluacion() {
   var sel = document.getElementById('f-unidad');
   return sel ? sel.value.trim() : '';
+}
+
+function aplicarUnidadPorDefectoSiVacia() {
+  if (obtenerComisariaEvaluacion()) return;
+  seleccionarComisariaEnSelect('f-unidad', UNIDAD_ADMIN_DEFAULT);
+}
+
+function editarDatosPersonales() {
+  var reg = document.getElementById('card-registro');
+  var cont = document.getElementById('card-continuar-cip');
+  ESTADO.registroEstabaOculto = reg && reg.style.display === 'none';
+  if (reg) {
+    reg.style.display = '';
+    reg.classList.remove('card-registro-bloqueado');
+  }
+  if (cont) cont.style.display = 'none';
+  var btnContinuar = document.querySelector('.btn-registro-continuar');
+  var btnGuardar = document.getElementById('btn-guardar-datos-continuar');
+  if (btnContinuar) btnContinuar.style.display = ESTADO.registroCompleto ? 'none' : '';
+  if (btnGuardar) btnGuardar.style.display = ESTADO.registroCompleto ? 'inline-flex' : 'none';
+  aplicarUnidadPorDefectoSiVacia();
+  mostrarAlerta('Actualice sus datos (especialmente la dependencia) y pulse «Guardar datos y volver al cuestionario».', 'info');
+  if (reg) reg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function guardarDatosYContinuarCuestionario() {
+  var err = validarRegistro();
+  if (err) {
+    mostrarAlerta(err, 'error');
+    document.getElementById('card-registro').scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+  ocultarAlerta();
+  var btn = document.getElementById('btn-guardar-datos-continuar');
+  if (btn) btn.disabled = true;
+  guardarRegistroEnServidor(function(ok) {
+    if (btn) btn.disabled = false;
+    activarCuestionario(true);
+    if (ESTADO.registroEstabaOculto) ocultarPanelRegistro();
+    var btnContinuar = document.querySelector('.btn-registro-continuar');
+    if (btnContinuar) btnContinuar.style.display = '';
+    if (btn) btn.style.display = 'none';
+    mostrarAlerta(ok
+      ? 'Datos actualizados. Ya puede finalizar y enviar su cuestionario.'
+      : 'Datos actualizados en este equipo. Revise conexión si no se guardó en el servidor.', 'exito');
+    setTimeout(ocultarAlerta, 5000);
+  });
+}
+
+function restaurarUnidadDesdeProgreso(data) {
+  var unidad = (data && (data.unidad || data.comisaria)) ? String(data.unidad || data.comisaria).trim() : '';
+  if (unidad) {
+    seleccionarComisariaEnSelect('f-unidad', unidad);
+  } else {
+    seleccionarComisariaEnSelect('f-unidad', UNIDAD_ADMIN_DEFAULT);
+  }
 }
 
 /* ================================================================
@@ -620,6 +677,10 @@ function activarCuestionario(scroll) {
   if(c) c.classList.remove('seccion-bloqueada');
   var r=document.getElementById('card-registro');
   if(r) r.classList.add('card-registro-bloqueado');
+  var btnGuardar = document.getElementById('btn-guardar-datos-continuar');
+  if (btnGuardar) btnGuardar.style.display = 'none';
+  var btnContinuar = document.querySelector('.btn-registro-continuar');
+  if (btnContinuar) btnContinuar.style.display = '';
   renderizarBloque(ESTADO.bloqueActual, !!scroll);
 }
 
@@ -934,7 +995,7 @@ function continuarConCIP() {
     if (data.area) restaurarAreaEvaluacion(data.area);
     restaurarArmamentoDesdeData(data);
     if (data.foto) { FOTO_BASE64 = data.foto; actualizarPreviewFoto(data.foto); }
-    seleccionarComisariaEnSelect('f-unidad', data.unidad || data.comisaria || '');
+    restaurarUnidadDesdeProgreso(data);
     ocultarPanelRegistro();
     aplicarProgresoRestaurado(data);
   });
@@ -1026,7 +1087,7 @@ function restaurarProgreso() {
   if(data.area) restaurarAreaEvaluacion(data.area);
   restaurarArmamentoDesdeData(data);
   if(data.foto) { FOTO_BASE64 = data.foto; actualizarPreviewFoto(data.foto); }
-  seleccionarComisariaEnSelect('f-unidad', data.unidad || data.comisaria || '');
+  restaurarUnidadDesdeProgreso(data);
   ocultarPanelRegistro();
   aplicarProgresoRestaurado(data);
 }
@@ -1043,7 +1104,11 @@ function descartarProgreso() {
 ================================================================ */
 function validarYEnviar() {
   var err=validarRegistro();
-  if(err){mostrarAlerta(err,'error'); ocultarCuestionario(); document.getElementById('card-registro').scrollIntoView({behavior:'smooth'}); return;}
+  if(err){
+    mostrarAlerta(err + ' Use el botón «Editar datos» o complete el Paso 1.', 'error');
+    editarDatosPersonales();
+    return;
+  }
 
   var sinRes=PREGUNTAS.filter(function(p){return !ESTADO.respuestas[p.id];});
   if(sinRes.length>0){

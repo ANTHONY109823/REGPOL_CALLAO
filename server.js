@@ -373,6 +373,8 @@ async function initDB() {
     console.log('Divisiones ya cargadas (' + divRows[0].t + '), sync omitido.');
   }
 
+  await sincronizarUnidadAdministrativa();
+
   // Seed preguntas en lotes de 100 para no superar límite de parámetros
   const { rows } = await pool.query('SELECT COUNT(*) AS t FROM preguntas');
   if (parseInt(rows[0].t) === 0) {
@@ -407,7 +409,7 @@ const DIVISIONES_CANON = [
     'ESCVER CALLAO', 'ESCVER VENTANILLA', 'UNIEME CALLAO', 'UNIEME VENTANILLA',
     'UNIDIR CALLAO', 'UNIPAPIE', 'USEG CALLAO', 'UNISEINT CALLAO',
     'UNIPIAT CALLAO', 'USE CALLAO', 'USE VENTANILLA', 'UNIPIRV CALLAO',
-    'UTSEVI CALLAO', 'SECTSV VENTANILLA'
+    'UTSEVI CALLAO', 'SECTSV VENTANILLA', 'UNIDADES ADM.'
   ]}
 ];
 
@@ -454,6 +456,48 @@ async function sincronizarDivisionesUnidades() {
   }
   console.log('Divisiones sincronizadas: DIVOPUS 1-3 + DIVUES.');
   await seedContactoComisarias();
+}
+
+const UNIDAD_ADMIN_EVAL = 'UNIDADES ADM.';
+
+async function sincronizarUnidadAdministrativa() {
+  const divR = await pool.query(
+    "SELECT id FROM divisiones WHERE UPPER(TRIM(nombre))='DIVUES' LIMIT 1"
+  );
+  const divId = divR.rows[0]?.id;
+  if (divId) {
+    await pool.query(
+      `INSERT INTO unidades_pol (nombre, division_id, tipo, orden) VALUES ($1,$2,'especializada',99)
+       ON CONFLICT (nombre) DO UPDATE SET division_id=$2, tipo='especializada', orden=99`,
+      [UNIDAD_ADMIN_EVAL, divId]
+    );
+  }
+
+  const rProg = await pool.query(
+    `UPDATE progresos SET unidad=$1,
+       comisaria=CASE WHEN TRIM(COALESCE(comisaria,''))='' THEN $1 ELSE comisaria END
+     WHERE TRIM(COALESCE(unidad,''))=''`
+    , [UNIDAD_ADMIN_EVAL]
+  );
+  const rEval = await pool.query(
+    `UPDATE evaluaciones SET unidad=$1,
+       comisaria=CASE WHEN TRIM(COALESCE(comisaria,''))='' THEN $1 ELSE comisaria END
+     WHERE TRIM(COALESCE(unidad,''))=''`
+    , [UNIDAD_ADMIN_EVAL]
+  );
+
+  let activas = await leerUnidadesActivas();
+  const key = UNIDAD_ADMIN_EVAL.toUpperCase();
+  if (!activas.includes(key)) {
+    activas.push(key);
+    await setConfig('unidades_activas', JSON.stringify(activas));
+    configCache = null;
+    configCacheExp = 0;
+  }
+
+  if (rProg.rowCount || rEval.rowCount) {
+    console.log('Unidad administrativa: ' + rProg.rowCount + ' progreso(s) y ' + rEval.rowCount + ' evaluación(es) actualizados.');
+  }
 }
 
 const CONTACTO_COMISARIAS = [

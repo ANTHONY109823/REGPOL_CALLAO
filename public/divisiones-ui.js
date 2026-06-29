@@ -105,10 +105,13 @@ function llenarSelectUnidadesAgrupadas(selId, divisiones, placeholder, filtroDiv
   });
 }
 
+var UNIDADES_EVAL_SIEMPRE = ['UNIDADES ADM.'];
+
 function poblarSelectEvaluacionDivisiones(sel, divisiones, activas) {
   if (!sel) return;
   sel.innerHTML = '<option value="">-- Seleccionar dependencia --</option>';
   var total = 0;
+  var agregadas = {};
   (divisiones || []).forEach(function(div) {
     var og = document.createElement('optgroup');
     og.label = div.nombre;
@@ -119,9 +122,19 @@ function poblarSelectEvaluacionDivisiones(sel, divisiones, activas) {
       op.value = nom;
       op.textContent = nom;
       og.appendChild(op);
+      agregadas[normalizarNombreUnidad(nom)] = true;
       total++;
     });
     if (og.children.length) sel.appendChild(og);
+  });
+  UNIDADES_EVAL_SIEMPRE.forEach(function(nom) {
+    if (agregadas[normalizarNombreUnidad(nom)]) return;
+    if (activas && activas.length && !unidadActiva(nom, activas)) return;
+    var op = document.createElement('option');
+    op.value = nom;
+    op.textContent = nom;
+    sel.appendChild(op);
+    total++;
   });
   return total;
 }

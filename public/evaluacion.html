@@ -215,6 +215,9 @@
         <button type="button" class="btn-eval btn-verde btn-registro-continuar" onclick="continuarAlCuestionario()">
           <i class="fas fa-user-check"></i> Registrar y continuar al cuestionario
         </button>
+        <button type="button" class="btn-eval btn-borde" id="btn-guardar-datos-continuar" onclick="guardarDatosYContinuarCuestionario()" style="display:none;">
+          <i class="fas fa-save"></i> Guardar datos y volver al cuestionario
+        </button>
         <p class="registro-aviso">Todos los campos marcados con * son obligatorios.</p>
       </div>
     </div>
@@ -240,6 +243,9 @@
       <div class="paginacion">
         <button class="btn-eval btn-borde" id="btn-atras" onclick="cambiarBloque(-1)"><i class="fas fa-arrow-left"></i> Anterior</button>
         <span class="info-pagina" id="info-pagina">Bloque 1 de 12</span>
+        <button type="button" class="btn-eval btn-borde" id="btn-editar-datos" onclick="editarDatosPersonales()" title="Corregir dependencia u otros datos antes de enviar">
+          <i class="fas fa-user-edit"></i> Editar datos
+        </button>
         <button class="btn-eval btn-guardar" id="btn-guardar-bloque" onclick="guardarYSalir()" style="background:#c8a94a;color:#fff;border:none;"><i class="fas fa-save"></i> Guardar y salir</button>
         <button class="btn-eval btn-verde" id="btn-siguiente" onclick="cambiarBloque(1)">Siguiente bloque <i class="fas fa-arrow-right"></i></button>
         <button class="btn-eval btn-finalizar" id="btn-finalizar" onclick="validarYEnviar()" style="display:none;"><i class="fas fa-paper-plane"></i> Finalizar y Enviar</button>
@@ -288,7 +294,7 @@
 <script src="divisiones-ui.js?v=1"></script>
 <script src="preguntas.js?v=1"></script>
 <script src="areas-labor.js?v=2"></script>
-<script src="evaluacion.js?v=21"></script>
+<script src="evaluacion.js?v=22"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof regpolPoblarSelectArea === 'function') {
