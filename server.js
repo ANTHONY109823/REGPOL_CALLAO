@@ -469,6 +469,36 @@ const DIV_ADM_RPC = 'UNIDADES ADM. RPC';
 const UNIDAD_ADM_RPC = 'UNIDADES ADM. RPC';
 const UNIDAD_ADM_LEGACY = 'UNIDADES ADM.';
 
+const SQL_FILTRO_USUARIOS_ADM_RPC = `
+  UPPER(COALESCE(nombres, '')) LIKE '%SALAZAR MONTANO%'
+  OR UPPER(COALESCE(nombres, '')) LIKE '%ANTHONY%CCAYO%'
+`;
+
+async function moverUsuariosRegistroAdmRpc() {
+  const adm = UNIDAD_ADM_RPC;
+  const rProg = await pool.query(
+    `UPDATE progresos SET unidad = $1::varchar(150), comisaria = $2::varchar(120)
+     WHERE (${SQL_FILTRO_USUARIOS_ADM_RPC})
+       AND (
+         UPPER(TRIM(COALESCE(unidad, ''))) <> UPPER(TRIM($3::text))
+         OR UPPER(TRIM(COALESCE(comisaria, ''))) <> UPPER(TRIM($3::text))
+       )`,
+    [adm, adm, adm]
+  );
+  const rEval = await pool.query(
+    `UPDATE evaluaciones SET unidad = $1::varchar(150), comisaria = $2::varchar(120)
+     WHERE (${SQL_FILTRO_USUARIOS_ADM_RPC})
+       AND (
+         UPPER(TRIM(COALESCE(unidad, ''))) <> UPPER(TRIM($3::text))
+         OR UPPER(TRIM(COALESCE(comisaria, ''))) <> UPPER(TRIM($3::text))
+       )`,
+    [adm, adm, adm]
+  );
+  const n = (rProg.rowCount || 0) + (rEval.rowCount || 0);
+  if (n) console.log('Usuarios admin. movidos a UNIDADES ADM. RPC: ' + n + ' registro(s).');
+  return n;
+}
+
 async function sincronizarUnidadAdministrativa() {
   const adm = UNIDAD_ADM_RPC;
   const leg = UNIDAD_ADM_LEGACY;
@@ -576,8 +606,9 @@ async function sincronizarUnidadAdministrativa() {
 
   const total = (rProg1.rowCount || 0) + (rProg2.rowCount || 0) + (rEval1.rowCount || 0) + (rEval2.rowCount || 0)
     + (rCiaProg.rowCount || 0) + (rCiaEval.rowCount || 0);
-  if (total) {
-    console.log('UNIDADES ADM. RPC: ' + total + ' registro(s) de evaluación/progreso actualizados.');
+  const movidos = await moverUsuariosRegistroAdmRpc();
+  if (total || movidos) {
+    console.log('UNIDADES ADM. RPC: ' + (total + movidos) + ' registro(s) de evaluación/progreso actualizados.');
   }
 }
 
