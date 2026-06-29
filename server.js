@@ -504,20 +504,20 @@ async function sincronizarUnidadAdministrativa() {
   }
 
   const rProg = await pool.query(
-    `UPDATE progresos SET unidad=$1, comisaria=$1
+    `UPDATE progresos SET unidad=$1, comisaria=$2
      WHERE TRIM(COALESCE(unidad,''))=''
-        OR UPPER(TRIM(unidad))=UPPER(TRIM($2))
-        OR UPPER(TRIM(COALESCE(comisaria,'')))=UPPER(TRIM($2))
+        OR UPPER(TRIM(unidad))=UPPER(TRIM($3))
+        OR UPPER(TRIM(COALESCE(comisaria,'')))=UPPER(TRIM($3))
         OR (TRIM(COALESCE(unidad,''))='' AND TRIM(COALESCE(comisaria,''))<>'')`,
-    [UNIDAD_ADM_RPC, UNIDAD_ADM_LEGACY]
+    [UNIDAD_ADM_RPC, UNIDAD_ADM_RPC, UNIDAD_ADM_LEGACY]
   );
   const rEval = await pool.query(
-    `UPDATE evaluaciones SET unidad=$1, comisaria=$1
+    `UPDATE evaluaciones SET unidad=$1, comisaria=$2
      WHERE TRIM(COALESCE(unidad,''))=''
-        OR UPPER(TRIM(unidad))=UPPER(TRIM($2))
-        OR UPPER(TRIM(COALESCE(comisaria,'')))=UPPER(TRIM($2))
+        OR UPPER(TRIM(unidad))=UPPER(TRIM($3))
+        OR UPPER(TRIM(COALESCE(comisaria,'')))=UPPER(TRIM($3))
         OR (TRIM(COALESCE(unidad,''))='' AND TRIM(COALESCE(comisaria,''))<>'')`,
-    [UNIDAD_ADM_RPC, UNIDAD_ADM_LEGACY]
+    [UNIDAD_ADM_RPC, UNIDAD_ADM_RPC, UNIDAD_ADM_LEGACY]
   );
 
   const migrHecha = await getConfig('migracion_unidades_adm_rpc_v1');
@@ -525,17 +525,17 @@ async function sincronizarUnidadAdministrativa() {
   let rCiaEval = { rowCount: 0 };
   if (!migrHecha) {
     rCiaProg = await pool.query(
-      `UPDATE progresos SET unidad=$1, comisaria=$1
+      `UPDATE progresos SET unidad=$1, comisaria=$2
        WHERE UPPER(TRIM(COALESCE(unidad,'')))='CIA CALLAO'
          AND UPPER(TRIM(COALESCE(comisaria,'')))='CIA CALLAO'`,
-      [UNIDAD_ADM_RPC]
+      [UNIDAD_ADM_RPC, UNIDAD_ADM_RPC]
     );
     rCiaEval = await pool.query(
-      `UPDATE evaluaciones SET unidad=$1, comisaria=$1
+      `UPDATE evaluaciones SET unidad=$1, comisaria=$2
        WHERE UPPER(TRIM(COALESCE(unidad,'')))='CIA CALLAO'
          AND UPPER(TRIM(COALESCE(comisaria,'')))='CIA CALLAO'
          AND (completada IS NOT TRUE OR completada IS NULL)`,
-      [UNIDAD_ADM_RPC]
+      [UNIDAD_ADM_RPC, UNIDAD_ADM_RPC]
     );
     await setConfig('migracion_unidades_adm_rpc_v1', '1');
   }
