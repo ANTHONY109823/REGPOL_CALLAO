@@ -131,10 +131,10 @@ function siteDataParaCacheLocal(data) {
   if (!data || typeof data !== 'object') return data;
   var lite = Object.assign({}, data);
   if (lite.fotosEncabezado) {
-    lite.fotosEncabezado = lite.fotosEncabezado.map(function(u) {
+    lite.fotosEncabezado = sanitizarFotosEncabezado(lite.fotosEncabezado.map(function(u) {
       var s = String(u || '');
       return s.indexOf('data:') === 0 ? '' : s;
-    }).filter(Boolean);
+    }).filter(Boolean));
   }
   if (lite.carrusel) {
     lite.carrusel = lite.carrusel.map(function(sl) {
@@ -231,6 +231,7 @@ function fetchSiteDataDefault() {
       .then(function(r) { if (!r.ok) throw new Error('no-config'); return r.json(); })
       .then(function(data) {
         if (!data || data.ok === false) throw new Error('no-config');
+        if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezado(data.fotosEncabezado);
         return data;
       })
       .catch(cargarJsonLocal);
@@ -487,6 +488,18 @@ var HEADER_FOTOS_TRANSITION_MS = 750;
 var _headerFotosTimer = null;
 var _headerFotosResizeFn = null;
 
+function esUrlImagenHotlinkRota(url) {
+  var u = String(url || '').toLowerCase();
+  return /fbcdn\.net|facebook\.com|instagram\.com|cdninstagram\.com|tiktokcdn\.com|tiktok\.com/.test(u);
+}
+
+function sanitizarFotosEncabezado(fotos) {
+  var arr = Array.isArray(fotos) ? fotos : [];
+  var limpias = arr.map(function(f) { return String(f || '').trim(); })
+    .filter(function(f) { return f && f.indexOf('data:') !== 0 && !esUrlImagenHotlinkRota(f); });
+  return limpias.length ? limpias : FOTOS_ENCABEZADO_DEFAULT.slice();
+}
+
 function detenerHeaderFotosCarrusel() {
   if (_headerFotosTimer) {
     clearInterval(_headerFotosTimer);
@@ -505,8 +518,7 @@ function renderFotosEncabezado(data) {
   if (!panel) return;
 
   var raw = (data && data.fotosEncabezado) ? data.fotosEncabezado : [];
-  var fotos = raw.map(function(f) { return String(f || '').trim(); }).filter(Boolean);
-  if (!fotos.length) fotos = FOTOS_ENCABEZADO_DEFAULT.slice();
+  var fotos = sanitizarFotosEncabezado(raw.map(function(f) { return String(f || '').trim(); }).filter(Boolean));
 
   var clones = fotos.slice(0, Math.min(3, fotos.length));
   var todos = fotos.concat(clones);
@@ -515,7 +527,9 @@ function renderFotosEncabezado(data) {
     '<div class="header-fotos-viewport">'
     + '<div class="header-fotos-track">'
     + todos.map(function(src, i) {
+      var fallback = FOTOS_ENCABEZADO_DEFAULT[i % FOTOS_ENCABEZADO_DEFAULT.length];
       return '<div class="header-foto-item"><img src="' + escHtml(src) + '" alt="REGPOL Callao foto ' + ((i % fotos.length) + 1) + '" decoding="async"'
+        + ' onerror="this.onerror=null;this.src=\'' + escHtml(fallback) + '\'"'
         + (i < 3 ? ' fetchpriority="high"' : ' loading="lazy"') + '/></div>';
     }).join('')
     + '</div></div>';

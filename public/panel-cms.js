@@ -178,7 +178,7 @@ function renderEditorFotosEncabezado() {
     + '<strong style="color:#004d3d;font-size:13px;"><i class="fas fa-images"></i> Carrusel de fotos del encabezado</strong>'
     + '<button type="button" class="btn btn-v btn-sm" onclick="agregarFotoEncabezadoCMS()"><i class="fas fa-plus"></i> Añadir imagen</button>'
     + '</div>'
-    + '<p style="font-size:11px;color:#666;margin:0 0 12px;">Se muestran a la derecha del logo en la página principal. Use fotos <strong>anchas (mín. 800 px)</strong> en JPG/PNG/WEBP para máxima nitidez. Máx. 2 MB por imagen.</p>'
+    + '<p style="font-size:11px;color:#666;margin:0 0 12px;">Se muestran a la derecha del logo en la página principal. Use fotos <strong>anchas (mín. 800 px)</strong> en JPG/PNG/WEBP para máxima nitidez. Máx. 2 MB por imagen. <strong>No use enlaces de Facebook u otras redes</strong> (bloquean la carga); suba el archivo o use una ruta del sitio.</p>'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:12px;">';
   for (var i = 0; i < fotos.length; i++) {
     html += renderSlotFotoEncabezado(i);

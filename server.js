@@ -374,6 +374,7 @@ async function initDB() {
   }
 
   await sincronizarUnidadAdministrativa();
+  await corregirFotosEncabezadoPortal();
 
   // Seed preguntas en lotes de 100 para no superar límite de parámetros
   const { rows } = await pool.query('SELECT COUNT(*) AS t FROM preguntas');
@@ -497,6 +498,36 @@ async function sincronizarUnidadAdministrativa() {
 
   if (rProg.rowCount || rEval.rowCount) {
     console.log('Unidad administrativa: ' + rProg.rowCount + ' progreso(s) y ' + rEval.rowCount + ' evaluación(es) actualizados.');
+  }
+}
+
+const FOTOS_ENCABEZADO_DEFAULT = ['img/Imagen1.jpg', 'img/saludo.jpg', 'img/lunespatriotico.jpg'];
+
+function esUrlImagenHotlinkRota(url) {
+  const u = String(url || '').toLowerCase();
+  return /fbcdn\.net|facebook\.com|instagram\.com|cdninstagram\.com|tiktokcdn\.com|tiktok\.com/.test(u);
+}
+
+function sanitizarFotosEncabezadoList(fotos) {
+  const arr = Array.isArray(fotos) ? fotos : [];
+  const limpias = arr.map(f => String(f || '').trim())
+    .filter(f => f && !f.startsWith('data:') && !esUrlImagenHotlinkRota(f));
+  return limpias.length ? limpias : FOTOS_ENCABEZADO_DEFAULT.slice();
+}
+
+async function corregirFotosEncabezadoPortal() {
+  const r = await pool.query('SELECT data_json FROM portal_configuracion WHERE id=1');
+  if (!r.rows.length || !r.rows[0].data_json) return;
+  const data = typeof r.rows[0].data_json === 'string'
+    ? JSON.parse(r.rows[0].data_json) : r.rows[0].data_json;
+  const orig = JSON.stringify(data.fotosEncabezado || []);
+  data.fotosEncabezado = sanitizarFotosEncabezadoList(data.fotosEncabezado);
+  if (JSON.stringify(data.fotosEncabezado) !== orig) {
+    await pool.query(
+      'UPDATE portal_configuracion SET data_json=$1, updated_at=NOW() WHERE id=1',
+      [JSON.stringify(data)]
+    );
+    console.log('fotosEncabezado: URLs de redes sociales reemplazadas por imágenes locales.');
   }
 }
 
@@ -2289,9 +2320,12 @@ app.get('/portal/configuracion', async (req, res) => {
   try {
     const r = await pool.query('SELECT data_json FROM portal_configuracion WHERE id=1');
     if (r.rows.length && r.rows[0].data_json) {
+      const data = typeof r.rows[0].data_json === 'string'
+        ? JSON.parse(r.rows[0].data_json) : r.rows[0].data_json;
+      if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezadoList(data.fotosEncabezado);
       res.set('Content-Type', 'application/json; charset=utf-8');
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-      return res.send(r.rows[0].data_json);
+      return res.send(JSON.stringify(data));
     }
     const sitePath = path.join(__dirname, 'public', 'site-data.json');
     if (fs.existsSync(sitePath)) {
@@ -2314,6 +2348,7 @@ app.post('/admin/configuracion', requireAuth, async (req, res) => {
     const hoy = new Date();
     data.actualizacion = data.actualizacion || (hoy.getDate() + ' DE ' + meses[hoy.getMonth()] + ' ' + hoy.getFullYear());
     data.cmsPublicadoEn = new Date().toISOString();
+    if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezadoList(data.fotosEncabezado);
     const json = JSON.stringify(data);
     await pool.query(
       `INSERT INTO portal_configuracion(id, data_json, updated_at) VALUES(1, $1, NOW())
