@@ -470,54 +470,78 @@ const UNIDAD_ADM_RPC = 'UNIDADES ADM. RPC';
 const UNIDAD_ADM_LEGACY = 'UNIDADES ADM.';
 
 async function sincronizarUnidadAdministrativa() {
+  const adm = UNIDAD_ADM_RPC;
+  const leg = UNIDAD_ADM_LEGACY;
+
   let dr = await pool.query(
-    'SELECT id FROM divisiones WHERE UPPER(TRIM(nombre))=UPPER(TRIM($1))',
-    [DIV_ADM_RPC]
+    'SELECT id FROM divisiones WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1::text))',
+    [adm]
   );
   let divId;
   if (!dr.rows.length) {
     const ins = await pool.query(
-      'INSERT INTO divisiones (nombre, orden) VALUES ($1, $2) RETURNING id',
-      [DIV_ADM_RPC, 5]
+      'INSERT INTO divisiones (nombre, orden) VALUES ($1::varchar, $2::smallint) RETURNING id',
+      [adm, 5]
     );
     divId = ins.rows[0].id;
   } else {
     divId = dr.rows[0].id;
-    await pool.query('UPDATE divisiones SET orden=$1, nombre=$2 WHERE id=$3', [5, DIV_ADM_RPC, divId]);
+    await pool.query(
+      'UPDATE divisiones SET orden = $1::smallint, nombre = $2::varchar WHERE id = $3::integer',
+      [5, adm, divId]
+    );
   }
 
-  const leg = await pool.query(
-    'SELECT id FROM unidades_pol WHERE UPPER(TRIM(nombre))=UPPER(TRIM($1))',
-    [UNIDAD_ADM_LEGACY]
+  const existRpc = await pool.query(
+    'SELECT id FROM unidades_pol WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1::text))',
+    [adm]
   );
-  if (leg.rows.length) {
+  const existLeg = await pool.query(
+    'SELECT id FROM unidades_pol WHERE UPPER(TRIM(nombre)) = UPPER(TRIM($1::text))',
+    [leg]
+  );
+  if (existRpc.rows.length) {
     await pool.query(
-      `UPDATE unidades_pol SET nombre=$1, division_id=$2, tipo='administrativa', orden=1 WHERE id=$3`,
-      [UNIDAD_ADM_RPC, divId, leg.rows[0].id]
+      `UPDATE unidades_pol SET division_id = $1::integer, tipo = 'administrativa', orden = 1 WHERE id = $2::integer`,
+      [divId, existRpc.rows[0].id]
+    );
+    if (existLeg.rows.length && existLeg.rows[0].id !== existRpc.rows[0].id) {
+      await pool.query('DELETE FROM unidades_pol WHERE id = $1::integer', [existLeg.rows[0].id]);
+    }
+  } else if (existLeg.rows.length) {
+    await pool.query(
+      `UPDATE unidades_pol SET nombre = $1::varchar, division_id = $2::integer, tipo = 'administrativa', orden = 1 WHERE id = $3::integer`,
+      [adm, divId, existLeg.rows[0].id]
     );
   } else {
     await pool.query(
-      `INSERT INTO unidades_pol (nombre, division_id, tipo, orden) VALUES ($1,$2,'administrativa',1)
-       ON CONFLICT (nombre) DO UPDATE SET division_id=$2, tipo='administrativa', orden=1`,
-      [UNIDAD_ADM_RPC, divId]
+      `INSERT INTO unidades_pol (nombre, division_id, tipo, orden) VALUES ($1::varchar, $2::integer, 'administrativa', 1)
+       ON CONFLICT (nombre) DO UPDATE SET division_id = EXCLUDED.division_id, tipo = 'administrativa', orden = 1`,
+      [adm, divId]
     );
   }
 
-  const rProg = await pool.query(
-    `UPDATE progresos SET unidad=$1, comisaria=$2
-     WHERE TRIM(COALESCE(unidad,''))=''
-        OR UPPER(TRIM(unidad))=UPPER(TRIM($3))
-        OR UPPER(TRIM(COALESCE(comisaria,'')))=UPPER(TRIM($3))
-        OR (TRIM(COALESCE(unidad,''))='' AND TRIM(COALESCE(comisaria,''))<>'')`,
-    [UNIDAD_ADM_RPC, UNIDAD_ADM_RPC, UNIDAD_ADM_LEGACY]
+  const rProg1 = await pool.query(
+    `UPDATE progresos SET unidad = $1::varchar(150), comisaria = $2::varchar(120)
+     WHERE TRIM(COALESCE(unidad, '')) = ''`,
+    [adm, adm]
   );
-  const rEval = await pool.query(
-    `UPDATE evaluaciones SET unidad=$1, comisaria=$2
-     WHERE TRIM(COALESCE(unidad,''))=''
-        OR UPPER(TRIM(unidad))=UPPER(TRIM($3))
-        OR UPPER(TRIM(COALESCE(comisaria,'')))=UPPER(TRIM($3))
-        OR (TRIM(COALESCE(unidad,''))='' AND TRIM(COALESCE(comisaria,''))<>'')`,
-    [UNIDAD_ADM_RPC, UNIDAD_ADM_RPC, UNIDAD_ADM_LEGACY]
+  const rProg2 = await pool.query(
+    `UPDATE progresos SET unidad = $1::varchar(150), comisaria = $2::varchar(120)
+     WHERE UPPER(TRIM(COALESCE(unidad, ''))) = UPPER(TRIM($3::text))
+        OR UPPER(TRIM(COALESCE(comisaria, ''))) = UPPER(TRIM($3::text))`,
+    [adm, adm, leg]
+  );
+  const rEval1 = await pool.query(
+    `UPDATE evaluaciones SET unidad = $1::varchar(150), comisaria = $2::varchar(120)
+     WHERE TRIM(COALESCE(unidad, '')) = ''`,
+    [adm, adm]
+  );
+  const rEval2 = await pool.query(
+    `UPDATE evaluaciones SET unidad = $1::varchar(150), comisaria = $2::varchar(120)
+     WHERE UPPER(TRIM(COALESCE(unidad, ''))) = UPPER(TRIM($3::text))
+        OR UPPER(TRIM(COALESCE(comisaria, ''))) = UPPER(TRIM($3::text))`,
+    [adm, adm, leg]
   );
 
   const migrHecha = await getConfig('migracion_unidades_adm_rpc_v1');
@@ -525,17 +549,17 @@ async function sincronizarUnidadAdministrativa() {
   let rCiaEval = { rowCount: 0 };
   if (!migrHecha) {
     rCiaProg = await pool.query(
-      `UPDATE progresos SET unidad=$1, comisaria=$2
-       WHERE UPPER(TRIM(COALESCE(unidad,'')))='CIA CALLAO'
-         AND UPPER(TRIM(COALESCE(comisaria,'')))='CIA CALLAO'`,
-      [UNIDAD_ADM_RPC, UNIDAD_ADM_RPC]
+      `UPDATE progresos SET unidad = $1::varchar(150), comisaria = $2::varchar(120)
+       WHERE UPPER(TRIM(COALESCE(unidad, ''))) = 'CIA CALLAO'
+         AND UPPER(TRIM(COALESCE(comisaria, ''))) = 'CIA CALLAO'`,
+      [adm, adm]
     );
     rCiaEval = await pool.query(
-      `UPDATE evaluaciones SET unidad=$1, comisaria=$2
-       WHERE UPPER(TRIM(COALESCE(unidad,'')))='CIA CALLAO'
-         AND UPPER(TRIM(COALESCE(comisaria,'')))='CIA CALLAO'
+      `UPDATE evaluaciones SET unidad = $1::varchar(150), comisaria = $2::varchar(120)
+       WHERE UPPER(TRIM(COALESCE(unidad, ''))) = 'CIA CALLAO'
+         AND UPPER(TRIM(COALESCE(comisaria, ''))) = 'CIA CALLAO'
          AND (completada IS NOT TRUE OR completada IS NULL)`,
-      [UNIDAD_ADM_RPC, UNIDAD_ADM_RPC]
+      [adm, adm]
     );
     await setConfig('migracion_unidades_adm_rpc_v1', '1');
   }
@@ -543,14 +567,15 @@ async function sincronizarUnidadAdministrativa() {
   let activas = await leerUnidadesActivas();
   activas = activas
     .map(a => String(a).trim().toUpperCase())
-    .filter(a => a && a !== UNIDAD_ADM_LEGACY.toUpperCase());
-  const key = UNIDAD_ADM_RPC.toUpperCase();
+    .filter(a => a && a !== leg.toUpperCase());
+  const key = adm.toUpperCase();
   if (!activas.includes(key)) activas.push(key);
   await setConfig('unidades_activas', JSON.stringify(activas));
   configCache = null;
   configCacheExp = 0;
 
-  const total = (rProg.rowCount || 0) + (rEval.rowCount || 0) + (rCiaProg.rowCount || 0) + (rCiaEval.rowCount || 0);
+  const total = (rProg1.rowCount || 0) + (rProg2.rowCount || 0) + (rEval1.rowCount || 0) + (rEval2.rowCount || 0)
+    + (rCiaProg.rowCount || 0) + (rCiaEval.rowCount || 0);
   if (total) {
     console.log('UNIDADES ADM. RPC: ' + total + ' registro(s) de evaluación/progreso actualizados.');
   }
@@ -763,8 +788,8 @@ async function getConfig(clave) {
 
 async function setConfig(clave, valor) {
   await pool.query(
-    `INSERT INTO configuracion (clave, valor, actualizado) VALUES ($1,$2,NOW())
-     ON CONFLICT (clave) DO UPDATE SET valor=$2, actualizado=NOW()`,
+    `INSERT INTO configuracion (clave, valor, actualizado) VALUES ($1::varchar, $2::text, NOW())
+     ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor, actualizado = NOW()`,
     [clave, valor]
   );
 }
@@ -2959,9 +2984,9 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
   for (const [titulo, desc, icono, orden] of CONVENIOS_OFICIALES) {
     await db.query(
       `INSERT INTO items_portal(tipo,titulo,descripcion,icono,requisitos,estado,visible,orden,ventana_inscripcion)
-       SELECT 'convenio',$1,$2,$3,$4::jsonb,'DISPONIBLE',TRUE,$5,'Las inscripciones se habilitan del 20 al 25 de cada mes.'
-       WHERE NOT EXISTS (SELECT 1 FROM items_portal WHERE tipo='convenio' AND UPPER(TRIM(titulo))=UPPER(TRIM($1)))`,
-      [titulo, desc, icono, REQS_CONV_OFICIAL, orden]
+       SELECT 'convenio',$1::varchar,$2::text,$3::varchar,$4::jsonb,'DISPONIBLE',TRUE,$5::integer,'Las inscripciones se habilitan del 20 al 25 de cada mes.'
+       WHERE NOT EXISTS (SELECT 1 FROM items_portal WHERE tipo='convenio' AND UPPER(TRIM(titulo))=UPPER(TRIM($6::text)))`,
+      [titulo, desc, icono, REQS_CONV_OFICIAL, orden, titulo]
     );
     await db.query(
       `UPDATE items_portal SET orden=$1, visible=TRUE,
@@ -3337,6 +3362,7 @@ function iniciarDB() {
     })
     .catch(function(e) {
       console.error('Error init DB (reintento en 15s):', e.message);
+      if (e.stack) console.error(e.stack.split('\n').slice(0, 4).join('\n'));
       setTimeout(iniciarDB, 15000);
     });
 }
