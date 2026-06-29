@@ -410,8 +410,9 @@ const DIVISIONES_CANON = [
     'ESCVER CALLAO', 'ESCVER VENTANILLA', 'UNIEME CALLAO', 'UNIEME VENTANILLA',
     'UNIDIR CALLAO', 'UNIPAPIE', 'USEG CALLAO', 'UNISEINT CALLAO',
     'UNIPIAT CALLAO', 'USE CALLAO', 'USE VENTANILLA', 'UNIPIRV CALLAO',
-    'UTSEVI CALLAO', 'SECTSV VENTANILLA', 'UNIDADES ADM.'
-  ]}
+    'UTSEVI CALLAO', 'SECTSV VENTANILLA'
+  ]},
+  { nombre: 'UNIDADES ADM. RPC', orden: 5, unidades: ['UNIDADES ADM. RPC'] }
 ];
 
 async function obtenerDivisionesAgrupadas() {
@@ -431,9 +432,14 @@ async function obtenerDivisionesAgrupadas() {
 }
 
 async function sincronizarDivisionesUnidades() {
+  function tipoUnidadDivision(nombreDiv) {
+    if (nombreDiv === 'DIVUES') return 'especializada';
+    if (nombreDiv === 'UNIDADES ADM. RPC') return 'administrativa';
+    return 'comisaria';
+  }
   for (let d = 0; d < DIVISIONES_CANON.length; d++) {
     const div = DIVISIONES_CANON[d];
-    const tipo = div.nombre === 'DIVUES' ? 'especializada' : 'comisaria';
+    const tipo = tipoUnidadDivision(div.nombre);
     let dr = await pool.query('SELECT id FROM divisiones WHERE UPPER(TRIM(nombre))=UPPER(TRIM($1))', [div.nombre]);
     let divId;
     if (!dr.rows.length) {
@@ -455,49 +461,98 @@ async function sincronizarDivisionesUnidades() {
       );
     }
   }
-  console.log('Divisiones sincronizadas: DIVOPUS 1-3 + DIVUES.');
+  console.log('Divisiones sincronizadas: DIVOPUS 1-3, DIVUES y UNIDADES ADM. RPC.');
   await seedContactoComisarias();
 }
 
-const UNIDAD_ADMIN_EVAL = 'UNIDADES ADM.';
+const DIV_ADM_RPC = 'UNIDADES ADM. RPC';
+const UNIDAD_ADM_RPC = 'UNIDADES ADM. RPC';
+const UNIDAD_ADM_LEGACY = 'UNIDADES ADM.';
 
 async function sincronizarUnidadAdministrativa() {
-  const divR = await pool.query(
-    "SELECT id FROM divisiones WHERE UPPER(TRIM(nombre))='DIVUES' LIMIT 1"
+  let dr = await pool.query(
+    'SELECT id FROM divisiones WHERE UPPER(TRIM(nombre))=UPPER(TRIM($1))',
+    [DIV_ADM_RPC]
   );
-  const divId = divR.rows[0]?.id;
-  if (divId) {
+  let divId;
+  if (!dr.rows.length) {
+    const ins = await pool.query(
+      'INSERT INTO divisiones (nombre, orden) VALUES ($1, $2) RETURNING id',
+      [DIV_ADM_RPC, 5]
+    );
+    divId = ins.rows[0].id;
+  } else {
+    divId = dr.rows[0].id;
+    await pool.query('UPDATE divisiones SET orden=$1, nombre=$2 WHERE id=$3', [5, DIV_ADM_RPC, divId]);
+  }
+
+  const leg = await pool.query(
+    'SELECT id FROM unidades_pol WHERE UPPER(TRIM(nombre))=UPPER(TRIM($1))',
+    [UNIDAD_ADM_LEGACY]
+  );
+  if (leg.rows.length) {
     await pool.query(
-      `INSERT INTO unidades_pol (nombre, division_id, tipo, orden) VALUES ($1,$2,'especializada',99)
-       ON CONFLICT (nombre) DO UPDATE SET division_id=$2, tipo='especializada', orden=99`,
-      [UNIDAD_ADMIN_EVAL, divId]
+      `UPDATE unidades_pol SET nombre=$1, division_id=$2, tipo='administrativa', orden=1 WHERE id=$3`,
+      [UNIDAD_ADM_RPC, divId, leg.rows[0].id]
+    );
+  } else {
+    await pool.query(
+      `INSERT INTO unidades_pol (nombre, division_id, tipo, orden) VALUES ($1,$2,'administrativa',1)
+       ON CONFLICT (nombre) DO UPDATE SET division_id=$2, tipo='administrativa', orden=1`,
+      [UNIDAD_ADM_RPC, divId]
     );
   }
 
   const rProg = await pool.query(
-    `UPDATE progresos SET unidad=$1,
-       comisaria=CASE WHEN TRIM(COALESCE(comisaria,''))='' THEN $1 ELSE comisaria END
-     WHERE TRIM(COALESCE(unidad,''))=''`
-    , [UNIDAD_ADMIN_EVAL]
+    `UPDATE progresos SET unidad=$1, comisaria=$1
+     WHERE TRIM(COALESCE(unidad,''))=''
+        OR UPPER(TRIM(unidad))=UPPER(TRIM($2))
+        OR UPPER(TRIM(COALESCE(comisaria,'')))=UPPER(TRIM($2))
+        OR (TRIM(COALESCE(unidad,''))='' AND TRIM(COALESCE(comisaria,''))<>'')`,
+    [UNIDAD_ADM_RPC, UNIDAD_ADM_LEGACY]
   );
   const rEval = await pool.query(
-    `UPDATE evaluaciones SET unidad=$1,
-       comisaria=CASE WHEN TRIM(COALESCE(comisaria,''))='' THEN $1 ELSE comisaria END
-     WHERE TRIM(COALESCE(unidad,''))=''`
-    , [UNIDAD_ADMIN_EVAL]
+    `UPDATE evaluaciones SET unidad=$1, comisaria=$1
+     WHERE TRIM(COALESCE(unidad,''))=''
+        OR UPPER(TRIM(unidad))=UPPER(TRIM($2))
+        OR UPPER(TRIM(COALESCE(comisaria,'')))=UPPER(TRIM($2))
+        OR (TRIM(COALESCE(unidad,''))='' AND TRIM(COALESCE(comisaria,''))<>'')`,
+    [UNIDAD_ADM_RPC, UNIDAD_ADM_LEGACY]
   );
 
-  let activas = await leerUnidadesActivas();
-  const key = UNIDAD_ADMIN_EVAL.toUpperCase();
-  if (!activas.includes(key)) {
-    activas.push(key);
-    await setConfig('unidades_activas', JSON.stringify(activas));
-    configCache = null;
-    configCacheExp = 0;
+  const migrHecha = await getConfig('migracion_unidades_adm_rpc_v1');
+  let rCiaProg = { rowCount: 0 };
+  let rCiaEval = { rowCount: 0 };
+  if (!migrHecha) {
+    rCiaProg = await pool.query(
+      `UPDATE progresos SET unidad=$1, comisaria=$1
+       WHERE UPPER(TRIM(COALESCE(unidad,'')))='CIA CALLAO'
+         AND UPPER(TRIM(COALESCE(comisaria,'')))='CIA CALLAO'`,
+      [UNIDAD_ADM_RPC]
+    );
+    rCiaEval = await pool.query(
+      `UPDATE evaluaciones SET unidad=$1, comisaria=$1
+       WHERE UPPER(TRIM(COALESCE(unidad,'')))='CIA CALLAO'
+         AND UPPER(TRIM(COALESCE(comisaria,'')))='CIA CALLAO'
+         AND (completada IS NOT TRUE OR completada IS NULL)`,
+      [UNIDAD_ADM_RPC]
+    );
+    await setConfig('migracion_unidades_adm_rpc_v1', '1');
   }
 
-  if (rProg.rowCount || rEval.rowCount) {
-    console.log('Unidad administrativa: ' + rProg.rowCount + ' progreso(s) y ' + rEval.rowCount + ' evaluación(es) actualizados.');
+  let activas = await leerUnidadesActivas();
+  activas = activas
+    .map(a => String(a).trim().toUpperCase())
+    .filter(a => a && a !== UNIDAD_ADM_LEGACY.toUpperCase());
+  const key = UNIDAD_ADM_RPC.toUpperCase();
+  if (!activas.includes(key)) activas.push(key);
+  await setConfig('unidades_activas', JSON.stringify(activas));
+  configCache = null;
+  configCacheExp = 0;
+
+  const total = (rProg.rowCount || 0) + (rEval.rowCount || 0) + (rCiaProg.rowCount || 0) + (rCiaEval.rowCount || 0);
+  if (total) {
+    console.log('UNIDADES ADM. RPC: ' + total + ' registro(s) de evaluación/progreso actualizados.');
   }
 }
 

@@ -1,12 +1,13 @@
-/* divisiones-ui.js — UI compartida: 4 divisiones REGPOL Callao */
+/* divisiones-ui.js — UI compartida: divisiones REGPOL Callao */
 
 (function injectDivisionesUiStyles() {
   if (document.getElementById('divisiones-ui-styles')) return;
   var s = document.createElement('style');
   s.id = 'divisiones-ui-styles';
   s.textContent = [
-    '.uni-grid-activacion{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:start;}',
-    '@media(max-width:1200px){.uni-grid-activacion{grid-template-columns:repeat(2,minmax(0,1fr));}}',
+    '.uni-grid-activacion{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:start;}',
+    '@media(max-width:1400px){.uni-grid-activacion{grid-template-columns:repeat(3,minmax(0,1fr));}}',
+    '@media(max-width:1000px){.uni-grid-activacion{grid-template-columns:repeat(2,minmax(0,1fr));}}',
     '@media(max-width:640px){.uni-grid-activacion{grid-template-columns:1fr;}}',
     '.uni-div-col{border:1.5px solid #c8e6c9;border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 1px 4px rgba(0,77,61,.06);}',
     '.uni-div-head{background:#004d3d;color:#fff;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.35px;padding:7px 9px;line-height:1.3;}',
@@ -105,7 +106,7 @@ function llenarSelectUnidadesAgrupadas(selId, divisiones, placeholder, filtroDiv
   });
 }
 
-var UNIDADES_EVAL_SIEMPRE = ['UNIDADES ADM.'];
+var UNIDADES_EVAL_SIEMPRE = ['UNIDADES ADM. RPC'];
 
 function poblarSelectEvaluacionDivisiones(sel, divisiones, activas) {
   if (!sel) return;

@@ -26,7 +26,7 @@ var ESTADO = {
 var ALERTA_FINAL_MOSTRADA = false;
 var FOTO_BASE64 = '';
 var CAM_STREAM = null;
-var UNIDAD_ADMIN_DEFAULT = 'UNIDADES ADM.';
+var UNIDAD_ADMIN_DEFAULT = 'UNIDADES ADM. RPC';
 
 function toggleAreaOtroEval() {
   if (typeof regpolToggleAreaOtro === 'function') {

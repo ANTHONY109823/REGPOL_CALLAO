@@ -126,7 +126,7 @@
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=2"></script>
 <script src="portal.js?v=28"></script>
-<script src="divisiones-ui.js?v=3"></script>
+<script src="divisiones-ui.js?v=4"></script>
 <script src="panel-cms.js?v=13"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
@@ -379,7 +379,7 @@ function cargarDashboardUsuario() {
 function renderTabEvaluaciones() {
   return '<div class="card">'
     +'<h3><i class="fas fa-building"></i> Activar dependencias para evaluaciones</h3>'
-    +'<p style="font-size:12px;color:#666;margin-bottom:10px;">Marque las dependencias habilitadas por división (DIVOPUS 1, 2, 3 y DIVUES).</p>'
+    +'<p style="font-size:12px;color:#666;margin-bottom:10px;">Marque las dependencias habilitadas por división (DIVOPUS 1, 2, 3, DIVUES y UNIDADES ADM. RPC).</p>'
     +'<div id="u-cfg-unidades-list" style="margin-bottom:10px;"></div>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">'
     +'<button class="btn btn-v" onclick="guardarActivacionUsuario()"><i class="fas fa-save"></i> Guardar activación</button>'
@@ -570,7 +570,7 @@ function renderTabDescargas() {
     // Tab por unidad
     +'<div id="u-dtab-unidad" style="display:none;"><div class="descarga-grid">'
     +'<div class="descarga-box" style="max-width:640px;"><strong>Reporte por unidad</strong>'
-    +'<p>Vista previa del listado. Unidades agrupadas en DIVOPUS 1, 2, 3 y DIVUES.</p>'
+    +'<p>Vista previa del listado. Unidades agrupadas en DIVOPUS 1, 2, 3, DIVUES y UNIDADES ADM. RPC.</p>'
     +'<select id="u-d-uni" onchange="vistaPreviaDescargaU(\'unidad\',\'u-d-uni\',\'u-prev-uni\')"><option value="">— Seleccionar unidad —</option></select>'
     +'<div id="u-prev-uni-wrap" style="display:none;margin:12px 0;"><div style="overflow-x:auto;"><table class="t">'
     +'<thead><tr><th>N°</th><th>Nombres</th><th>CIP</th><th>DNI</th><th>Fecha</th><th>Bloque</th><th>Avance</th><th>Estado</th><th>PDF</th></tr></thead>'
