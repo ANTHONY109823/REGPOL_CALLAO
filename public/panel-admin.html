@@ -1553,7 +1553,7 @@ function renderTablaMmpiPreview(wrap, mmpi, completa, diagnostico, opts) {
     var tieneT = esc.t > 0;
     var tc = noCal && !tieneT ? '#b8860b' : (noCal && tieneT ? '#856404' : colorInterpT(esc.t));
     var estado = noCal && !tieneT ? 'NO CALIFICABLE' : (noCal && tieneT ? 'PROVISIONAL' : labelInterpT(esc.t));
-    return '<tr style="background:' + bg + ';">'
+    var fila = '<tr style="background:' + bg + ';">'
       + '<td style="padding:8px 10px;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;white-space:nowrap;">' + escHtml(esc.nombre) + '</td>'
       + '<td style="padding:8px;text-align:center;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;">' + (esc.tv !== '—' ? esc.tv : '—') + '</td>'
       + '<td style="padding:8px;text-align:center;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;">' + (esc.tf !== '—' ? esc.tf : '—') + '</td>'
@@ -1563,6 +1563,14 @@ function renderTablaMmpiPreview(wrap, mmpi, completa, diagnostico, opts) {
       + '<span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:' + tc + ';margin-right:6px;vertical-align:middle;"></span>'
       + estado + '</td>'
       + '</tr>';
+    if (esc.significado && esc.significado.texto) {
+      var sigBg = esc.significado.alerta ? '#fdeeee' : '#f7f9f7';
+      var sigColor = esc.significado.alerta ? '#7a1a1a' : '#555';
+      fila += '<tr style="background:' + sigBg + ';">'
+        + '<td colspan="6" style="padding:6px 10px 8px;font-size:11.5px;font-style:italic;color:' + sigColor + ';border-bottom:1px solid #e0e8e0;line-height:1.5;">'
+        + escHtml(esc.significado.texto) + '</td></tr>';
+    }
+    return fila;
   }).join('');
 
   var tituloTabla = noCal ? 'PARÁMETROS MMPI-2 — AVANCE PARCIAL' : 'RESULTADOS DEL MMPI-2 — PUNTAJES T ESTÁNDAR';
@@ -1576,8 +1584,8 @@ function renderTablaMmpiPreview(wrap, mmpi, completa, diagnostico, opts) {
       + '</div>';
   }
 
-  var tabla = '<div style="overflow-x:auto;border:1px solid #cfdad2;border-radius:0 0 8px 8px;margin-bottom:4px;">'
-    + '<table class="t" style="font-size:12px;width:auto;border-collapse:collapse;">'
+  var tabla = '<div style="overflow-x:auto;border:1px solid #cfdad2;border-radius:0 0 8px 8px;margin-bottom:12px;">'
+    + '<table class="t" style="font-size:12px;width:100%;border-collapse:collapse;">'
     + '<thead><tr style="background:#004d3d;color:#fff;">'
     + '<th style="padding:9px 10px;text-align:left;font-size:12px;">Escala</th>'
     + '<th style="padding:9px 6px;font-size:12px;">TV</th><th style="padding:9px 6px;font-size:12px;">TF</th>'
@@ -1585,11 +1593,8 @@ function renderTablaMmpiPreview(wrap, mmpi, completa, diagnostico, opts) {
     + '<th style="padding:9px 10px;text-align:left;font-size:12px;">Estado</th></tr></thead>'
     + '<tbody>' + filas + '</tbody></table></div>';
 
-  wrap.innerHTML = encabezado
-    + '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">'
-    + '<div style="flex:0 0 auto;">' + tabla + '</div>'
-    + '<div style="flex:1;min-width:220px;">' + (opts.omitirDiagnostico ? '' : htmlDiagnosticoAutomatizado(diagnostico)) + '</div>'
-    + '</div>';
+  wrap.innerHTML = encabezado + tabla
+    + (opts.omitirDiagnostico ? '' : htmlDiagnosticoAutomatizado(diagnostico));
 }
 
 function btnAccionesEval(r) {
