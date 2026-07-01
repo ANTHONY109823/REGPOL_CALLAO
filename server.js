@@ -28,6 +28,10 @@ const AUTH_CACHE_TTL = 5 * 60 * 1000;
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const sha256 = s => crypto.createHash('sha256').update(s).digest('hex');
 
+// Timestamps en BD (TIMESTAMP sin tz, servidor UTC). fecha_iso permite hora local en el navegador.
+function sqlFechaTxt(col) { return `TO_CHAR(${col},'DD/MM/YYYY HH24:MI')`; }
+function sqlFechaIso(col) { return `(${col} AT TIME ZONE 'UTC')`; }
+
 function calcularEdadDesdeISO(fecha_nac) {
   if (!fecha_nac) return 0;
   let y, mo, d;
@@ -1252,7 +1256,8 @@ app.get('/admin/avances', requireAuth, async (req, res) => {
     const r = await pool.query(
       `SELECT cip, nombres, comisaria, unidad, bloque_max AS bloque,
               COALESCE(total_resp, 0) AS total,
-              TO_CHAR(actualizado,'DD/MM/YYYY HH24:MI') AS ultima
+              ${sqlFechaTxt('actualizado')} AS ultima,
+              ${sqlFechaIso('actualizado')} AS ultima_iso
        FROM progresos ${where} ORDER BY actualizado DESC`,
       params
     );
@@ -1473,7 +1478,8 @@ async function consultarProgresosPendientes(admin, query) {
             p.bloque_max, p.fecha_nac, p.edad,
             GREATEST(COALESCE(p.total_resp, 0), ${sqlContarRespuestas('p.respuestas')}) AS total_resp,
             FALSE AS completada, TRUE AS solo_progreso,
-            TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha
+            ${sqlFechaTxt('p.actualizado')} AS fecha,
+            ${sqlFechaIso('p.actualizado')} AS fecha_iso
      FROM progresos p ${where}
      ORDER BY p.actualizado DESC LIMIT 200`,
     params
@@ -1510,7 +1516,8 @@ app.get('/admin/registro-cip', requireAuth, async (req, res) => {
     if (!cip) return res.json({ ok: false, error: 'CIP requerido' });
 
     const evalR = await pool.query(
-      `SELECT id, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha, comisaria, unidad, nombres, cip, dni,
+      `SELECT id, ${sqlFechaTxt('fecha')} AS fecha, ${sqlFechaIso('fecha')} AS fecha_iso,
+              comisaria, unidad, nombres, cip, dni,
               completada, bloque_max,
               ${sqlContarRespuestas('respuestas')} AS total_resp
        FROM evaluaciones
@@ -1521,7 +1528,8 @@ app.get('/admin/registro-cip', requireAuth, async (req, res) => {
     const progR = await pool.query(
       `SELECT cip, nombres, comisaria, unidad, bloque_max,
               ${sqlContarRespuestas('respuestas')} AS total_resp,
-              TO_CHAR(actualizado,'DD/MM/YYYY HH24:MI') AS fecha
+              ${sqlFechaTxt('actualizado')} AS fecha,
+              ${sqlFechaIso('actualizado')} AS fecha_iso
        FROM progresos WHERE UPPER(TRIM(cip))=UPPER(TRIM($1)) OR LOWER(TRIM(clave))=LOWER(TRIM($1))`,
       [cip]
     );
@@ -1578,13 +1586,15 @@ app.get('/stats', requireAuth, async (req, res) => {
     }
 
     const ultimas  = await pool.query(
-      `SELECT id, cip, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha, comisaria, unidad, nombres, completada,
+      `SELECT id, cip, ${sqlFechaTxt('fecha')} AS fecha, ${sqlFechaIso('fecha')} AS fecha_iso,
+              comisaria, unidad, nombres, completada,
               ${sqlContarRespuestas('respuestas')} AS total_resp,
               FALSE AS solo_progreso
        FROM evaluaciones ${whereAdmin} ORDER BY fecha DESC LIMIT 10`, params);
 
     const ultimasProgR = await pool.query(
-      `SELECT NULL::int AS id, p.cip, TO_CHAR(p.actualizado,'DD/MM/YYYY HH24:MI') AS fecha,
+      `SELECT NULL::int AS id, p.cip, ${sqlFechaTxt('p.actualizado')} AS fecha,
+              ${sqlFechaIso('p.actualizado')} AS fecha_iso,
               p.comisaria, p.unidad, p.nombres, FALSE AS completada, TRUE AS solo_progreso,
               COALESCE(p.total_resp, 0) AS total_resp
        FROM progresos p ${progWhere}
@@ -1687,7 +1697,8 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
     const ultEvalR = await pool.query(
       `SELECT 'evaluacion' AS tipo, nombres AS titulo,
         COALESCE(unidad, comisaria, '') AS detalle,
-        TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha,
+        ${sqlFechaTxt('fecha')} AS fecha,
+        ${sqlFechaIso('fecha')} AS fecha_iso,
         completada::text AS estado
        FROM evaluaciones ORDER BY fecha DESC LIMIT 6`);
     const ultInscR = await pool.query(
@@ -1789,7 +1800,8 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
     const paginas = Math.max(1, Math.ceil(total / porPagina));
 
     const rows = await pool.query(
-      `SELECT id, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha, comisaria, unidad,
+      `SELECT id, ${sqlFechaTxt('fecha')} AS fecha, ${sqlFechaIso('fecha')} AS fecha_iso,
+              comisaria, unidad,
               nombres, cip, dni, fecha_nac, edad, grado, completada, bloque_max,
               ${sqlContarRespuestas('respuestas')} AS total_resp,
               FALSE AS solo_progreso

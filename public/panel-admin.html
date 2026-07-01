@@ -1302,6 +1302,7 @@
 </div>
 
 <script src="api-config.js?v=2"></script>
+<script src="fecha-local.js?v=1"></script>
 <script src="portal-data.js?v=6"></script>
 <script src="portal.js?v=42"></script>
 <script src="divisiones-ui.js?v=4"></script>
@@ -2043,7 +2044,7 @@ function cargarStatsSistema(){
               + '<div class="sys-act-tipo"><i class="fas ' + icon + '"></i> ' + tipo + '</div>'
               + '<strong>' + escHtml(a.titulo || '—') + '</strong>'
               + '<div style="color:#666;font-size:11px;">' + escHtml(a.detalle || '') + '</div></div>'
-              + '<span style="color:#bbb;font-size:10.5px;white-space:nowrap;">' + escHtml(a.fecha || '') + '</span></div>';
+              + '<span style="color:#bbb;font-size:10.5px;white-space:nowrap;">' + escHtml(formatearFechaHoraLocal(a)) + '</span></div>';
           }).join('')
         : '<p style="color:#bbb;padding:12px;text-align:center;">Sin actividad reciente.</p>';
     }
@@ -2072,7 +2073,7 @@ function cargarStatsPsico(){
             +'<span class="ult-meta"> — '+escHtml(e.comisaria||e.unidad||'')+'</span></div>'
             +'<div style="display:flex;align-items:center;gap:8px;">'
             +btnAccionesEval(e)
-            +badge+'<span style="color:#bbb;font-size:10.5px;">'+escHtml(e.fecha)+'</span></div></div>';
+            +badge+'<span style="color:#bbb;font-size:10.5px;">'+escHtml(formatearFechaHoraLocal(e))+'</span></div></div>';
         }).join('')
       : '<div style="color:#bbb;padding:12px;font-size:12px;text-align:center;">Sin evaluaciones registradas.</div>';
   }).catch(function(err) {
@@ -2214,7 +2215,7 @@ function filaRegistroRespuesta(r, divNombre) {
     + '<td><strong>' + escHtml(r.nombres) + '</strong></td>'
     + '<td>' + escHtml(r.cip) + '</td>'
     + '<td>' + escHtml(r.dni || '—') + '</td>'
-    + '<td style="font-size:11px;">' + escHtml(r.fecha) + '</td>'
+    + '<td style="font-size:11px;">' + escHtml(formatearFechaHoraLocal(r)) + '</td>'
     + '<td style="text-align:center;">' + (r.edad ? escHtml(String(r.edad)) : '—') + '</td>'
     + '<td>' + badgeEstadoRegistro(r) + '</td>'
     + '<td>' + btnAccionesEval(r) + '</td>'

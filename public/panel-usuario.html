@@ -124,6 +124,7 @@
 </div>
 
 <script src="api-config.js?v=2"></script>
+<script src="fecha-local.js?v=1"></script>
 <script src="portal-data.js?v=2"></script>
 <script src="portal.js?v=28"></script>
 <script src="divisiones-ui.js?v=4"></script>
@@ -368,7 +369,7 @@ function cargarDashboardUsuario() {
             return '<div class="ult-item"><div><span class="ult-nom">' + escHtml(e.nombres) + '</span>'
               + '<span class="ult-meta"> — ' + escHtml(e.unidad || e.comisaria || '—') + '</span></div>'
               + '<div style="display:flex;align-items:center;gap:8px;">' + badge
-              + '<span class="ult-meta">' + escHtml(e.fecha) + '</span></div></div>';
+              + '<span class="ult-meta">' + escHtml(formatearFechaHoraLocal(e)) + '</span></div></div>';
           }).join('')
         : '<p style="padding:12px;color:#bbb;text-align:center;">Sin evaluaciones aún.</p>';
     }
@@ -538,7 +539,7 @@ function cargarEval(pag) {
         var pdf = linkPdfEval(r);
         return '<tr'+(r.solo_progreso?' style="background:#fffdf5;"':'')+'><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td><td>'+escHtml(r.dni||'—')+'</td>'
           +'<td style="font-size:11px;">'+escHtml(r.unidad||r.comisaria||'—')+'</td>'
-          +'<td style="font-size:11px;">'+escHtml(r.fecha)+'</td><td>'+badge+'</td><td>'+pdf+'</td><td>'+btnEliminarEvalUsuario(r)+'</td></tr>';
+          +'<td style="font-size:11px;">'+escHtml(formatearFechaHoraLocal(r))+'</td><td>'+badge+'</td><td>'+pdf+'</td><td>'+btnEliminarEvalUsuario(r)+'</td></tr>';
       }).join('');
       var pag=document.getElementById('ev-pag'); pag.innerHTML='';
       for(var p=1;p<=d.paginas;p++){
@@ -652,12 +653,12 @@ function vistaPreviaDescargaU(filtro, selId, prefijo) {
       var total = parseInt(r.total_resp, 10) || 0;
       var comp = total >= 566;
       var bloque = parseInt(r.bloque_max, 10) || Math.min(12, Math.ceil(total / 50) || 0);
-      filas.push({ nombres: r.nombres, cip: r.cip, dni: r.dni, fecha: r.fecha, bloque: bloque, total: total, comp: comp, id: r.id, enCurso: false });
+      filas.push({ nombres: r.nombres, cip: r.cip, dni: r.dni, fecha: formatearFechaHoraLocal(r), bloque: bloque, total: total, comp: comp, id: r.id, enCurso: false });
     });
     (av.ok ? av.rows : []).forEach(function(p) {
       if (cipsListos[(p.cip || '').toLowerCase()]) return;
       filas.push({
-        nombres: p.nombres, cip: p.cip, dni: '—', fecha: p.ultima || '—',
+        nombres: p.nombres, cip: p.cip, dni: '—', fecha: formatearFechaHoraLocal(p, 'ultima_iso', 'ultima'),
         bloque: parseInt(p.bloque, 10) || 1, total: parseInt(p.total, 10) || 0,
         comp: false, id: null, enCurso: true
       });
@@ -701,14 +702,14 @@ function buscarPersonaU(){
       (d.evaluaciones||[]).forEach(function(r){
         var comp=parseInt(r.total_resp)>=566;
         filas.push('<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td>'
-          +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+escHtml(r.fecha)+'</td>'
+          +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+escHtml(formatearFechaHoraLocal(r))+'</td>'
           +'<td>'+(comp?'<span class="badge ok">Enviado</span>':'<span class="badge pend">'+r.total_resp+'/566</span>')+'</td>'
           +'<td>'+linkPdfEval(r)+'</td></tr>');
       });
       if(d.progreso && !(d.evaluaciones||[]).some(function(e){return e.completada;})){
         var p=d.progreso, pt=parseInt(p.total_resp,10)||0;
         filas.push('<tr style="background:#fffdf5;"><td><strong>'+escHtml(p.nombres)+'</strong></td><td>'+escHtml(p.cip)+'</td>'
-          +'<td style="font-size:11px;">'+escHtml(p.comisaria||p.unidad)+'</td><td style="font-size:11px;">'+escHtml(p.fecha)+'</td>'
+          +'<td style="font-size:11px;">'+escHtml(p.comisaria||p.unidad)+'</td><td style="font-size:11px;">'+escHtml(formatearFechaHoraLocal(p))+'</td>'
           +'<td><span class="badge" style="background:#fff3cd;color:#856404;">'+pt+'/566 sin enviar</span></td>'
           +'<td>'+linkPdfEval({ cip: p.cip, total_resp: pt })+'</td></tr>');
       }
@@ -729,7 +730,7 @@ function buscarPersonaU(){
         :(comp?'<span class="badge ok">Completo</span>':'<span class="badge pend">'+total+'/566</span>');
       var pdf = linkPdfEval(r);
       return '<tr><td><strong>'+escHtml(r.nombres)+'</strong></td><td>'+escHtml(r.cip)+'</td>'
-        +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+r.fecha+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(r.comisaria||r.unidad)+'</td><td style="font-size:11px;">'+escHtml(formatearFechaHoraLocal(r))+'</td>'
         +'<td>'+badge+'</td><td>'+pdf+'</td></tr>';
     }).join('');
   });
