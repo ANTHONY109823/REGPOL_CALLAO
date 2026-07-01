@@ -410,7 +410,8 @@ function generarPDFIndividual(evaluacion, preguntas, opts) {
     const m  = { left: 40, right: 40, top: 75, bottom: 45 };
     const W  = A4_W - m.left - m.right;
     const x0 = m.left;
-    const maxY = A4_H - m.bottom - 8;
+    // Deja libre la franja del pie de página (ver dibujarPie: altoPie=28 + banda de 5+8pt)
+    const maxY = A4_H - m.bottom - 28 - 11;
 
     doc.addPage();
     dibujarCabecera(doc);
@@ -420,7 +421,14 @@ function generarPDFIndividual(evaluacion, preguntas, opts) {
     if (!completa) {
       y = dibujarBannerAvance(doc, stats, maxItemRespondido(resp), x0, y, W) + 4;
     }
-    y = dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, { completa: completa, omitirAvisoIncompleto: !completa });
+    const resultado = dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, { completa: completa, omitirAvisoIncompleto: !completa });
+    y = resultado.y;
+
+    if (resultado.diagPendiente) {
+      doc.addPage();
+      dibujarCabecera(doc);
+      y = dibujarDiagnosticoFinalMMPI(doc, resultado.diagnostico, x0, 78, W, resultado.fontSig);
+    }
 
     dibujarPaginasMatrizRespuestas(doc, evaluacion, resp, x0, W, maxY);
 
@@ -748,6 +756,134 @@ function normalizarResultadoMMPI(mmpi, evaluacion, completa, stats) {
   };
 }
 
+// ── Significado automático por escala (enfoque preventivo Sellbom) ─────────────
+// Fuente: especificación funcional "Módulo de Informe Automatizado MMPI-2".
+// L usa puntaje directo (tb); el resto usa puntaje T estándar.
+function significadoEscalaMMPI(esc, esMujer) {
+  var t = esc.t, pd = esc.tb;
+  switch (esc.code) {
+    case 'L':
+      return pd >= 8
+        ? { texto: 'Rigidez moral fingida. Defensividad extrema. Alto riesgo de fallas de integridad en el campo.', alerta: true }
+        : { texto: 'Sin indicios de distorsión positiva marcada; actitud sincera ante la prueba.', alerta: false };
+    case 'F':
+      if (t > 100) return { texto: 'Perfil invalidado. Respuestas al azar, errores de corrección, grave dislexia o tendencia a contestar todo como "Verdadero". Actitud no cooperativa, fingimiento de mala imagen de sí mismo o desorientación y confusión psicótica.', alerta: true, invalida: true };
+      if (t >= 80)  return { texto: 'Perfil invalidado. Sugiere fingimiento de enfermedad, procesos psicóticos, responder "Falso" a todas las respuestas o exageración de problemas asociados a deseabilidad social o estado confusional.', alerta: true, invalida: true };
+      if (t >= 65)  return { texto: 'Probablemente válido. Elevación asociada a fingir enfermedad o procesos psicóticos. Posibles rasgos psicóticos/neuróticos severos, problemas de sociabilidad, cambios de humor, inquietud e imprevisibilidad.', alerta: true };
+      if (t >= 60)  return { texto: 'Perfil probablemente válido. Indica problemas en un área particular (trabajo, salud, sexo, etc.).', alerta: false };
+      if (t >= 50)  return { texto: 'Registro aceptable. Puntuaciones dentro de la media que reflejan un buen funcionamiento y respuestas típicas.', alerta: false };
+      return { texto: 'Registro aceptable. Indica conformidad, convencionalidad, sinceridad social o una posible falsa imagen positiva.', alerta: false };
+    case 'K':
+      if (t > 70)  return { texto: 'Perfil invalidado por marcada defensividad o fingimiento de buena imagen (contestar todo como "Falso"). Acusada implicación emocional, inhibición, timidez, desconfianza o ausencia de comprensión.', alerta: true, invalida: true };
+      if (t >= 60) return { texto: 'Validez cuestionada. Clínicamente defensivo, tendencia a la negación de problemas e intolerancia. Niega todo y muestra nula capacidad para la intuición.', alerta: true };
+      if (t >= 50) return { texto: 'Perfil válido. Autoevaluación equilibrada. Individuo ajustado, independiente, inteligente, entusiasta y con intereses amplios.', alerta: false };
+      return { texto: 'Perfil invalidado por exageración de desajustes o fingir "hacerse el enfermo" (contestar todo como "Verdadero"). Estado confuso, autocrítico, conformista, introvertido, cínico y suspicaz.', alerta: true, invalida: true };
+    case 'Hs':
+      if (t > 80)  return { texto: 'Problemas somáticos graves, ilusiones esquizoides o extrañas ilusiones corporales. Individuo constreñido e inmovilizado por múltiples síntomas y quejas.', alerta: true };
+      if (t >= 60) return { texto: 'Preocupaciones somáticas, reacción exigente ante cualquier problema real y exageración de problemas físicos. Trastornos del sueño, falta de energía, carácter exigente e insatisfecho.', alerta: true };
+      if (t >= 40) return { texto: 'Puntuaciones medias. Pequeñas preocupaciones (o ninguna) acerca del cuerpo o la salud. Emocionalmente abierto, equilibrado, realista y perspicaz.', alerta: false };
+      return { texto: 'Ausencia de preocupaciones somáticas. Individuo enérgico, optimista, intuitivo, capaz y efectivo.', alerta: false };
+    case 'D':
+      if (t > 70)  return { texto: 'Depresión clínica severa. Reservado, afectado seriamente por los problemas, desesperado, con sentimientos de inutilidad. Preocupación por muerte/suicidio, abatido y lento en el pensar y actuar.', alerta: true };
+      if (t >= 60) return { texto: 'Depresión moderada e insatisfacción con la vida. Ausencia de energía, incapacidad de concentración, quejas somáticas y problemas de sueño. Falta de confianza en sí mismo, disfórico.', alerta: true };
+      if (t >= 40) return { texto: 'Puntuaciones medias. Conforme consigo mismo, estable, ajustado y realista.', alerta: false };
+      return { texto: 'Alegre, de buen humor, seguro de sí mismo y autoconfiado. Ausencia de inhibición, rasgos impulsivos, socialmente extravertido y sin desórdenes emocionales.', alerta: false };
+    case 'Hy':
+      if (t > 80)  return { texto: 'Considerar reacción de conversión. Elevada sugestionabilidad, ansiedad frecuente y episodios de pánico. Carácter desinhibido, rabietas infantiles y tendencia a somatizar la vergüenza.', alerta: true };
+      if (t >= 60) return { texto: 'Presencia de síntomas somáticos, trastornos del sueño y ausencia de comprensión sobre las causas. Actitud inmadura, centrada en sí mismo, exigente, absorbente y sugestionable.', alerta: true };
+      if (t >= 40) return { texto: 'Puntuaciones medias. Sujeto realista, abierto a los sentimientos, lógico y sensato.', alerta: false };
+      return { texto: 'Individuo reservado, conformista y convencional. Intereses reducidos, socialmente aislado, crítico y de mente cerrada.', alerta: false };
+    case 'Pd':
+      if (t > 75)  return { texto: 'Asocial / comportamiento antisocial. Juicio pobre, inestabilidad, irresponsabilidad, egocéntrico e inmaduro. Perfil atacante y agresivo.', alerta: true };
+      if (t >= 60) return { texto: 'Riesgo institucional: posibles problemas con la ley y la autoridad, o consumo de sustancias no autorizadas. Problemas familiares, impulsivo, airado, irritable, no cooperativo/a. Extrovertido, relaciones superficiales, enérgico y creativo.', alerta: true };
+      if (t >= 40) return { texto: 'Puntuaciones medias. Sincero, confiado, responsable y persistente.', alerta: false };
+      return { texto: 'Convencional, rígido, con aceptación de la autoridad. Sincero, persona de confianza, moralista, autocrítico y excesivamente cumplidor.', alerta: false };
+    case 'Mf':
+      if (esMujer) {
+        if (t > 75)  return { texto: 'Considerar graves problemas sexuales.', alerta: true };
+        if (t >= 60) return { texto: 'Rechazo del papel tradicional femenino. Persona asertiva, segura de sí misma y competitiva.', alerta: false };
+        if (t >= 40) return { texto: 'Puntuaciones medias. Empática, capaz, competente, acomodaticia, considerada e idealista.', alerta: false };
+        return { texto: 'Puntuación baja. Perfil de intereses tradicionalmente femeninos; los rasgos específicos pueden variar entre mayor docilidad/sumisión o mayor asertividad/competencia según el contexto sociocultural del evaluado.', alerta: false };
+      }
+      if (t > 75)  return { texto: 'Considerar graves problemas sexuales.', alerta: true };
+      if (t >= 60) return { texto: 'Conflictos sobre la identidad sexual, ausencia de intereses masculinos tradicionales. Intereses intelectuales, sensible y empático.', alerta: false };
+      if (t >= 40) return { texto: 'Puntuaciones medias. Práctico, acomodaticio, realista y convencional.', alerta: false };
+      return { texto: 'Patrón tradicional de intereses masculinos, declaraciones machistas, crudo, agresivo. Intereses reducidos, imprudente, orientado a la acción y autoconfiado.', alerta: false };
+    case 'Pa':
+      if (t > 70)  return { texto: 'Gravedad: considerar psicosis paranoide.', alerta: true };
+      if (t >= 60) return { texto: 'Alerta preventiva: predisposición paranoide. Excesivamente sensible, suspicaz, airado, resentido y reservado.', alerta: true };
+      if (t >= 50) return { texto: 'Sujeto sensible, suspicaz, airado, resentido. Presenta ausencia de control emocional.', alerta: false };
+      if (t >= 45) return { texto: 'Puntuaciones medias. Racional, de pensamiento claro, cauto y flexible.', alerta: false };
+      if (t >= 35) return { texto: 'Persona tenaz, evasiva, egocéntrica, insatisfecha y sin intuición. Considerar psicosis.', alerta: true };
+      return { texto: 'Probablemente psicosis paranoide. Sujeto cauteloso, evasivo y testarudo.', alerta: true };
+    case 'Pt':
+      if (t > 75)  return { texto: 'Miedo extremo, ansiedad, tensión. Trastornos del pensamiento, percepción defectuosa, falta de concentración, rumiaciones, rituales rígidos, fobias y sentimientos de culpa.', alerta: true };
+      if (t >= 60) return { texto: 'Ansiedad, depresión moderada, falta de seguridad en sí mismo, culpabilidad, perfeccionista e indeciso. No se siente aceptado por los demás.', alerta: true };
+      if (t >= 40) return { texto: 'Puntuaciones medias. Confiable, sincero, adaptable y bien organizado.', alerta: false };
+      return { texto: 'Ausencia de desórdenes emocionales. Seguro de sí mismo, capaz, competente, con prestigio y reconocimiento.', alerta: false };
+    case 'Sc':
+      if (t > 75)  return { texto: 'Alerta psiquiátrica: posible trastorno esquizofrénico.', alerta: true };
+      if (t >= 60) return { texto: 'Esquizoide de estilo libre, confuso, miedoso. Carácter reservado, no comprometido, tendencia a la fantasía y ensueños excesivos.', alerta: true };
+      if (t >= 40) return { texto: 'Puntuaciones medias. Adaptable, dependiente y con un buen equilibrio.', alerta: false };
+      return { texto: 'Persona sensible, confiada, prudente, convencional, concreta, práctica y sumisa.', alerta: false };
+    case 'Ma':
+      if (t > 80)  return { texto: 'Alerta institucional: posible trastorno bipolar, tipo maníaco.', alerta: true };
+      if (t >= 70) return { texto: 'Energía excesiva, ausencia de dirección, desorganización conceptual, poco realista en su auto-valoración. Tiránico, mandón, muy hablador, baja tolerancia a la frustración e impulsivo.', alerta: true };
+      if (t >= 60) return { texto: 'Rango preventivo policial: sujeto activo, enérgico, extrovertido, creativo y rebelde.', alerta: true };
+      if (t >= 40) return { texto: 'Puntuaciones medias. Sociable y amistoso, responsable, realista, entusiasta y equilibrado.', alerta: false };
+      return { texto: 'Sujeto sensible, confiado, responsable, prudente, convencional, sumiso, práctico y concreto.', alerta: false };
+    case 'Si':
+      if (t > 75)  return { texto: 'Extremadamente reservado.', alerta: true };
+      if (t >= 60) return { texto: 'Introvertido, reservado, tímido, depresivo, culpable y con bajo ritmo personal. Supercontrolado, sumiso; persona de confianza, formal y responsable en el trabajo.', alerta: false };
+      if (t >= 40) return { texto: 'Puntuaciones medias. Activo, enérgico, amistoso, equilibrado y hablador.', alerta: false };
+      return { texto: 'Extravertido, sociable, seguro de sí mismo, enérgico, competitivo, poco controlado y manipulativo.', alerta: false };
+    default:
+      return { texto: '', alerta: false };
+  }
+}
+
+// ── Diagnóstico automatizado final — riesgo institucional (Bloques I-III) ─────
+function diagnosticoFinalMMPI(escalas) {
+  function porCodigo(c) { return (escalas || []).filter(function(e) { return e.code === c; })[0]; }
+  var L = porCodigo('L'), K = porCodigo('K'), E4 = porCodigo('Pd'), E6 = porCodigo('Pa'), E9 = porCodigo('Ma');
+  var pdL = L ? L.tb : 0;
+  var ptK = K ? K.t : 0;
+  var t4 = E4 ? E4.t : 0, t6 = E6 ? E6.t : 0, t9 = E9 ? E9.t : 0;
+
+  var bloqueI = null;
+  if (pdL >= 8) {
+    bloqueI = 'La actitud del evaluado ante la prueba muestra una intencionalidad marcada de distorsión positiva (deseo de simular una moralidad impecable). Este nivel de defensividad constituye un predictor estadístico de problemas de rendimiento futuro y fallas de integridad.';
+  } else if (ptK >= 60) {
+    bloqueI = 'Se observa un perfil defensivo moderado/alto. El evaluado tiende a ocultar sus fallas de adaptación, lo que suele correlacionar con un cuestionamiento encubierto de la normativa institucional.';
+  }
+
+  var alertas = [];
+  if (t4 >= 60) alertas.push({ code: 'Pd', label: 'Escala 4 — Desviación Psicopática', texto: 'Predictor robusto de mala conducta, impulsividad, rechazo a la autoridad y normas.' });
+  if (t6 >= 60) alertas.push({ code: 'Pa', label: 'Escala 6 — Paranoia', texto: 'Suspicacia, resentimiento hacia superiores, reticencia interpersonal, problemas disciplinarios.' });
+  if (t9 >= 60) alertas.push({ code: 'Ma', label: 'Escala 9 — Hipomanía', texto: 'Baja tolerancia a la frustración, búsqueda de sensaciones, riesgo de uso innecesario de la fuerza.' });
+
+  var regla1 = t4 >= 60 && t6 >= 60;
+  var regla2 = t4 >= 60 && t9 >= 60;
+  var reglas = [];
+  if (regla1) reglas.push('ALTO RIESGO DISCIPLINARIO: combinación de rechazo a las normas e impulsividad (Escala 4) con resentimiento y suspicacia hacia los superiores (Escala 6). Se sugiere monitoreo preventivo inmediato.');
+  if (regla2) reglas.push('ALTO RIESGO OPERATIVO: coexistencia de desviación psicopática (Escala 4) con alta energía, baja tolerancia a la frustración y búsqueda de sensaciones (Escala 9). Predice estadísticamente alta probabilidad de uso desproporcionado de la fuerza física.');
+
+  var alertasRojas = alertas.length;
+  var nivel, texto;
+  if (alertasRojas >= 3 || regla1 || regla2) {
+    nivel = 'ALTO';
+    texto = 'Riesgo Alto (Intervención Prioritaria). Requiere intervención, reevaluación presencial por el psicólogo mentor y seguimiento cercano.';
+  } else if (alertasRojas >= 1) {
+    nivel = 'MODERADO';
+    texto = 'Riesgo Moderado (Alerta Preventiva). Se sugiere su inclusión en programas preventivos de control de impulsos o gestión emocional.';
+  } else {
+    nivel = 'BAJO';
+    texto = 'Riesgo Bajo. Continuar con su rol habitual.';
+  }
+
+  return { bloqueI: bloqueI, alertas: alertas, reglas: reglas, nivel: nivel, texto: texto, alertasRojas: alertasRojas };
+}
+
 // Interpretación del puntaje T
 function interpretarT(t) {
   if (!t || t === 0) return { label: 'N/D', color: '#888888' };
@@ -783,6 +919,53 @@ function dibujarLeyendaMmpi(doc, x0, y, W) {
 }
 
 // Dibuja tabla de resultados MMPI-2 (siempre muestra las 13 escalas)
+// ── Bloque de diagnóstico automatizado final (Bloques I-III + reglas compuestas) ─
+function dibujarDiagnosticoFinalMMPI(doc, diag, x0, y, W, fs) {
+  const colorNivel = diag.nivel === 'ALTO' ? '#c0392b' : (diag.nivel === 'MODERADO' ? '#e67e22' : '#27ae60');
+  const padX = 7;
+  const innerW = W - padX * 2;
+
+  const tituloH = 14;
+  doc.rect(x0, y, W, tituloH).fill(COLOR_NEGRO);
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(Math.min(fs + 1.2, 9))
+     .text('DIAGNÓSTICO AUTOMATIZADO — CONCLUSIÓN DE RIESGO INSTITUCIONAL', x0 + padX, y + 3, { width: innerW, lineBreak: false });
+  y += tituloH + 3;
+
+  if (diag.bloqueI) {
+    doc.font('Helvetica').fontSize(fs);
+    const h = doc.heightOfString(diag.bloqueI, { width: innerW });
+    doc.rect(x0, y, W, h + 6).fill('#f7f2e2');
+    doc.fillColor('#5c4a12').text(diag.bloqueI, x0 + padX, y + 3, { width: innerW });
+    y += h + 6 + 3;
+  }
+
+  diag.alertas.forEach(function(a) {
+    doc.font('Helvetica').fontSize(fs);
+    const txt = a.label + ': ' + a.texto;
+    const h = doc.heightOfString(txt, { width: innerW });
+    doc.rect(x0, y, W, h + 6).fill('#fdeeee');
+    doc.fillColor('#7a1a1a').text(txt, x0 + padX, y + 3, { width: innerW });
+    y += h + 6 + 3;
+  });
+
+  diag.reglas.forEach(function(r) {
+    doc.font('Helvetica-Bold').fontSize(fs);
+    const h = doc.heightOfString(r, { width: innerW });
+    doc.rect(x0, y, W, h + 6).fill('#fbe1e1');
+    doc.fillColor('#7a1a1a').text(r, x0 + padX, y + 3, { width: innerW });
+    y += h + 6 + 3;
+  });
+
+  doc.font('Helvetica-Bold').fontSize(fs + 0.3);
+  const hFinal = doc.heightOfString('NIVEL DE RIESGO: ' + diag.nivel + ' — ' + diag.texto, { width: innerW });
+  doc.rect(x0, y, W, hFinal + 8).fill(colorNivel);
+  doc.fillColor('#ffffff')
+     .text('NIVEL DE RIESGO: ' + diag.nivel + ' — ' + diag.texto, x0 + padX, y + 4, { width: innerW });
+  y += hFinal + 8 + 5;
+
+  return y;
+}
+
 function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, opts) {
   opts = opts || {};
   const escalas = (mmpi && mmpi.escalas && mmpi.escalas.length)
@@ -792,6 +975,8 @@ function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, opts) {
   const noCalificable = !!(mmpi && mmpi.no_calificable);
   const provisional = !!(mmpi && mmpi.provisional);
   const completa = opts.completa !== false && !noCalificable;
+  const esMujer = (mmpi && mmpi.sexo) === 'Mujer';
+  const conDiagnostico = completa && !provisional && !noCalificable;
 
   let titulo = 'RESULTADOS DEL MMPI-2 — PUNTAJES T ESTÁNDAR';
   if (noCalificable) titulo = 'PARÁMETROS MMPI-2 — AVANCE PARCIAL';
@@ -827,32 +1012,99 @@ function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, opts) {
 
   const colW  = calcularAnchosTablaMmpi(W);
   const heads = ['Escala', 'TV', 'TF', 'Bruto', 'T-score', 'Estado'];
-  const rowH  = 16;
+  const headRowH = 15;
+  const mainRowH = 13;
   const borde = '#cfdad2';
+  const sigX = x0 + 6;
+  const sigW = W - 12;
+  const padSig = 3;
 
-  doc.rect(x0, y, W, rowH).fill(COLOR_VERDE);
+  // ── Preparar significados automáticos por escala y diagnóstico final ─────────
+  const filas = escalas.map(function(esc) {
+    const tieneT = esc.t > 0;
+    const sig = (conDiagnostico && tieneT) ? significadoEscalaMMPI(esc, esMujer) : null;
+    return { esc: esc, tieneT: tieneT, sig: sig };
+  });
+  const diagnostico = conDiagnostico ? diagnosticoFinalMMPI(escalas) : null;
+
+  // ── Autofit: elegir el tamaño de fuente más grande que quepa en una sola hoja ─
+  const availH = Math.max(0, maxY - y - 4);
+  let fontSig = 7.2;
+  let alturaDiag = 0;
+  let cabeDiagAqui = true;
+
+  function medirAlturaTabla(fs) {
+    let h = headRowH;
+    doc.font('Helvetica-Oblique').fontSize(fs);
+    filas.forEach(function(f) {
+      h += mainRowH;
+      if (f.sig && f.sig.texto) h += doc.heightOfString(f.sig.texto, { width: sigW }) + padSig * 2;
+    });
+    return h;
+  }
+
+  function medirAlturaDiagnostico(fs) {
+    if (!diagnostico) return 0;
+    let h = 14 + 3;
+    const innerW = W - 14;
+    if (diagnostico.bloqueI) { doc.font('Helvetica').fontSize(fs); h += doc.heightOfString(diagnostico.bloqueI, { width: innerW }) + 9; }
+    diagnostico.alertas.forEach(function(a) {
+      doc.font('Helvetica').fontSize(fs);
+      h += doc.heightOfString(a.label + ': ' + a.texto, { width: innerW }) + 9;
+    });
+    diagnostico.reglas.forEach(function(r) {
+      doc.font('Helvetica-Bold').fontSize(fs);
+      h += doc.heightOfString(r, { width: innerW }) + 9;
+    });
+    doc.font('Helvetica-Bold').fontSize(fs + 0.3);
+    h += doc.heightOfString('NIVEL DE RIESGO: ' + diagnostico.nivel + ' — ' + diagnostico.texto, { width: innerW }) + 13;
+    return h;
+  }
+
+  if (conDiagnostico) {
+    const candidatos = [7.2, 7.0, 6.8, 6.6, 6.4, 6.2, 6.0, 5.8, 5.6];
+    for (let i = 0; i < candidatos.length; i++) {
+      const fs = candidatos[i];
+      const hTabla = medirAlturaTabla(fs);
+      const hDiag = medirAlturaDiagnostico(Math.max(fs, 6.2));
+      if (hTabla + hDiag <= availH) {
+        fontSig = fs;
+        alturaDiag = hDiag;
+        cabeDiagAqui = true;
+        break;
+      }
+      if (i === candidatos.length - 1) {
+        fontSig = fs;
+        alturaDiag = hDiag;
+        cabeDiagAqui = hTabla + hDiag <= availH;
+      }
+    }
+  }
+
+  doc.rect(x0, y, W, headRowH).fill(COLOR_VERDE);
   let tx = x0;
   heads.forEach(function(h, i) {
-    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(8.5)
-       .text(h, tx + 4, y + 4, { width: colW[i] - 8, lineBreak: false });
+    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(8)
+       .text(h, tx + 4, y + 3.5, { width: colW[i] - 8, lineBreak: false });
     if (i < heads.length - 1) {
-      doc.strokeColor('#3d7a62').lineWidth(0.4).moveTo(tx + colW[i], y).lineTo(tx + colW[i], y + rowH).stroke();
+      doc.strokeColor('#3d7a62').lineWidth(0.4).moveTo(tx + colW[i], y).lineTo(tx + colW[i], y + headRowH).stroke();
     }
     tx += colW[i];
   });
-  y += rowH;
+  y += headRowH;
 
-  escalas.forEach(function(esc, idx) {
-    if (y + rowH > maxY - 4) return;
-    const tieneT = esc.t > 0;
+  filas.forEach(function(f, idx) {
+    const esc = f.esc;
+    if (y + mainRowH > maxY - 4) return;
+    const tieneT = f.tieneT;
     const inter = noCalificable && !tieneT
       ? { label: 'NO CALIFICABLE', color: '#b8860b' }
       : (noCalificable && tieneT
         ? { label: 'PROVISIONAL', color: '#856404' }
         : (tieneT ? interpretarT(esc.t) : { label: '—', color: '#888888' }));
     const bg = idx % 2 === 0 ? '#f4f8f5' : '#ffffff';
-    doc.rect(x0, y, W, rowH).fill(bg);
-    doc.strokeColor(borde).lineWidth(0.45).moveTo(x0, y + rowH).lineTo(x0 + W, y + rowH).stroke();
+    doc.rect(x0, y, W, mainRowH).fill(bg);
+    doc.strokeColor(borde).lineWidth(0.45).moveTo(x0, y + mainRowH).lineTo(x0 + W, y + mainRowH).stroke();
 
     tx = x0;
     const celdas = [
@@ -864,27 +1116,43 @@ function dibujarResultadosMMPI2(doc, mmpi, x0, y, W, maxY, opts) {
     ];
     celdas.forEach(function(val, i) {
       const centrado = i >= 1 && i <= 4;
-      doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(8)
-         .text(val, tx + 4, y + 4, { width: colW[i] - 8, align: centrado ? 'center' : 'left', lineBreak: false });
-      doc.strokeColor(borde).lineWidth(0.35).moveTo(tx + colW[i], y).lineTo(tx + colW[i], y + rowH).stroke();
+      doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(7.5)
+         .text(val, tx + 4, y + 3, { width: colW[i] - 8, align: centrado ? 'center' : 'left', lineBreak: false });
+      doc.strokeColor(borde).lineWidth(0.35).moveTo(tx + colW[i], y).lineTo(tx + colW[i], y + mainRowH).stroke();
       tx += colW[i];
     });
 
     const estadoX = tx;
     const estadoLabel = noCalificable && !tieneT ? 'NO CALIFICABLE' : inter.label;
-    doc.rect(estadoX + 4, y + 5, 6, 6).fill(inter.color);
-    doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(7.5)
-       .text(estadoLabel, estadoX + 13, y + 4, { width: colW[5] - 16, lineBreak: false });
+    doc.rect(estadoX + 4, y + 3.5, 6, 6).fill(inter.color);
+    doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(7)
+       .text(estadoLabel, estadoX + 13, y + 3, { width: colW[5] - 16, lineBreak: false });
 
-    y += rowH;
+    y += mainRowH;
+
+    if (f.sig && f.sig.texto) {
+      doc.font('Helvetica-Oblique').fontSize(fontSig);
+      const h = doc.heightOfString(f.sig.texto, { width: sigW });
+      const bgSig = f.sig.alerta ? '#fdeeee' : '#f7f9f7';
+      doc.rect(x0, y, W, h + padSig * 2).fill(bgSig);
+      doc.strokeColor(borde).lineWidth(0.35).moveTo(x0, y + h + padSig * 2).lineTo(x0 + W, y + h + padSig * 2).stroke();
+      doc.fillColor(f.sig.alerta ? '#7a1a1a' : '#444444')
+         .text(f.sig.texto, sigX, y + padSig, { width: sigW });
+      y += h + padSig * 2;
+    }
   });
 
-  if (completa || provisional || noCalificable) {
+  if (diagnostico) {
+    y += 5;
+    if (cabeDiagAqui) {
+      y = dibujarDiagnosticoFinalMMPI(doc, diagnostico, x0, y, W, Math.max(fontSig, 6.2));
+    }
+  } else if (completa || provisional || noCalificable) {
     y += 4;
     y = dibujarLeyendaMmpi(doc, x0, y, W);
   }
 
-  return y;
+  return { y: y, diagnostico: diagnostico, diagPendiente: diagnostico && !cabeDiagAqui, fontSig: Math.max(fontSig, 6.2) };
 }
 
 function dibujarBannerAvance(doc, stats, maxId, x0, y, W) {
