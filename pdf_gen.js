@@ -102,6 +102,22 @@ function calcularAnchurasTabla(W) {
   return cols;
 }
 
+function calcularAnchosTablaEscalas(W) {
+  const ratios = [0.28, 0.144, 0.144, 0.144, 0.144, 0.144];
+  const cols = ratios.map(function(r) { return Math.floor(W * r); });
+  const sum = cols.reduce(function(a, b) { return a + b; }, 0);
+  cols[0] += W - sum;
+  return cols;
+}
+
+function calcularAnchosTablaDetalle(W) {
+  const ratios = [0.045, 0.31, 0.105, 0.145, 0.145, 0.25];
+  const cols = ratios.map(function(r) { return Math.floor(W * r); });
+  const sum = cols.reduce(function(a, b) { return a + b; }, 0);
+  cols[1] += W - sum;
+  return cols;
+}
+
 function dibujarFilaTabla(doc, x0, y, W, cols, celdas, opts) {
   const esHeader = opts && opts.header;
   const par = opts && opts.par;
@@ -475,30 +491,39 @@ function generarPDFComisaria(comisaria, evaluaciones) {
       if (pagina > 0) dibujarPieLista(doc, pagina);
     }
 
-    function abrirPagina(esContinuacion) {
+    // opts: { titulo, subtitulo, heads, cols, continuacionTitulo }
+    function abrirPagina(opts) {
+      opts = opts || {};
       cerrarPaginaActual();
       doc.addPage();
       pagina += 1;
       dibujarCabeceraLista(doc);
-      let startY = 50;
-      if (!esContinuacion) {
+      let startY = 58;
+      if (opts.titulo) {
         doc.fillColor(COLOR_VERDE).font('Helvetica-Bold').fontSize(11)
-           .text('LISTADO DE EFECTIVOS EVALUADOS', x0, 50, { align: 'center', width: W, lineBreak: false });
+           .text(opts.titulo, x0, 58, { align: 'center', width: W, lineBreak: false });
         doc.fillColor(COLOR_ORO).font('Helvetica-Bold').fontSize(10)
-           .text(String(comisaria || '').toUpperCase(), x0, 63, { align: 'center', width: W, lineBreak: false });
+           .text(String(comisaria || '').toUpperCase(), x0, 71, { align: 'center', width: W, lineBreak: false });
         doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(8)
-           .text('Total: ' + lista.length + ' registro' + (lista.length === 1 ? '' : 's'), x0, 76, { align: 'center', width: W, lineBreak: false });
-        startY = 88;
+           .text(opts.subtitulo || '', x0, 84, { align: 'center', width: W, lineBreak: false });
+        startY = 96;
       } else {
         doc.fillColor(COLOR_GRIS).font('Helvetica-Bold').fontSize(8)
-           .text(String(comisaria || '').toUpperCase() + ' — continuación', x0, 54, { align: 'center', width: W, lineBreak: false });
-        startY = 66;
+           .text(String(comisaria || '').toUpperCase() + (opts.continuacionTitulo || ' — continuación'), x0, 60, { align: 'center', width: W, lineBreak: false });
+        startY = 72;
       }
-      const headerH = dibujarFilaTabla(doc, x0, startY, W, cols, heads, { header: true, rowH: 20 });
-      return startY + headerH;
+      if (opts.heads && opts.cols) {
+        const headerH = dibujarFilaTabla(doc, x0, startY, W, opts.cols, opts.heads, { header: true, rowH: 20 });
+        return startY + headerH;
+      }
+      return startY;
     }
 
-    let rowY = abrirPagina(false);
+    let rowY = abrirPagina({
+      titulo: 'LISTADO DE EFECTIVOS EVALUADOS',
+      subtitulo: 'Total: ' + lista.length + ' registro' + (lista.length === 1 ? '' : 's'),
+      heads: heads, cols: cols
+    });
 
     lista.forEach(function(ev, idx) {
       const stats = contarRespuestas(ev);
@@ -515,7 +540,7 @@ function generarPDFComisaria(comisaria, evaluaciones) {
         stats.total + '/566',
         edad ? String(edad) : '—'
       ];
-      if (rowY + 17 > maxRowY) rowY = abrirPagina(true);
+      if (rowY + 17 > maxRowY) rowY = abrirPagina({ heads: heads, cols: cols });
       rowY += dibujarFilaTabla(doc, x0, rowY, W, cols, fila, { par: idx % 2 === 0, rowH: 17 });
     });
 
@@ -525,8 +550,121 @@ function generarPDFComisaria(comisaria, evaluaciones) {
         { par: false, rowH: 17 });
     }
 
+    if (lista.length) {
+      dibujarInformeEstadisticoUnidad(doc, lista, { x0: x0, W: W, maxRowY: maxRowY, abrirPagina: abrirPagina });
+    }
+
     cerrarPaginaActual();
     doc.end();
+  });
+}
+
+// ── Informe estadístico — diagnóstico MMPI-2 contabilizado por escala + ───────
+// ── detalle nominal (nombres completos) de quienes respondieron en la unidad ──
+function dibujarInformeEstadisticoUnidad(doc, lista, ctx) {
+  const x0 = ctx.x0, W = ctx.W, maxRowY = ctx.maxRowY, abrirPagina = ctx.abrirPagina;
+
+  const detalle = lista.map(function(ev) { return { ev: ev, res: calcularDiagnosticoFila(ev) }; });
+  const totalEvaluados = lista.length;
+  const completos = detalle.filter(function(d) { return d.res.completa; });
+  const incompletos = totalEvaluados - completos.length;
+
+  const riesgoCounts = { BAJO: 0, MODERADO: 0, ALTO: 0 };
+  const escalaCounts = {};
+  ESCALAS_MMPI2.forEach(function(nombre) {
+    escalaCounts[nombre] = { MUY_ELEVADO: 0, ELEVADO: 0, LEVE: 0, NORMAL: 0, BAJO: 0 };
+  });
+
+  completos.forEach(function(d) {
+    if (d.res.diag) riesgoCounts[d.res.diag.nivel] = (riesgoCounts[d.res.diag.nivel] || 0) + 1;
+    if (d.res.mmpi && d.res.mmpi.escalas) {
+      d.res.mmpi.escalas.forEach(function(esc) {
+        if (!escalaCounts[esc.nombre] || esc.t <= 0) return;
+        const label = interpretarT(esc.t).label;
+        if (label === 'MUY ELEVADO') escalaCounts[esc.nombre].MUY_ELEVADO++;
+        else if (label === 'ELEVADO') escalaCounts[esc.nombre].ELEVADO++;
+        else if (label === 'LEVE ELEV.') escalaCounts[esc.nombre].LEVE++;
+        else if (label === 'NORMAL') escalaCounts[esc.nombre].NORMAL++;
+        else if (label === 'BAJO') escalaCounts[esc.nombre].BAJO++;
+      });
+    }
+  });
+
+  // ── Página de resumen ──────────────────────────────────────────────────────
+  let y = abrirPagina({
+    titulo: 'INFORME ESTADÍSTICO — DIAGNÓSTICO MMPI-2',
+    subtitulo: totalEvaluados + ' evaluado' + (totalEvaluados === 1 ? '' : 's') + ' · ' + completos.length + ' completo' + (completos.length === 1 ? '' : 's') + ' · ' + incompletos + ' en avance'
+  });
+
+  doc.rect(x0, y, W, 16).fill(COLOR_VERDE);
+  doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9)
+     .text('DISTRIBUCIÓN DE RIESGO INSTITUCIONAL (sobre evaluaciones completas)', x0 + 6, y + 4, { width: W - 12, lineBreak: false });
+  y += 20;
+
+  const nivelesInfo = [
+    { key: 'BAJO', color: '#27ae60', label: 'Riesgo Bajo' },
+    { key: 'MODERADO', color: '#e67e22', label: 'Riesgo Moderado' },
+    { key: 'ALTO', color: '#c0392b', label: 'Riesgo Alto' }
+  ];
+  const boxW = (W - 16) / 3;
+  nivelesInfo.forEach(function(n, i) {
+    const n_ = riesgoCounts[n.key] || 0;
+    const pct = completos.length ? Math.round((n_ / completos.length) * 100) : 0;
+    const bx = x0 + i * (boxW + 8);
+    doc.rect(bx, y, boxW, 40).fill(n.color);
+    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(16)
+       .text(String(n_), bx, y + 5, { width: boxW, align: 'center', lineBreak: false });
+    doc.font('Helvetica').fontSize(8)
+       .text(n.label + ' (' + pct + '%)', bx, y + 24, { width: boxW, align: 'center', lineBreak: false });
+  });
+  y += 52;
+
+  doc.rect(x0, y, W, 16).fill(COLOR_VERDE);
+  doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9)
+     .text('CONTEO POR ESCALA (evaluaciones completas, según puntaje T)', x0 + 6, y + 4, { width: W - 12, lineBreak: false });
+  y += 20;
+
+  const colsEsc = calcularAnchosTablaEscalas(W);
+  const headsEsc = ['Escala', 'Muy Elevado', 'Elevado', 'Leve Elev.', 'Normal', 'Bajo'];
+  y += dibujarFilaTabla(doc, x0, y, W, colsEsc, headsEsc, { header: true, rowH: 18 });
+
+  ESCALAS_MMPI2.forEach(function(nombre, idx) {
+    const c = escalaCounts[nombre];
+    if (y + 15 > maxRowY) {
+      y = abrirPagina({ titulo: 'INFORME ESTADÍSTICO — DIAGNÓSTICO MMPI-2', continuacionTitulo: ' — Conteo por escala (continuación)' });
+      y += dibujarFilaTabla(doc, x0, y, W, colsEsc, headsEsc, { header: true, rowH: 18 });
+    }
+    y += dibujarFilaTabla(doc, x0, y, W, colsEsc,
+      [nombre, String(c.MUY_ELEVADO), String(c.ELEVADO), String(c.LEVE), String(c.NORMAL), String(c.BAJO)],
+      { par: idx % 2 === 0, rowH: 15 });
+  });
+
+  // ── Detalle nominal por evaluado ─────────────────────────────────────────────
+  const colsDet = calcularAnchosTablaDetalle(W);
+  const headsDet = ['N°', 'Apellidos y Nombres', 'CIP', 'Estado', 'Nivel de Riesgo', 'Escalas en Alerta'];
+  let rowY = abrirPagina({
+    titulo: 'DETALLE POR EVALUADO — DIAGNÓSTICO MMPI-2',
+    subtitulo: 'Nombres completos de quienes respondieron en la unidad',
+    heads: headsDet, cols: colsDet
+  });
+
+  detalle.forEach(function(d, idx) {
+    const ev = d.ev, res = d.res;
+    const estado = res.completa ? 'Completo' : ('Avance ' + Math.round((res.stats.total / TOTAL_PREGUNTAS) * 100) + '%');
+    const nivel = res.completa && res.diag ? res.diag.nivel : '—';
+    const alertas = res.completa && res.alertCodes && res.alertCodes.length ? res.alertCodes.join(', ') : (res.completa ? 'Ninguna' : '—');
+    const fila = [
+      String(idx + 1),
+      String(ev.nombres || '—').toUpperCase(),
+      String(ev.cip || '—').toUpperCase(),
+      estado,
+      nivel,
+      alertas
+    ];
+    if (rowY + 17 > maxRowY) {
+      rowY = abrirPagina({ heads: headsDet, cols: colsDet, continuacionTitulo: ' — Detalle por evaluado (continuación)' });
+    }
+    rowY += dibujarFilaTabla(doc, x0, rowY, W, colsDet, fila, { par: idx % 2 === 0, rowH: 17 });
   });
 }
 
@@ -882,6 +1020,25 @@ function diagnosticoFinalMMPI(escalas) {
   }
 
   return { bloqueI: bloqueI, alertas: alertas, reglas: reglas, nivel: nivel, texto: texto, alertasRojas: alertasRojas };
+}
+
+// ── Diagnóstico completo de una fila (evaluación o avance) — uso en reportes ──
+function calcularDiagnosticoFila(ev) {
+  const stats = contarRespuestas(ev);
+  const completa = stats.total >= TOTAL_PREGUNTAS;
+  if (!completa) return { completa: false, stats: stats, mmpi: null, diag: null };
+
+  const mmpiRaw = calcularMMPI2(ev);
+  const mmpi = normalizarResultadoMMPI(mmpiRaw, ev, true, stats);
+  if (!mmpi || !mmpi.escalas || !mmpi.escalas.length) {
+    return { completa: true, stats: stats, mmpi: mmpi, diag: null };
+  }
+  const esMujer = mmpi.sexo === 'Mujer';
+  const alertCodes = mmpi.escalas
+    .filter(function(e) { return e.t > 0 && significadoEscalaMMPI(e, esMujer).alerta; })
+    .map(function(e) { return e.code; });
+  const diag = diagnosticoFinalMMPI(mmpi.escalas);
+  return { completa: true, stats: stats, mmpi: mmpi, diag: diag, alertCodes: alertCodes };
 }
 
 // Interpretación del puntaje T

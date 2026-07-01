@@ -7,9 +7,11 @@ const express  = require('express');
 const cors     = require('cors');
 const path     = require('path');
 const fs       = require('fs');
+const os       = require('os');
 const crypto   = require('crypto');
 const { Pool } = require('pg');
-const { generarPDFIndividual, generarPDFComisaria, generarPDFConstanciaVacante, calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido } = require('./pdf_gen');
+const { Worker } = require('worker_threads');
+const { calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido } = require('./pdf_gen');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +23,63 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000
 });
+
+// ── Pool de workers para generación de PDF (PDFKit es síncrono/CPU-bound) ──────
+// Evita que un PDF grande bloquee el event loop principal para el resto de usuarios.
+const PDF_POOL_SIZE = Math.max(1, Math.min(3, os.cpus().length - 1));
+const pdfPool = [];
+const pdfQueue = [];
+let pdfJobSeq = 1;
+
+function crearPdfWorker() {
+  const w = new Worker(path.join(__dirname, 'pdf_worker.js'));
+  w.busy = false;
+  w.pending = new Map();
+  w.on('message', function(msg) {
+    const job = w.pending.get(msg.id);
+    w.pending.delete(msg.id);
+    w.busy = false;
+    if (job) {
+      if (msg.ok) job.resolve(Buffer.from(msg.buffer));
+      else job.reject(new Error(msg.error || 'Error generando PDF'));
+    }
+    despacharPdfQueue();
+  });
+  w.on('error', function(err) {
+    w.pending.forEach(function(job) { job.reject(err); });
+    w.pending.clear();
+    w.busy = false;
+    despacharPdfQueue();
+  });
+  w.on('exit', function() {
+    const idx = pdfPool.indexOf(w);
+    if (idx !== -1) pdfPool.splice(idx, 1);
+    pdfPool.push(crearPdfWorker());
+  });
+  return w;
+}
+
+for (let i = 0; i < PDF_POOL_SIZE; i++) pdfPool.push(crearPdfWorker());
+
+function despacharPdfQueue() {
+  if (!pdfQueue.length) return;
+  const libre = pdfPool.find(function(w) { return !w.busy; });
+  if (!libre) return;
+  const job = pdfQueue.shift();
+  libre.busy = true;
+  libre.pending.set(job.id, job);
+  libre.postMessage({ id: job.id, fn: job.fn, args: job.args });
+}
+
+// Genera un PDF en un worker aparte para no bloquear el hilo principal.
+// fn: nombre exportado por pdf_gen.js ('generarPDFIndividual', 'generarPDFComisaria', 'generarPDFConstanciaVacante')
+function generarPDFAsync(fn, args) {
+  return new Promise(function(resolve, reject) {
+    const id = pdfJobSeq++;
+    pdfQueue.push({ id: id, fn: fn, args: args, resolve: resolve, reject: reject });
+    despacharPdfQueue();
+  });
+}
 
 const authCache = new Map();
 const AUTH_CACHE_TTL = 5 * 60 * 1000;
@@ -2254,7 +2313,7 @@ app.get('/pdf/efectivo', requireAuth, async (req, res) => {
 
     const completa = evaluacionEstaCompleta(ev);
     const pregsR = await pool.query('SELECT numero AS id, texto FROM preguntas WHERE activa=TRUE ORDER BY orden,numero');
-    const buf = await generarPDFIndividual(ev, pregsR.rows, { completa });
+    const buf = await generarPDFAsync('generarPDFIndividual', [ev, pregsR.rows, { completa }]);
     const nom = (ev.nombres||'efectivo').replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
     const suf = completa ? 'ResultadoMMPI2' : 'AvanceEvaluacion';
     res.setHeader('Content-Type', 'application/pdf');
@@ -2287,7 +2346,7 @@ app.get('/pdf/grupo', requireAuth, async (req, res) => {
     if (!merged.length) return res.status(404).json({ error: 'Sin evaluaciones para este filtro' });
 
     const label  = division || comisaria || unidad;
-    const buf    = await generarPDFComisaria(label, merged);
+    const buf    = await generarPDFAsync('generarPDFComisaria', [label, merged]);
     const nom    = 'Cuestionario_' + label.replace(/\s+/g,'_') + '.pdf';
     const inline = req.query.inline === '1' || req.query.ver === '1';
     res.setHeader('Content-Type', 'application/pdf');
@@ -2915,7 +2974,7 @@ app.get('/portal/inscripciones/:id/constancia-vacante', async (req, res) => {
       }
     }
     const row = r.rows[0];
-    const buf = await generarPDFConstanciaVacante(row, row);
+    const buf = await generarPDFAsync('generarPDFConstanciaVacante', [row, row]);
     const titulo = 'Constancia — ' + (row.titulo || 'Vacante');
     const nombre = 'Constancia_' + row.cip + '.pdf';
     if (req.query.download === '1') {
