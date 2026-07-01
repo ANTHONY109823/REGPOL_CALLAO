@@ -894,7 +894,7 @@ function significadoEscalaMMPI(esc, esMujer) {
   switch (esc.code) {
     case 'L':
       return pd >= 8
-        ? { texto: 'Rigidez moral fingida. Defensividad extrema. Alto riesgo de fallas de integridad en el campo.', alerta: true }
+        ? { texto: 'Puntaje bruto ≥ 8: puntuaciones elevadas correlacionan significativamente con problemas de rendimiento futuros. Los oficiales con puntaje bruto de 8 o más en la escala L presentan significativamente más problemas de conducta que aquellos con puntajes inferiores. La rigidez moral fingida o la excesiva defensividad predicen fallas de integridad en el campo.', alerta: true }
         : { texto: 'Sin indicios de distorsión positiva marcada; actitud sincera ante la prueba.', alerta: false };
     case 'F':
       if (t > 100) return { texto: 'Perfil invalidado. Respuestas al azar, errores de corrección, grave dislexia o tendencia a contestar todo como "Verdadero". Actitud no cooperativa, fingimiento de mala imagen de sí mismo o desorientación y confusión psicótica.', alerta: true, invalida: true };
@@ -905,7 +905,7 @@ function significadoEscalaMMPI(esc, esMujer) {
       return { texto: 'Registro aceptable. Indica conformidad, convencionalidad, sinceridad social o una posible falsa imagen positiva.', alerta: false };
     case 'K':
       if (t > 70)  return { texto: 'Perfil invalidado por marcada defensividad o fingimiento de buena imagen (contestar todo como "Falso"). Acusada implicación emocional, inhibición, timidez, desconfianza o ausencia de comprensión.', alerta: true, invalida: true };
-      if (t >= 60) return { texto: 'Validez cuestionada. Clínicamente defensivo, tendencia a la negación de problemas e intolerancia. Niega todo y muestra nula capacidad para la intuición.', alerta: true };
+      if (t >= 60) return { texto: 'Validez cuestionada. Clínicamente defensivo, tendencia a la negación de problemas e intolerancia. Alta correlación con problemas disciplinarios: la actitud excesivamente defensiva para ocultar fallas de adaptación se asocia con el cuestionamiento oculto de las normas.', alerta: true };
       if (t >= 50) return { texto: 'Perfil válido. Autoevaluación equilibrada. Individuo ajustado, independiente, inteligente, entusiasta y con intereses amplios.', alerta: false };
       return { texto: 'Perfil invalidado por exageración de desajustes o fingir "hacerse el enfermo" (contestar todo como "Verdadero"). Estado confuso, autocrítico, conformista, introvertido, cínico y suspicaz.', alerta: true, invalida: true };
     case 'Hs':
