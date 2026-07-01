@@ -1511,7 +1511,35 @@ function renderMatrizRespuestasHtml(respMap, totalItems) {
   return html;
 }
 
-function renderTablaMmpiPreview(wrap, mmpi, completa, opts) {
+function htmlDiagnosticoAutomatizado(diagnostico) {
+  if (!diagnostico) {
+    return '<div style="border:1.5px solid #e0e8e0;border-radius:8px;overflow:hidden;height:100%;">'
+      + '<div style="background:#004d3d;color:#fff;font-weight:700;font-size:12px;padding:9px 12px;">DIAGNÓSTICO AUTOMATIZADO</div>'
+      + '<p style="font-size:12px;color:#888;margin:0;padding:14px;">Disponible al completar y calificar la evaluación (566/566).</p>'
+      + '</div>';
+  }
+  var colorNivel = diagnostico.nivel === 'ALTO' ? '#c0392b' : (diagnostico.nivel === 'MODERADO' ? '#e67e22' : '#27ae60');
+  var html = '<div style="border:1.5px solid #e0e8e0;border-radius:8px;overflow:hidden;">'
+    + '<div style="background:#004d3d;color:#fff;font-weight:700;font-size:12px;padding:9px 12px;">DIAGNÓSTICO AUTOMATIZADO — RIESGO INSTITUCIONAL</div>'
+    + '<div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;">';
+
+  if (diagnostico.bloqueI) {
+    html += '<div style="background:#f7f2e2;border-radius:6px;padding:8px 10px;font-size:11.5px;color:#5c4a12;line-height:1.5;">' + escHtml(diagnostico.bloqueI) + '</div>';
+  }
+  (diagnostico.alertas || []).forEach(function(a) {
+    html += '<div style="background:#fdeeee;border-radius:6px;padding:8px 10px;font-size:11.5px;color:#7a1a1a;line-height:1.5;"><strong>' + escHtml(a.label) + ':</strong> ' + escHtml(a.texto) + '</div>';
+  });
+  (diagnostico.reglas || []).forEach(function(r) {
+    html += '<div style="background:#fbe1e1;border-radius:6px;padding:8px 10px;font-size:11.5px;color:#7a1a1a;font-weight:700;line-height:1.5;">' + escHtml(r) + '</div>';
+  });
+  html += '<div style="background:' + colorNivel + ';border-radius:6px;padding:9px 10px;font-size:12px;color:#fff;font-weight:700;line-height:1.5;">'
+    + 'NIVEL DE RIESGO: ' + escHtml(diagnostico.nivel) + ' — ' + escHtml(diagnostico.texto) + '</div>';
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderTablaMmpiPreview(wrap, mmpi, completa, diagnostico, opts) {
   opts = opts || {};
   if (!wrap) return;
   if (!mmpi || !(mmpi.escalas || []).length) {
@@ -1526,12 +1554,12 @@ function renderTablaMmpiPreview(wrap, mmpi, completa, opts) {
     var tc = noCal && !tieneT ? '#b8860b' : (noCal && tieneT ? '#856404' : colorInterpT(esc.t));
     var estado = noCal && !tieneT ? 'NO CALIFICABLE' : (noCal && tieneT ? 'PROVISIONAL' : labelInterpT(esc.t));
     return '<tr style="background:' + bg + ';">'
-      + '<td style="padding:8px 10px;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;">' + escHtml(esc.nombre) + '</td>'
+      + '<td style="padding:8px 10px;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;white-space:nowrap;">' + escHtml(esc.nombre) + '</td>'
       + '<td style="padding:8px;text-align:center;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;">' + (esc.tv !== '—' ? esc.tv : '—') + '</td>'
       + '<td style="padding:8px;text-align:center;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;">' + (esc.tf !== '—' ? esc.tf : '—') + '</td>'
       + '<td style="padding:8px;text-align:center;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;">' + (esc.tb !== '—' ? esc.tb : '—') + '</td>'
       + '<td style="padding:8px;text-align:center;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;">' + (tieneT ? esc.t : '—') + '</td>'
-      + '<td style="padding:8px 10px;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;">'
+      + '<td style="padding:8px 10px;font-size:12px;color:#1a1a1a;border-bottom:1px solid #e0e8e0;white-space:nowrap;">'
       + '<span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:' + tc + ';margin-right:6px;vertical-align:middle;"></span>'
       + estado + '</td>'
       + '</tr>';
@@ -1548,15 +1576,20 @@ function renderTablaMmpiPreview(wrap, mmpi, completa, opts) {
       + '</div>';
   }
 
-  wrap.innerHTML = encabezado
-    + '<div style="overflow-x:auto;border:1px solid #cfdad2;border-radius:0 0 8px 8px;margin-bottom:4px;">'
-    + '<table class="t" style="font-size:12px;width:100%;border-collapse:collapse;">'
+  var tabla = '<div style="overflow-x:auto;border:1px solid #cfdad2;border-radius:0 0 8px 8px;margin-bottom:4px;">'
+    + '<table class="t" style="font-size:12px;width:auto;border-collapse:collapse;">'
     + '<thead><tr style="background:#004d3d;color:#fff;">'
     + '<th style="padding:9px 10px;text-align:left;font-size:12px;">Escala</th>'
     + '<th style="padding:9px 6px;font-size:12px;">TV</th><th style="padding:9px 6px;font-size:12px;">TF</th>'
     + '<th style="padding:9px 6px;font-size:12px;">Bruto</th><th style="padding:9px 6px;font-size:12px;">T-score</th>'
     + '<th style="padding:9px 10px;text-align:left;font-size:12px;">Estado</th></tr></thead>'
     + '<tbody>' + filas + '</tbody></table></div>';
+
+  wrap.innerHTML = encabezado
+    + '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">'
+    + '<div style="flex:0 0 auto;">' + tabla + '</div>'
+    + '<div style="flex:1;min-width:220px;">' + (opts.omitirDiagnostico ? '' : htmlDiagnosticoAutomatizado(diagnostico)) + '</div>'
+    + '</div>';
 }
 
 function btnAccionesEval(r) {
@@ -1767,7 +1800,7 @@ function verResultadoEval(id) {
       }
 
       configurarBtnPdfEfectivo(btnPdf, { id: id, total: e.total_resp, completa: d.completa });
-      renderTablaMmpiPreview(wrap, d.mmpi || {}, d.completa);
+      renderTablaMmpiPreview(wrap, d.mmpi || {}, d.completa, d.diagnostico);
       if (wrap && d.resp_map) {
         wrap.innerHTML += '<h4 style="font-size:12px;color:#004d3d;margin:16px 0 8px;">Matriz de respuestas (N° / V o F)</h4>'
           + '<div style="border:1px solid #e0e8e0;border-radius:8px;padding:10px;max-height:42vh;overflow:auto;">'
@@ -1815,7 +1848,7 @@ function verAvance(cip) {
           + '<div style="background:linear-gradient(90deg,#004d3d,#1a7a3a);height:100%;width:' + pct + '%;"></div>'
           + '</div></div>';
         if (d.mmpi) {
-          renderTablaMmpiPreview(wrap, d.mmpi, false, { omitirAviso: true });
+          renderTablaMmpiPreview(wrap, d.mmpi, false, null, { omitirAviso: true, omitirDiagnostico: true });
         }
         wrap.innerHTML += '<h4 style="font-size:12px;color:#004d3d;margin:16px 0 8px;">Matriz de respuestas — N° / V o F (566 ítems)</h4>'
           + '<div style="border:1px solid #e0e8e0;border-radius:8px;padding:10px;max-height:42vh;overflow:auto;">'

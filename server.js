@@ -11,7 +11,7 @@ const os       = require('os');
 const crypto   = require('crypto');
 const { Pool } = require('pg');
 const { Worker } = require('worker_threads');
-const { calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido } = require('./pdf_gen');
+const { calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido, significadoEscalaMMPI, diagnosticoFinalMMPI } = require('./pdf_gen');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -2192,9 +2192,19 @@ app.get('/admin/preview-resultado', requireAuth, async (req, res) => {
       mmpi.max_item = maxItemRespondido(parseRespuestasSafe(ev.respuestas));
     }
 
+    let diagnostico = null;
+    if (completa && !mmpi.no_calificable && mmpi.escalas && mmpi.escalas.length) {
+      const esMujer = mmpi.sexo === 'Mujer';
+      mmpi.escalas.forEach(function(esc) {
+        esc.significado = esc.t > 0 ? significadoEscalaMMPI(esc, esMujer) : null;
+      });
+      diagnostico = diagnosticoFinalMMPI(mmpi.escalas);
+    }
+
     res.json({
       ok: true,
       completa,
+      diagnostico,
       efectivo: {
         id: ev.id,
         grado: ev.grado || '',

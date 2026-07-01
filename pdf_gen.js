@@ -1565,5 +1565,7 @@ module.exports = {
   formatearArmamentoLegible,
   formatearGradoDisplay,
   maxItemRespondido,
-  ESCALAS_MMPI2
+  ESCALAS_MMPI2,
+  significadoEscalaMMPI,
+  diagnosticoFinalMMPI
 };
