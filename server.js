@@ -11,7 +11,7 @@ const os       = require('os');
 const crypto   = require('crypto');
 const { Pool } = require('pg');
 const { Worker } = require('worker_threads');
-const { calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido, significadoEscalaMMPI, diagnosticoFinalMMPI } = require('./pdf_gen');
+const { calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido, significadoEscalaMMPI, diagnosticoFinalMMPI, calcularDiagnosticoFila } = require('./pdf_gen');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -2334,29 +2334,90 @@ app.get('/pdf/efectivo', requireAuth, async (req, res) => {
   }
 });
 
+// ── Datos compartidos del informe por unidad (PDF de grupo y vista previa web) ─
+async function obtenerFilasInformeGrupo(req) {
+  const division  = (req.query.division  || '').toUpperCase();
+  const comisaria = (req.query.comisaria || '').toUpperCase();
+  const unidad    = (req.query.unidad    || '').toUpperCase();
+  if (!division && !comisaria && !unidad) return { error: 'Parámetro requerido', status: 400 };
+
+  const { where, params } = await buildWhere(req.query, 'WHERE 1=1', []);
+  const r = await pool.query(
+    `SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha FROM evaluaciones ${where} ORDER BY comisaria,nombres`, params);
+
+  const cipsEval = new Set(r.rows.map(function(row) { return (row.cip || '').toUpperCase(); }));
+  const progresos = await consultarProgresosParaPDFGrupo(req.admin, req.query);
+  const merged = normalizarFilasPDFGrupo(
+    r.rows.concat(
+      progresos.filter(function(p) { return !cipsEval.has((p.cip || '').toUpperCase()); })
+    )
+  );
+  if (!merged.length) return { error: 'Sin evaluaciones para este filtro', status: 404 };
+  return { label: division || comisaria || unidad, merged };
+}
+
+// ── GET /admin/preview-grupo — dashboard interactivo del informe por unidad ───
+app.get('/admin/preview-grupo', requireAuth, async (req, res) => {
+  try {
+    const datos = await obtenerFilasInformeGrupo(req);
+    if (datos.error) return res.status(datos.status).json({ ok: false, error: datos.error });
+
+    const riesgo = { BAJO: 0, MODERADO: 0, ALTO: 0 };
+    const alertasEscala = {};
+    let completos = 0;
+    const rows = datos.merged.map(function(ev) {
+      const d = calcularDiagnosticoFila(ev);
+      const stats = d.stats || { total: 0, v: 0, f: 0 };
+      let nivel = '';
+      let alertas = [];
+      if (d.completa) {
+        completos++;
+        if (d.diag) {
+          nivel = d.diag.nivel;
+          riesgo[nivel] = (riesgo[nivel] || 0) + 1;
+        }
+        alertas = d.alertCodes || [];
+        alertas.forEach(function(c) { alertasEscala[c] = (alertasEscala[c] || 0) + 1; });
+      }
+      return {
+        nombres: ev.nombres || '',
+        cip: ev.cip || '',
+        dni: ev.dni || '',
+        fecha: String(ev.fecha || '').substring(0, 10),
+        edad: resolverEdadFila(ev),
+        v: stats.v,
+        f: stats.f,
+        total: stats.total,
+        pct: Math.min(100, Math.round((stats.total / 566) * 100)),
+        completa: d.completa,
+        nivel: nivel,
+        alertas: alertas
+      };
+    });
+
+    res.json({
+      ok: true,
+      label: datos.label,
+      total: rows.length,
+      completos: completos,
+      incompletos: rows.length - completos,
+      riesgo: riesgo,
+      alertas_escala: alertasEscala,
+      rows: rows
+    });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 // ── GET /pdf/grupo?division=X | ?comisaria=X | ?unidad=X ─────────────────────
 app.get('/pdf/grupo', requireAuth, async (req, res) => {
   try {
-    const division  = (req.query.division  || '').toUpperCase();
-    const comisaria = (req.query.comisaria || '').toUpperCase();
-    const unidad    = (req.query.unidad    || '').toUpperCase();
-    if (!division && !comisaria && !unidad) return res.status(400).json({ error: 'Parámetro requerido' });
+    const datos = await obtenerFilasInformeGrupo(req);
+    if (datos.error) return res.status(datos.status).json({ error: datos.error });
 
-    const { where, params } = await buildWhere(req.query, 'WHERE 1=1', []);
-    const r = await pool.query(
-      `SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha FROM evaluaciones ${where} ORDER BY comisaria,nombres`, params);
-
-    const cipsEval = new Set(r.rows.map(function(row) { return (row.cip || '').toUpperCase(); }));
-    const progresos = await consultarProgresosParaPDFGrupo(req.admin, req.query);
-    const merged = normalizarFilasPDFGrupo(
-      r.rows.concat(
-        progresos.filter(function(p) { return !cipsEval.has((p.cip || '').toUpperCase()); })
-      )
-    );
-    if (!merged.length) return res.status(404).json({ error: 'Sin evaluaciones para este filtro' });
-
-    const label  = division || comisaria || unidad;
-    const buf    = await generarPDFAsync('generarPDFComisaria', [label, merged]);
+    const label  = datos.label;
+    const buf    = await generarPDFAsync('generarPDFComisaria', [label, datos.merged]);
     const nom    = 'Cuestionario_' + label.replace(/\s+/g,'_') + '.pdf';
     const inline = req.query.inline === '1' || req.query.ver === '1';
     res.setHeader('Content-Type', 'application/pdf');

@@ -116,6 +116,31 @@
       color:#004d3d;border-radius:4px;cursor:pointer;font-size:11px;}
     .pag-btn.on{background:#004d3d;color:#fff;}
 
+    /* ── DASHBOARD INFORME POR UNIDAD ── */
+    .gd-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px;}
+    .gd-kpi{background:#f4f8f5;border:1.5px solid #cfdad2;border-left:4px solid #004d3d;border-radius:8px;padding:10px 12px;}
+    .gd-kpi .n{font-size:24px;font-weight:800;line-height:1.1;}
+    .gd-kpi .l{font-size:10px;font-weight:700;color:#666;letter-spacing:.5px;text-transform:uppercase;margin-top:2px;}
+    .gd-sec{background:#004d3d;color:#fff;font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;padding:6px 10px;border-radius:6px;margin:4px 0 8px;}
+    .gd-riesgo{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:2px 0 10px;}
+    .gd-riesgo-card{border-radius:8px;color:#fff;text-align:center;padding:12px 8px;cursor:pointer;
+      transition:transform .15s,box-shadow .15s;border:2.5px solid transparent;user-select:none;}
+    .gd-riesgo-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.18);}
+    .gd-riesgo-card.sel{border-color:#1a1a1a;box-shadow:0 4px 12px rgba(0,0,0,.25);}
+    .gd-riesgo-card .n{font-size:26px;font-weight:800;}
+    .gd-riesgo-card .l{font-size:11px;font-weight:600;margin-top:2px;}
+    .gd-stack{display:flex;height:12px;border-radius:6px;overflow:hidden;border:1px solid #cfdad2;margin:0 0 12px;}
+    .gd-stack div{transition:width .5s;}
+    .gd-esc-row{display:flex;align-items:center;gap:8px;font-size:11px;margin:3px 0;}
+    .gd-esc-label{width:180px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333;}
+    .gd-esc-bar{flex:1;background:#eef2ef;border-radius:4px;height:10px;overflow:hidden;}
+    .gd-esc-fill{height:100%;border-radius:4px;transition:width .6s;}
+    .gd-esc-n{width:24px;text-align:right;font-weight:700;}
+    .gd-buscar{padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;width:100%;max-width:280px;margin:2px 0 10px;}
+    .gd-badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:10.5px;font-weight:800;color:#fff;white-space:nowrap;}
+    .gd-alertas{font-size:10px;color:#7a1a1a;margin-top:2px;}
+    @media(max-width:640px){.gd-esc-label{width:92px;font-size:10px;}}
+
     /* ── BOTONES ── */
     .btn{padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12.5px;
       font-weight:600;display:inline-flex;align-items:center;gap:5px;}
@@ -584,8 +609,8 @@
           <input id="f-bus" type="text" placeholder="CIP / DNI / Nombres..." style="min-width:200px;flex:1;"
             onkeydown="if(event.key==='Enter'){event.preventDefault();cargarTabla(1);}"/>
           <button class="btn btn-v" type="button" onclick="cargarTabla(1)"><i class="fas fa-search"></i> Buscar</button>
-          <button class="btn btn-o" id="btn-pdf-unidad" style="display:none;" type="button" onclick="verPdfUnidadRespuestas()" title="Abrir vista previa del PDF de la unidad seleccionada">
-            <i class="fas fa-eye"></i> Ver PDF unidad
+          <button class="btn btn-o" id="btn-pdf-unidad" style="display:none;" type="button" onclick="verPdfUnidadRespuestas()" title="Abrir el informe interactivo de la unidad seleccionada (dashboard + listado con diagnóstico)">
+            <i class="fas fa-chart-pie"></i> Ver informe unidad
           </button>
         </div>
         <p style="font-size:12px;color:#666;margin:-4px 0 10px;">Seleccione división, unidad o busque por CIP / DNI / nombre. Los registros aparecen solo tras filtrar. Use <strong>Ver</strong> en cada fila; el PDF individual (resultado o avance parcial) se descarga desde esa vista previa.</p>
@@ -1275,15 +1300,15 @@
   </div>
 </div>
 
-<!-- Modal vista previa PDF de unidad -->
+<!-- Modal informe por unidad — dashboard interactivo + descarga PDF -->
 <div class="modal" id="modal-pdf-grupo">
-  <div class="modal-box" style="width:min(980px,96vw);max-height:94vh;display:flex;flex-direction:column;padding-bottom:12px;">
-    <h3 id="modal-pdf-grupo-titulo"><i class="fas fa-file-pdf"></i> PDF de unidad</h3>
-    <p id="pdf-grupo-loading" style="font-size:12px;color:#666;margin:-6px 0 10px;">Cargando vista previa...</p>
-    <iframe id="pdf-grupo-iframe" title="Vista previa PDF" style="flex:1;width:100%;min-height:68vh;border:1.5px solid #dde8e5;border-radius:8px;background:#f4f4f4;"></iframe>
+  <div class="modal-box" style="width:min(1100px,97vw);max-height:94vh;display:flex;flex-direction:column;padding-bottom:12px;">
+    <h3 id="modal-pdf-grupo-titulo"><i class="fas fa-chart-pie"></i> Informe de unidad</h3>
+    <p id="pdf-grupo-loading" style="font-size:12px;color:#666;margin:-6px 0 10px;">Cargando informe...</p>
+    <div id="grupo-dash-wrap" style="flex:1;overflow:auto;border:1.5px solid #dde8e5;border-radius:8px;background:#fff;padding:14px;min-height:40vh;"></div>
     <div class="modal-footer" style="margin-top:12px;">
       <button class="btn" style="background:#999;color:#fff;" type="button" onclick="cerrarModalPdfGrupo()">Cerrar</button>
-      <a id="pdf-grupo-descargar" href="#" class="btn btn-r" style="display:none;text-decoration:none;" download><i class="fas fa-download"></i> Descargar PDF</a>
+      <button id="pdf-grupo-descargar" class="btn btn-r" style="display:none;" type="button" onclick="descargarPdfGrupoActual()"><i class="fas fa-download"></i> Descargar PDF</button>
     </div>
   </div>
 </div>
@@ -1659,59 +1684,211 @@ function onFiltroRespuestasChange() {
   else vaciarTablaRespuestas();
 }
 
-var _pdfGrupoBlobUrl = null;
+// ── Informe por unidad: dashboard interactivo (mismo contenido que el PDF) ────
+var _grupoDatos = null, _grupoFiltroNivel = '', _grupoUnidadActual = '';
+
+var GRUPO_ESCALAS = [
+  ['L', 'L — Mentira'], ['F', 'F — Infrecuencia'], ['K', 'K — Corrección'],
+  ['Hs', '1 — Hipocondría'], ['D', '2 — Depresión'], ['Hy', '3 — Histeria'],
+  ['Pd', '4 — Psicopatía'], ['Mf', '5 — Masculinidad/Feminidad'], ['Pa', '6 — Paranoia'],
+  ['Pt', '7 — Psicastenia'], ['Sc', '8 — Esquizofrenia'], ['Ma', '9 — Hipomanía'],
+  ['Si', '0 — Introversión Social']
+];
+var GRUPO_NIVELES = [
+  { key: 'BAJO', color: '#27ae60', label: 'Riesgo Bajo' },
+  { key: 'MODERADO', color: '#e67e22', label: 'Riesgo Moderado' },
+  { key: 'ALTO', color: '#c0392b', label: 'Riesgo Alto' }
+];
 
 function cerrarModalPdfGrupo() {
-  var iframe = document.getElementById('pdf-grupo-iframe');
-  if (iframe) iframe.src = 'about:blank';
-  if (_pdfGrupoBlobUrl) {
-    URL.revokeObjectURL(_pdfGrupoBlobUrl);
-    _pdfGrupoBlobUrl = null;
-  }
+  var wrap = document.getElementById('grupo-dash-wrap');
+  if (wrap) wrap.innerHTML = '';
+  _grupoDatos = null;
+  _grupoFiltroNivel = '';
   cerrarModal('modal-pdf-grupo');
+}
+
+function nivelInfoGrupo(row) {
+  if (!row.completa) return { label: 'EN AVANCE ' + row.pct + '%', color: '#b8860b', key: 'AVANCE' };
+  if (!row.nivel) return { label: 'SIN CALIFICAR', color: '#888888', key: 'SIN' };
+  var n = GRUPO_NIVELES.filter(function(x) { return x.key === row.nivel; })[0];
+  return { label: row.nivel, color: n ? n.color : '#555555', key: row.nivel };
 }
 
 function verPdfUnidadRespuestas() {
   var u = val('f-uni');
   if (!u) { alert('Seleccione una unidad en el filtro.'); return; }
+  _grupoUnidadActual = u;
+  _grupoFiltroNivel = '';
 
   var modal = document.getElementById('modal-pdf-grupo');
-  var iframe = document.getElementById('pdf-grupo-iframe');
   var titulo = document.getElementById('modal-pdf-grupo-titulo');
   var loading = document.getElementById('pdf-grupo-loading');
+  var wrap = document.getElementById('grupo-dash-wrap');
   var btnDl = document.getElementById('pdf-grupo-descargar');
 
-  if (titulo) titulo.innerHTML = '<i class="fas fa-file-pdf"></i> ' + escHtml(u);
-  if (iframe) iframe.src = 'about:blank';
-  if (loading) { loading.style.display = ''; loading.textContent = 'Cargando vista previa...'; }
-  if (btnDl) { btnDl.style.display = 'none'; btnDl.removeAttribute('href'); }
-  if (_pdfGrupoBlobUrl) { URL.revokeObjectURL(_pdfGrupoBlobUrl); _pdfGrupoBlobUrl = null; }
+  if (titulo) titulo.innerHTML = '<i class="fas fa-chart-pie"></i> Informe de unidad — ' + escHtml(u);
+  if (wrap) wrap.innerHTML = '';
+  if (loading) { loading.style.display = ''; loading.textContent = 'Cargando informe...'; }
+  if (btnDl) btnDl.style.display = 'none';
   if (modal) modal.classList.add('open');
 
-  fetch(API + '/pdf/grupo?unidad=' + encodeURIComponent(u) + '&inline=1', { headers: hdr() })
+  fetch(API + '/admin/preview-grupo?unidad=' + encodeURIComponent(u), { headers: hdr() })
+    .then(function(r) {
+      return r.json().catch(function() { return {}; });
+    })
+    .then(function(d) {
+      if (!d || !d.ok) throw new Error((d && d.error) || 'No hay evaluaciones para esta unidad.');
+      _grupoDatos = d;
+      if (loading) loading.style.display = 'none';
+      renderDashboardGrupo();
+      if (btnDl) btnDl.style.display = '';
+    })
+    .catch(function(e) {
+      alert(e.message || 'No se pudo cargar el informe.');
+      cerrarModalPdfGrupo();
+    });
+}
+
+function renderDashboardGrupo() {
+  var d = _grupoDatos;
+  var wrap = document.getElementById('grupo-dash-wrap');
+  if (!d || !wrap) return;
+  var h = '';
+
+  // KPIs
+  var kpis = [
+    { n: d.total, l: 'Evaluados', c: '#004d3d' },
+    { n: d.completos, l: 'Completos', c: '#1a7a3a' },
+    { n: d.incompletos, l: 'En avance', c: '#b8860b' },
+    { n: d.riesgo.ALTO || 0, l: 'Riesgo alto', c: '#c0392b' }
+  ];
+  h += '<div class="gd-kpis">' + kpis.map(function(k) {
+    return '<div class="gd-kpi" style="border-left-color:' + k.c + ';"><div class="n" style="color:' + k.c + ';">' + k.n + '</div><div class="l">' + k.l + '</div></div>';
+  }).join('') + '</div>';
+
+  // Índice de medición — nivel de riesgo
+  h += '<div class="gd-sec">Índice de medición — Nivel de riesgo institucional (sobre ' + d.completos + (d.completos === 1 ? ' evaluación completa' : ' evaluaciones completas') + ')</div>';
+  h += '<div class="gd-riesgo">' + GRUPO_NIVELES.map(function(n) {
+    var cant = d.riesgo[n.key] || 0;
+    var pct = d.completos ? Math.round((cant / d.completos) * 100) : 0;
+    var sel = _grupoFiltroNivel === n.key ? ' sel' : '';
+    return '<div class="gd-riesgo-card' + sel + '" style="background:' + n.color + ';" onclick="filtrarNivelGrupo(\'' + n.key + '\')" title="Clic para filtrar el listado por este nivel">'
+      + '<div class="n">' + cant + '</div><div class="l">' + n.label + ' (' + pct + '%)</div></div>';
+  }).join('') + '</div>';
+  if (d.completos > 0) {
+    h += '<div class="gd-stack">' + GRUPO_NIVELES.map(function(n) {
+      var cant = d.riesgo[n.key] || 0;
+      if (!cant) return '';
+      return '<div style="width:' + ((cant / d.completos) * 100) + '%;background:' + n.color + ';"></div>';
+    }).join('') + '</div>';
+  } else {
+    h += '<p style="font-size:11.5px;color:#856404;margin:2px 0 12px;">Aún no hay evaluaciones completas para calcular el índice de riesgo.</p>';
+  }
+
+  // Escalas en alerta
+  h += '<div class="gd-sec">Escalas en alerta — N° de efectivos con elevación clínica</div><div style="padding:2px 2px 8px;">';
+  var maxA = 1;
+  GRUPO_ESCALAS.forEach(function(e) { maxA = Math.max(maxA, (d.alertas_escala && d.alertas_escala[e[0]]) || 0); });
+  GRUPO_ESCALAS.forEach(function(e) {
+    var cant = (d.alertas_escala && d.alertas_escala[e[0]]) || 0;
+    var w = cant ? Math.max(2, (cant / maxA) * 100) : 0;
+    var color = cant >= Math.max(2, maxA) ? '#c0392b' : '#e67e22';
+    h += '<div class="gd-esc-row"><span class="gd-esc-label" title="' + escHtml(e[1]) + '">' + escHtml(e[1]) + '</span>'
+      + '<div class="gd-esc-bar"><div class="gd-esc-fill" style="width:' + w + '%;background:' + color + ';"></div></div>'
+      + '<span class="gd-esc-n" style="color:' + (cant ? '#7a1a1a' : '#999') + ';">' + cant + '</span></div>';
+  });
+  h += '</div>';
+
+  // Listado con diagnóstico al costado
+  h += '<div class="gd-sec" style="margin-top:10px;">Listado de efectivos evaluados — Diagnóstico individual</div>';
+  h += '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">'
+    + '<input class="gd-buscar" id="gd-buscar" type="text" placeholder="Filtrar por nombre, CIP o DNI..." oninput="aplicarFiltroGrupo()"/>'
+    + '<span id="gd-filtro-info" style="font-size:11px;color:#666;"></span></div>';
+  h += '<div style="overflow-x:auto;"><table class="t" style="min-width:760px;"><thead><tr>'
+    + '<th>N°</th><th>Apellidos y Nombres</th><th>CIP</th><th>DNI</th><th>Fecha</th><th>V</th><th>F</th><th>Avance</th><th>Edad</th><th>Nivel de Riesgo</th>'
+    + '</tr></thead><tbody id="gd-tbody">';
+  d.rows.forEach(function(r, i) {
+    var ni = nivelInfoGrupo(r);
+    var alertas = (r.completa && r.alertas && r.alertas.length)
+      ? '<div class="gd-alertas">Alertas: ' + escHtml(r.alertas.join(', ')) + '</div>' : '';
+    h += '<tr data-nivel="' + ni.key + '" data-idx="' + i + '">'
+      + '<td>' + (i + 1) + '</td>'
+      + '<td style="font-weight:700;">' + escHtml((r.nombres || '—').toUpperCase()) + '</td>'
+      + '<td>' + escHtml(r.cip || '—') + '</td>'
+      + '<td>' + escHtml(r.dni || '—') + '</td>'
+      + '<td>' + escHtml(r.fecha || '—') + '</td>'
+      + '<td>' + r.v + '</td><td>' + r.f + '</td>'
+      + '<td>' + r.total + '/566</td>'
+      + '<td>' + (r.edad || '—') + '</td>'
+      + '<td><span class="gd-badge" style="background:' + ni.color + ';">' + escHtml(ni.label) + '</span>' + alertas + '</td>'
+      + '</tr>';
+  });
+  h += '</tbody></table></div>';
+
+  wrap.innerHTML = h;
+  aplicarFiltroGrupo();
+}
+
+function filtrarNivelGrupo(nivel) {
+  _grupoFiltroNivel = _grupoFiltroNivel === nivel ? '' : nivel;
+  var b = document.getElementById('gd-buscar');
+  var txt = b ? b.value : '';
+  renderDashboardGrupo();
+  var b2 = document.getElementById('gd-buscar');
+  if (b2) b2.value = txt;
+  aplicarFiltroGrupo();
+}
+
+function aplicarFiltroGrupo() {
+  var tbody = document.getElementById('gd-tbody');
+  if (!tbody || !_grupoDatos) return;
+  var b = document.getElementById('gd-buscar');
+  var q = (b && b.value ? b.value : '').trim().toUpperCase();
+  var vis = 0, tot = 0;
+  Array.prototype.forEach.call(tbody.rows, function(tr) {
+    tot++;
+    var row = _grupoDatos.rows[parseInt(tr.getAttribute('data-idx'), 10)] || {};
+    var txt = ((row.nombres || '') + ' ' + (row.cip || '') + ' ' + (row.dni || '')).toUpperCase();
+    var okNivel = !_grupoFiltroNivel || tr.getAttribute('data-nivel') === _grupoFiltroNivel;
+    var okTxt = !q || txt.indexOf(q) !== -1;
+    var show = okNivel && okTxt;
+    tr.style.display = show ? '' : 'none';
+    if (show) vis++;
+  });
+  var info = document.getElementById('gd-filtro-info');
+  if (info) {
+    info.textContent = vis + ' de ' + tot + ' registro' + (tot === 1 ? '' : 's')
+      + (_grupoFiltroNivel ? ' — filtro: ' + _grupoFiltroNivel + ' (clic de nuevo en la tarjeta para quitar)' : '');
+  }
+}
+
+function descargarPdfGrupoActual() {
+  var u = _grupoUnidadActual;
+  if (!u) return;
+  var btn = document.getElementById('pdf-grupo-descargar');
+  if (btn) btn.disabled = true;
+  fetch(API + '/pdf/grupo?unidad=' + encodeURIComponent(u), { headers: hdr() })
     .then(function(r) {
       if (!r.ok) {
         return r.json().catch(function() { return {}; }).then(function(j) {
-          throw new Error((j && j.error) || 'No hay evaluaciones para esta unidad.');
+          throw new Error((j && j.error) || 'No se pudo generar el PDF.');
         });
       }
       return r.blob();
     })
     .then(function(blob) {
-      if (loading) loading.style.display = 'none';
-      _pdfGrupoBlobUrl = URL.createObjectURL(blob);
-      if (iframe) iframe.src = _pdfGrupoBlobUrl;
-      if (btnDl) {
-        btnDl.href = _pdfGrupoBlobUrl;
-        btnDl.download = 'Cuestionario_' + u.replace(/\s+/g, '_') + '.pdf';
-        btnDl.style.display = '';
-      }
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'Cuestionario_' + u.replace(/\s+/g, '_') + '.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function() { URL.revokeObjectURL(url); }, 4000);
     })
-    .catch(function(e) {
-      if (loading) loading.textContent = '';
-      alert(e.message || 'No se pudo cargar el PDF.');
-      cerrarModalPdfGrupo();
-    });
+    .catch(function(e) { alert(e.message || 'No se pudo descargar el PDF.'); })
+    .then(function() { if (btn) btn.disabled = false; });
 }
 
 function eliminarRegistroEval(id, cip, soloProgreso, nombre) {

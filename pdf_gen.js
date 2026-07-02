@@ -94,24 +94,9 @@ function resolverEdad(ev) {
   return edad > 0 ? edad : null;
 }
 
+// N°, Nombres, CIP, DNI, Fecha, V, F, Avance, Edad, Nivel de Riesgo
 function calcularAnchurasTabla(W) {
-  const ratios = [0.045, 0.36, 0.095, 0.095, 0.115, 0.055, 0.055, 0.12, 0.06];
-  const cols = ratios.map(function(r) { return Math.floor(W * r); });
-  const sum = cols.reduce(function(a, b) { return a + b; }, 0);
-  cols[1] += W - sum;
-  return cols;
-}
-
-function calcularAnchosTablaEscalas(W) {
-  const ratios = [0.28, 0.144, 0.144, 0.144, 0.144, 0.144];
-  const cols = ratios.map(function(r) { return Math.floor(W * r); });
-  const sum = cols.reduce(function(a, b) { return a + b; }, 0);
-  cols[0] += W - sum;
-  return cols;
-}
-
-function calcularAnchosTablaDetalle(W) {
-  const ratios = [0.045, 0.31, 0.105, 0.145, 0.145, 0.25];
+  const ratios = [0.04, 0.235, 0.09, 0.09, 0.095, 0.045, 0.045, 0.085, 0.055, 0.22];
   const cols = ratios.map(function(r) { return Math.floor(W * r); });
   const sum = cols.reduce(function(a, b) { return a + b; }, 0);
   cols[1] += W - sum;
@@ -128,10 +113,14 @@ function dibujarFilaTabla(doc, x0, y, W, cols, celdas, opts) {
   const bg = esHeader ? COLOR_VERDE : (par ? '#f4f8f5' : '#ffffff');
   const borde = esHeader ? '#3d7a62' : '#cfdad2';
 
+  const bolds = (opts && opts.bolds) || null;
+  const colores = (opts && opts.colors) || null;
+  const wrapCols = (opts && opts.wrapCols) || null;
+
   let rowH = minRowH;
   if (!esHeader) {
     celdas.forEach(function(c, i) {
-      doc.font(i === 1 ? 'Helvetica-Bold' : 'Helvetica').fontSize(fontSize);
+      doc.font((i === 1 || (bolds && bolds[i])) ? 'Helvetica-Bold' : 'Helvetica').fontSize(fontSize);
       const h = doc.heightOfString(String(c == null ? '—' : c), { width: cols[i] - padX * 2 });
       rowH = Math.max(rowH, h + padY * 2);
     });
@@ -151,17 +140,18 @@ function dibujarFilaTabla(doc, x0, y, W, cols, celdas, opts) {
   celdas.forEach(function(c, i) {
     const centrado = i === 0 || i >= 5;
     const txt = String(c == null ? '—' : c);
-    doc.fillColor(esHeader ? '#ffffff' : (i === 0 ? COLOR_VERDE : COLOR_NEGRO))
-       .font((esHeader || i === 1) ? 'Helvetica-Bold' : 'Helvetica')
+    doc.fillColor(esHeader ? '#ffffff' : ((colores && colores[i]) || (i === 0 ? COLOR_VERDE : COLOR_NEGRO)))
+       .font((esHeader || i === 1 || (bolds && bolds[i])) ? 'Helvetica-Bold' : 'Helvetica')
        .fontSize(fontSize);
     const textW = cols[i] - padX * 2;
     const textH = doc.heightOfString(txt, { width: textW });
     const ty = y + Math.max(padY, (rowH - textH) / 2);
+    const envolver = !esHeader && (i === 1 || (wrapCols && wrapCols[i]));
     doc.text(txt, tx + padX, ty, {
       width: textW,
       align: centrado ? 'center' : 'left',
-      lineBreak: !esHeader && i === 1,
-      ellipsis: esHeader || i !== 1
+      lineBreak: envolver,
+      ellipsis: !envolver
     });
     tx += cols[i];
   });
@@ -457,8 +447,143 @@ function dibujarPieLista(doc, pagina) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PDF POR COMISARÍA / UNIDAD — tabla resumida (sin hojas en blanco)
+// PDF POR COMISARÍA / UNIDAD — dashboard de riesgo + listado con diagnóstico
+// (mismo contenido que la vista web del panel; sin hojas en blanco)
 // ─────────────────────────────────────────────────────────────────────────────
+const NIVEL_RIESGO_COLORES = { BAJO: '#27ae60', MODERADO: '#e67e22', ALTO: '#c0392b' };
+const CODIGOS_ESCALAS_MMPI2 = ['L', 'F', 'K', 'Hs', 'D', 'Hy', 'Pd', 'Mf', 'Pa', 'Pt', 'Sc', 'Ma', 'Si'];
+
+// Índice de medición de la unidad: distribución de niveles de riesgo,
+// escalas en alerta y diagnóstico por evaluado.
+function resumenDiagnosticoUnidad(lista) {
+  const detalle = (lista || []).map(function(ev) { return { ev: ev, res: calcularDiagnosticoFila(ev) }; });
+  const completos = detalle.filter(function(d) { return d.res.completa; });
+  const riesgo = { BAJO: 0, MODERADO: 0, ALTO: 0 };
+  const alertasEscala = {};
+  CODIGOS_ESCALAS_MMPI2.forEach(function(c) { alertasEscala[c] = 0; });
+  completos.forEach(function(d) {
+    if (d.res.diag) riesgo[d.res.diag.nivel] = (riesgo[d.res.diag.nivel] || 0) + 1;
+    (d.res.alertCodes || []).forEach(function(c) {
+      if (alertasEscala[c] != null) alertasEscala[c]++;
+    });
+  });
+  return {
+    detalle: detalle,
+    total: detalle.length,
+    completos: completos.length,
+    incompletos: detalle.length - completos.length,
+    riesgo: riesgo,
+    alertasEscala: alertasEscala
+  };
+}
+
+// Etiqueta y color del diagnóstico de una fila (nivel de riesgo o avance)
+function nivelRiesgoFila(res) {
+  if (!res.completa) {
+    const pct = Math.min(100, Math.round((((res.stats && res.stats.total) || 0) / TOTAL_PREGUNTAS) * 100));
+    return { texto: 'EN AVANCE ' + pct + '%', nivel: '', color: '#b8860b' };
+  }
+  if (!res.diag) return { texto: 'SIN CALIFICAR', nivel: '', color: '#888888' };
+  const codes = res.alertCodes && res.alertCodes.length ? ' · ' + res.alertCodes.join(', ') : '';
+  return {
+    texto: res.diag.nivel + codes,
+    nivel: res.diag.nivel,
+    color: NIVEL_RIESGO_COLORES[res.diag.nivel] || COLOR_NEGRO
+  };
+}
+
+// Dashboard de la unidad: KPIs, índice de riesgo y escalas en alerta
+function dibujarDashboardUnidadPDF(doc, x0, y, W, resumen) {
+  function barraSeccion(t) {
+    doc.rect(x0, y, W, 16).fill(COLOR_VERDE);
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9)
+       .text(t, x0 + 6, y + 4, { width: W - 12, lineBreak: false, ellipsis: true });
+    y += 20;
+  }
+
+  // ── KPIs ────────────────────────────────────────────────────────────────────
+  const kpis = [
+    { n: resumen.total,          l: 'EVALUADOS',    c: COLOR_VERDE },
+    { n: resumen.completos,      l: 'COMPLETOS',    c: '#1a7a3a' },
+    { n: resumen.incompletos,    l: 'EN AVANCE',    c: '#b8860b' },
+    { n: resumen.riesgo.ALTO || 0, l: 'RIESGO ALTO', c: '#c0392b' }
+  ];
+  const gap = 8;
+  const kw = (W - gap * 3) / 4;
+  kpis.forEach(function(k, i) {
+    const bx = x0 + i * (kw + gap);
+    doc.rect(bx, y, kw, 42).fill('#f4f8f5').stroke('#cfdad2');
+    doc.rect(bx, y, 3, 42).fill(k.c);
+    doc.fillColor(k.c).font('Helvetica-Bold').fontSize(16)
+       .text(String(k.n), bx + 10, y + 7, { width: kw - 14, lineBreak: false });
+    doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7.5)
+       .text(k.l, bx + 10, y + 27, { width: kw - 14, lineBreak: false });
+  });
+  y += 50;
+
+  // ── Índice de medición — nivel de riesgo ────────────────────────────────────
+  barraSeccion('ÍNDICE DE MEDICIÓN — NIVEL DE RIESGO INSTITUCIONAL (sobre ' + resumen.completos + (resumen.completos === 1 ? ' evaluación completa' : ' evaluaciones completas') + ')');
+
+  const nivelesInfo = [
+    { key: 'BAJO', color: '#27ae60', label: 'Riesgo Bajo' },
+    { key: 'MODERADO', color: '#e67e22', label: 'Riesgo Moderado' },
+    { key: 'ALTO', color: '#c0392b', label: 'Riesgo Alto' }
+  ];
+  const boxW = (W - 16) / 3;
+  nivelesInfo.forEach(function(n, i) {
+    const cant = resumen.riesgo[n.key] || 0;
+    const pct = resumen.completos ? Math.round((cant / resumen.completos) * 100) : 0;
+    const bx = x0 + i * (boxW + 8);
+    doc.rect(bx, y, boxW, 40).fill(n.color);
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(16)
+       .text(String(cant), bx, y + 5, { width: boxW, align: 'center', lineBreak: false });
+    doc.font('Helvetica').fontSize(8)
+       .text(n.label + ' (' + pct + '%)', bx, y + 24, { width: boxW, align: 'center', lineBreak: false });
+  });
+  y += 46;
+
+  // Barra apilada de proporciones
+  if (resumen.completos > 0) {
+    let bx = x0;
+    nivelesInfo.forEach(function(n) {
+      const cant = resumen.riesgo[n.key] || 0;
+      if (!cant) return;
+      const segW = (cant / resumen.completos) * W;
+      doc.rect(bx, y, segW, 9).fill(n.color);
+      bx += segW;
+    });
+    doc.rect(x0, y, W, 9).stroke('#cfdad2');
+    y += 16;
+  } else {
+    doc.fillColor(COLOR_GRIS).font('Helvetica-Oblique').fontSize(7.5)
+       .text('Aún no hay evaluaciones completas para calcular el índice de riesgo.', x0, y, { width: W, lineBreak: false });
+    y += 14;
+  }
+
+  // ── Escalas en alerta ───────────────────────────────────────────────────────
+  barraSeccion('ESCALAS EN ALERTA — N° DE EFECTIVOS CON ELEVACIÓN CLÍNICA');
+  const maxAlert = Math.max(1, Math.max.apply(null, CODIGOS_ESCALAS_MMPI2.map(function(c) { return resumen.alertasEscala[c] || 0; })));
+  const labelW = 150;
+  const barMaxW = W - labelW - 34;
+  const rowH = 12;
+  CODIGOS_ESCALAS_MMPI2.forEach(function(code, i) {
+    const cant = resumen.alertasEscala[code] || 0;
+    const ry = y + i * rowH;
+    doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(7)
+       .text(ESCALAS_MMPI2[i], x0, ry + 2, { width: labelW - 6, lineBreak: false, ellipsis: true });
+    doc.rect(x0 + labelW, ry + 1.5, barMaxW, 8).fill('#eef2ef');
+    if (cant > 0) {
+      const bw = Math.max(3, (cant / maxAlert) * barMaxW);
+      doc.rect(x0 + labelW, ry + 1.5, bw, 8).fill(cant >= Math.max(2, maxAlert) ? '#c0392b' : '#e67e22');
+    }
+    doc.fillColor(cant > 0 ? '#7a1a1a' : COLOR_GRIS).font('Helvetica-Bold').fontSize(7)
+       .text(String(cant), x0 + labelW + barMaxW + 6, ry + 2, { width: 24, lineBreak: false });
+  });
+  y += CODIGOS_ESCALAS_MMPI2.length * rowH + 8;
+
+  return y;
+}
+
 function generarPDFComisaria(comisaria, evaluaciones) {
   return new Promise(function(resolve) {
     const doc = new PDFDocument({
@@ -473,10 +598,11 @@ function generarPDFComisaria(comisaria, evaluaciones) {
     const x0 = 28;
     const W  = A4_W - 56;
     const cols = calcularAnchurasTabla(W);
-    const heads = ['N°', 'Apellidos y Nombres', 'CIP', 'DNI', 'Fecha', 'V', 'F', 'Avance', 'Edad'];
+    const heads = ['N°', 'Apellidos y Nombres', 'CIP', 'DNI', 'Fecha', 'V', 'F', 'Avance', 'Edad', 'Nivel de Riesgo'];
     const marginBottom = 34;
     const maxRowY = A4_H - marginBottom - 24;
     const lista = evaluaciones || [];
+    const resumen = resumenDiagnosticoUnidad(lista);
     let pagina = 0;
 
     function cerrarPaginaActual() {
@@ -511,16 +637,33 @@ function generarPDFComisaria(comisaria, evaluaciones) {
       return startY;
     }
 
-    let rowY = abrirPagina({
-      titulo: 'LISTADO DE EFECTIVOS EVALUADOS',
-      subtitulo: 'Total: ' + lista.length + ' registro' + (lista.length === 1 ? '' : 's'),
-      heads: heads, cols: cols
+    // ── Página 1 — dashboard de la unidad ───────────────────────────────────────
+    let y = abrirPagina({
+      titulo: 'INFORME PSICOLÓGICO POR UNIDAD — MMPI-2',
+      subtitulo: 'Total: ' + resumen.total + ' registro' + (resumen.total === 1 ? '' : 's')
+        + ' · ' + resumen.completos + ' completo' + (resumen.completos === 1 ? '' : 's')
+        + ' · ' + resumen.incompletos + ' en avance'
     });
+    y = dibujarDashboardUnidadPDF(doc, x0, y, W, resumen) + 4;
 
-    lista.forEach(function(ev, idx) {
-      const stats = contarRespuestas(ev);
+    // ── Listado con diagnóstico al costado (continúa en la misma hoja) ──────────
+    let rowY;
+    if (y + 60 > maxRowY) {
+      rowY = abrirPagina({ heads: heads, cols: cols, continuacionTitulo: ' — Listado de efectivos evaluados' });
+    } else {
+      doc.rect(x0, y, W, 16).fill(COLOR_VERDE);
+      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9)
+         .text('LISTADO DE EFECTIVOS EVALUADOS — DIAGNÓSTICO INDIVIDUAL', x0 + 6, y + 4, { width: W - 12, lineBreak: false });
+      y += 18;
+      rowY = y + dibujarFilaTabla(doc, x0, y, W, cols, heads, { header: true, rowH: 20 });
+    }
+
+    resumen.detalle.forEach(function(d, idx) {
+      const ev = d.ev;
+      const stats = d.res.stats || contarRespuestas(ev);
       const fecha = String(ev.fecha || '—').substring(0, 10);
       const edad = resolverEdad(ev);
+      const riesgo = nivelRiesgoFila(d.res);
       const fila = [
         String(idx + 1),
         String(ev.nombres || '—').toUpperCase(),
@@ -530,133 +673,28 @@ function generarPDFComisaria(comisaria, evaluaciones) {
         String(stats.v),
         String(stats.f),
         stats.total + '/566',
-        edad ? String(edad) : '—'
+        edad ? String(edad) : '—',
+        riesgo.texto
       ];
+      const opciones = {
+        par: idx % 2 === 0,
+        rowH: 17,
+        colors: { 9: riesgo.color },
+        bolds: { 9: true },
+        wrapCols: { 9: true }
+      };
       if (rowY + 17 > maxRowY) rowY = abrirPagina({ heads: heads, cols: cols });
-      rowY += dibujarFilaTabla(doc, x0, rowY, W, cols, fila, { par: idx % 2 === 0, rowH: 17 });
+      rowY += dibujarFilaTabla(doc, x0, rowY, W, cols, fila, opciones);
     });
 
     if (!lista.length) {
       dibujarFilaTabla(doc, x0, rowY, W, cols,
-        ['—', 'Sin registros para este filtro', '—', '—', '—', '—', '—', '—', '—'],
+        ['—', 'Sin registros para este filtro', '—', '—', '—', '—', '—', '—', '—', '—'],
         { par: false, rowH: 17 });
-    }
-
-    if (lista.length) {
-      dibujarInformeEstadisticoUnidad(doc, lista, { x0: x0, W: W, maxRowY: maxRowY, abrirPagina: abrirPagina });
     }
 
     cerrarPaginaActual();
     doc.end();
-  });
-}
-
-// ── Informe estadístico — diagnóstico MMPI-2 contabilizado por escala + ───────
-// ── detalle nominal (nombres completos) de quienes respondieron en la unidad ──
-function dibujarInformeEstadisticoUnidad(doc, lista, ctx) {
-  const x0 = ctx.x0, W = ctx.W, maxRowY = ctx.maxRowY, abrirPagina = ctx.abrirPagina;
-
-  const detalle = lista.map(function(ev) { return { ev: ev, res: calcularDiagnosticoFila(ev) }; });
-  const totalEvaluados = lista.length;
-  const completos = detalle.filter(function(d) { return d.res.completa; });
-  const incompletos = totalEvaluados - completos.length;
-
-  const riesgoCounts = { BAJO: 0, MODERADO: 0, ALTO: 0 };
-  const escalaCounts = {};
-  ESCALAS_MMPI2.forEach(function(nombre) {
-    escalaCounts[nombre] = { MUY_ELEVADO: 0, ELEVADO: 0, LEVE: 0, NORMAL: 0, BAJO: 0 };
-  });
-
-  completos.forEach(function(d) {
-    if (d.res.diag) riesgoCounts[d.res.diag.nivel] = (riesgoCounts[d.res.diag.nivel] || 0) + 1;
-    if (d.res.mmpi && d.res.mmpi.escalas) {
-      d.res.mmpi.escalas.forEach(function(esc) {
-        if (!escalaCounts[esc.nombre] || esc.t <= 0) return;
-        const label = interpretarT(esc.t).label;
-        if (label === 'MUY ELEVADO') escalaCounts[esc.nombre].MUY_ELEVADO++;
-        else if (label === 'ELEVADO') escalaCounts[esc.nombre].ELEVADO++;
-        else if (label === 'LEVE ELEV.') escalaCounts[esc.nombre].LEVE++;
-        else if (label === 'NORMAL') escalaCounts[esc.nombre].NORMAL++;
-        else if (label === 'BAJO') escalaCounts[esc.nombre].BAJO++;
-      });
-    }
-  });
-
-  // ── Página de resumen ──────────────────────────────────────────────────────
-  let y = abrirPagina({
-    titulo: 'INFORME ESTADÍSTICO — DIAGNÓSTICO MMPI-2',
-    subtitulo: totalEvaluados + ' evaluado' + (totalEvaluados === 1 ? '' : 's') + ' · ' + completos.length + ' completo' + (completos.length === 1 ? '' : 's') + ' · ' + incompletos + ' en avance'
-  });
-
-  doc.rect(x0, y, W, 16).fill(COLOR_VERDE);
-  doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9)
-     .text('DISTRIBUCIÓN DE RIESGO INSTITUCIONAL (sobre evaluaciones completas)', x0 + 6, y + 4, { width: W - 12, lineBreak: false });
-  y += 20;
-
-  const nivelesInfo = [
-    { key: 'BAJO', color: '#27ae60', label: 'Riesgo Bajo' },
-    { key: 'MODERADO', color: '#e67e22', label: 'Riesgo Moderado' },
-    { key: 'ALTO', color: '#c0392b', label: 'Riesgo Alto' }
-  ];
-  const boxW = (W - 16) / 3;
-  nivelesInfo.forEach(function(n, i) {
-    const n_ = riesgoCounts[n.key] || 0;
-    const pct = completos.length ? Math.round((n_ / completos.length) * 100) : 0;
-    const bx = x0 + i * (boxW + 8);
-    doc.rect(bx, y, boxW, 40).fill(n.color);
-    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(16)
-       .text(String(n_), bx, y + 5, { width: boxW, align: 'center', lineBreak: false });
-    doc.font('Helvetica').fontSize(8)
-       .text(n.label + ' (' + pct + '%)', bx, y + 24, { width: boxW, align: 'center', lineBreak: false });
-  });
-  y += 52;
-
-  doc.rect(x0, y, W, 16).fill(COLOR_VERDE);
-  doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9)
-     .text('CONTEO POR ESCALA (evaluaciones completas, según puntaje T)', x0 + 6, y + 4, { width: W - 12, lineBreak: false });
-  y += 20;
-
-  const colsEsc = calcularAnchosTablaEscalas(W);
-  const headsEsc = ['Escala', 'Muy Elevado', 'Elevado', 'Leve Elev.', 'Normal', 'Bajo'];
-  y += dibujarFilaTabla(doc, x0, y, W, colsEsc, headsEsc, { header: true, rowH: 18 });
-
-  ESCALAS_MMPI2.forEach(function(nombre, idx) {
-    const c = escalaCounts[nombre];
-    if (y + 15 > maxRowY) {
-      y = abrirPagina({ titulo: 'INFORME ESTADÍSTICO — DIAGNÓSTICO MMPI-2', continuacionTitulo: ' — Conteo por escala (continuación)' });
-      y += dibujarFilaTabla(doc, x0, y, W, colsEsc, headsEsc, { header: true, rowH: 18 });
-    }
-    y += dibujarFilaTabla(doc, x0, y, W, colsEsc,
-      [nombre, String(c.MUY_ELEVADO), String(c.ELEVADO), String(c.LEVE), String(c.NORMAL), String(c.BAJO)],
-      { par: idx % 2 === 0, rowH: 15 });
-  });
-
-  // ── Detalle nominal por evaluado ─────────────────────────────────────────────
-  const colsDet = calcularAnchosTablaDetalle(W);
-  const headsDet = ['N°', 'Apellidos y Nombres', 'CIP', 'Estado', 'Nivel de Riesgo', 'Escalas en Alerta'];
-  let rowY = abrirPagina({
-    titulo: 'DETALLE POR EVALUADO — DIAGNÓSTICO MMPI-2',
-    subtitulo: 'Nombres completos de quienes respondieron en la unidad',
-    heads: headsDet, cols: colsDet
-  });
-
-  detalle.forEach(function(d, idx) {
-    const ev = d.ev, res = d.res;
-    const estado = res.completa ? 'Completo' : ('Avance ' + Math.round((res.stats.total / TOTAL_PREGUNTAS) * 100) + '%');
-    const nivel = res.completa && res.diag ? res.diag.nivel : '—';
-    const alertas = res.completa && res.alertCodes && res.alertCodes.length ? res.alertCodes.join(', ') : (res.completa ? 'Ninguna' : '—');
-    const fila = [
-      String(idx + 1),
-      String(ev.nombres || '—').toUpperCase(),
-      String(ev.cip || '—').toUpperCase(),
-      estado,
-      nivel,
-      alertas
-    ];
-    if (rowY + 17 > maxRowY) {
-      rowY = abrirPagina({ heads: headsDet, cols: colsDet, continuacionTitulo: ' — Detalle por evaluado (continuación)' });
-    }
-    rowY += dibujarFilaTabla(doc, x0, rowY, W, colsDet, fila, { par: idx % 2 === 0, rowH: 17 });
   });
 }
 
@@ -1576,5 +1614,8 @@ module.exports = {
   maxItemRespondido,
   ESCALAS_MMPI2,
   significadoEscalaMMPI,
-  diagnosticoFinalMMPI
+  diagnosticoFinalMMPI,
+  calcularDiagnosticoFila,
+  resumenDiagnosticoUnidad,
+  nivelRiesgoFila
 };
