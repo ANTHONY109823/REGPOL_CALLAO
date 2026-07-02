@@ -5,6 +5,7 @@
 
 const express  = require('express');
 const cors     = require('cors');
+const compression = require('compression');
 const path     = require('path');
 const fs       = require('fs');
 const os       = require('os');
@@ -83,6 +84,39 @@ function generarPDFAsync(fn, args) {
 
 const authCache = new Map();
 const AUTH_CACHE_TTL = 5 * 60 * 1000;
+
+// ── Sesiones de panel: token aleatorio → admin (la contraseña ya no viaja ni ────
+// se guarda en el navegador; el token es opaco y expira con inactividad)
+const sesiones = new Map();
+const SESION_TTL = 12 * 60 * 60 * 1000;
+
+// ── Límite de intentos de login por IP (freno a fuerza bruta) ──────────────────
+const loginIntentos = new Map();
+const LOGIN_MAX_FALLOS = 10;
+const LOGIN_VENTANA_MS = 10 * 60 * 1000;
+
+function loginBloqueado(ip) {
+  const reg = loginIntentos.get(ip);
+  if (!reg) return false;
+  if (Date.now() - reg.desde > LOGIN_VENTANA_MS) { loginIntentos.delete(ip); return false; }
+  return reg.fallos >= LOGIN_MAX_FALLOS;
+}
+
+function registrarFalloLogin(ip) {
+  const reg = loginIntentos.get(ip);
+  if (!reg || Date.now() - reg.desde > LOGIN_VENTANA_MS) {
+    loginIntentos.set(ip, { fallos: 1, desde: Date.now() });
+  } else {
+    reg.fallos += 1;
+  }
+}
+
+setInterval(function() {
+  const ahora = Date.now();
+  sesiones.forEach(function(s, t) { if (s.exp <= ahora) sesiones.delete(t); });
+  loginIntentos.forEach(function(r, ip) { if (ahora - r.desde > LOGIN_VENTANA_MS) loginIntentos.delete(ip); });
+  authCache.forEach(function(c, t) { if (c.exp <= ahora) authCache.delete(t); });
+}, 60 * 60 * 1000).unref();
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const sha256 = s => crypto.createHash('sha256').update(s).digest('hex');
@@ -365,13 +399,21 @@ async function initDB() {
     );
   `);
 
-  // Admins por defecto
+  // Admins por defecto — la contraseña inicial se toma de variables de entorno.
+  // Solo se insertan si el usuario no existe (ON CONFLICT DO NOTHING); las cuentas
+  // ya creadas conservan su contraseña y se cambian desde el panel de usuarios.
+  const seedPass = (envVar, fallback) => {
+    const v = (process.env[envVar] || '').trim();
+    if (v) return v;
+    console.warn('AVISO: usando contraseña semilla por defecto para ' + envVar + '. Defina la variable de entorno y cambie la contraseña desde el panel.');
+    return fallback;
+  };
   const adminsDefecto = [
-    ['admin_unitic',    sha256('AdminUNITIC2026'), 'unitic',   'UNITIC REGPOL Callao', null, '[]'],
-    ['psicologia',      sha256('Psico2026!'),      'usuario',  'Oficina de Psicología',  null, '["evaluaciones","descargas"]'],
-    ['convenios',       sha256('Convenios2026!'),  'usuario',  'Oficina de Convenios',   null, '["cms_convenios"]'],
-    ['educacion',       sha256('Educacion2026!'),  'usuario',  'Oficina de Educación',   null, '["cms_cursos"]'],
-    ['imagen',          sha256('Imagen2026!'),     'usuario',  'Oficina de Imagen',      null, '["cms_inicio","cms_resena","cms_labor","cms_novedades"]'],
+    ['admin_unitic', sha256(seedPass('SEED_PASS_UNITIC',     'AdminUNITIC2026')), 'unitic',  'UNITIC REGPOL Callao',   null, '[]'],
+    ['psicologia',   sha256(seedPass('SEED_PASS_PSICOLOGIA', 'Psico2026!')),      'usuario', 'Oficina de Psicología',  null, '["evaluaciones","descargas"]'],
+    ['convenios',    sha256(seedPass('SEED_PASS_CONVENIOS',  'Convenios2026!')),  'usuario', 'Oficina de Convenios',   null, '["cms_convenios"]'],
+    ['educacion',    sha256(seedPass('SEED_PASS_EDUCACION',  'Educacion2026!')),  'usuario', 'Oficina de Educación',   null, '["cms_cursos"]'],
+    ['imagen',       sha256(seedPass('SEED_PASS_IMAGEN',     'Imagen2026!')),     'usuario', 'Oficina de Imagen',      null, '["cms_inicio","cms_resena","cms_labor","cms_novedades"]'],
   ];
   for (const [u,h,r,n,un,p] of adminsDefecto) {
     await pool.query(
@@ -831,6 +873,11 @@ app.get('/health', function(req, res) {
 });
 
 app.use(cors());
+app.use(compression()); // gzip para HTML/JS/JSON — acelera panel y formulario
+app.use(function(req, res, next) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+});
 app.use(express.json({ limit: '12mb' }));
 app.use(staticBufferado);
 app.use(express.static(PUBLIC_DIR, {
@@ -855,6 +902,26 @@ async function requireAuth(req, res, next) {
   try {
     const token = req.headers['x-admin-token'] || req.query.token || '';
     if (!token) return res.status(401).json({ ok: false, error: 'Sin token' });
+
+    // 1) Token opaco de sesión (esquema actual)
+    const ses = sesiones.get(token);
+    if (ses && ses.exp > Date.now()) {
+      if (ses.dbExp <= Date.now()) {
+        // Refresca rol/permisos desde BD; si el usuario fue eliminado, cierra sesión
+        const rs = await pool.query('SELECT * FROM admins WHERE id=$1', [ses.adminId]);
+        if (!rs.rows.length) {
+          sesiones.delete(token);
+          return res.status(403).json({ ok: false, error: 'Sesión finalizada' });
+        }
+        ses.admin = rs.rows[0];
+        ses.dbExp = Date.now() + AUTH_CACHE_TTL;
+      }
+      ses.exp = Date.now() + SESION_TTL;
+      req.admin = ses.admin;
+      return next();
+    }
+
+    // 2) Compatibilidad con tokens antiguos (sesiones abiertas antes del cambio)
     const cached = authCache.get(token);
     if (cached && cached.exp > Date.now()) {
       req.admin = cached.admin;
@@ -862,6 +929,7 @@ async function requireAuth(req, res, next) {
     }
     const decoded = Buffer.from(token, 'base64').toString();
     const colon   = decoded.indexOf(':');
+    if (colon < 1) return res.status(403).json({ ok: false, error: 'Sesión expirada' });
     const usuario = decoded.substring(0, colon);
     const pass    = decoded.substring(colon + 1);
     const r = await pool.query('SELECT * FROM admins WHERE usuario=$1 AND passhash=$2', [usuario, sha256(pass)]);
@@ -1019,12 +1087,22 @@ app.put('/config', requireAuth, async (req, res) => {
 // ── POST /admin/login ──────────────────────────────────────────────────────────
 app.post('/admin/login', async (req, res) => {
   try {
+    const ip = req.ip || req.socket.remoteAddress || '';
+    if (loginBloqueado(ip)) {
+      return res.status(429).json({ ok: false, error: 'Demasiados intentos. Espere unos minutos y vuelva a intentar.' });
+    }
     const { usuario, password } = req.body;
     const r = await pool.query('SELECT * FROM admins WHERE usuario=$1 AND passhash=$2',
       [usuario, sha256(password)]);
-    if (!r.rows.length) return res.json({ ok: false, error: 'Credenciales incorrectas' });
+    if (!r.rows.length) {
+      registrarFalloLogin(ip);
+      return res.json({ ok: false, error: 'Credenciales incorrectas' });
+    }
+    loginIntentos.delete(ip);
     const a = r.rows[0];
-    const token = Buffer.from(`${usuario}:${password}`).toString('base64');
+    // Token opaco de sesión: no contiene ni permite recuperar la contraseña
+    const token = crypto.randomBytes(24).toString('hex');
+    sesiones.set(token, { adminId: a.id, admin: a, exp: Date.now() + SESION_TTL, dbExp: Date.now() + AUTH_CACHE_TTL });
     res.json({ ok: true, token, rol: a.rol, nombre: a.nombre, unidad: a.unidad, permisos: normalizarPermisos(a.permisos) });
   } catch (e) {
     res.json({ ok: false, error: e.message });

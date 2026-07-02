@@ -166,10 +166,16 @@ Inicialización en `initDB()` al arrancar `server.js`. Sin migraciones externas.
 ## 12. Seguridad
 
 - Contraseñas admin: SHA-256
+- Sesiones del panel con token aleatorio opaco (no contiene credenciales); expira a las 12 h de inactividad
 - Tokens por cabecera `x-admin-token`
+- Límite de intentos de login por IP (10 fallos / 10 min)
+- Compresión gzip y cabecera `X-Content-Type-Options: nosniff`
 - Filtro por unidad para operadores restringidos
 - CORS para GitHub Pages
-- Rotar contraseñas seed en producción
+- Contraseñas seed configurables por variables de entorno en Railway:
+  `SEED_PASS_UNITIC`, `SEED_PASS_PSICOLOGIA`, `SEED_PASS_CONVENIOS`, `SEED_PASS_EDUCACION`, `SEED_PASS_IMAGEN`
+  (solo aplican al crear la cuenta; las existentes se cambian desde el panel → Usuarios)
+- IMPORTANTE: cambiar las contraseñas por defecto de las 5 cuentas desde el panel tras el despliegue
 
 ---
 
