@@ -198,14 +198,20 @@ function fetchSiteDataFromServer() {
     .catch(function() { return null; });
 }
 
+var PORTAL_CONFIG_TIMEOUT_MS = 30000;
+
 function fetchConTimeout(url, ms) {
   ms = ms || 12000;
   return Promise.race([
-    fetch(url),
+    fetch(url, { cache: 'no-store' }),
     new Promise(function(_, reject) {
       setTimeout(function() { reject(new Error('timeout')); }, ms);
     })
   ]);
+}
+
+function limpiarCachePortal() {
+  try { localStorage.removeItem(REGPOL_SITE_KEY); } catch (e) {}
 }
 
 function esHostEstaticoPortal() {
@@ -227,12 +233,21 @@ function fetchSiteDataDefault() {
   var base = apiBasePortal();
   if (base) {
     var urlApi = base + '/portal/configuracion?t=' + Date.now();
-    return fetchConTimeout(urlApi, 8000)
+    return fetchConTimeout(urlApi, PORTAL_CONFIG_TIMEOUT_MS)
       .then(function(r) { if (!r.ok) throw new Error('no-config'); return r.json(); })
       .then(function(data) {
         if (!data || data.ok === false) throw new Error('no-config');
         if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezado(data.fotosEncabezado);
         return data;
+      })
+      .catch(function() {
+        return fetchConTimeout(urlApi + '&retry=1', PORTAL_CONFIG_TIMEOUT_MS)
+          .then(function(r) { if (!r.ok) throw new Error('no-config'); return r.json(); })
+          .then(function(data) {
+            if (!data || data.ok === false) throw new Error('no-config');
+            if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezado(data.fotosEncabezado);
+            return data;
+          });
       })
       .catch(cargarJsonLocal);
   }
@@ -493,10 +508,16 @@ function esUrlImagenHotlinkRota(url) {
   return /fbcdn\.net|facebook\.com|instagram\.com|cdninstagram\.com|tiktokcdn\.com|tiktok\.com/.test(u);
 }
 
+function esImagenEncabezadoValida(url) {
+  var f = String(url || '').trim();
+  if (!f) return false;
+  if (/^data:image\/(jpeg|png|webp);base64,/i.test(f)) return true;
+  return !esUrlImagenHotlinkRota(f);
+}
+
 function sanitizarFotosEncabezado(fotos) {
   var arr = Array.isArray(fotos) ? fotos : [];
-  var limpias = arr.map(function(f) { return String(f || '').trim(); })
-    .filter(function(f) { return f && f.indexOf('data:') !== 0 && !esUrlImagenHotlinkRota(f); });
+  var limpias = arr.map(function(f) { return String(f || '').trim(); }).filter(esImagenEncabezadoValida);
   return limpias.length ? limpias : FOTOS_ENCABEZADO_DEFAULT.slice();
 }
 

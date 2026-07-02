@@ -50,7 +50,11 @@ function initCMS() {
     renderListasCMS();
   };
   if (base) {
-    fetch(base + '/portal/configuracion?t=' + Date.now(), { cache: 'no-store' })
+    var urlCms = base + '/portal/configuracion?t=' + Date.now();
+    var fetchCms = (typeof fetchConTimeout === 'function')
+      ? fetchConTimeout(urlCms, 30000)
+      : fetch(urlCms, { cache: 'no-store' });
+    fetchCms
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(server) {
         if (server && (server.novedades || server.fotosEncabezado || server.carrusel) && server.ok !== false) {
@@ -328,7 +332,7 @@ function abrirModalSlide(idx) {
     if (esNuevo) cmsDataActual.carrusel.push(nuevo);
     else         cmsDataActual.carrusel[idx] = nuevo;
     renderEditorCarrusel();
-    mostrarAlertaCMS('Carrusel actualizado. Pulse "Publicar cambios".', 'ok');
+    publicarCmsTrasEdicion('Carrusel actualizado en borrador. Pulse "Publicar cambios".');
     return true;
   });
 }
@@ -501,6 +505,14 @@ function cargarPaginaMenuPublicacion() {
   pintar();
 }
 
+function publicarCmsTrasEdicion(mensajeBorrador) {
+  guardarSitioWeb(function(ok) {
+    if (!ok) {
+      mostrarAlertaCMS(mensajeBorrador || 'Cambios guardados en borrador. Pulse "Publicar cambios" para subir al portal.', 'ok');
+    }
+  });
+}
+
 function guardarConfigMenu() {
   guardarMenuPublicacionWeb();
 }
@@ -570,7 +582,7 @@ function abrirModalNovedad(idx) {
     if (esNuevo) cmsDataActual.novedades.unshift(nuevo);
     else         cmsDataActual.novedades[idx] = nuevo;
     renderListasCMS();
-    mostrarAlertaCMS('Guardado en borrador. Pulse "Publicar cambios" para subir al portal.', 'ok');
+    publicarCmsTrasEdicion('Guardado en borrador. Pulse "Publicar cambios" para subir al portal.');
     return true;
   });
 }
@@ -755,7 +767,7 @@ function abrirModalPilar(idx) {
     if (esNuevo) cmsDataActual.nuestraLabor.pilares.push(nuevo);
     else         cmsDataActual.nuestraLabor.pilares[idx] = nuevo;
     renderPilaresCMS();
-    mostrarAlertaCMS('Pilar guardado. Pulse "Publicar cambios" para aplicar en el portal.', 'ok');
+    publicarCmsTrasEdicion('Pilar guardado en borrador. Pulse "Publicar cambios".');
     return true;
   });
 }
@@ -802,7 +814,7 @@ function abrirModalTarjeta(tipo, idx) {
     if (esNuevo) cmsDataActual[tipo].push(nuevo);
     else         cmsDataActual[tipo][idx] = nuevo;
     renderListasCMS();
-    mostrarAlertaCMS('Guardado en borrador. Pulse "Publicar cambios" para subir al portal.', 'ok');
+    publicarCmsTrasEdicion('Guardado en borrador. Pulse "Publicar cambios" para subir al portal.');
     return true;
   });
 }
@@ -894,6 +906,7 @@ function guardarSitioWeb(onComplete) {
     .then(function(res) {
       var ok = !!(res.data && res.data.ok);
       if (ok) {
+        if (typeof limpiarCachePortal === 'function') limpiarCachePortal();
         mostrarAlertaCMS('¡Publicado en el servidor! Los visitantes verán los cambios al recargar (Ctrl+F5).', 'ok');
       } else {
         mostrarAlertaCMS('No se publicó: ' + ((res.data && res.data.error) || ('error HTTP ' + res.status)), 'error');

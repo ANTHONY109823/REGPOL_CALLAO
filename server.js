@@ -724,10 +724,16 @@ function esUrlImagenHotlinkRota(url) {
   return /fbcdn\.net|facebook\.com|instagram\.com|cdninstagram\.com|tiktokcdn\.com|tiktok\.com/.test(u);
 }
 
+function esImagenEncabezadoValida(url) {
+  const f = String(url || '').trim();
+  if (!f) return false;
+  if (/^data:image\/(jpeg|png|webp);base64,/i.test(f)) return true;
+  return !esUrlImagenHotlinkRota(f);
+}
+
 function sanitizarFotosEncabezadoList(fotos) {
   const arr = Array.isArray(fotos) ? fotos : [];
-  const limpias = arr.map(f => String(f || '').trim())
-    .filter(f => f && !f.startsWith('data:') && !esUrlImagenHotlinkRota(f));
+  const limpias = arr.map(f => String(f || '').trim()).filter(esImagenEncabezadoValida);
   return limpias.length ? limpias : FOTOS_ENCABEZADO_DEFAULT.slice();
 }
 
