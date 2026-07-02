@@ -778,11 +778,37 @@ function cerrarModalPdfPortal() {
 }
 
 
+function htmlPaginaHeroBanner(opts) {
+  opts = opts || {};
+  var tipo = opts.tipo || 'resena';
+  var titulo = opts.titulo || '';
+  var subtitulo = opts.subtitulo || '';
+  var imagen = String(opts.imagen || '').trim();
+  var icono = opts.icono || 'fa-landmark';
+  var imgHtml = imagen
+    ? '<img class="pagina-hero-img" src="' + escHtml(imagen) + '" alt="' + escHtml(titulo) + '" loading="lazy" decoding="async"/>'
+    : '';
+  var subHtml = subtitulo ? '<p>' + escHtml(subtitulo) + '</p>' : '';
+  return '<div class="pagina-hero-banner hero-' + escHtml(tipo) + '">'
+    + imgHtml
+    + '<div class="pagina-hero-overlay"></div>'
+    + '<div class="pagina-hero-contenido">'
+    + '<div class="pagina-hero-icono"><i class="fas ' + escHtml(icono) + '"></i></div>'
+    + '<div class="pagina-hero-texto"><h2>' + escHtml(titulo) + '</h2>' + subHtml + '</div>'
+    + '</div></div>';
+}
+
 function renderResenaHistorica(data, containerId) {
   var el = document.getElementById(containerId);
   var sec = data.resenaHistorica;
   if (!el || !sec) return;
   var html = '<article class="institucional-page institucional-resena">';
+  html += htmlPaginaHeroBanner({
+    tipo: 'resena',
+    titulo: sec.titulo || 'Reseña Histórica',
+    imagen: sec.imagenBanner,
+    icono: 'fa-landmark'
+  });
   html += '<div class="institucional-cabecera">';
   html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
   html += '</div>';
@@ -801,6 +827,12 @@ function renderNuestraLabor(data, containerId) {
   var sec = data.nuestraLabor;
   if (!el || !sec) return;
   var html = '<article class="institucional-page institucional-labor">';
+  html += htmlPaginaHeroBanner({
+    tipo: 'labor',
+    titulo: sec.titulo || 'Nuestra Labor',
+    imagen: sec.imagenBanner,
+    icono: 'fa-tasks'
+  });
   html += '<div class="institucional-cabecera">';
   html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
   html += '</div>';
