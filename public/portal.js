@@ -809,9 +809,6 @@ function renderResenaHistorica(data, containerId) {
     imagen: sec.imagenBanner,
     icono: 'fa-landmark'
   });
-  html += '<div class="institucional-cabecera">';
-  html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
-  html += '</div>';
   html += '<div class="institucional-cuerpo">';
   (sec.parrafos || []).forEach(function(p, i) {
     html += '<div class="institucional-bloque">' +
@@ -833,9 +830,6 @@ function renderNuestraLabor(data, containerId) {
     imagen: sec.imagenBanner,
     icono: 'fa-tasks'
   });
-  html += '<div class="institucional-cabecera">';
-  html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
-  html += '</div>';
   html += '<div class="pilares-grid-v2">';
   (sec.pilares || []).forEach(function(p) {
     html += '<div class="card-pilar-v2">' +
