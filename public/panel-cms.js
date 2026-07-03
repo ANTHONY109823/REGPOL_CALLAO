@@ -30,6 +30,9 @@ function initCMS() {
     if (!cmsDataActual.carrusel)  cmsDataActual.carrusel  = [];
     if (!cmsDataActual.fotosEncabezado) cmsDataActual.fotosEncabezado = [];
     if (!cmsDataActual.novedades) cmsDataActual.novedades = [];
+    if (typeof ordenarNovedadesPorFecha === 'function') {
+      cmsDataActual.novedades = ordenarNovedadesPorFecha(cmsDataActual.novedades);
+    }
     if (!cmsDataActual.convenios) cmsDataActual.convenios = [];
     if (!cmsDataActual.cursos)    cmsDataActual.cursos    = [];
     if (!cmsDataActual.heroTexto) cmsDataActual.heroTexto = {
@@ -579,8 +582,11 @@ function abrirModalNovedad(idx) {
       imagen:    getVal('m-foto-data') || item.imagen || ''
     };
     cmsDataActual.novedades = cmsDataActual.novedades || [];
-    if (esNuevo) cmsDataActual.novedades.unshift(nuevo);
+    if (esNuevo) cmsDataActual.novedades.push(nuevo);
     else         cmsDataActual.novedades[idx] = nuevo;
+    if (typeof ordenarNovedadesPorFecha === 'function') {
+      cmsDataActual.novedades = ordenarNovedadesPorFecha(cmsDataActual.novedades);
+    }
     renderListasCMS();
     publicarCmsTrasEdicion('Guardado en borrador. Pulse "Publicar cambios" para subir al portal.');
     return true;
@@ -841,6 +847,9 @@ function editarNovedadCMS(idx)     { abrirModalNovedad(idx); }
 // ═══════════════════════════════════════════════════════════════
 function recolectarDatosCMS() {
   var data = cloneSiteData(cmsDataActual || {});
+  if (data.novedades && typeof ordenarNovedadesPorFecha === 'function') {
+    data.novedades = ordenarNovedadesPorFecha(data.novedades);
+  }
   data.actualizacion      = getVal('cms-actualizacion') || data.actualizacion;
   data.resenaHistorica    = data.resenaHistorica || {};
   data.resenaHistorica.titulo  = 'Reseña Histórica';

@@ -945,6 +945,54 @@ function renderBienestarPolicial(data, containerId) {
 
 var _novedadesCache = [];
 
+var MESES_NOVEDAD = {
+  ene: 0, enero: 0, feb: 1, febrero: 1, mar: 2, marzo: 2,
+  abr: 3, abril: 3, may: 4, mayo: 4, jun: 5, junio: 5,
+  jul: 6, julio: 6, ago: 7, agosto: 7, sep: 8, sept: 8, septiembre: 8,
+  oct: 9, octubre: 9, nov: 10, noviembre: 10, dic: 11, diciembre: 11
+};
+
+function parseFechaNovedad(fecha) {
+  var s = String(fecha || '').trim().toLowerCase();
+  if (!s) return NaN;
+  var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return Date.UTC(+iso[1], +iso[2] - 1, +iso[3]);
+  var dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (dmy) return Date.UTC(+dmy[3], +dmy[2] - 1, +dmy[1]);
+  var norm = s.replace(/\./g, '').replace(/\s+/g, '');
+  var compact = norm.match(/^(\d{1,2})([a-z\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1]+)(\d{4})$/i);
+  if (compact) {
+    var mesC = MESES_NOVEDAD[compact[2].substring(0, 3)] ?? MESES_NOVEDAD[compact[2]];
+    if (mesC !== undefined) return Date.UTC(+compact[3], mesC, +compact[1]);
+  }
+  var spaced = s.match(/^(\d{1,2})\s+([a-z\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1\.]+)\s+(\d{4})$/i);
+  if (spaced) {
+    var mesS = MESES_NOVEDAD[spaced[2].replace(/\./g, '').substring(0, 3)];
+    if (mesS !== undefined) return Date.UTC(+spaced[3], mesS, +spaced[1]);
+  }
+  var t = Date.parse(fecha);
+  return isNaN(t) ? NaN : t;
+}
+
+function timestampIngresoNovedad(n) {
+  if (!n) return 0;
+  var m = String(n.id || '').match(/nov-(\d+)/);
+  return m ? +m[1] : 0;
+}
+
+function ordenarNovedadesPorFecha(items) {
+  return (items || []).slice().sort(function(a, b) {
+    var ta = parseFechaNovedad(a && a.fecha);
+    var tb = parseFechaNovedad(b && b.fecha);
+    var aValid = !isNaN(ta);
+    var bValid = !isNaN(tb);
+    if (aValid && bValid && ta !== tb) return tb - ta;
+    if (aValid && !bValid) return -1;
+    if (!aValid && bValid) return 1;
+    return timestampIngresoNovedad(b) - timestampIngresoNovedad(a);
+  });
+}
+
 function imagenNovedad(n) {
   if (!n) return '';
   return String(n.imagen || n.foto || n.imagenUrl || '').trim();
@@ -953,7 +1001,7 @@ function imagenNovedad(n) {
 function renderNovedades(data, containerId, limite) {
   var el = document.getElementById(containerId);
   if (!el) return;
-  var items = (data.novedades || []).slice();
+  var items = ordenarNovedadesPorFecha(data.novedades || []);
   _novedadesCache = items;
   if (limite) items = items.slice(0, limite);
   if (!items.length) { el.innerHTML = '<p class="texto-vacio">Sin novedades publicadas.</p>'; return; }
