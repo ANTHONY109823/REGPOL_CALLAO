@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REGPOL CALLAO - PNP</title>
-    <link rel="stylesheet" href="style.css?v=40">
+    <link rel="stylesheet" href="style.css?v=41">
     <link rel="stylesheet" href="responsive.css?v=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -39,18 +39,8 @@
 
     <nav class="nav-main" aria-label="Menú principal"><div class="container"><ul></ul></div></nav>
 
-    <section class="presentation-slider" aria-label="Presentación institucional">
-        <div class="slides">
-            <div class="slide active">
-                <img src="img/Imagen1.jpg" alt="" class="slide-img slide-img-imagen1" width="1920" height="1080" decoding="async" fetchpriority="high">
-            </div>
-            <div class="slide">
-                <img src="img/lunespatriotico.jpg" alt="" class="slide-img slide-img-lunes" width="1920" height="1080" decoding="async">
-            </div>
-            <div class="slide">
-                <img src="img/saludo.jpg" alt="" class="slide-img slide-img-saludo" width="1920" height="1080" decoding="async">
-            </div>
-        </div>
+    <section class="presentation-slider slider-cargando" aria-label="Presentación institucional">
+        <div class="slides"></div>
         <div class="hero-overlay">
             <div class="container">
                 <h1 class="portal-hero-titulo animate-text">REGIÓN POLICIAL CALLAO</h1>
@@ -58,11 +48,7 @@
                 <p class="portal-hero-eslogan animate-text">Compromiso, Honor y Servicio en la Provincia Constitucional</p>
             </div>
         </div>
-        <div class="slider-dots">
-            <span class="dot active" data-slide="0" aria-label="Imagen 1"></span>
-            <span class="dot" data-slide="1" aria-label="Imagen 2"></span>
-            <span class="dot" data-slide="2" aria-label="Imagen 3"></span>
-        </div>
+        <div class="slider-dots"></div>
     </section>
 </div>
 
@@ -194,11 +180,10 @@
 
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=7"></script>
-<script src="portal.js?v=48"></script>
+<script src="portal.js?v=49"></script>
 <script>
     initPortalInicio();
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') cerrarNovedadModal(); });
-    initPresentationSlider();
 </script>
 </body>
 </html>

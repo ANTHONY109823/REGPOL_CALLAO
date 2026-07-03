@@ -237,7 +237,7 @@ function fetchSiteDataDefault() {
       .then(function(r) { if (!r.ok) throw new Error('no-config'); return r.json(); })
       .then(function(data) {
         if (!data || data.ok === false) throw new Error('no-config');
-        if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezado(data.fotosEncabezado);
+        if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezado(data.fotosEncabezado, false);
         return data;
       })
       .catch(function() {
@@ -245,7 +245,7 @@ function fetchSiteDataDefault() {
           .then(function(r) { if (!r.ok) throw new Error('no-config'); return r.json(); })
           .then(function(data) {
             if (!data || data.ok === false) throw new Error('no-config');
-            if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezado(data.fotosEncabezado);
+            if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezado(data.fotosEncabezado, false);
             return data;
           });
       })
@@ -515,10 +515,24 @@ function esImagenEncabezadoValida(url) {
   return !esUrlImagenHotlinkRota(f);
 }
 
-function sanitizarFotosEncabezado(fotos) {
+function sanitizarFotosEncabezado(fotos, usarDefaults) {
   var arr = Array.isArray(fotos) ? fotos : [];
   var limpias = arr.map(function(f) { return String(f || '').trim(); }).filter(esImagenEncabezadoValida);
-  return limpias.length ? limpias : FOTOS_ENCABEZADO_DEFAULT.slice();
+  if (limpias.length) return limpias;
+  return usarDefaults ? FOTOS_ENCABEZADO_DEFAULT.slice() : [];
+}
+
+function slidesCarruselValidos(carrusel) {
+  return (carrusel || []).filter(function(s) {
+    return s && String(s.imagen || '').trim();
+  });
+}
+
+function detenerPresentationSlider() {
+  if (initPresentationSlider._timer) {
+    clearInterval(initPresentationSlider._timer);
+    initPresentationSlider._timer = null;
+  }
 }
 
 function detenerHeaderFotosCarrusel() {
@@ -539,7 +553,14 @@ function renderFotosEncabezado(data) {
   if (!panel) return;
 
   var raw = (data && data.fotosEncabezado) ? data.fotosEncabezado : [];
-  var fotos = sanitizarFotosEncabezado(raw.map(function(f) { return String(f || '').trim(); }).filter(Boolean));
+  var fotos = sanitizarFotosEncabezado(raw, false);
+
+  if (!fotos.length) {
+    panel.innerHTML = '';
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = '';
 
   var clones = fotos.slice(0, Math.min(3, fotos.length));
   var todos = fotos.concat(clones);
@@ -548,9 +569,7 @@ function renderFotosEncabezado(data) {
     '<div class="header-fotos-viewport">'
     + '<div class="header-fotos-track">'
     + todos.map(function(src, i) {
-      var fallback = FOTOS_ENCABEZADO_DEFAULT[i % FOTOS_ENCABEZADO_DEFAULT.length];
       return '<div class="header-foto-item"><img src="' + escHtml(src) + '" alt="REGPOL Callao foto ' + ((i % fotos.length) + 1) + '" decoding="async"'
-        + ' onerror="this.onerror=null;this.src=\'' + escHtml(fallback) + '\'"'
         + (i < 3 ? ' fetchpriority="high"' : ' loading="lazy"') + '/></div>';
     }).join('')
     + '</div></div>';
@@ -964,15 +983,16 @@ function cerrarNovedadModal() {
 }
 
 function initPresentationSlider() {
-  if (initPresentationSlider._timer) {
-    clearInterval(initPresentationSlider._timer);
-    initPresentationSlider._timer = null;
-  }
+  detenerPresentationSlider();
   var slider = document.querySelector('.presentation-slider');
   if (!slider) return;
   var slides = slider.querySelectorAll('.slide');
   var dots = slider.querySelectorAll('.slider-dots .dot');
-  if (!slides.length) return;
+  if (!slides.length) {
+    slider.classList.add('slider-sin-imagenes');
+    return;
+  }
+  slider.classList.remove('slider-cargando', 'slider-sin-imagenes');
 
   var FADE_MS = 1200;
   var current = 0;
@@ -1031,26 +1051,33 @@ function initPresentationSlider() {
 }
 
 function actualizarCarrusel(data) {
-  var slides = data.carrusel || [];
+  data = data || {};
+  var slides = slidesCarruselValidos(data.carrusel);
   var heroT  = data.heroTexto || {};
   var slider = document.querySelector('.presentation-slider');
   if (!slider) return;
 
   aplicarHeroMarca(heroT);
-
-  if (!slides.length) return;
+  detenerPresentationSlider();
 
   var slidesDiv = slider.querySelector('.slides');
   var dotsDiv   = slider.querySelector('.slider-dots');
   if (!slidesDiv) return;
 
+  if (!slides.length) {
+    slidesDiv.innerHTML = '';
+    if (dotsDiv) dotsDiv.innerHTML = '';
+    slider.classList.add('slider-sin-imagenes');
+    slider.classList.remove('slider-cargando');
+    return;
+  }
+
+  slider.classList.remove('slider-sin-imagenes');
   slidesDiv.innerHTML = slides.map(function(s, i) {
     var isActive = i === 0 ? ' active' : '';
-    var imgSrc = s.imagen || '';
-    var imgTag = imgSrc
-      ? '<img src="' + imgSrc + '" alt="' + escHtml(s.titulo || '') + '" class="slide-img" width="1920" height="1080" '
-        + (i === 0 ? 'decoding="async" fetchpriority="high"' : 'loading="lazy" decoding="async"') + '>'
-      : '';
+    var imgSrc = String(s.imagen || '').trim();
+    var imgTag = '<img src="' + imgSrc + '" alt="' + escHtml(s.titulo || '') + '" class="slide-img" width="1920" height="1080" '
+      + (i === 0 ? 'decoding="async" fetchpriority="high"' : 'loading="lazy" decoding="async"') + '>';
     var caption = (s.titulo || s.subtitulo)
       ? '<div class="slide-caption"><strong>' + escHtml(s.titulo || '') + '</strong>'
         + (s.subtitulo ? '<span>' + escHtml(s.subtitulo) + '</span>' : '') + '</div>'
@@ -1059,10 +1086,12 @@ function actualizarCarrusel(data) {
   }).join('');
 
   if (dotsDiv) {
-    dotsDiv.innerHTML = slides.map(function(s, i) {
-      return '<span class="dot' + (i === 0 ? ' active' : '') + '" data-slide="' + i
-        + '" aria-label="Imagen ' + (i + 1) + '"></span>';
-    }).join('');
+    dotsDiv.innerHTML = slides.length > 1
+      ? slides.map(function(s, i) {
+        return '<span class="dot' + (i === 0 ? ' active' : '') + '" data-slide="' + i
+          + '" aria-label="Imagen ' + (i + 1) + '"></span>';
+      }).join('')
+      : '';
     dotsDiv.querySelectorAll('.dot').forEach(function(dot) {
       dot.addEventListener('click', function() {
         if (typeof window.irASlide === 'function') {
@@ -1071,6 +1100,7 @@ function actualizarCarrusel(data) {
       });
     });
   }
+  slider.classList.remove('slider-cargando');
   initPresentationSlider();
 }
 

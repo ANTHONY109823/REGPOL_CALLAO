@@ -401,6 +401,16 @@ img {
     line-height: 1.25;
 }
 
+.presentation-slider.slider-cargando .slides,
+.presentation-slider.slider-sin-imagenes .slides {
+  background: linear-gradient(135deg, #003d2e 0%, #005244 50%, #1a7a5e 100%);
+}
+
+.presentation-slider.slider-cargando .slider-dots,
+.presentation-slider.slider-sin-imagenes .slider-dots {
+  display: none;
+}
+
 /* --- 4. SECCIÓN SLIDER --- */
 .presentation-slider {
     position: relative;
