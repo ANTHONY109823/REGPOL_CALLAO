@@ -1414,7 +1414,7 @@ const DEFAULTS_CONSTANCIA_CONVENIO = {
     uniforme: 'Uniforme de faena completo (camisa, pantalón, correa y fornitura reglamentaria).',
     lugar: 'Dependencia o comisaría asignada — confirmar punto de formación diaria en Oficina de Convenios.',
     horario: '08:00 a 20:00 hrs (12 horas por turno).',
-    contactos: 'Oficina de Convenios — REGPOL Callao | WhatsApp: 927 577 686.'
+    contactos: 'Oficina de Convenios — REGPOL Callao | WhatsApp: 980 122 452.'
   }
 };
 
@@ -1426,7 +1426,7 @@ function detallesConstanciaConvenio(item) {
     uniforme: String(item.uniforme || '').trim() || uniformeReq || defs.uniforme || 'Uniforme reglamentario de faena completo y documento de identidad.',
     lugar: String(item.lugar || '').trim() || defs.lugar || 'Oficina gestora — REGPOL Callao (confirmar con el área).',
     horario: String(item.horario || '').trim() || defs.horario || 'Por confirmar — consulte con el área correspondiente.',
-    contactos: String(item.contactos_responsables || '').trim() || defs.contactos || 'Oficina de Convenios — REGPOL Callao | WhatsApp: 927 577 686.',
+    contactos: String(item.contactos_responsables || '').trim() || defs.contactos || 'Oficina de Convenios — REGPOL Callao | WhatsApp: 980 122 452.',
     beneficio: String(item.fecha_inicio || '').trim(),
     detalleBeneficio: String(item.duracion || '').trim(),
     observaciones: String(item.observaciones || '').trim()
