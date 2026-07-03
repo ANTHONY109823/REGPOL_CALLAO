@@ -785,6 +785,12 @@ function htmlPaginaHeroBanner(opts) {
   var subtitulo = opts.subtitulo || '';
   var imagen = String(opts.imagen || '').trim();
   var icono = opts.icono || 'fa-landmark';
+  if (opts.soloImagen) {
+    if (!imagen) return '';
+    return '<div class="pagina-hero-banner pagina-hero-banner--solo-img hero-' + escHtml(tipo) + '">'
+      + '<img class="pagina-hero-img" src="' + escHtml(imagen) + '" alt="' + escHtml(titulo) + '" loading="lazy" decoding="async"/>'
+      + '</div>';
+  }
   var imgHtml = imagen
     ? '<img class="pagina-hero-img" src="' + escHtml(imagen) + '" alt="' + escHtml(titulo) + '" loading="lazy" decoding="async"/>'
     : '';
@@ -807,8 +813,11 @@ function renderResenaHistorica(data, containerId) {
     tipo: 'resena',
     titulo: sec.titulo || 'Reseña Histórica',
     imagen: sec.imagenBanner,
-    icono: 'fa-landmark'
+    soloImagen: true
   });
+  html += '<div class="institucional-cabecera">';
+  html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
+  html += '</div>';
   html += '<div class="institucional-cuerpo">';
   (sec.parrafos || []).forEach(function(p, i) {
     html += '<div class="institucional-bloque">' +
@@ -828,8 +837,11 @@ function renderNuestraLabor(data, containerId) {
     tipo: 'labor',
     titulo: sec.titulo || 'Nuestra Labor',
     imagen: sec.imagenBanner,
-    icono: 'fa-tasks'
+    soloImagen: true
   });
+  html += '<div class="institucional-cabecera">';
+  html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
+  html += '</div>';
   html += '<div class="pilares-grid-v2">';
   (sec.pilares || []).forEach(function(p) {
     html += '<div class="card-pilar-v2">' +
