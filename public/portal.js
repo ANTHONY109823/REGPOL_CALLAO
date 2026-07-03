@@ -437,7 +437,7 @@ function initPortalNav(activeId, ocultos) {
   if (activeId) portalActiveNavId = activeId;
   else activeId = portalActiveNavId;
   if (ocultos) portalNavOcultosCache = ocultos;
-  aplicarEncabezadoMarca(obtenerSiteDataSync());
+  aplicarTextoEncabezadoMarca();
   var ul = document.querySelector('.nav-main ul');
   if (!ul) return;
   var navItems = obtenerPortalNav(portalNavOcultosCache);
@@ -473,14 +473,20 @@ function normalizarHeroTexto(heroT) {
   return { titulo: titulo, lema: lema, eslogan: eslogan };
 }
 
-function aplicarEncabezadoMarca(data) {
+function aplicarTextoEncabezadoMarca() {
   document.querySelectorAll('.main-header .portal-eslogan').forEach(function(el) {
     el.textContent = PORTAL_MARCA.titulo;
   });
   document.querySelectorAll('.main-header .portal-subtitulo').forEach(function(el) {
     el.textContent = PORTAL_MARCA.subtitulo;
   });
-  if (data) renderFotosEncabezado(data);
+}
+
+function aplicarEncabezadoMarca(data) {
+  aplicarTextoEncabezadoMarca();
+  if (!data) return;
+  var fotos = sanitizarFotosEncabezado(data.fotosEncabezado, false);
+  if (fotos.length) renderFotosEncabezado(data);
 }
 
 function asegurarPanelFotosEncabezado() {
@@ -502,6 +508,34 @@ var HEADER_FOTOS_INTERVAL_MS = 6500;
 var HEADER_FOTOS_TRANSITION_MS = 900;
 var _headerFotosTimer = null;
 var _headerFotosResizeFn = null;
+var _headerFotoBlobUrls = [];
+
+function revocarHeaderFotoBlobs() {
+  _headerFotoBlobUrls.forEach(function(u) {
+    try { URL.revokeObjectURL(u); } catch (e) {}
+  });
+  _headerFotoBlobUrls = [];
+}
+
+function urlImagenHeaderParaDom(src) {
+  var s = String(src || '').trim();
+  if (!s) return '';
+  if (s.indexOf('data:image/') !== 0) return s;
+  try {
+    var parts = s.split(',');
+    if (parts.length < 2) return s;
+    var mimeMatch = parts[0].match(/:(.*?);/);
+    if (!mimeMatch) return s;
+    var bin = atob(parts[1]);
+    var arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    var blobUrl = URL.createObjectURL(new Blob([arr], { type: mimeMatch[1] }));
+    _headerFotoBlobUrls.push(blobUrl);
+    return blobUrl;
+  } catch (e) {
+    return s;
+  }
+}
 
 function esUrlImagenHotlinkRota(url) {
   var u = String(url || '').toLowerCase();
@@ -544,6 +578,7 @@ function detenerHeaderFotosCarrusel() {
 
 function renderFotosEncabezado(data) {
   detenerHeaderFotosCarrusel();
+  revocarHeaderFotoBlobs();
   if (_headerFotosResizeFn) {
     window.removeEventListener('resize', _headerFotosResizeFn);
     _headerFotosResizeFn = null;
@@ -560,10 +595,11 @@ function renderFotosEncabezado(data) {
     panel.style.display = 'none';
     return;
   }
-  panel.style.display = '';
+  panel.style.removeProperty('display');
 
-  var clones = fotos.slice(0, Math.min(3, fotos.length));
-  var todos = fotos.concat(clones);
+  var domFotos = fotos.map(urlImagenHeaderParaDom);
+  var domClones = domFotos.slice(0, Math.min(3, domFotos.length));
+  var todos = domFotos.concat(domClones);
 
   panel.innerHTML =
     '<div class="header-fotos-viewport">'
