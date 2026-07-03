@@ -499,7 +499,7 @@ function asegurarPanelFotosEncabezado() {
 
 var FOTOS_ENCABEZADO_DEFAULT = ['img/Imagen1.jpg', 'img/saludo.jpg', 'img/lunespatriotico.jpg'];
 var HEADER_FOTOS_INTERVAL_MS = 6500;
-var HEADER_FOTOS_TRANSITION_MS = 750;
+var HEADER_FOTOS_TRANSITION_MS = 900;
 var _headerFotosTimer = null;
 var _headerFotosResizeFn = null;
 
@@ -594,8 +594,11 @@ function renderFotosEncabezado(data) {
         track.style.transition = 'none';
         offset = 0;
         track.style.transform = 'translate3d(0,0,0)';
-        void track.offsetHeight;
-        track.style.transition = '';
+        requestAnimationFrame(function() {
+          requestAnimationFrame(function() {
+            track.style.transition = '';
+          });
+        });
       }
     }, HEADER_FOTOS_TRANSITION_MS + 50);
   }
@@ -960,6 +963,73 @@ function cerrarNovedadModal() {
   if (modal) { modal.classList.remove('visible'); document.body.style.overflow = ''; }
 }
 
+function initPresentationSlider() {
+  if (initPresentationSlider._timer) {
+    clearInterval(initPresentationSlider._timer);
+    initPresentationSlider._timer = null;
+  }
+  var slider = document.querySelector('.presentation-slider');
+  if (!slider) return;
+  var slides = slider.querySelectorAll('.slide');
+  var dots = slider.querySelectorAll('.slider-dots .dot');
+  if (!slides.length) return;
+
+  var FADE_MS = 1200;
+  var current = 0;
+  var timer = null;
+  slides.forEach(function(s, i) {
+    if (s.classList.contains('active')) current = i;
+  });
+
+  function changeSlide(index) {
+    if (index < 0 || index >= slides.length || index === current) return;
+    var prev = slides[current];
+    var next = slides[index];
+    if (!next || prev === next) return;
+
+    slides.forEach(function(s) {
+      if (s !== prev && s !== next) s.classList.remove('active', 'was-active');
+    });
+    if (prev) {
+      prev.classList.remove('active');
+      prev.classList.add('was-active');
+    }
+    next.classList.remove('was-active');
+    next.classList.add('active');
+
+    dots.forEach(function(d) { d.classList.remove('active'); });
+    if (dots[index]) dots[index].classList.add('active');
+
+    clearTimeout(changeSlide._cleanup);
+    if (prev) {
+      changeSlide._cleanup = setTimeout(function() {
+        prev.classList.remove('was-active');
+      }, FADE_MS + 80);
+    }
+    current = index;
+  }
+
+  function nextSlide() {
+    changeSlide((current + 1) % slides.length);
+  }
+
+  function startAuto() {
+    clearInterval(timer);
+    timer = setInterval(nextSlide, 6000);
+  }
+
+  dots.forEach(function(dot) {
+    dot.onclick = function() {
+      changeSlide(parseInt(dot.getAttribute('data-slide'), 10) || 0);
+      startAuto();
+    };
+  });
+
+  window.irASlide = changeSlide;
+  startAuto();
+  initPresentationSlider._timer = timer;
+}
+
 function actualizarCarrusel(data) {
   var slides = data.carrusel || [];
   var heroT  = data.heroTexto || {};
@@ -994,9 +1064,14 @@ function actualizarCarrusel(data) {
         + '" aria-label="Imagen ' + (i + 1) + '"></span>';
     }).join('');
     dotsDiv.querySelectorAll('.dot').forEach(function(dot) {
-      dot.addEventListener('click', function() { irASlide(parseInt(this.getAttribute('data-slide'))); });
+      dot.addEventListener('click', function() {
+        if (typeof window.irASlide === 'function') {
+          window.irASlide(parseInt(this.getAttribute('data-slide'), 10) || 0);
+        }
+      });
     });
   }
+  initPresentationSlider();
 }
 
 function actualizarFechaPortal(data) {

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REGPOL CALLAO - PNP</title>
-    <link rel="stylesheet" href="style.css?v=39">
+    <link rel="stylesheet" href="style.css?v=40">
     <link rel="stylesheet" href="responsive.css?v=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -194,40 +194,11 @@
 
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=7"></script>
-<script src="portal.js?v=47"></script>
+<script src="portal.js?v=48"></script>
 <script>
     initPortalInicio();
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') cerrarNovedadModal(); });
-</script>
-<script>
-    (function() {
-        var slides = document.querySelectorAll('.slide');
-        var dots = document.querySelectorAll('.dot');
-        var current = 0;
-        var timer;
-        var FADE_MS = 1000;
-        function changeSlide(index) {
-            if (!slides.length || index === current) return;
-            var prev = slides[current];
-            var next = slides[index];
-            slides.forEach(function(s) { s.classList.remove('active', 'was-active'); });
-            dots.forEach(function(d) { d.classList.remove('active'); });
-            if (prev && prev !== next) prev.classList.add('was-active');
-            next.classList.add('active');
-            if (dots[index]) dots[index].classList.add('active');
-            setTimeout(function() { slides.forEach(function(s) { s.classList.remove('was-active'); }); }, FADE_MS + 50);
-            current = index;
-        }
-        function next() { changeSlide((current + 1) % slides.length); }
-        function startAuto() { clearInterval(timer); timer = setInterval(next, 5000); }
-        dots.forEach(function(dot) {
-            dot.addEventListener('click', function() {
-                changeSlide(parseInt(dot.getAttribute('data-slide'), 10) || 0);
-                startAuto();
-            });
-        });
-        if (slides.length > 0) startAuto();
-    })();
+    initPresentationSlider();
 </script>
 </body>
 </html>

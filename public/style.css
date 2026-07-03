@@ -207,7 +207,8 @@ img {
 .header-fotos-track {
     display: flex;
     gap: 8px;
-    transition: transform 0.75s ease-in-out;
+    transition: transform 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
 }
 
 .header-foto-item {
@@ -270,6 +271,7 @@ img {
     transform: scale(1.08);
     transform-origin: center center;
     backface-visibility: hidden;
+    transition: transform 1.2s ease-out;
 }
 
 .portal-home .slide:not(.active):not(.was-active) .slide-img {
@@ -283,7 +285,7 @@ img {
 
 .portal-home .slide.was-active .slide-img {
     animation: none;
-    transform: scale(1.08);
+    transform: scale(1.14);
 }
 
 @keyframes slideZoomHome {
@@ -424,7 +426,7 @@ img {
     opacity: 0;
     z-index: 0;
     overflow: hidden;
-    transition: opacity 1s ease-in-out;
+    transition: opacity 1.2s ease-in-out;
     pointer-events: none;
     background-color: #0a2818;
 }
@@ -438,7 +440,7 @@ img {
     transform: scale(1.08);
     transform-origin: center center;
     backface-visibility: hidden;
-    will-change: transform;
+    transition: transform 1.2s ease-out;
 }
 
 .slide:not(.active):not(.was-active) .slide-img {
@@ -447,12 +449,12 @@ img {
 }
 
 .slide.active .slide-img {
-    animation: slideZoom 7s ease-out forwards;
+    animation: slideZoom 8s ease-out forwards;
 }
 
 .slide.was-active .slide-img {
     animation: none;
-    transform: scale(1.08);
+    transform: scale(1.14);
 }
 
 @keyframes slideZoom {
