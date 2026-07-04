@@ -47,6 +47,8 @@ function initCMS() {
       icono: 'fa-heart',
       botonTexto: 'INICIAR EVALUACIÓN',
       botonUrl: 'evaluacion.html',
+      videoTutorial: '',
+      videoTutorialTitulo: 'Video tutorial — Cómo usar el cuestionario',
       visible: true
     };
     poblarFormulariosCMS();
@@ -141,8 +143,10 @@ function poblarFormulariosCMS() {
   setVal('cms-bienestar-descripcion', bp.descripcion || '');
   setVal('cms-bienestar-boton-texto', bp.botonTexto || 'INICIAR EVALUACIÓN');
   setVal('cms-bienestar-boton-url', bp.botonUrl || 'evaluacion.html');
+  setVal('cms-bienestar-video-titulo', bp.videoTutorialTitulo || 'Video tutorial — Cómo usar el cuestionario');
   var chkBien = document.getElementById('cms-bienestar-visible');
   if (chkBien) chkBien.checked = bp.visible !== false;
+  if (typeof actualizarEstadoVideoBienestarCMS === 'function') actualizarEstadoVideoBienestarCMS();
   var selIconoBien = document.getElementById('cms-bienestar-icono');
   if (selIconoBien) {
     var iconoBien = bp.icono || 'fa-heart';
@@ -843,6 +847,127 @@ function editarItemCMS(tipo, idx)  { abrirModalTarjeta(tipo, idx); }
 function editarNovedadCMS(idx)     { abrirModalNovedad(idx); }
 
 // ═══════════════════════════════════════════════════════════════
+// VIDEO TUTORIAL BIENESTAR
+// ═══════════════════════════════════════════════════════════════
+var BIENESTAR_VIDEO_MAX_MB = 60;
+
+function actualizarEstadoVideoBienestarCMS() {
+  var preview = document.getElementById('cms-bienestar-video-preview');
+  var meta = document.getElementById('cms-bienestar-video-meta');
+  var base = apiBaseCMS();
+  var token = (typeof TOKEN !== 'undefined' && TOKEN) ? TOKEN : '';
+  if (!base || !token) {
+    if (meta) meta.textContent = 'Inicie sesión para gestionar el video.';
+    return;
+  }
+  fetch(base + '/admin/bienestar-video/info', { headers: { 'x-admin-token': token } })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      cmsDataActual.bienestarPolicial = cmsDataActual.bienestarPolicial || {};
+      if (!d.ok || !d.disponible) {
+        cmsDataActual.bienestarPolicial.videoTutorial = '';
+        if (preview) { preview.removeAttribute('src'); preview.style.display = 'none'; }
+        if (meta) meta.textContent = 'No hay video subido.';
+        return;
+      }
+      cmsDataActual.bienestarPolicial.videoTutorial = '/portal/bienestar-video';
+      if (preview) {
+        preview.src = base + '/portal/bienestar-video?t=' + Date.now();
+        preview.style.display = 'block';
+      }
+      if (meta) {
+        var mb = ((d.bytes || 0) / (1024 * 1024)).toFixed(1);
+        meta.textContent = (d.nombre || 'Video tutorial') + ' — ' + mb + ' MB';
+      }
+    })
+    .catch(function() {
+      if (meta) meta.textContent = 'No se pudo verificar el video en el servidor.';
+    });
+}
+
+function subirVideoBienestarCMS() {
+  var input = document.getElementById('cms-bienestar-video-file');
+  var file = input && input.files[0];
+  if (!file) {
+    alert('Seleccione un archivo de video (MP4 o WebM).');
+    return;
+  }
+  if (file.size > BIENESTAR_VIDEO_MAX_MB * 1024 * 1024) {
+    alert('El video supera el máximo de ' + BIENESTAR_VIDEO_MAX_MB + ' MB. Comprímalo e intente de nuevo.');
+    return;
+  }
+  var okExt = /\.(mp4|webm|mov)$/i.test(file.name);
+  var okMime = /^video\/(mp4|webm|quicktime)$/i.test(file.type || '');
+  if (!okExt && !okMime) {
+    alert('Formato no válido. Use MP4, WebM o MOV.');
+    return;
+  }
+  var base = apiBaseCMS();
+  var token = (typeof TOKEN !== 'undefined' && TOKEN) ? TOKEN : '';
+  if (!base || !token) {
+    alert('Sesión expirada. Vuelva a ingresar al panel.');
+    return;
+  }
+  mostrarAlertaCMS('Subiendo video (puede tardar 1–2 minutos)...', 'ok');
+  fetch(base + '/admin/bienestar-video', {
+    method: 'POST',
+    headers: {
+      'Content-Type': file.type || 'video/mp4',
+      'x-admin-token': token,
+      'x-filename': file.name
+    },
+    body: file
+  })
+    .then(function(r) { return r.json().then(function(d) { return { status: r.status, data: d }; }); })
+    .then(function(res) {
+      if (!res.data || !res.data.ok) {
+        mostrarAlertaCMS('No se subió el video: ' + ((res.data && res.data.error) || ('HTTP ' + res.status)), 'error');
+        return;
+      }
+      cmsDataActual.bienestarPolicial = cmsDataActual.bienestarPolicial || {};
+      cmsDataActual.bienestarPolicial.videoTutorial = '/portal/bienestar-video';
+      actualizarEstadoVideoBienestarCMS();
+      guardarSitioWeb(function(ok) {
+        if (ok) mostrarAlertaCMS('Video subido y publicado correctamente.', 'ok');
+      });
+    })
+    .catch(function() {
+      mostrarAlertaCMS('Error de conexión al subir el video.', 'error');
+    });
+}
+
+function quitarVideoBienestarCMS() {
+  if (!confirm('¿Quitar el video tutorial del portal?')) return;
+  var base = apiBaseCMS();
+  var token = (typeof TOKEN !== 'undefined' && TOKEN) ? TOKEN : '';
+  if (!base || !token) {
+    alert('Sesión expirada.');
+    return;
+  }
+  fetch(base + '/admin/bienestar-video', {
+    method: 'DELETE',
+    headers: { 'x-admin-token': token }
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) {
+        mostrarAlertaCMS('No se pudo quitar el video.', 'error');
+        return;
+      }
+      cmsDataActual.bienestarPolicial = cmsDataActual.bienestarPolicial || {};
+      cmsDataActual.bienestarPolicial.videoTutorial = '';
+      var input = document.getElementById('cms-bienestar-video-file');
+      if (input) input.value = '';
+      actualizarEstadoVideoBienestarCMS();
+      guardarSitioWeb();
+      mostrarAlertaCMS('Video eliminado del portal.', 'ok');
+    })
+    .catch(function() {
+      mostrarAlertaCMS('Error de conexión.', 'error');
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════
 // GUARDAR / EXPORTAR / IMPORTAR
 // ═══════════════════════════════════════════════════════════════
 function recolectarDatosCMS() {
@@ -868,6 +993,8 @@ function recolectarDatosCMS() {
     icono: getVal('cms-bienestar-icono') || 'fa-heart',
     botonTexto: getVal('cms-bienestar-boton-texto') || 'INICIAR EVALUACIÓN',
     botonUrl: getVal('cms-bienestar-boton-url') || 'evaluacion.html',
+    videoTutorial: (cmsDataActual.bienestarPolicial || {}).videoTutorial || '',
+    videoTutorialTitulo: getVal('cms-bienestar-video-titulo') || 'Video tutorial — Cómo usar el cuestionario',
     visible: (function() {
       var el = document.getElementById('cms-bienestar-visible');
       return el ? el.checked : true;

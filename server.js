@@ -397,6 +397,14 @@ async function initDB() {
       data_json  TEXT NOT NULL,
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS portal_archivos (
+      clave       VARCHAR(64) PRIMARY KEY,
+      mime        VARCHAR(100) NOT NULL DEFAULT 'video/mp4',
+      nombre      VARCHAR(255) DEFAULT '',
+      data        BYTEA NOT NULL,
+      updated_at  TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
 
   // Admins por defecto — la contraseña inicial se toma de variables de entorno.
@@ -2673,6 +2681,122 @@ app.get('/portal/configuracion', async (req, res) => {
     res.status(404).json({ ok: false, error: 'Sin datos' });
   } catch (e) {
     res.status(500).json({ ok: false, error: 'Error al leer configuración' });
+  }
+});
+
+const BIENESTAR_VIDEO_MAX_BYTES = 60 * 1024 * 1024;
+const BIENESTAR_VIDEO_CLAVE = 'bienestar_tutorial';
+
+function mimeVideoBienestarValido(mime) {
+  return /^video\/(mp4|webm|quicktime)$/i.test(String(mime || ''));
+}
+
+function enviarVideoBienestar(req, res, buf, mime) {
+  if (!buf || !buf.length) return res.status(404).end();
+  const size = buf.length;
+  const type = mime || 'video/mp4';
+  res.setHeader('Content-Type', type);
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  const range = req.headers.range;
+  if (range) {
+    const m = /^bytes=(\d*)-(\d*)$/i.exec(String(range));
+    if (m) {
+      let start = m[1] ? parseInt(m[1], 10) : 0;
+      let end = m[2] ? parseInt(m[2], 10) : size - 1;
+      if (isNaN(start) || start < 0) start = 0;
+      if (isNaN(end) || end >= size) end = size - 1;
+      if (start <= end) {
+        res.status(206);
+        res.setHeader('Content-Range', 'bytes ' + start + '-' + end + '/' + size);
+        res.setHeader('Content-Length', String(end - start + 1));
+        return res.end(buf.subarray(start, end + 1));
+      }
+    }
+  }
+  res.setHeader('Content-Length', String(size));
+  res.end(buf);
+}
+
+// ── GET /portal/bienestar-video — video tutorial público ─────────────────────
+app.get('/portal/bienestar-video', async (req, res) => {
+  try {
+    const r = await pool.query(
+      'SELECT mime, data FROM portal_archivos WHERE clave=$1',
+      [BIENESTAR_VIDEO_CLAVE]
+    );
+    if (!r.rows.length || !r.rows[0].data) return res.status(404).end();
+    enviarVideoBienestar(req, res, r.rows[0].data, r.rows[0].mime);
+  } catch (e) {
+    res.status(500).end();
+  }
+});
+
+// ── POST /admin/bienestar-video — subir tutorial (máx. 60 MB) ────────────────
+app.post('/admin/bienestar-video', requireAuth,
+  express.raw({ limit: BIENESTAR_VIDEO_MAX_BYTES, type: function() { return true; } }),
+  async (req, res) => {
+    try {
+      const buf = req.body;
+      if (!buf || !Buffer.isBuffer(buf) || !buf.length) {
+        return res.status(400).json({ ok: false, error: 'Archivo vacío o no recibido.' });
+      }
+      if (buf.length > BIENESTAR_VIDEO_MAX_BYTES) {
+        return res.status(400).json({ ok: false, error: 'El video supera el máximo de 60 MB.' });
+      }
+      let mime = String(req.headers['content-type'] || 'video/mp4').split(';')[0].trim();
+      const nombre = String(req.headers['x-filename'] || 'tutorial.mp4').trim();
+      if (!mimeVideoBienestarValido(mime)) {
+        if (/\.webm$/i.test(nombre)) mime = 'video/webm';
+        else if (/\.mov$/i.test(nombre)) mime = 'video/quicktime';
+        else mime = 'video/mp4';
+      }
+      await pool.query(
+        `INSERT INTO portal_archivos (clave, mime, nombre, data, updated_at)
+         VALUES ($1, $2, $3, $4, NOW())
+         ON CONFLICT (clave) DO UPDATE SET
+           mime = EXCLUDED.mime,
+           nombre = EXCLUDED.nombre,
+           data = EXCLUDED.data,
+           updated_at = NOW()`,
+        [BIENESTAR_VIDEO_CLAVE, mime, nombre.slice(0, 255), buf]
+      );
+      res.json({ ok: true, url: '/portal/bienestar-video', bytes: buf.length });
+    } catch (e) {
+      res.status(500).json({ ok: false, error: 'Error al guardar el video.' });
+    }
+  }
+);
+
+// ── DELETE /admin/bienestar-video — quitar tutorial ──────────────────────────
+app.delete('/admin/bienestar-video', requireAuth, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM portal_archivos WHERE clave=$1', [BIENESTAR_VIDEO_CLAVE]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'Error al eliminar el video.' });
+  }
+});
+
+// ── GET /admin/bienestar-video/info — estado del tutorial (panel CMS) ────────
+app.get('/admin/bienestar-video/info', requireAuth, async (req, res) => {
+  try {
+    const r = await pool.query(
+      'SELECT mime, nombre, octet_length(data) AS bytes, updated_at FROM portal_archivos WHERE clave=$1',
+      [BIENESTAR_VIDEO_CLAVE]
+    );
+    if (!r.rows.length) return res.json({ ok: true, disponible: false });
+    const row = r.rows[0];
+    res.json({
+      ok: true,
+      disponible: true,
+      mime: row.mime,
+      nombre: row.nombre,
+      bytes: parseInt(row.bytes, 10) || 0,
+      updated_at: row.updated_at
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'Error al consultar el video.' });
   }
 });
 

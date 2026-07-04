@@ -919,8 +919,18 @@ function bienestarPolicialDefault() {
     icono: 'fa-heart',
     botonTexto: 'INICIAR EVALUACIÓN',
     botonUrl: 'evaluacion.html',
+    videoTutorial: '',
+    videoTutorialTitulo: 'Video tutorial — Cómo usar el cuestionario',
     visible: true
   };
+}
+
+function urlVideoBienestarPortal(path) {
+  var p = String(path || '/portal/bienestar-video').trim();
+  if (!p) return '';
+  if (/^https?:\/\//i.test(p)) return p;
+  var base = apiBasePortal() || '';
+  return base + p + (p.indexOf('?') === -1 ? '?t=' + Date.now() : '');
 }
 
 function renderBienestarPolicial(data, containerId) {
@@ -934,13 +944,25 @@ function renderBienestarPolicial(data, containerId) {
   if (sec.visible === false) { el.innerHTML = ''; return; }
   var icono = sec.icono || 'fa-heart';
   var url = sec.botonUrl || 'evaluacion.html';
-  el.innerHTML = '<div class="bienestar-home-card">'
+  var html = '';
+  if (sec.videoTutorial) {
+    var videoSrc = urlVideoBienestarPortal(sec.videoTutorial);
+    var videoTitulo = (sec.videoTutorialTitulo || 'Video tutorial — Cómo usar el cuestionario').trim();
+    html += '<div class="bienestar-video-wrap">'
+      + (videoTitulo ? '<p class="bienestar-video-titulo"><i class="fas fa-play-circle"></i> ' + escHtml(videoTitulo) + '</p>' : '')
+      + '<video class="bienestar-video" controls playsinline preload="metadata" '
+      + 'src="' + escHtml(videoSrc) + '">'
+      + 'Su navegador no puede reproducir este video.</video>'
+      + '</div>';
+  }
+  html += '<div class="bienestar-home-card">'
     + '<i class="fas ' + escHtml(icono) + '" style="font-size:36px;color:#c8a94a;margin-bottom:12px;"></i>'
     + '<h4>' + escHtml(sec.titulo || '') + '</h4>'
     + '<p>' + escHtml(sec.descripcion || '') + '</p>'
     + '<a href="' + escHtml(url) + '" class="btn-bienestar"><i class="fas fa-clipboard-check"></i> '
     + escHtml(sec.botonTexto || 'INICIAR EVALUACIÓN') + '</a>'
     + '</div>';
+  el.innerHTML = html;
 }
 
 var _novedadesCache = [];
