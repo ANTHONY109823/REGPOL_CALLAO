@@ -958,6 +958,27 @@ function construirSlidesResena(sec) {
   return slides.concat(parrafos);
 }
 
+function htmlTextoResenaSlide(texto) {
+  var t = String(texto || '').trim();
+  if (!t) return '';
+  var parts = t.split(/\s*[\u2022\u00B7•]\s*/);
+  if (parts.length <= 1) {
+    return '<p class="resena-slide-parrafo">' + escHtml(t) + '</p>';
+  }
+  var intro = parts[0].trim();
+  var items = parts.slice(1).map(function(s) { return s.trim(); }).filter(Boolean);
+  var html = '';
+  if (intro) html += '<p class="resena-slide-parrafo resena-slide-intro">' + escHtml(intro) + '</p>';
+  if (items.length) {
+    html += '<ul class="resena-slide-lista">';
+    items.forEach(function(item) {
+      html += '<li>' + escHtml(item) + '</li>';
+    });
+    html += '</ul>';
+  }
+  return html;
+}
+
 function htmlResenaCarruselSlide(p, i, isActive) {
   var num = String(i + 1).padStart(2, '0');
   var imgSrc = p.imagen ? urlImagenResenaSlideParaDom(p.imagen) : '';
@@ -973,7 +994,7 @@ function htmlResenaCarruselSlide(p, i, isActive) {
     + '<div class="resena-slide-body">'
     + '<span class="institucional-num" aria-hidden="true">' + num + '</span>'
     + tituloHtml
-    + (p.texto ? '<p>' + escHtml(p.texto) + '</p>' : '')
+    + (p.texto ? htmlTextoResenaSlide(p.texto) : '')
     + '</div></div></article>';
 }
 

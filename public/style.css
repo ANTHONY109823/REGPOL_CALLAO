@@ -1583,6 +1583,50 @@ table.t { min-width: 600px; }
   line-height: 1.3;
 }
 
+.resena-slide-parrafo {
+  margin: 0;
+  color: #444;
+  font-size: 0.98rem;
+  line-height: 1.65;
+  text-align: justify;
+}
+
+.resena-slide-intro {
+  margin-bottom: 4px;
+}
+
+.resena-slide-lista {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.resena-slide-lista li {
+  position: relative;
+  padding: 12px 14px 12px 38px;
+  background: rgba(0, 77, 61, 0.05);
+  border-left: 3px solid var(--dorado-pnp, #c8a94a);
+  border-radius: 0 8px 8px 0;
+  color: #333;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  text-align: justify;
+}
+
+.resena-slide-lista li::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 18px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--verde-pnp);
+}
+
 .resena-carrusel-btn {
   position: absolute;
   top: 50%;
