@@ -142,6 +142,15 @@ function siteDataParaCacheLocal(data) {
       return Object.assign({}, sl, { imagen: img.indexOf('data:') === 0 ? '' : img });
     });
   }
+  if (lite.resenaHistorica && lite.resenaHistorica.parrafos) {
+    lite.resenaHistorica = Object.assign({}, lite.resenaHistorica, {
+      parrafos: lite.resenaHistorica.parrafos.map(function(p) {
+        var n = typeof p === 'string' ? { texto: p } : Object.assign({}, p);
+        if (n.imagen && String(n.imagen).indexOf('data:') === 0) n.imagen = '';
+        return n;
+      })
+    });
+  }
   ['resenaHistorica', 'nuestraLabor'].forEach(function(k) {
     if (lite[k] && lite[k].imagenBanner && String(lite[k].imagenBanner).indexOf('data:') === 0) {
       lite[k] = Object.assign({}, lite[k], { imagenBanner: '' });
@@ -862,10 +871,98 @@ function htmlPaginaHeroBanner(opts) {
     + '</div></div>';
 }
 
+function normalizarParrafoResena(p) {
+  if (!p) return { titulo: '', texto: '', imagen: '' };
+  if (typeof p === 'string') return { titulo: '', texto: p.trim(), imagen: '' };
+  return {
+    titulo: String(p.titulo || '').trim(),
+    texto: String(p.texto || p.parrafo || '').trim(),
+    imagen: String(p.imagen || '').trim()
+  };
+}
+
+function normalizarParrafosResena(list) {
+  return (list || []).map(normalizarParrafoResena);
+}
+
+var _resenaCarruselTimer = null;
+
+function detenerResenaCarrusel() {
+  if (_resenaCarruselTimer) {
+    clearInterval(_resenaCarruselTimer);
+    _resenaCarruselTimer = null;
+  }
+}
+
+function initResenaHistoricaCarrusel() {
+  detenerResenaCarrusel();
+  var root = document.getElementById('resena-carrusel');
+  if (!root) return;
+  var track = root.querySelector('.resena-carrusel-track');
+  var slides = root.querySelectorAll('.resena-carrusel-slide');
+  var btnPrev = root.querySelector('.resena-carrusel-btn.prev');
+  var btnNext = root.querySelector('.resena-carrusel-btn.next');
+  if (!track || !slides.length) return;
+
+  var current = 0;
+
+  function irA(idx) {
+    if (!slides.length) return;
+    current = (idx + slides.length) % slides.length;
+    track.style.transform = 'translate3d(-' + (current * 100) + '%,0,0)';
+    root.querySelectorAll('.resena-carrusel-dot').forEach(function(dot, i) {
+      dot.classList.toggle('active', i === current);
+      dot.setAttribute('aria-selected', i === current ? 'true' : 'false');
+    });
+    slides.forEach(function(sl, i) {
+      sl.classList.toggle('active', i === current);
+      sl.setAttribute('aria-hidden', i === current ? 'false' : 'true');
+    });
+  }
+
+  if (slides.length < 2) {
+    if (btnPrev) btnPrev.style.display = 'none';
+    if (btnNext) btnNext.style.display = 'none';
+    var dotsOnly = root.querySelector('.resena-carrusel-dots');
+    if (dotsOnly) dotsOnly.style.display = 'none';
+    irA(0);
+    return;
+  }
+
+  if (btnPrev) {
+    btnPrev.style.display = '';
+    btnPrev.onclick = function() { irA(current - 1); reiniciarAuto(); };
+  }
+  if (btnNext) {
+    btnNext.style.display = '';
+    btnNext.onclick = function() { irA(current + 1); reiniciarAuto(); };
+  }
+  root.querySelectorAll('.resena-carrusel-dot').forEach(function(dot) {
+    dot.onclick = function() {
+      irA(parseInt(dot.getAttribute('data-idx'), 10) || 0);
+      reiniciarAuto();
+    };
+  });
+
+  function reiniciarAuto() {
+    detenerResenaCarrusel();
+    _resenaCarruselTimer = setInterval(function() { irA(current + 1); }, 7000);
+  }
+
+  root.onmouseenter = detenerResenaCarrusel;
+  root.onmouseleave = reiniciarAuto;
+  irA(0);
+  reiniciarAuto();
+}
+
 function renderResenaHistorica(data, containerId) {
   var el = document.getElementById(containerId);
   var sec = data.resenaHistorica;
   if (!el || !sec) return;
+  detenerResenaCarrusel();
+  var parrafos = normalizarParrafosResena(sec.parrafos).filter(function(p) {
+    return p.titulo || p.texto || p.imagen;
+  });
   var html = '<article class="institucional-page institucional-resena">';
   html += htmlPaginaHeroBanner({
     tipo: 'resena',
@@ -876,14 +973,40 @@ function renderResenaHistorica(data, containerId) {
   html += '<div class="institucional-cabecera">';
   html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
   html += '</div>';
-  html += '<div class="institucional-cuerpo">';
-  (sec.parrafos || []).forEach(function(p, i) {
-    html += '<div class="institucional-bloque">' +
-      '<span class="institucional-num" aria-hidden="true">' + String(i + 1).padStart(2, '0') + '</span>' +
-      '<p>' + escHtml(p) + '</p></div>';
-  });
-  html += '</div></article>';
+
+  if (parrafos.length) {
+    html += '<div class="resena-carrusel" id="resena-carrusel" aria-label="Bloques de reseña histórica">';
+    html += '<button type="button" class="resena-carrusel-btn prev" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>';
+    html += '<div class="resena-carrusel-viewport"><div class="resena-carrusel-track">';
+    parrafos.forEach(function(p, i) {
+      var num = String(i + 1).padStart(2, '0');
+      var mediaHtml = p.imagen
+        ? '<div class="resena-slide-media"><img src="' + escHtml(p.imagen) + '" alt="' + escHtml(p.titulo || ('Bloque ' + num)) + '" loading="lazy" decoding="async"/></div>'
+        : '';
+      var tituloHtml = p.titulo
+        ? '<h3 class="resena-slide-titulo">' + escHtml(p.titulo) + '</h3>'
+        : '';
+      html += '<article class="resena-carrusel-slide institucional-bloque' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '" aria-hidden="' + (i === 0 ? 'false' : 'true') + '">'
+        + '<div class="resena-slide-inner' + (p.imagen ? ' resena-slide-inner--con-img' : '') + '">'
+        + mediaHtml
+        + '<div class="resena-slide-body">'
+        + '<span class="institucional-num" aria-hidden="true">' + num + '</span>'
+        + tituloHtml
+        + (p.texto ? '<p>' + escHtml(p.texto) + '</p>' : '')
+        + '</div></div></article>';
+    });
+    html += '</div></div>';
+    html += '<button type="button" class="resena-carrusel-btn next" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>';
+    html += '<div class="resena-carrusel-dots" role="tablist">';
+    parrafos.forEach(function(p, i) {
+      html += '<button type="button" class="resena-carrusel-dot' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '" role="tab" aria-label="Bloque ' + (i + 1) + '" aria-selected="' + (i === 0 ? 'true' : 'false') + '"></button>';
+    });
+    html += '</div></div>';
+  }
+
+  html += '</article>';
   el.innerHTML = html;
+  if (parrafos.length) initResenaHistoricaCarrusel();
 }
 
 function renderNuestraLabor(data, containerId) {

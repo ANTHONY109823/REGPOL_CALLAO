@@ -749,9 +749,10 @@
           <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Introducción</label>
           <textarea id="cms-resena-intro" rows="3" style="width:100%;padding:8px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;margin-bottom:12px;font-family:inherit;" placeholder="Texto introductorio de la reseña..."></textarea>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <strong style="color:#004d3d;font-size:13px;">Párrafos</strong>
+            <strong style="color:#004d3d;font-size:13px;">Párrafos (carrusel)</strong>
             <button class="btn btn-v" onclick="agregarParrafoResena()"><i class="fas fa-plus"></i> Agregar párrafo</button>
           </div>
+          <p style="font-size:11px;color:#666;margin:0 0 10px;line-height:1.45;">Cada bloque puede tener <strong>título</strong>, <strong>texto</strong> y <strong>fotografía</strong>. En la web se muestran en un carrusel interactivo.</p>
           <div id="cms-lista-parrafos"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
           <button class="btn btn-v" onclick="guardarSitioWeb()" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar Reseña</button>
         </div>
@@ -1342,9 +1343,9 @@
 <script src="api-config.js?v=2"></script>
 <script src="fecha-local.js?v=1"></script>
 <script src="portal-data.js?v=6"></script>
-<script src="portal.js?v=52"></script>
+<script src="portal.js?v=53"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=19"></script>
+<script src="panel-cms.js?v=20"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[], SESION=null;

@@ -33,6 +33,9 @@ function initCMS() {
     if (typeof ordenarNovedadesPorFecha === 'function') {
       cmsDataActual.novedades = ordenarNovedadesPorFecha(cmsDataActual.novedades);
     }
+    if (cmsDataActual.resenaHistorica && cmsDataActual.resenaHistorica.parrafos && typeof normalizarParrafosResena === 'function') {
+      cmsDataActual.resenaHistorica.parrafos = normalizarParrafosResena(cmsDataActual.resenaHistorica.parrafos);
+    }
     if (!cmsDataActual.convenios) cmsDataActual.convenios = [];
     if (!cmsDataActual.cursos)    cmsDataActual.cursos    = [];
     if (!cmsDataActual.heroTexto) cmsDataActual.heroTexto = {
@@ -695,31 +698,62 @@ function renderListaEditable(containerId, items, tipo) {
 function renderParrafosResenaCMS() {
   var el = document.getElementById('cms-lista-parrafos');
   if (!el) return;
-  var parrafos = ((cmsDataActual.resenaHistorica || {}).parrafos) || [];
+  var parrafos = normalizarParrafosResena(((cmsDataActual.resenaHistorica || {}).parrafos) || []);
+  cmsDataActual.resenaHistorica = cmsDataActual.resenaHistorica || {};
+  cmsDataActual.resenaHistorica.parrafos = parrafos;
   if (!parrafos.length) {
     el.innerHTML = '<p class="cms-vacio">No hay párrafos. Pulse "Agregar párrafo".</p>';
     return;
   }
-  el.innerHTML = parrafos.map(function(texto, idx) {
-    return '<div class="cms-parrafo-item">'
+  el.innerHTML = '<div class="cms-parrafos-lista">' + parrafos.map(function(item, idx) {
+    var sec = 'resena-p' + idx;
+    return '<div class="cms-parrafo-item cms-parrafo-item-v2">'
       + '<div class="cms-parrafo-num">' + String(idx + 1).padStart(2, '0') + '</div>'
-      + '<textarea class="cms-textarea cms-parrafo-input" data-idx="' + idx + '" rows="3" placeholder="Escriba el párrafo...">' + safeTextareaContent(texto) + '</textarea>'
+      + '<div class="cms-parrafo-campos">'
+      + '<input type="text" class="cms-input cms-parrafo-titulo" data-idx="' + idx + '" placeholder="Título del bloque (opcional)" value="' + escHtml(item.titulo) + '"/>'
+      + '<textarea class="cms-textarea cms-parrafo-input" data-idx="' + idx + '" rows="3" placeholder="Texto del párrafo...">' + safeTextareaContent(item.texto) + '</textarea>'
+      + '<div class="cms-parrafo-img">'
+      + '<label class="cms-label" style="font-size:11px;margin-bottom:4px;">Fotografía (JPG/PNG máx. 2.5 MB)</label>'
+      + '<input type="file" id="cms-' + sec + '-img-file" accept="image/jpeg,image/png,image/webp" style="font-size:11px;width:100%;margin-bottom:6px;" onchange="previewBannerImg(this,\'' + sec + '\')"/>'
+      + '<input type="text" id="cms-' + sec + '-img-url" placeholder="URL de imagen (opcional)" class="cms-input" style="font-size:11px;margin-bottom:6px;" oninput="previewBannerUrl(this,\'' + sec + '\')"/>'
+      + '<input type="hidden" id="cms-' + sec + '-img-data" value="' + escHtml(item.imagen || '') + '"/>'
+      + '<div id="cms-' + sec + '-img-preview" style="display:none;margin-bottom:4px;">'
+      + '<img id="cms-' + sec + '-img-thumb" style="max-height:80px;border-radius:6px;border:1px solid #ddd;" alt=""/>'
+      + '<button type="button" onclick="quitarBannerImg(\'' + sec + '\')" style="margin-left:8px;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;"><i class="fas fa-times"></i> Quitar</button>'
+      + '</div></div></div>'
       + '<button type="button" class="btn-mini btn-mini-danger" title="Eliminar" onclick="eliminarParrafoResena(' + idx + ')"><i class="fas fa-trash"></i></button>'
       + '</div>';
-  }).join('');
+  }).join('') + '</div>';
+  parrafos.forEach(function(item, idx) {
+    inicializarBannerImg('resena-p' + idx, item.imagen || '');
+  });
+}
+
+function recolectarParrafosDesdeDOM() {
+  var inputs = document.querySelectorAll('.cms-parrafo-input');
+  var list = [];
+  inputs.forEach(function(el) {
+    var idx = el.getAttribute('data-idx');
+    if (idx === null || idx === '') idx = list.length;
+    var tituloEl = document.querySelector('.cms-parrafo-titulo[data-idx="' + idx + '"]');
+    var hidden = document.getElementById('cms-resena-p' + idx + '-img-data');
+    list.push({
+      titulo: tituloEl ? tituloEl.value.trim() : '',
+      texto: el.value.trim(),
+      imagen: hidden ? hidden.value.trim() : ''
+    });
+  });
+  return list;
 }
 
 function syncParrafosFromDOM() {
   cmsDataActual.resenaHistorica = cmsDataActual.resenaHistorica || { parrafos: [] };
-  var inputs = document.querySelectorAll('.cms-parrafo-input');
-  var list = [];
-  inputs.forEach(function(el) { list.push(el.value); });
-  cmsDataActual.resenaHistorica.parrafos = list;
+  cmsDataActual.resenaHistorica.parrafos = recolectarParrafosDesdeDOM();
 }
 
 function agregarParrafoResena() {
   syncParrafosFromDOM();
-  cmsDataActual.resenaHistorica.parrafos.push('');
+  cmsDataActual.resenaHistorica.parrafos.push({ titulo: '', texto: '', imagen: '' });
   renderParrafosResenaCMS();
 }
 

@@ -14,9 +14,21 @@
     "titulo": "Reseña Histórica",
     "intro": "La Región Policial Callao es la entidad encargada de garantizar la seguridad ciudadana en la Provincia Constitucional del Callao, articulando el trabajo de comisarías, unidades especializadas y programas institucionales al servicio de la población.",
     "parrafos": [
-      "Desde su conformación, la REGPOL Callao ha acompañado el desarrollo portuario, comercial y urbano del primer puerto del Perú, desplegando operativos de prevención, investigación y proximidad policial en distritos como Bellavista, La Perla, La Punta, Ventanilla y Carmen de la Legua.",
-      "La Unidad de Tecnologías de la Información y Comunicaciones (UNITIC) impulsa la modernización digital del servicio policial: portal web institucional, evaluaciones de bienestar, tableros de gestión y herramientas de comunicación con el personal y la ciudadanía.",
-      "Hoy la región policial articula convenios de trabajo, cursos de especialización, patrullaje integrado y campañas de prevención, manteniendo el compromiso de honor, servicio y vocación por la seguridad en el Callao."
+      {
+        "titulo": "Orígenes y desarrollo portuario",
+        "texto": "Desde su conformación, la REGPOL Callao ha acompañado el desarrollo portuario, comercial y urbano del primer puerto del Perú, desplegando operativos de prevención, investigación y proximidad policial en distritos como Bellavista, La Perla, La Punta, Ventanilla y Carmen de la Legua.",
+        "imagen": ""
+      },
+      {
+        "titulo": "Modernización digital UNITIC",
+        "texto": "La Unidad de Tecnologías de la Información y Comunicaciones (UNITIC) impulsa la modernización digital del servicio policial: portal web institucional, evaluaciones de bienestar, tableros de gestión y herramientas de comunicación con el personal y la ciudadanía.",
+        "imagen": ""
+      },
+      {
+        "titulo": "Compromiso actual con la ciudadanía",
+        "texto": "Hoy la región policial articula convenios de trabajo, cursos de especialización, patrullaje integrado y campañas de prevención, manteniendo el compromiso de honor, servicio y vocación por la seguridad en el Callao.",
+        "imagen": ""
+      }
     ]
   },
   "nuestraLabor": {

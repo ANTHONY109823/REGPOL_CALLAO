@@ -1493,6 +1493,154 @@ table.t { min-width: 600px; }
   margin: 0;
 }
 
+/* Carrusel de bloques — Reseña Histórica */
+.resena-carrusel {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.resena-carrusel-viewport {
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0, 77, 61, 0.1);
+}
+
+.resena-carrusel-track {
+  display: flex;
+  transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.resena-carrusel-slide {
+  flex: 0 0 100%;
+  min-width: 100%;
+  margin: 0;
+  border-radius: 14px;
+  transition: opacity 0.4s ease;
+  padding: 0;
+  display: block;
+  overflow: hidden;
+}
+
+.resena-slide-inner {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  min-height: 220px;
+}
+
+.resena-slide-inner--con-img .resena-slide-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.resena-slide-media {
+  flex: 0 0 42%;
+  max-width: 42%;
+  min-height: 220px;
+  background: #e8efec;
+  overflow: hidden;
+}
+
+.resena-slide-media img {
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.resena-slide-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px 28px;
+  flex: 1;
+}
+
+.resena-slide-titulo {
+  color: var(--verde-pnp);
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.resena-carrusel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 77, 61, 0.88);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.resena-carrusel-btn:hover {
+  background: var(--verde-pnp);
+  transform: translateY(-50%) scale(1.06);
+}
+
+.resena-carrusel-btn.prev { left: -14px; }
+.resena-carrusel-btn.next { right: -14px; }
+
+.resena-carrusel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.resena-carrusel-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--verde-pnp);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.resena-carrusel-dot.active,
+.resena-carrusel-dot:hover {
+  background: var(--verde-pnp);
+  transform: scale(1.15);
+}
+
+@media (max-width: 768px) {
+  .resena-slide-inner,
+  .resena-slide-inner--con-img {
+    flex-direction: column;
+  }
+  .resena-slide-media {
+    flex: 0 0 auto;
+    max-width: 100%;
+    min-height: 180px;
+  }
+  .resena-slide-media img { min-height: 180px; }
+  .resena-slide-body { padding: 18px 20px; }
+  .resena-carrusel-btn.prev { left: 6px; }
+  .resena-carrusel-btn.next { right: 6px; }
+  .resena-carrusel-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 13px;
+    background: rgba(0, 77, 61, 0.75);
+  }
+}
+
 .pilares-grid-v2 {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
