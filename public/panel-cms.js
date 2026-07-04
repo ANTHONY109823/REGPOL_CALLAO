@@ -860,6 +860,9 @@ function recolectarParrafosDesdeDOM() {
     var tituloEl = document.querySelector('.cms-parrafo-titulo[data-idx="' + idx + '"]');
     var hidden = document.getElementById('cms-resena-p' + idx + '-img-data');
     var imagen = hidden ? hidden.value.trim() : '';
+    if (!imagen && typeof leerBannerImg === 'function') {
+      imagen = leerBannerImg('resena-p' + idx) || '';
+    }
     if (imagen.indexOf('http') === 0 && imagen.indexOf('/portal/resena-imagen/') !== -1) {
       var u = imagen.replace(/^https?:\/\/[^/]+/, '');
       imagen = u.split('?')[0];
@@ -942,13 +945,6 @@ function abrirModalPilar(idx) {
     publicarCmsTrasEdicion('Pilar guardado en borrador. Pulse "Publicar cambios".');
     return true;
   });
-}
-
-function recolectarParrafosDesdeDOM() {
-  var inputs = document.querySelectorAll('.cms-parrafo-input');
-  var list = [];
-  inputs.forEach(function(el) { var t = el.value.trim(); if (t) list.push(t); });
-  return list;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1142,11 +1138,13 @@ function recolectarDatosCMS() {
   data.resenaHistorica.titulo  = 'Reseña Histórica';
   data.resenaHistorica.intro   = getVal('cms-resena-intro');
   data.resenaHistorica.introTitulo = getVal('cms-resena-intro-titulo') || 'Introducción';
-  if (document.querySelector('.cms-parrafo-input')) syncParrafosFromDOM();
-  var memP = normalizarParrafosResena((cmsDataActual.resenaHistorica || {}).parrafos || []);
-  var domP = document.querySelector('.cms-parrafo-input') ? recolectarParrafosDesdeDOM() : memP;
-  data.resenaHistorica.parrafos = typeof mergeParrafosResena === 'function'
-    ? mergeParrafosResena(domP, memP) : domP;
+  if (document.querySelector('.cms-parrafo-input')) {
+    data.resenaHistorica.parrafos = recolectarParrafosDesdeDOM();
+    cmsDataActual.resenaHistorica = cmsDataActual.resenaHistorica || {};
+    cmsDataActual.resenaHistorica.parrafos = data.resenaHistorica.parrafos;
+  } else {
+    data.resenaHistorica.parrafos = normalizarParrafosResena((cmsDataActual.resenaHistorica || {}).parrafos || []);
+  }
   var bannerIntro = leerBannerImg('resena');
   if (!bannerIntro && cmsDataActual.resenaHistorica && cmsDataActual.resenaHistorica.imagenBanner) {
     bannerIntro = cmsDataActual.resenaHistorica.imagenBanner;
