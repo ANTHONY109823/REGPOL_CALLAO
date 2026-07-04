@@ -885,6 +885,15 @@ function normalizarParrafosResena(list) {
   return (list || []).map(normalizarParrafoResena);
 }
 
+function imagenResenaPreferida(domImg, memImg) {
+  var d = String(domImg || '').trim();
+  var m = String(memImg || '').trim();
+  if (d.indexOf('/portal/resena-imagen/') === 0) return d;
+  if (m.indexOf('/portal/resena-imagen/') === 0) return m;
+  if (d.indexOf('data:') === 0 && m && m.indexOf('data:') !== 0) return m;
+  return d || m;
+}
+
 function mergeParrafosResena(desdeDom, desdeMem) {
   var mem = normalizarParrafosResena(desdeMem || []);
   var dom = normalizarParrafosResena(desdeDom || []);
@@ -897,7 +906,7 @@ function mergeParrafosResena(desdeDom, desdeMem) {
     out.push({
       titulo: String(d.titulo || m.titulo || '').trim(),
       texto: String(d.texto || m.texto || '').trim(),
-      imagen: String(d.imagen || m.imagen || '').trim()
+      imagen: imagenResenaPreferida(d.imagen, m.imagen)
     });
   }
   return out;

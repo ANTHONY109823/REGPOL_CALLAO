@@ -1059,6 +1059,14 @@ function puedeGestionarEvaluaciones(admin) {
   return normalizarPermisos(admin.permisos).includes('evaluaciones');
 }
 
+function puedePublicarConfiguracionPortal(admin) {
+  if (!admin) return false;
+  if (admin.rol === 'unitic') return true;
+  return normalizarPermisos(admin.permisos).some(function(p) {
+    return String(p || '').indexOf('cms_') === 0;
+  });
+}
+
 function adminPuedeAccederRegistro(admin, unidad, comisaria) {
   if (!debeFiltrarPorUnidadAsignada(admin)) return true;
   const u = (admin.unidad || '').toUpperCase();
@@ -2785,6 +2793,9 @@ app.post('/admin/resena-imagen/:idx', requireAuth,
   express.raw({ limit: RESENA_IMG_MAX_BYTES, type: function() { return true; } }),
   async (req, res) => {
     try {
+      if (!puedePublicarConfiguracionPortal(req.admin)) {
+        return res.status(403).json({ ok: false, error: 'Sin permiso para subir imágenes del portal' });
+      }
       const idxParam = String(req.params.idx || '').trim().toLowerCase();
       const clave = resenaImgClave(idxParam);
       if (!clave) return res.status(400).json({ ok: false, error: 'Índice inválido.' });
@@ -2822,6 +2833,9 @@ app.post('/admin/resena-imagen/:idx', requireAuth,
 // ── DELETE /admin/resena-imagen/:idx — quitar foto de reseña ─────────────────
 app.delete('/admin/resena-imagen/:idx', requireAuth, async (req, res) => {
   try {
+    if (!puedePublicarConfiguracionPortal(req.admin)) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso para eliminar imágenes del portal' });
+    }
     const clave = resenaImgClave(req.params.idx);
     if (!clave) return res.status(400).json({ ok: false, error: 'Índice inválido.' });
     await pool.query('DELETE FROM portal_archivos WHERE clave=$1', [clave]);
@@ -2950,6 +2964,9 @@ app.get('/admin/bienestar-video/info', requireAuth, async (req, res) => {
 // ── POST /admin/configuracion — guardar CMS (requiere auth) ──────────────────
 app.post('/admin/configuracion', requireAuth, async (req, res) => {
   try {
+    if (!puedePublicarConfiguracionPortal(req.admin)) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso para publicar el portal' });
+    }
     const data = req.body;
     if (!data || typeof data !== 'object') return res.status(400).json({ ok: false, error: 'Datos inválidos' });
     const meses = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];

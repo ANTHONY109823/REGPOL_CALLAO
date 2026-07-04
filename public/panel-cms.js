@@ -793,20 +793,31 @@ function subirDataUrlResenaSiBase64(idx, dataUrl) {
   });
 }
 
+function sincronizarImagenResenaEnDom(seccion, url) {
+  if (typeof inicializarBannerImg === 'function') inicializarBannerImg(seccion, url || '');
+  if (typeof syncImagenParrafoResenaCms === 'function') syncImagenParrafoResenaCms(seccion, url || '');
+}
+
 function prepararImagenesResenaParaPublicar(callback) {
   var rh = cmsDataActual.resenaHistorica || {};
   if (document.querySelector('.cms-parrafo-input')) syncParrafosFromDOM();
   var tareas = [];
   if (rh.imagenBanner && String(rh.imagenBanner).indexOf('data:') === 0) {
     tareas.push(subirDataUrlResenaSiBase64('intro', rh.imagenBanner).then(function(url) {
-      if (url) rh.imagenBanner = url;
+      if (url) {
+        rh.imagenBanner = url;
+        sincronizarImagenResenaEnDom('resena', url);
+      }
     }));
   }
   (rh.parrafos || []).forEach(function(p, i) {
     var img = (p && p.imagen) ? String(p.imagen) : '';
     if (img.indexOf('data:') === 0) {
       tareas.push(subirDataUrlResenaSiBase64(String(i), img).then(function(url) {
-        if (url) p.imagen = url;
+        if (url) {
+          p.imagen = url;
+          sincronizarImagenResenaEnDom('resena-p' + i, url);
+        }
       }));
     }
   });
