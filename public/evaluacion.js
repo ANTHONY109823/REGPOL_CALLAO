@@ -1,5 +1,5 @@
 /* ================================================================
-   evaluacion.js — Cuestionario Psicológico REGPOL Callao
+   evaluacion.js — PROGRAMA DE BIENESTAR REGPOL Callao
    Ing. Anthony Ccayo — UNITIC — 2026
    Preguntas se cargan desde la API (PostgreSQL)
 ================================================================ */
