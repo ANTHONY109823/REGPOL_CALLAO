@@ -13,6 +13,7 @@
   "resenaHistorica": {
     "titulo": "Reseña Histórica",
     "intro": "La Región Policial Callao es la entidad encargada de garantizar la seguridad ciudadana en la Provincia Constitucional del Callao, articulando el trabajo de comisarías, unidades especializadas y programas institucionales al servicio de la población.",
+    "introTitulo": "Introducción",
     "parrafos": [
       {
         "titulo": "Orígenes y desarrollo portuario",

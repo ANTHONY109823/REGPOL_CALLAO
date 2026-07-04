@@ -139,6 +139,7 @@ function poblarFormulariosCMS() {
   var d = cmsDataActual;
   setVal('cms-actualizacion', d.actualizacion);
   setVal('cms-resena-intro',  (d.resenaHistorica || {}).intro || '');
+  setVal('cms-resena-intro-titulo', (d.resenaHistorica || {}).introTitulo || 'Introducción');
   setVal('cms-labor-intro',   (d.nuestraLabor    || {}).intro || '');
   var bp = d.bienestarPolicial || {};
   setVal('cms-bienestar-titulo-seccion', bp.tituloSeccion || 'BIENESTAR POLICIAL');
@@ -695,6 +696,20 @@ function renderListaEditable(containerId, items, tipo) {
 // ═══════════════════════════════════════════════════════════════
 // RESEÑA HISTÓRICA
 // ═══════════════════════════════════════════════════════════════
+function syncImagenParrafoResenaCms(seccion, val) {
+  var m = /^resena-p(\d+)$/.exec(String(seccion || ''));
+  if (!m) return;
+  var idx = parseInt(m[1], 10);
+  cmsDataActual.resenaHistorica = cmsDataActual.resenaHistorica || { parrafos: [] };
+  var list = cmsDataActual.resenaHistorica.parrafos || [];
+  while (list.length <= idx) list.push({ titulo: '', texto: '', imagen: '' });
+  list[idx] = (typeof normalizarParrafoResena === 'function')
+    ? normalizarParrafoResena(list[idx])
+    : { titulo: list[idx].titulo || '', texto: list[idx].texto || '', imagen: '' };
+  list[idx].imagen = val || '';
+  cmsDataActual.resenaHistorica.parrafos = list;
+}
+
 function renderParrafosResenaCMS() {
   var el = document.getElementById('cms-lista-parrafos');
   if (!el) return;
@@ -716,7 +731,7 @@ function renderParrafosResenaCMS() {
       + '<label class="cms-label" style="font-size:11px;margin-bottom:4px;">Fotografía (JPG/PNG máx. 2.5 MB)</label>'
       + '<input type="file" id="cms-' + sec + '-img-file" accept="image/jpeg,image/png,image/webp" style="font-size:11px;width:100%;margin-bottom:6px;" onchange="previewBannerImg(this,\'' + sec + '\')"/>'
       + '<input type="text" id="cms-' + sec + '-img-url" placeholder="URL de imagen (opcional)" class="cms-input" style="font-size:11px;margin-bottom:6px;" oninput="previewBannerUrl(this,\'' + sec + '\')"/>'
-      + '<input type="hidden" id="cms-' + sec + '-img-data" value="' + escHtml(item.imagen || '') + '"/>'
+      + '<input type="hidden" id="cms-' + sec + '-img-data" value=""/>'
       + '<div id="cms-' + sec + '-img-preview" style="display:none;margin-bottom:4px;">'
       + '<img id="cms-' + sec + '-img-thumb" style="max-height:80px;border-radius:6px;border:1px solid #ddd;" alt=""/>'
       + '<button type="button" onclick="quitarBannerImg(\'' + sec + '\')" style="margin-left:8px;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;"><i class="fas fa-times"></i> Quitar</button>'
@@ -732,15 +747,19 @@ function renderParrafosResenaCMS() {
 function recolectarParrafosDesdeDOM() {
   var inputs = document.querySelectorAll('.cms-parrafo-input');
   var list = [];
+  var mem = (cmsDataActual.resenaHistorica || {}).parrafos || [];
   inputs.forEach(function(el) {
     var idx = el.getAttribute('data-idx');
     if (idx === null || idx === '') idx = list.length;
+    idx = parseInt(idx, 10);
     var tituloEl = document.querySelector('.cms-parrafo-titulo[data-idx="' + idx + '"]');
     var hidden = document.getElementById('cms-resena-p' + idx + '-img-data');
+    var imagen = hidden ? hidden.value.trim() : '';
+    if (!imagen && mem[idx] && mem[idx].imagen) imagen = String(mem[idx].imagen).trim();
     list.push({
       titulo: tituloEl ? tituloEl.value.trim() : '',
       texto: el.value.trim(),
-      imagen: hidden ? hidden.value.trim() : ''
+      imagen: imagen
     });
   });
   return list;
@@ -1013,6 +1032,7 @@ function recolectarDatosCMS() {
   data.resenaHistorica    = data.resenaHistorica || {};
   data.resenaHistorica.titulo  = 'Reseña Histórica';
   data.resenaHistorica.intro   = getVal('cms-resena-intro');
+  data.resenaHistorica.introTitulo = getVal('cms-resena-intro-titulo') || 'Introducción';
   data.resenaHistorica.parrafos = recolectarParrafosDesdeDOM();
   data.resenaHistorica.imagenBanner = leerBannerImg('resena');
   data.nuestraLabor       = data.nuestraLabor || {};
@@ -1265,11 +1285,12 @@ function previewBannerImg(input, seccion) {
     var data = e.target.result;
     var aplicar = function(val) {
       inicializarBannerImg(seccion, val);
+      syncImagenParrafoResenaCms(seccion, val);
       var urlInput = document.getElementById('cms-' + seccion + '-img-url');
       if (urlInput) urlInput.value = '';
     };
-    if (String(seccion).indexOf('encabezado') === 0) {
-      optimizarImagenCMS(data, 1200, 0.93, aplicar);
+    if (String(seccion).indexOf('encabezado') === 0 || String(seccion).indexOf('resena-p') === 0 || seccion === 'resena') {
+      optimizarImagenCMS(data, 1200, 0.88, aplicar);
     } else {
       aplicar(data);
     }
@@ -1284,6 +1305,7 @@ function previewBannerUrl(input, seccion) {
     mostrarAlertaCMS('Esa URL parece una miniatura. Use la imagen en tamaño completo para mejor nitidez.', 'error');
   }
   inicializarBannerImg(seccion, url);
+  syncImagenParrafoResenaCms(seccion, url);
 }
 
 function quitarBannerImg(seccion) {
@@ -1297,6 +1319,7 @@ function quitarBannerImg(seccion) {
   if (thumb)     thumb.src = '';
   if (fileInput) fileInput.value = '';
   if (urlInput)  urlInput.value = '';
+  syncImagenParrafoResenaCms(seccion, '');
 }
 
 function leerBannerImg(seccion) {

@@ -1494,6 +1494,22 @@ table.t { min-width: 600px; }
 }
 
 /* Carrusel de bloques — Reseña Histórica */
+.institucional-resena--carrusel {
+  max-width: 960px;
+}
+
+.resena-carrusel--completo {
+  margin-top: 0;
+}
+
+.resena-carrusel--completo .resena-carrusel-viewport {
+  min-height: 280px;
+}
+
+.resena-carrusel--completo .resena-slide-inner {
+  min-height: 280px;
+}
+
 .resena-carrusel {
   position: relative;
   margin-bottom: 8px;

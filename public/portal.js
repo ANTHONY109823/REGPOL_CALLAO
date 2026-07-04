@@ -886,6 +886,67 @@ function normalizarParrafosResena(list) {
 }
 
 var _resenaCarruselTimer = null;
+var _resenaSlideBlobUrls = [];
+
+function revocarResenaSlideBlobs() {
+  _resenaSlideBlobUrls.forEach(function(u) {
+    try { URL.revokeObjectURL(u); } catch (e) {}
+  });
+  _resenaSlideBlobUrls = [];
+}
+
+function urlImagenResenaSlideParaDom(src) {
+  var s = String(src || '').trim();
+  if (!s) return '';
+  if (s.indexOf('data:image/') !== 0) return s;
+  try {
+    var parts = s.split(',');
+    if (parts.length < 2) return s;
+    var mimeMatch = parts[0].match(/:(.*?);/);
+    if (!mimeMatch) return s;
+    var bin = atob(parts[1]);
+    var arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    var blobUrl = URL.createObjectURL(new Blob([arr], { type: mimeMatch[1] }));
+    _resenaSlideBlobUrls.push(blobUrl);
+    return blobUrl;
+  } catch (e) {
+    return s;
+  }
+}
+
+function construirSlidesResena(sec) {
+  var slides = [];
+  var intro = String(sec.intro || '').trim();
+  var introImg = String(sec.imagenBanner || '').trim();
+  var introTitulo = String(sec.introTitulo || 'Introducción').trim() || 'Introducción';
+  if (intro || introImg) {
+    slides.push({ titulo: introTitulo, texto: intro, imagen: introImg });
+  }
+  var parrafos = normalizarParrafosResena(sec.parrafos).filter(function(p) {
+    return p.titulo || p.texto || p.imagen;
+  });
+  return slides.concat(parrafos);
+}
+
+function htmlResenaCarruselSlide(p, i, isActive) {
+  var num = String(i + 1).padStart(2, '0');
+  var imgSrc = p.imagen ? urlImagenResenaSlideParaDom(p.imagen) : '';
+  var mediaHtml = imgSrc
+    ? '<div class="resena-slide-media"><img src="' + escHtml(imgSrc) + '" alt="' + escHtml(p.titulo || ('Bloque ' + num)) + '" loading="lazy" decoding="async"/></div>'
+    : '';
+  var tituloHtml = p.titulo
+    ? '<h3 class="resena-slide-titulo">' + escHtml(p.titulo) + '</h3>'
+    : '';
+  return '<article class="resena-carrusel-slide institucional-bloque' + (isActive ? ' active' : '') + '" data-idx="' + i + '" aria-hidden="' + (isActive ? 'false' : 'true') + '">'
+    + '<div class="resena-slide-inner' + (imgSrc ? ' resena-slide-inner--con-img' : '') + '">'
+    + mediaHtml
+    + '<div class="resena-slide-body">'
+    + '<span class="institucional-num" aria-hidden="true">' + num + '</span>'
+    + tituloHtml
+    + (p.texto ? '<p>' + escHtml(p.texto) + '</p>' : '')
+    + '</div></div></article>';
+}
 
 function detenerResenaCarrusel() {
   if (_resenaCarruselTimer) {
@@ -960,53 +1021,31 @@ function renderResenaHistorica(data, containerId) {
   var sec = data.resenaHistorica;
   if (!el || !sec) return;
   detenerResenaCarrusel();
-  var parrafos = normalizarParrafosResena(sec.parrafos).filter(function(p) {
-    return p.titulo || p.texto || p.imagen;
-  });
-  var html = '<article class="institucional-page institucional-resena">';
-  html += htmlPaginaHeroBanner({
-    tipo: 'resena',
-    titulo: sec.titulo || 'Reseña Histórica',
-    imagen: sec.imagenBanner,
-    soloImagen: true
-  });
-  html += '<div class="institucional-cabecera">';
-  html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
-  html += '</div>';
+  revocarResenaSlideBlobs();
+  var slides = construirSlidesResena(sec);
+  var html = '<article class="institucional-page institucional-resena institucional-resena--carrusel">';
 
-  if (parrafos.length) {
-    html += '<div class="resena-carrusel" id="resena-carrusel" aria-label="Bloques de reseña histórica">';
+  if (slides.length) {
+    html += '<div class="resena-carrusel resena-carrusel--completo" id="resena-carrusel" aria-label="Reseña histórica">';
     html += '<button type="button" class="resena-carrusel-btn prev" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>';
     html += '<div class="resena-carrusel-viewport"><div class="resena-carrusel-track">';
-    parrafos.forEach(function(p, i) {
-      var num = String(i + 1).padStart(2, '0');
-      var mediaHtml = p.imagen
-        ? '<div class="resena-slide-media"><img src="' + escHtml(p.imagen) + '" alt="' + escHtml(p.titulo || ('Bloque ' + num)) + '" loading="lazy" decoding="async"/></div>'
-        : '';
-      var tituloHtml = p.titulo
-        ? '<h3 class="resena-slide-titulo">' + escHtml(p.titulo) + '</h3>'
-        : '';
-      html += '<article class="resena-carrusel-slide institucional-bloque' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '" aria-hidden="' + (i === 0 ? 'false' : 'true') + '">'
-        + '<div class="resena-slide-inner' + (p.imagen ? ' resena-slide-inner--con-img' : '') + '">'
-        + mediaHtml
-        + '<div class="resena-slide-body">'
-        + '<span class="institucional-num" aria-hidden="true">' + num + '</span>'
-        + tituloHtml
-        + (p.texto ? '<p>' + escHtml(p.texto) + '</p>' : '')
-        + '</div></div></article>';
+    slides.forEach(function(p, i) {
+      html += htmlResenaCarruselSlide(p, i, i === 0);
     });
     html += '</div></div>';
     html += '<button type="button" class="resena-carrusel-btn next" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>';
     html += '<div class="resena-carrusel-dots" role="tablist">';
-    parrafos.forEach(function(p, i) {
-      html += '<button type="button" class="resena-carrusel-dot' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '" role="tab" aria-label="Bloque ' + (i + 1) + '" aria-selected="' + (i === 0 ? 'true' : 'false') + '"></button>';
+    slides.forEach(function(p, i) {
+      html += '<button type="button" class="resena-carrusel-dot' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '" role="tab" aria-label="Diapositiva ' + (i + 1) + '" aria-selected="' + (i === 0 ? 'true' : 'false') + '"></button>';
     });
     html += '</div></div>';
+  } else {
+    html += '<p class="texto-vacio">Contenido de reseña histórica en preparación.</p>';
   }
 
   html += '</article>';
   el.innerHTML = html;
-  if (parrafos.length) initResenaHistoricaCarrusel();
+  if (slides.length) initResenaHistoricaCarrusel();
 }
 
 function renderNuestraLabor(data, containerId) {
