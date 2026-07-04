@@ -750,9 +750,10 @@ function subirImagenResenaAlServidor(seccion, blob, mime, nombre, callback) {
     },
     body: blob
   })
-    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); })
     .then(function(res) {
       if (res.data && res.data.ok && res.data.url) callback(res.data.url, null);
+      else if (res.status === 401 || res.status === 403) callback(null, mensajeErrorSesionCms(res.status, res.data));
       else callback(null, (res.data && res.data.error) || 'No se pudo subir la imagen');
     })
     .catch(function() { callback(null, 'Sin conexión al subir la imagen'); });
@@ -1198,6 +1199,23 @@ function guardarSitioWeb(onComplete) {
   });
 }
 
+function mensajeErrorSesionCms(status, data) {
+  if (status === 401 || status === 403) {
+    return 'Sesión expirada o inválida. Cierre sesión (arriba a la derecha), vuelva a ingresar y publique de nuevo.';
+  }
+  return (data && data.error) || ('error HTTP ' + status);
+}
+
+function verificarSesionCmsActiva(callback) {
+  var base = apiBaseCMS();
+  var token = (typeof TOKEN !== 'undefined' && TOKEN) ? TOKEN : '';
+  if (!base || !token) { callback(false); return; }
+  fetch(base + '/admin/perfil', { headers: { 'x-admin-token': token } })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok && d && d.ok, status: r.status }; }); })
+    .then(function(res) { callback(!!res.ok, res.status); })
+    .catch(function() { callback(false); });
+}
+
 function publicarCmsDataAlServidor(onComplete) {
   var base = apiBaseCMS();
   var token = (typeof TOKEN !== 'undefined' && TOKEN) ? TOKEN : '';
@@ -1211,26 +1229,36 @@ function publicarCmsDataAlServidor(onComplete) {
     if (typeof onComplete === 'function') onComplete(false);
     return;
   }
-  mostrarAlertaCMS('Publicando en el servidor...', 'ok');
-  fetch(base + '/admin/configuracion', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-    body: JSON.stringify(cmsDataActual)
-  }).then(function(r) { return r.json().then(function(d) { return { status: r.status, data: d }; }); })
-    .then(function(res) {
-      var ok = !!(res.data && res.data.ok);
-      if (ok) {
-        if (typeof limpiarCachePortal === 'function') limpiarCachePortal();
-        mostrarAlertaCMS('¡Publicado en el servidor! Los visitantes verán los cambios al recargar (Ctrl+F5).', 'ok');
-      } else {
-        mostrarAlertaCMS('No se publicó: ' + ((res.data && res.data.error) || ('error HTTP ' + res.status)), 'error');
-      }
-      if (typeof onComplete === 'function') onComplete(ok);
-    })
-    .catch(function() {
-      mostrarAlertaCMS('Sin conexión al servidor. Los cambios quedaron solo en este navegador.', 'error');
+  verificarSesionCmsActiva(function(sesionOk) {
+    if (!sesionOk) {
+      mostrarAlertaCMS(mensajeErrorSesionCms(403, null), 'error');
       if (typeof onComplete === 'function') onComplete(false);
-    });
+      return;
+    }
+    mostrarAlertaCMS('Publicando en el servidor...', 'ok');
+    fetch(base + '/admin/configuracion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+      body: JSON.stringify(cmsDataActual)
+    }).then(function(r) {
+      return r.json().catch(function() { return { ok: false, error: 'Respuesta inválida del servidor' }; })
+        .then(function(d) { return { status: r.status, data: d }; });
+    })
+      .then(function(res) {
+        var ok = !!(res.data && res.data.ok);
+        if (ok) {
+          if (typeof limpiarCachePortal === 'function') limpiarCachePortal();
+          mostrarAlertaCMS('¡Publicado en el servidor! Los visitantes verán los cambios al recargar (Ctrl+F5).', 'ok');
+        } else {
+          mostrarAlertaCMS('No se publicó: ' + mensajeErrorSesionCms(res.status, res.data), 'error');
+        }
+        if (typeof onComplete === 'function') onComplete(ok);
+      })
+      .catch(function() {
+        mostrarAlertaCMS('Sin conexión al servidor. Los cambios quedaron solo en este navegador.', 'error');
+        if (typeof onComplete === 'function') onComplete(false);
+      });
+  });
 }
 
 function exportarSiteJSON() {

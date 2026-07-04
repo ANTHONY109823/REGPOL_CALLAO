@@ -111,11 +111,50 @@ function registrarFalloLogin(ip) {
   }
 }
 
+async function persistirSesionDb(token, adminId, expMs) {
+  await pool.query(
+    `INSERT INTO admin_sesiones (token, admin_id, expira)
+     VALUES ($1, $2, to_timestamp($3 / 1000.0))
+     ON CONFLICT (token) DO UPDATE SET admin_id = EXCLUDED.admin_id, expira = EXCLUDED.expira`,
+    [token, adminId, expMs]
+  );
+}
+
+async function cargarSesionDesdeDb(token) {
+  const r = await pool.query(
+    `SELECT a.id, a.usuario, a.passhash, a.rol, a.nombre, a.unidad, a.permisos,
+            EXTRACT(EPOCH FROM s.expira) * 1000 AS exp_ms
+     FROM admin_sesiones s
+     INNER JOIN admins a ON a.id = s.admin_id
+     WHERE s.token = $1 AND s.expira > NOW()`,
+    [token]
+  );
+  if (!r.rows.length) return null;
+  const row = r.rows[0];
+  return {
+    admin: {
+      id: row.id,
+      usuario: row.usuario,
+      passhash: row.passhash,
+      rol: row.rol,
+      nombre: row.nombre,
+      unidad: row.unidad,
+      permisos: row.permisos
+    },
+    exp: parseFloat(row.exp_ms)
+  };
+}
+
+async function limpiarSesionesDbExpiradas() {
+  await pool.query('DELETE FROM admin_sesiones WHERE expira <= NOW()');
+}
+
 setInterval(function() {
   const ahora = Date.now();
   sesiones.forEach(function(s, t) { if (s.exp <= ahora) sesiones.delete(t); });
   loginIntentos.forEach(function(r, ip) { if (ahora - r.desde > LOGIN_VENTANA_MS) loginIntentos.delete(ip); });
   authCache.forEach(function(c, t) { if (c.exp <= ahora) authCache.delete(t); });
+  limpiarSesionesDbExpiradas().catch(function() {});
 }, 60 * 60 * 1000).unref();
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -405,6 +444,13 @@ async function initDB() {
       data        BYTEA NOT NULL,
       updated_at  TIMESTAMPTZ DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS admin_sesiones (
+      token     VARCHAR(64) PRIMARY KEY,
+      admin_id  INTEGER NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+      expira    TIMESTAMPTZ NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_admin_sesiones_expira ON admin_sesiones(expira);
   `);
 
   // Admins por defecto — la contraseña inicial se toma de variables de entorno.
@@ -925,17 +971,34 @@ async function requireAuth(req, res, next) {
         const rs = await pool.query('SELECT * FROM admins WHERE id=$1', [ses.adminId]);
         if (!rs.rows.length) {
           sesiones.delete(token);
+          await pool.query('DELETE FROM admin_sesiones WHERE token=$1', [token]).catch(function() {});
           return res.status(403).json({ ok: false, error: 'Sesión finalizada' });
         }
         ses.admin = rs.rows[0];
         ses.dbExp = Date.now() + AUTH_CACHE_TTL;
       }
       ses.exp = Date.now() + SESION_TTL;
+      await persistirSesionDb(token, ses.adminId, ses.exp);
       req.admin = ses.admin;
       return next();
     }
 
-    // 2) Compatibilidad con tokens antiguos (sesiones abiertas antes del cambio)
+    // 2) Sesión persistida en PostgreSQL (sobrevive reinicios de Railway)
+    const dbSes = await cargarSesionDesdeDb(token);
+    if (dbSes) {
+      const nuevaExp = Date.now() + SESION_TTL;
+      sesiones.set(token, {
+        adminId: dbSes.admin.id,
+        admin: dbSes.admin,
+        exp: nuevaExp,
+        dbExp: Date.now() + AUTH_CACHE_TTL
+      });
+      await persistirSesionDb(token, dbSes.admin.id, nuevaExp);
+      req.admin = dbSes.admin;
+      return next();
+    }
+
+    // 3) Compatibilidad con tokens antiguos (sesiones abiertas antes del cambio)
     const cached = authCache.get(token);
     if (cached && cached.exp > Date.now()) {
       req.admin = cached.admin;
@@ -1116,7 +1179,9 @@ app.post('/admin/login', async (req, res) => {
     const a = r.rows[0];
     // Token opaco de sesión: no contiene ni permite recuperar la contraseña
     const token = crypto.randomBytes(24).toString('hex');
-    sesiones.set(token, { adminId: a.id, admin: a, exp: Date.now() + SESION_TTL, dbExp: Date.now() + AUTH_CACHE_TTL });
+    const exp = Date.now() + SESION_TTL;
+    sesiones.set(token, { adminId: a.id, admin: a, exp, dbExp: Date.now() + AUTH_CACHE_TTL });
+    await persistirSesionDb(token, a.id, exp);
     res.json({ ok: true, token, rol: a.rol, nombre: a.nombre, unidad: a.unidad, permisos: normalizarPermisos(a.permisos) });
   } catch (e) {
     res.json({ ok: false, error: e.message });
