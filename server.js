@@ -892,7 +892,7 @@ app.use(function(req, res, next) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   next();
 });
-app.use(express.json({ limit: '12mb' }));
+app.use(express.json({ limit: '32mb' }));
 app.use(staticBufferado);
 app.use(express.static(PUBLIC_DIR, {
   maxAge: 0, etag: false, fallthrough: true,
@@ -2681,6 +2681,88 @@ app.get('/portal/configuracion', async (req, res) => {
     res.status(404).json({ ok: false, error: 'Sin datos' });
   } catch (e) {
     res.status(500).json({ ok: false, error: 'Error al leer configuración' });
+  }
+});
+
+const RESENA_IMG_MAX_BYTES = 3 * 1024 * 1024;
+
+function resenaImgClave(idx) {
+  const s = String(idx || '').trim().toLowerCase();
+  if (s === 'intro') return 'resena_intro';
+  if (/^\d+$/.test(s)) return 'resena_slide_' + s;
+  return null;
+}
+
+function mimeImagenResenaValido(mime) {
+  return /^image\/(jpeg|png|webp)$/i.test(String(mime || ''));
+}
+
+// ── GET /portal/resena-imagen/:idx — fotos del carrusel de reseña ───────────
+app.get('/portal/resena-imagen/:idx', async (req, res) => {
+  try {
+    const clave = resenaImgClave(req.params.idx);
+    if (!clave) return res.status(404).end();
+    const r = await pool.query(
+      'SELECT mime, data FROM portal_archivos WHERE clave=$1',
+      [clave]
+    );
+    if (!r.rows.length || !r.rows[0].data) return res.status(404).end();
+    res.set('Content-Type', r.rows[0].mime || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(r.rows[0].data);
+  } catch (e) {
+    res.status(500).end();
+  }
+});
+
+// ── POST /admin/resena-imagen/:idx — subir foto de reseña (intro o párrafo) ───
+app.post('/admin/resena-imagen/:idx', requireAuth,
+  express.raw({ limit: RESENA_IMG_MAX_BYTES, type: function() { return true; } }),
+  async (req, res) => {
+    try {
+      const idxParam = String(req.params.idx || '').trim().toLowerCase();
+      const clave = resenaImgClave(idxParam);
+      if (!clave) return res.status(400).json({ ok: false, error: 'Índice inválido.' });
+      const buf = req.body;
+      if (!buf || !Buffer.isBuffer(buf) || !buf.length) {
+        return res.status(400).json({ ok: false, error: 'Archivo vacío o no recibido.' });
+      }
+      if (buf.length > RESENA_IMG_MAX_BYTES) {
+        return res.status(400).json({ ok: false, error: 'La imagen supera el máximo de 3 MB.' });
+      }
+      let mime = String(req.headers['content-type'] || 'image/jpeg').split(';')[0].trim();
+      const nombre = String(req.headers['x-filename'] || 'foto.jpg').trim();
+      if (!mimeImagenResenaValido(mime)) {
+        if (/\.png$/i.test(nombre)) mime = 'image/png';
+        else if (/\.webp$/i.test(nombre)) mime = 'image/webp';
+        else mime = 'image/jpeg';
+      }
+      await pool.query(
+        `INSERT INTO portal_archivos (clave, mime, nombre, data, updated_at)
+         VALUES ($1, $2, $3, $4, NOW())
+         ON CONFLICT (clave) DO UPDATE SET
+           mime = EXCLUDED.mime,
+           nombre = EXCLUDED.nombre,
+           data = EXCLUDED.data,
+           updated_at = NOW()`,
+        [clave, mime, nombre.slice(0, 255), buf]
+      );
+      res.json({ ok: true, url: '/portal/resena-imagen/' + idxParam, bytes: buf.length });
+    } catch (e) {
+      res.status(500).json({ ok: false, error: 'Error al guardar la imagen.' });
+    }
+  }
+);
+
+// ── DELETE /admin/resena-imagen/:idx — quitar foto de reseña ─────────────────
+app.delete('/admin/resena-imagen/:idx', requireAuth, async (req, res) => {
+  try {
+    const clave = resenaImgClave(req.params.idx);
+    if (!clave) return res.status(400).json({ ok: false, error: 'Índice inválido.' });
+    await pool.query('DELETE FROM portal_archivos WHERE clave=$1', [clave]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'Error al eliminar la imagen.' });
   }
 });
 

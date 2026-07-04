@@ -697,10 +697,14 @@ function renderListaEditable(containerId, items, tipo) {
 // RESEÑA HISTÓRICA
 // ═══════════════════════════════════════════════════════════════
 function syncImagenParrafoResenaCms(seccion, val) {
+  cmsDataActual.resenaHistorica = cmsDataActual.resenaHistorica || {};
+  if (seccion === 'resena') {
+    cmsDataActual.resenaHistorica.imagenBanner = val || '';
+    return;
+  }
   var m = /^resena-p(\d+)$/.exec(String(seccion || ''));
   if (!m) return;
   var idx = parseInt(m[1], 10);
-  cmsDataActual.resenaHistorica = cmsDataActual.resenaHistorica || { parrafos: [] };
   var list = cmsDataActual.resenaHistorica.parrafos || [];
   while (list.length <= idx) list.push({ titulo: '', texto: '', imagen: '' });
   list[idx] = (typeof normalizarParrafoResena === 'function')
@@ -708,6 +712,106 @@ function syncImagenParrafoResenaCms(seccion, val) {
     : { titulo: list[idx].titulo || '', texto: list[idx].texto || '', imagen: '' };
   list[idx].imagen = val || '';
   cmsDataActual.resenaHistorica.parrafos = list;
+}
+
+function indiceResenaImagenSeccion(seccion) {
+  if (seccion === 'resena') return 'intro';
+  var m = /^resena-p(\d+)$/.exec(String(seccion || ''));
+  return m ? m[1] : null;
+}
+
+function esSeccionImagenResena(seccion) {
+  return seccion === 'resena' || /^resena-p\d+$/.test(String(seccion || ''));
+}
+
+function dataUrlABlobResena(dataUrl) {
+  var parts = String(dataUrl || '').split(',');
+  if (parts.length < 2) return null;
+  var mimeMatch = parts[0].match(/:(.*?);/);
+  if (!mimeMatch) return null;
+  var bin = atob(parts[1]);
+  var arr = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mimeMatch[1] });
+}
+
+function subirImagenResenaAlServidor(seccion, blob, mime, nombre, callback) {
+  var idx = indiceResenaImagenSeccion(seccion);
+  if (idx === null) { callback(null, 'Sección inválida'); return; }
+  var base = apiBaseCMS();
+  var token = (typeof TOKEN !== 'undefined' && TOKEN) ? TOKEN : '';
+  if (!base || !token) { callback(null, 'Sesión expirada'); return; }
+  fetch(base + '/admin/resena-imagen/' + encodeURIComponent(idx), {
+    method: 'POST',
+    headers: {
+      'Content-Type': mime || 'image/jpeg',
+      'x-admin-token': token,
+      'x-filename': nombre || 'foto.jpg'
+    },
+    body: blob
+  })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (res.data && res.data.ok && res.data.url) callback(res.data.url, null);
+      else callback(null, (res.data && res.data.error) || 'No se pudo subir la imagen');
+    })
+    .catch(function() { callback(null, 'Sin conexión al subir la imagen'); });
+}
+
+function aplicarImagenResenaCms(seccion, dataUrl, file) {
+  var blob = file || dataUrlABlobResena(dataUrl);
+  if (!blob) {
+    mostrarAlertaCMS('No se pudo procesar la imagen.', 'error');
+    return;
+  }
+  var mime = (file && file.type) || (blob.type) || 'image/jpeg';
+  var nombre = (file && file.name) || 'foto.jpg';
+  mostrarAlertaCMS('Subiendo imagen al servidor...', 'ok');
+  subirImagenResenaAlServidor(seccion, blob, mime, nombre, function(url, err) {
+    if (!url) {
+      mostrarAlertaCMS(err || 'Error al subir imagen', 'error');
+      return;
+    }
+    var base = apiBaseCMS() || '';
+    inicializarBannerImg(seccion, base + url + '?t=' + Date.now());
+    syncImagenParrafoResenaCms(seccion, url);
+    mostrarAlertaCMS('Imagen subida. Guarde y publique para verla en la web.', 'ok');
+  });
+}
+
+function subirDataUrlResenaSiBase64(idx, dataUrl) {
+  return new Promise(function(resolve) {
+    var s = String(dataUrl || '').trim();
+    if (!s || s.indexOf('data:image/') !== 0) { resolve(s); return; }
+    var seccion = idx === 'intro' ? 'resena' : ('resena-p' + idx);
+    var blob = dataUrlABlobResena(s);
+    if (!blob) { resolve(''); return; }
+    subirImagenResenaAlServidor(seccion, blob, blob.type, 'foto.jpg', function(url) {
+      resolve(url || '');
+    });
+  });
+}
+
+function prepararImagenesResenaParaPublicar(callback) {
+  var rh = cmsDataActual.resenaHistorica || {};
+  if (document.querySelector('.cms-parrafo-input')) syncParrafosFromDOM();
+  var tareas = [];
+  if (rh.imagenBanner && String(rh.imagenBanner).indexOf('data:') === 0) {
+    tareas.push(subirDataUrlResenaSiBase64('intro', rh.imagenBanner).then(function(url) {
+      if (url) rh.imagenBanner = url;
+    }));
+  }
+  (rh.parrafos || []).forEach(function(p, i) {
+    var img = (p && p.imagen) ? String(p.imagen) : '';
+    if (img.indexOf('data:') === 0) {
+      tareas.push(subirDataUrlResenaSiBase64(String(i), img).then(function(url) {
+        if (url) p.imagen = url;
+      }));
+    }
+  });
+  cmsDataActual.resenaHistorica = rh;
+  if (!tareas.length) { callback(); return; }
+  Promise.all(tareas).then(function() { callback(); }).catch(function() { callback(); });
 }
 
 function renderParrafosResenaCMS() {
@@ -746,8 +850,9 @@ function renderParrafosResenaCMS() {
 
 function recolectarParrafosDesdeDOM() {
   var inputs = document.querySelectorAll('.cms-parrafo-input');
+  var mem = normalizarParrafosResena((cmsDataActual.resenaHistorica || {}).parrafos || []);
+  if (!inputs.length) return mem;
   var list = [];
-  var mem = (cmsDataActual.resenaHistorica || {}).parrafos || [];
   inputs.forEach(function(el) {
     var idx = el.getAttribute('data-idx');
     if (idx === null || idx === '') idx = list.length;
@@ -755,14 +860,18 @@ function recolectarParrafosDesdeDOM() {
     var tituloEl = document.querySelector('.cms-parrafo-titulo[data-idx="' + idx + '"]');
     var hidden = document.getElementById('cms-resena-p' + idx + '-img-data');
     var imagen = hidden ? hidden.value.trim() : '';
+    if (imagen.indexOf('http') === 0 && imagen.indexOf('/portal/resena-imagen/') !== -1) {
+      var u = imagen.replace(/^https?:\/\/[^/]+/, '');
+      imagen = u.split('?')[0];
+    }
     if (!imagen && mem[idx] && mem[idx].imagen) imagen = String(mem[idx].imagen).trim();
     list.push({
-      titulo: tituloEl ? tituloEl.value.trim() : '',
+      titulo: tituloEl ? tituloEl.value.trim() : (mem[idx] && mem[idx].titulo) || '',
       texto: el.value.trim(),
       imagen: imagen
     });
   });
-  return list;
+  return typeof mergeParrafosResena === 'function' ? mergeParrafosResena(list, mem) : list;
 }
 
 function syncParrafosFromDOM() {
@@ -1033,8 +1142,19 @@ function recolectarDatosCMS() {
   data.resenaHistorica.titulo  = 'Reseña Histórica';
   data.resenaHistorica.intro   = getVal('cms-resena-intro');
   data.resenaHistorica.introTitulo = getVal('cms-resena-intro-titulo') || 'Introducción';
-  data.resenaHistorica.parrafos = recolectarParrafosDesdeDOM();
-  data.resenaHistorica.imagenBanner = leerBannerImg('resena');
+  if (document.querySelector('.cms-parrafo-input')) syncParrafosFromDOM();
+  var memP = normalizarParrafosResena((cmsDataActual.resenaHistorica || {}).parrafos || []);
+  var domP = document.querySelector('.cms-parrafo-input') ? recolectarParrafosDesdeDOM() : memP;
+  data.resenaHistorica.parrafos = typeof mergeParrafosResena === 'function'
+    ? mergeParrafosResena(domP, memP) : domP;
+  var bannerIntro = leerBannerImg('resena');
+  if (!bannerIntro && cmsDataActual.resenaHistorica && cmsDataActual.resenaHistorica.imagenBanner) {
+    bannerIntro = cmsDataActual.resenaHistorica.imagenBanner;
+  }
+  if (bannerIntro && bannerIntro.indexOf('http') === 0) {
+    bannerIntro = bannerIntro.replace(/^https?:\/\/[^/]+/, '').split('?')[0];
+  }
+  data.resenaHistorica.imagenBanner = bannerIntro;
   data.nuestraLabor       = data.nuestraLabor || {};
   data.nuestraLabor.titulo = 'Nuestra Labor';
   data.nuestraLabor.intro  = getVal('cms-labor-intro');
@@ -1067,14 +1187,20 @@ function recolectarDatosCMS() {
 function guardarSitioWeb(onComplete) {
   if (!cmsDataActual) cmsDataActual = {};
   var navPrevio = Array.isArray(cmsDataActual.navOcultos) ? cmsDataActual.navOcultos.slice() : [];
-  cmsDataActual = recolectarDatosCMS();
-  if (!contenedorMenuPublicacionActivo()) {
-    cmsDataActual.navOcultos = navPrevio;
-  }
-  cmsDataActual.actualizacion = fechaActualizacionHoy();
-  cmsDataActual.cmsPublicadoEn = new Date().toISOString();
-  setVal('cms-actualizacion', cmsDataActual.actualizacion);
-  saveSiteDataToStorage(cmsDataActual);
+  prepararImagenesResenaParaPublicar(function() {
+    cmsDataActual = recolectarDatosCMS();
+    if (!contenedorMenuPublicacionActivo()) {
+      cmsDataActual.navOcultos = navPrevio;
+    }
+    cmsDataActual.actualizacion = fechaActualizacionHoy();
+    cmsDataActual.cmsPublicadoEn = new Date().toISOString();
+    setVal('cms-actualizacion', cmsDataActual.actualizacion);
+    saveSiteDataToStorage(cmsDataActual);
+    publicarCmsDataAlServidor(onComplete);
+  });
+}
+
+function publicarCmsDataAlServidor(onComplete) {
   var base = apiBaseCMS();
   var token = (typeof TOKEN !== 'undefined' && TOKEN) ? TOKEN : '';
   if (!base) {
@@ -1239,9 +1365,14 @@ function inicializarBannerImg(seccion, valor) {
   if (!hidden) return;
   hidden.value = valor || '';
   if (valor) {
-    if (thumb)   { thumb.src = valor; }
+    var src = valor;
+    if (src.indexOf('/portal/resena-imagen/') === 0) {
+      src = (apiBaseCMS() || '') + src + (src.indexOf('?') === -1 ? '?t=' + Date.now() : '');
+    }
+    if (thumb)   { thumb.src = src; }
     if (preview) { preview.style.display = 'block'; }
     if (urlInput && valor.startsWith('http')) urlInput.value = valor;
+    else if (urlInput && valor.indexOf('/portal/resena-imagen/') === 0) urlInput.value = '';
   } else {
     if (preview) preview.style.display = 'none';
   }
@@ -1284,6 +1415,10 @@ function previewBannerImg(input, seccion) {
   reader.onload = function(e) {
     var data = e.target.result;
     var aplicar = function(val) {
+      if (esSeccionImagenResena(seccion)) {
+        aplicarImagenResenaCms(seccion, val, file);
+        return;
+      }
       inicializarBannerImg(seccion, val);
       syncImagenParrafoResenaCms(seccion, val);
       var urlInput = document.getElementById('cms-' + seccion + '-img-url');

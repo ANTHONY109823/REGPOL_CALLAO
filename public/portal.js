@@ -885,6 +885,34 @@ function normalizarParrafosResena(list) {
   return (list || []).map(normalizarParrafoResena);
 }
 
+function mergeParrafosResena(desdeDom, desdeMem) {
+  var mem = normalizarParrafosResena(desdeMem || []);
+  var dom = normalizarParrafosResena(desdeDom || []);
+  var n = Math.max(dom.length, mem.length);
+  var out = [];
+  var i;
+  for (i = 0; i < n; i++) {
+    var d = dom[i] || {};
+    var m = mem[i] || {};
+    out.push({
+      titulo: String(d.titulo || m.titulo || '').trim(),
+      texto: String(d.texto || m.texto || '').trim(),
+      imagen: String(d.imagen || m.imagen || '').trim()
+    });
+  }
+  return out;
+}
+
+function urlPublicaResenaImagen(path) {
+  var s = String(path || '').trim();
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.indexOf('/portal/resena-imagen/') === 0) {
+    return (apiBasePortal() || '') + s + (s.indexOf('?') === -1 ? '?t=' + Date.now() : '');
+  }
+  return s;
+}
+
 var _resenaCarruselTimer = null;
 var _resenaSlideBlobUrls = [];
 
@@ -898,6 +926,7 @@ function revocarResenaSlideBlobs() {
 function urlImagenResenaSlideParaDom(src) {
   var s = String(src || '').trim();
   if (!s) return '';
+  if (s.indexOf('/portal/resena-imagen/') === 0) return urlPublicaResenaImagen(s);
   if (s.indexOf('data:image/') !== 0) return s;
   try {
     var parts = s.split(',');
