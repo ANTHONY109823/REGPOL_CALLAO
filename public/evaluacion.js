@@ -26,7 +26,6 @@ var ESTADO = {
 var ALERTA_FINAL_MOSTRADA = false;
 var FOTO_BASE64 = '';
 var CAM_STREAM = null;
-var UNIDAD_ADMIN_DEFAULT = 'UNIDADES ADM. RPC';
 
 function toggleAreaOtroEval() {
   if (typeof regpolToggleAreaOtro === 'function') {
@@ -93,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
   cargarPreguntas();
 });
 
-var EVAL_CACHE_CONFIG = 'regpol_eval_config_v1';
+var EVAL_CACHE_CONFIG = 'regpol_eval_config_v2';
 var EVAL_CACHE_PREG = 'regpol_eval_preguntas_v1';
 var EVAL_CACHE_TTL = 30 * 60 * 1000;
 
@@ -117,11 +116,9 @@ function escHtmlEval(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function obtenerUnidadesActivasLista(data) {
-  if (!data || !data.ok) return [];
-  if (data.unidadesActivas && data.unidadesActivas.length) return data.unidadesActivas.slice();
-  if (data.comisariaActiva) return [data.comisariaActiva];
-  return [];
+function extraerUnidadesActivasConfig(data) {
+  if (!data || !data.ok || !Array.isArray(data.unidadesActivas)) return [];
+  return data.unidadesActivas.map(function(u) { return String(u || '').trim(); }).filter(Boolean);
 }
 
 function esInicioDesdePortal() {
@@ -134,12 +131,6 @@ function esInicioDesdePortal() {
 
 function debeMostrarAvisoUnidades() {
   return esInicioDesdePortal();
-}
-
-function intentarMostrarAvisoUnidades(data) {
-  if (!debeMostrarAvisoUnidades()) return;
-  var unidades = obtenerUnidadesActivasLista(data);
-  mostrarModalAvisoUnidades(unidades);
 }
 
 function mostrarModalAvisoUnidades(unidades) {
@@ -173,15 +164,12 @@ function aceptarAvisoUnidades() {
 
 function aplicarConfigUnidad(sel, data, opciones) {
   opciones = opciones || {};
-  var activas = [];
-  if (data && data.ok && data.unidadesActivas && data.unidadesActivas.length) {
-    activas = data.unidadesActivas;
-  } else if (data && data.ok && data.comisariaActiva) {
-    activas = [data.comisariaActiva];
-  }
+  var activas = extraerUnidadesActivasConfig(data);
   var divisiones = (data && data.ok && data.divisiones) ? data.divisiones : [];
   var total = poblarSelectEvaluacionDivisiones(sel, divisiones, activas);
-  if (opciones.mostrarAviso) intentarMostrarAvisoUnidades(data);
+  if (opciones.mostrarAviso) {
+    mostrarModalAvisoUnidades(activas);
+  }
   if (!total) {
     sel.disabled = true;
     mostrarAlerta('El cuestionario no está habilitado para su dependencia en este momento. Contacte a la Oficina de Psicología.', 'error');
@@ -198,38 +186,33 @@ function aplicarConfigUnidad(sel, data, opciones) {
 
 function configBuiltinEvaluacion() {
   if (typeof REGPOL_UNIDADES_BUILTIN === 'undefined' || !REGPOL_UNIDADES_BUILTIN.divisiones) return null;
-  var activas = [];
-  REGPOL_UNIDADES_BUILTIN.divisiones.forEach(function(div) {
-    (div.unidades || []).forEach(function(u) {
-      if (u.nombre) activas.push(u.nombre);
-    });
-  });
-  return { ok: true, unidadesActivas: activas, divisiones: REGPOL_UNIDADES_BUILTIN.divisiones };
+  return { ok: true, unidadesActivas: [], divisiones: REGPOL_UNIDADES_BUILTIN.divisiones };
 }
 
 function cargarConfigUnidad() {
   var sel = document.getElementById('f-unidad');
   if (!sel) return;
 
-  var cached = leerCacheEval(EVAL_CACHE_CONFIG);
-  if (cached) aplicarConfigUnidad(sel, cached);
-  else {
-    var builtin = configBuiltinEvaluacion();
-    if (builtin) aplicarConfigUnidad(sel, builtin);
-  }
+  sel.innerHTML = '<option value="">Cargando dependencias...</option>';
+  sel.disabled = true;
 
-  fetch(LOCAL_API + '/config')
+  fetch(LOCAL_API + '/config?_=' + Date.now())
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (!data || !data.ok) return;
+      if (!data || !data.ok) throw new Error('config');
       guardarCacheEval(EVAL_CACHE_CONFIG, data);
-      aplicarConfigUnidad(sel, data, { mostrarAviso: true });
+      aplicarConfigUnidad(sel, data, { mostrarAviso: debeMostrarAvisoUnidades() });
     })
     .catch(function() {
-      if (cached && debeMostrarAvisoUnidades()) {
-        intentarMostrarAvisoUnidades(cached);
+      var cached = leerCacheEval(EVAL_CACHE_CONFIG);
+      if (cached && cached.ok) {
+        aplicarConfigUnidad(sel, cached, { mostrarAviso: debeMostrarAvisoUnidades() });
+        return;
       }
-      if (!cached && !configBuiltinEvaluacion()) sel.disabled = false;
+      sel.innerHTML = '<option value="">-- Sin dependencias activas --</option>';
+      sel.disabled = true;
+      mostrarAlerta('No se pudo cargar la configuración de dependencias. Recargue la página.', 'error');
+      if (debeMostrarAvisoUnidades()) mostrarModalAvisoUnidades([]);
     });
 }
 
@@ -272,7 +255,9 @@ function obtenerComisariaEvaluacion() {
 
 function aplicarUnidadPorDefectoSiVacia() {
   if (obtenerComisariaEvaluacion()) return;
-  seleccionarComisariaEnSelect('f-unidad', UNIDAD_ADMIN_DEFAULT);
+  var sel = document.getElementById('f-unidad');
+  if (!sel || sel.options.length !== 2) return;
+  sel.selectedIndex = 1;
 }
 
 function editarDatosPersonales() {
@@ -321,8 +306,6 @@ function restaurarUnidadDesdeProgreso(data) {
   var unidad = (data && (data.unidad || data.comisaria)) ? String(data.unidad || data.comisaria).trim() : '';
   if (unidad) {
     seleccionarComisariaEnSelect('f-unidad', unidad);
-  } else {
-    seleccionarComisariaEnSelect('f-unidad', UNIDAD_ADMIN_DEFAULT);
   }
 }
 

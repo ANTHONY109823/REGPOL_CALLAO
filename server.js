@@ -792,15 +792,24 @@ async function sincronizarUnidadAdministrativa() {
     await setConfig('migracion_unidades_adm_rpc_v1', '1');
   }
 
-  let activas = await leerUnidadesActivas();
-  activas = activas
-    .map(a => String(a).trim().toUpperCase())
-    .filter(a => a && a !== leg.toUpperCase());
-  const key = adm.toUpperCase();
-  if (!activas.includes(key)) activas.push(key);
-  await setConfig('unidades_activas', JSON.stringify(activas));
-  configCache = null;
-  configCacheExp = 0;
+  const migrActivas = await getConfig('migracion_activas_adm_rpc_v1');
+  if (!migrActivas) {
+    let activas = await leerUnidadesActivas();
+    let cambio = false;
+    activas = activas.map(function(a) {
+      if (String(a).trim().toUpperCase() === leg.toUpperCase()) {
+        cambio = true;
+        return adm.toUpperCase();
+      }
+      return a;
+    });
+    if (cambio) {
+      await setConfig('unidades_activas', JSON.stringify(activas));
+      configCache = null;
+      configCacheExp = 0;
+    }
+    await setConfig('migracion_activas_adm_rpc_v1', '1');
+  }
 
   const total = (rProg1.rowCount || 0) + (rProg2.rowCount || 0) + (rEval1.rowCount || 0) + (rEval2.rowCount || 0)
     + (rCiaProg.rowCount || 0) + (rCiaEval.rowCount || 0);
@@ -1137,19 +1146,18 @@ let statsCacheExp = 0;
 const STATS_CACHE_MS = 45000;
 
 async function leerUnidadesActivas() {
-  let unidades = [];
   const raw = await getConfig('unidades_activas');
-  if (raw) {
+  if (raw !== null && raw !== undefined && String(raw).trim() !== '') {
     try {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) unidades = parsed;
+      if (Array.isArray(parsed)) {
+        return parsed.map(u => String(u).trim().toUpperCase()).filter(Boolean);
+      }
     } catch (e) { /* ignorar */ }
   }
-  if (!unidades.length) {
-    const legacy = await getConfig('comisaria_activa');
-    if (legacy) unidades = [legacy];
-  }
-  return unidades.map(u => String(u).trim().toUpperCase()).filter(Boolean);
+  const legacy = await getConfig('comisaria_activa');
+  if (legacy) return [String(legacy).trim().toUpperCase()];
+  return [];
 }
 
 let configCache = null;
@@ -1165,7 +1173,8 @@ const PORTAL_ITEMS_CACHE_MS = 120000;
 
 app.get('/config', async (req, res) => {
   try {
-    if (configCache && configCacheExp > Date.now()) {
+    const sinCache = req.query._ != null || req.query.nocache === '1';
+    if (!sinCache && configCache && configCacheExp > Date.now()) {
       return res.json(configCache);
     }
     const unidadesActivas = await leerUnidadesActivas();

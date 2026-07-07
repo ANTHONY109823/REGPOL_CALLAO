@@ -26,7 +26,7 @@ function normalizarNombreUnidad(n) {
 }
 
 function unidadActiva(nombre, activas) {
-  if (!activas || !activas.length) return true;
+  if (!activas || !activas.length) return false;
   var key = normalizarNombreUnidad(nombre);
   return activas.some(function(a) { return normalizarNombreUnidad(a) === key; });
 }
@@ -106,7 +106,7 @@ function llenarSelectUnidadesAgrupadas(selId, divisiones, placeholder, filtroDiv
   });
 }
 
-var UNIDADES_EVAL_SIEMPRE = ['UNIDADES ADM. RPC'];
+var UNIDADES_EVAL_SIEMPRE = [];
 
 function poblarSelectEvaluacionDivisiones(sel, divisiones, activas) {
   if (!sel) return;
