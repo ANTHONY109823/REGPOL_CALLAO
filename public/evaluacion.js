@@ -80,6 +80,8 @@ document.addEventListener('DOMContentLoaded', function() {
       if (ev.target === modalCam) cerrarModalCamara();
     });
   }
+  var btnAvisoUnidades = document.getElementById('btn-aceptar-aviso-unidades');
+  if (btnAvisoUnidades) btnAvisoUnidades.addEventListener('click', aceptarAvisoUnidades);
   ['f-cip','f-dni'].forEach(function(id) {
     document.getElementById(id).addEventListener('input', function(e) {
       e.target.value = e.target.value.replace(/\D/g,'');
@@ -93,6 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
 var EVAL_CACHE_CONFIG = 'regpol_eval_config_v1';
 var EVAL_CACHE_PREG = 'regpol_eval_preguntas_v1';
 var EVAL_CACHE_TTL = 30 * 60 * 1000;
+var EVAL_AVISO_SESSION = 'regpol_aviso_unidades_ok';
 
 function leerCacheEval(clave) {
   try {
@@ -110,6 +113,60 @@ function guardarCacheEval(clave, data) {
   } catch (e) {}
 }
 
+function escHtmlEval(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function obtenerUnidadesActivasLista(data) {
+  if (data && data.unidadesActivas && data.unidadesActivas.length) return data.unidadesActivas.slice();
+  if (data && data.comisariaActiva) return [data.comisariaActiva];
+  return [];
+}
+
+function debeMostrarAvisoUnidades() {
+  try {
+    if (sessionStorage.getItem(EVAL_AVISO_SESSION) === '1') return false;
+  } catch (e) {}
+  return true;
+}
+
+function intentarMostrarAvisoUnidades(data) {
+  if (!debeMostrarAvisoUnidades()) return;
+  var modal = document.getElementById('modal-aviso-unidades');
+  if (modal && !modal.hidden) return;
+  mostrarModalAvisoUnidades(obtenerUnidadesActivasLista(data));
+}
+
+function mostrarModalAvisoUnidades(unidades) {
+  var modal = document.getElementById('modal-aviso-unidades');
+  var lista = document.getElementById('aviso-unidades-lista');
+  if (!modal || !lista) return;
+
+  if (!unidades.length) {
+    lista.innerHTML = '<li class="aviso-unidad-vacia">Ninguna dependencia activa en este momento.</li>';
+  } else if (unidades.length === 1) {
+    lista.innerHTML = '<li class="aviso-unidad-unica">' + escHtmlEval(unidades[0]) + '</li>';
+  } else {
+    lista.innerHTML = unidades.map(function(u) {
+      return '<li><i class="fas fa-check-circle" aria-hidden="true"></i> ' + escHtmlEval(u) + '</li>';
+    }).join('');
+  }
+
+  modal.hidden = false;
+  document.body.classList.add('eval-aviso-unidades-abierto');
+  var btn = document.getElementById('btn-aceptar-aviso-unidades');
+  if (btn) setTimeout(function() { btn.focus(); }, 120);
+}
+
+function aceptarAvisoUnidades() {
+  try { sessionStorage.setItem(EVAL_AVISO_SESSION, '1'); } catch (e) {}
+  var modal = document.getElementById('modal-aviso-unidades');
+  if (modal) modal.hidden = true;
+  document.body.classList.remove('eval-aviso-unidades-abierto');
+  var reg = document.getElementById('card-registro');
+  if (reg) reg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function aplicarConfigUnidad(sel, data) {
   var activas = [];
   if (data.ok && data.unidadesActivas && data.unidadesActivas.length) {
@@ -119,6 +176,7 @@ function aplicarConfigUnidad(sel, data) {
   }
   var divisiones = (data.ok && data.divisiones) ? data.divisiones : [];
   var total = poblarSelectEvaluacionDivisiones(sel, divisiones, activas);
+  intentarMostrarAvisoUnidades(data);
   if (!total) {
     sel.disabled = true;
     mostrarAlerta('El cuestionario no está habilitado para su dependencia en este momento. Contacte a la Oficina de Psicología.', 'error');
@@ -639,7 +697,15 @@ function guardarRegistroEnServidor(callback) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   }).then(function(r) { return r.json(); })
-    .then(function(d) { if (callback) callback(!!d.ok); })
+    .then(function(d) {
+      if (!d.ok) {
+        var msgDup = mensajeErrorDuplicadoNombre(d);
+        if (msgDup) mostrarAlerta(msgDup, 'error');
+        if (callback) callback(false);
+        return;
+      }
+      if (callback) callback(true);
+    })
     .catch(function() { if (callback) callback(false); });
 }
 
@@ -708,6 +774,10 @@ function normalizarDataProgreso(data) {
 
 function notificarSesionExistente(cip, info) {
   var msg;
+  if (info && info.duplicado_por_nombre) {
+    notificarDuplicadoPorNombre(cip, info.nombres);
+    return;
+  }
   if (info && info.completada) {
     msg = 'El CIP ' + cip + ' ya tiene una evaluación enviada a Psicología. '
       + 'No puede registrarse de nuevo. Si necesita ayuda, contacte a la Oficina de Psicología.';
@@ -731,6 +801,32 @@ function notificarSesionExistente(cip, info) {
   }
 }
 
+function notificarDuplicadoPorNombre(cipExistente, nombres) {
+  var msg = 'Ya existe un registro a nombre de ' + (nombres || 'esta persona')
+    + ' con CIP ' + cipExistente + '. '
+    + 'No puede registrarse con otro CIP. Si ese es su CIP, ingréselo en «¿Ya comenzó?» y pulse Continuar.';
+  mostrarAlerta(msg, 'error');
+
+  var card = document.getElementById('card-continuar-cip');
+  var inp = document.getElementById('f-cip-continuar');
+  if (inp) inp.value = cipExistente;
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('continuar-cip-destacado');
+    setTimeout(function() { card.classList.remove('continuar-cip-destacado'); }, 8000);
+  }
+  if (inp) {
+    setTimeout(function() { inp.focus(); inp.select(); }, 400);
+  }
+}
+
+function mensajeErrorDuplicadoNombre(data) {
+  if (!data || data.error !== 'duplicado_nombre') return null;
+  return 'Ya existe un registro a nombre de ' + (data.nombres_existente || 'esta persona')
+    + ' con CIP ' + (data.cip_existente || '') + '. '
+    + 'No puede registrarse con otro CIP.';
+}
+
 function procederRegistroNuevo(cip, btn) {
   if (btn) btn.disabled = true;
   verificarProgresoGuardado(cip, function(data) {
@@ -740,6 +836,10 @@ function procederRegistroNuevo(cip, btn) {
 
     guardarRegistroEnServidor(function(ok) {
       if (btn) btn.disabled = false;
+      if (!ok) {
+        document.getElementById('card-registro').scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
       activarCuestionario(true);
       guardarBloqueEnServidor();
       var nResp = contarRespuestasEnData({ respuestas: ESTADO.respuestas });
@@ -763,10 +863,13 @@ function continuarAlCuestionario() {
 
   var cip = document.getElementById('f-cip').value.trim();
   var dni = document.getElementById('f-dni').value.trim();
+  var nombres = document.getElementById('f-nombres').value.trim();
   var btn = document.querySelector('.btn-registro-continuar');
   if (btn) btn.disabled = true;
 
-  fetch(LOCAL_API + '/verificar-registro?cip=' + encodeURIComponent(cip) + '&dni=' + encodeURIComponent(dni))
+  fetch(LOCAL_API + '/verificar-registro?cip=' + encodeURIComponent(cip)
+    + '&dni=' + encodeURIComponent(dni)
+    + '&nombres=' + encodeURIComponent(nombres))
     .then(function(r) { return r.json(); })
     .then(function(v) {
       if (v.ok && v.registrado) {
@@ -1140,7 +1243,10 @@ function enviarEvaluacion() {
   fetch(LOCAL_API+'/guardar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
     .then(function(r){return r.json();})
     .then(function(data){
-      if(!data.ok) throw new Error(data.error||'Error del servidor');
+      if(!data.ok) {
+        var msgDup = mensajeErrorDuplicadoNombre(data);
+        throw new Error(msgDup || data.error || 'Error del servidor');
+      }
       spinner.style.display='none';
       checkIcon.style.display='block';
       textoO.textContent='¡Cuestionario enviado correctamente!';

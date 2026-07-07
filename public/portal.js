@@ -1165,6 +1165,9 @@ function renderBienestarPolicial(data, containerId) {
   if (sec.visible === false) { el.innerHTML = ''; return; }
   var icono = sec.icono || 'fa-heart';
   var url = sec.botonUrl || 'evaluacion.html';
+  if (/evaluacion\.html$/i.test(url.split('?')[0])) {
+    url = 'evaluacion.html?inicio=1';
+  }
   var html = '';
   if (sec.videoTutorial) {
     var videoSrc = urlVideoBienestarPortal(sec.videoTutorial);

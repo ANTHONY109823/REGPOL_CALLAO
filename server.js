@@ -221,6 +221,45 @@ function deduplicarFilasPorCip(rows) {
   return out;
 }
 
+function normalizarNombreComparar(nombres) {
+  return String(nombres || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function sqlNombreNormalizado(campo) {
+  return `regexp_replace(upper(trim(translate(${campo}, 'áéíóúàèìòùäëïöüñÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÑ', 'aeiouaeiouaeiouaeiouaeiounAEIOUAEIOUAEIOUAEIOUN'))), '\\s+', ' ', 'g')`;
+}
+
+async function buscarRegistroDuplicadoPorNombre(nombres, cipActual) {
+  const nombreNorm = normalizarNombreComparar(nombres);
+  if (nombreNorm.length < 3) return null;
+  const cipTrim = String(cipActual || '').trim();
+  const sqlNom = sqlNombreNormalizado('nombres');
+  const sqlCipDistinto = `UPPER(TRIM(cip)) <> UPPER(TRIM($2))`;
+
+  const progR = await pool.query(
+    `SELECT cip, nombres, 'progreso' AS fuente FROM progresos
+     WHERE ${sqlNom} = $1 AND ${sqlCipDistinto}
+     ORDER BY actualizado DESC LIMIT 1`,
+    [nombreNorm, cipTrim]
+  );
+  if (progR.rows.length) return progR.rows[0];
+
+  const evR = await pool.query(
+    `SELECT cip, nombres, 'evaluacion' AS fuente FROM evaluaciones
+     WHERE ${sqlNom} = $1 AND ${sqlCipDistinto}
+     ORDER BY fecha DESC LIMIT 1`,
+    [nombreNorm, cipTrim]
+  );
+  if (evR.rows.length) return evR.rows[0];
+
+  return null;
+}
+
 function normalizarFilasPDFGrupo(rows) {
   return deduplicarFilasPorCip(rows).map(function(row) {
     let base;
@@ -1281,6 +1320,26 @@ app.post('/guardar', async (req, res) => {
       [cip]
     );
 
+    if (!exist.rows.length) {
+      const sesionProgreso = await pool.query(
+        `SELECT 1 FROM progresos
+         WHERE LOWER(TRIM(clave))=LOWER(TRIM($1)) OR UPPER(TRIM(cip))=UPPER(TRIM($1))
+         LIMIT 1`,
+        [cip]
+      );
+      if (!sesionProgreso.rows.length) {
+        const dupNombre = await buscarRegistroDuplicadoPorNombre(nombres, cip);
+        if (dupNombre) {
+          return res.json({
+            ok: false,
+            error: 'duplicado_nombre',
+            cip_existente: dupNombre.cip,
+            nombres_existente: dupNombre.nombres
+          });
+        }
+      }
+    }
+
     if (exist.rows.length) {
       await pool.query(
         `UPDATE evaluaciones SET comisaria=$1, unidad=$2, nombres=$3, dni=$4, fecha_nac=$5, edad=$6,
@@ -1319,6 +1378,27 @@ app.post('/progreso', async (req, res) => {
   try {
     const { cip, nombres, comisaria, unidad, cargo, area, grado, sexo, armamento, foto, bloque, total, respuestas, dni, fecha_nac, edad } = req.body;
     const clave = (cip || 'anonimo').toLowerCase().trim();
+    const cipTrim = String(cip || '').trim();
+    // Solo validar nombre en registro nuevo; quien ya tiene sesión con su CIP sigue igual
+    const sesionCip = await pool.query(
+      `SELECT 1 FROM progresos
+       WHERE LOWER(TRIM(clave))=LOWER(TRIM($1)) OR UPPER(TRIM(cip))=UPPER(TRIM($1))
+       UNION ALL
+       SELECT 1 FROM evaluaciones WHERE UPPER(TRIM(cip))=UPPER(TRIM($1))
+       LIMIT 1`,
+      [cipTrim]
+    );
+    if (!sesionCip.rows.length) {
+      const dupNombre = await buscarRegistroDuplicadoPorNombre(nombres, cip);
+      if (dupNombre) {
+        return res.json({
+          ok: false,
+          error: 'duplicado_nombre',
+          cip_existente: dupNombre.cip,
+          nombres_existente: dupNombre.nombres
+        });
+      }
+    }
     const armamentoStr = Array.isArray(armamento) ? armamento.join(', ') : (armamento || '');
     const totalCalc = contarRespuestasObj(respuestas).total;
     const totalFinal = Math.max(parseInt(total, 10) || 0, totalCalc);
@@ -1367,6 +1447,7 @@ app.get('/verificar-registro', async (req, res) => {
   try {
     const cip = (req.query.cip || '').trim();
     const dni = (req.query.dni || '').trim();
+    const nombres = (req.query.nombres || '').trim();
     if (!cip && !dni) return res.json({ ok: false, error: 'CIP requerido' });
 
     const progR = await pool.query(
@@ -1416,6 +1497,21 @@ app.get('/verificar-registro', async (req, res) => {
         total: parseInt(row.total_resp, 10) || 0,
         completada: !!row.completada
       });
+    }
+
+    if (nombres) {
+      const dupNombre = await buscarRegistroDuplicadoPorNombre(nombres, cip);
+      if (dupNombre) {
+        return res.json({
+          ok: true,
+          registrado: true,
+          duplicado_por_nombre: true,
+          fuente: dupNombre.fuente,
+          cip: dupNombre.cip,
+          nombres: dupNombre.nombres || '',
+          completada: dupNombre.fuente === 'evaluacion'
+        });
+      }
     }
 
     res.json({ ok: true, registrado: false });
