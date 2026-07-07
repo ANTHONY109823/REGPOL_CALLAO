@@ -325,6 +325,7 @@ async function initDB() {
     ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS armamento TEXT;
     ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS grado VARCHAR(80);
     ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS area VARCHAR(120);
+    ALTER TABLE evaluaciones ADD COLUMN IF NOT EXISTS tiempo_segundos INTEGER DEFAULT 0;
     CREATE INDEX IF NOT EXISTS idx_eval_comisaria ON evaluaciones(comisaria);
     CREATE INDEX IF NOT EXISTS idx_eval_unidad    ON evaluaciones(unidad);
 
@@ -354,6 +355,7 @@ async function initDB() {
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS fecha_nac DATE;
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS edad SMALLINT;
     ALTER TABLE progresos ADD COLUMN IF NOT EXISTS area VARCHAR(120);
+    ALTER TABLE progresos ADD COLUMN IF NOT EXISTS tiempo_segundos INTEGER DEFAULT 0;
 
     CREATE TABLE IF NOT EXISTS divisiones (
       id     SERIAL PRIMARY KEY,
@@ -1312,7 +1314,7 @@ app.delete('/admin/preguntas/:id', requireAuth, async (req, res) => {
 // ── POST /guardar ─────────────────────────────────────────────────────────────
 app.post('/guardar', async (req, res) => {
   try {
-    const { comisaria, unidad, nombres, cip, dni, fecha_nac, edad, cargo, area, grado, sexo, armamento, foto, respuestas, completada } = req.body;
+    const { comisaria, unidad, nombres, cip, dni, fecha_nac, edad, cargo, area, grado, sexo, armamento, foto, respuestas, completada, tiempo_segundos } = req.body;
     if (!nombres || !cip) return res.json({ ok: false, error: 'Faltan datos obligatorios' });
     const edadFinal = parseInt(edad) || calcularEdadDesdeISO(fecha_nac) || 0;
     const totalResp = contarRespuestasObj(respuestas).total;
@@ -1349,22 +1351,24 @@ app.post('/guardar', async (req, res) => {
       }
     }
 
+    const tiempoFinal = Math.max(0, parseInt(tiempo_segundos, 10) || 0);
+
     if (exist.rows.length) {
       await pool.query(
         `UPDATE evaluaciones SET comisaria=$1, unidad=$2, nombres=$3, dni=$4, fecha_nac=$5, edad=$6,
          cargo=$7, foto=COALESCE(NULLIF($8,''), foto), respuestas=$9, completada=$10, bloque_max=$11,
-         sexo=$12, armamento=$13, grado=$14, area=$15, fecha=NOW() WHERE id=$16`,
+         sexo=$12, armamento=$13, grado=$14, area=$15, tiempo_segundos=$16, fecha=NOW() WHERE id=$17`,
         [comisaria || '', unidad || '', nombres || '', dni || '', fecha_nac || null,
          edadFinal, cargo || '', foto || '', respuestas || {}, !!completada, totalResp,
-         sexo || '', armamentoStr, grado || '', area || '', exist.rows[0].id]
+         sexo || '', armamentoStr, grado || '', area || '', tiempoFinal, exist.rows[0].id]
       );
     } else {
       await pool.query(
-        `INSERT INTO evaluaciones (comisaria,unidad,nombres,cip,dni,fecha_nac,edad,cargo,sexo,armamento,foto,grado,area,respuestas,completada,bloque_max)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+        `INSERT INTO evaluaciones (comisaria,unidad,nombres,cip,dni,fecha_nac,edad,cargo,sexo,armamento,foto,grado,area,respuestas,completada,bloque_max,tiempo_segundos)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
         [comisaria || '', unidad || '', nombres || '', cip || '', dni || '',
          fecha_nac || null, edadFinal, cargo || '', sexo || '', armamentoStr,
-         foto || '', grado || '', area || '', respuestas || {}, !!completada, totalResp]
+         foto || '', grado || '', area || '', respuestas || {}, !!completada, totalResp, tiempoFinal]
       );
     }
 
@@ -1385,7 +1389,7 @@ app.post('/guardar', async (req, res) => {
 // ── POST /progreso (guardar bloque parcial) ────────────────────────────────────
 app.post('/progreso', async (req, res) => {
   try {
-    const { cip, nombres, comisaria, unidad, cargo, area, grado, sexo, armamento, foto, bloque, total, respuestas, dni, fecha_nac, edad } = req.body;
+    const { cip, nombres, comisaria, unidad, cargo, area, grado, sexo, armamento, foto, bloque, total, respuestas, dni, fecha_nac, edad, tiempo_segundos } = req.body;
     const clave = (cip || 'anonimo').toLowerCase().trim();
     const cipTrim = String(cip || '').trim();
     // Solo validar nombre en registro nuevo; quien ya tiene sesión con su CIP sigue igual
@@ -1410,6 +1414,7 @@ app.post('/progreso', async (req, res) => {
     }
     const armamentoStr = Array.isArray(armamento) ? armamento.join(', ') : (armamento || '');
     const totalCalc = contarRespuestasObj(respuestas).total;
+    const tiempoFinal = Math.max(0, parseInt(tiempo_segundos, 10) || 0);
     const totalFinal = Math.max(parseInt(total, 10) || 0, totalCalc);
     const edadFinal = parseInt(edad, 10) || calcularEdadDesdeISO(fecha_nac) || null;
     const merged = await mergeRespuestasEnProgreso(clave, respuestas, bloque);
@@ -1429,21 +1434,22 @@ app.post('/progreso', async (req, res) => {
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS fecha_nac DATE`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS edad SMALLINT`).catch(()=>{});
     await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS area VARCHAR(120)`).catch(()=>{});
+    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS tiempo_segundos INTEGER DEFAULT 0`).catch(()=>{});
     await pool.query(
-      `INSERT INTO progresos (clave,cip,nombres,comisaria,unidad,bloque_max,total_resp,respuestas,actualizado)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+      `INSERT INTO progresos (clave,cip,nombres,comisaria,unidad,bloque_max,total_resp,respuestas,tiempo_segundos,actualizado)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
        ON CONFLICT (clave) DO UPDATE SET
          nombres=$3, comisaria=$4, unidad=$5, bloque_max=$6,
-         total_resp=$7, respuestas=$8, actualizado=NOW()`,
-      [clave, cip||'', nombres||'', comisaria||'', unidad||'', bloqueGuardar, totalGuardar, merged.respuestas]
+         total_resp=$7, respuestas=$8, tiempo_segundos=$9, actualizado=NOW()`,
+      [clave, cip||'', nombres||'', comisaria||'', unidad||'', bloqueGuardar, totalGuardar, merged.respuestas, tiempoFinal]
     );
     await pool.query(
       `UPDATE progresos SET cargo=$2, sexo=$3, armamento=$4,
          foto=COALESCE(NULLIF($5,''),foto), grado=COALESCE(NULLIF($6,''),grado),
          dni=COALESCE(NULLIF($7,''),dni), fecha_nac=COALESCE($8,fecha_nac), edad=COALESCE($9,edad),
-         area=COALESCE(NULLIF($10,''),area)
+         area=COALESCE(NULLIF($10,''),area), tiempo_segundos=$11
        WHERE clave=$1`,
-      [clave, cargo||'', sexo||'', armamentoStr, foto||'', grado||'', dni||'', fecha_nac || null, edadFinal, area||'']
+      [clave, cargo||'', sexo||'', armamentoStr, foto||'', grado||'', dni||'', fecha_nac || null, edadFinal, area||'', tiempoFinal]
     ).catch(()=>{});
     res.json({ ok: true });
   } catch (e) {
@@ -1674,7 +1680,8 @@ async function fusionarProgresoEnEvaluacion(ev) {
       area: prog.area || ev.area,
       sexo: prog.sexo || ev.sexo,
       armamento: prog.armamento || ev.armamento,
-      foto: prog.foto || ev.foto
+      foto: prog.foto || ev.foto,
+      tiempo_segundos: prog.tiempo_segundos != null ? prog.tiempo_segundos : ev.tiempo_segundos
     });
   }
   return ev;
@@ -1725,7 +1732,8 @@ function mapearProgresoParaPDF(p) {
     fecha: p.fecha || (p.actualizado
       ? new Date(p.actualizado).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       : '—'),
-    total_resp: totalResp
+    total_resp: totalResp,
+    tiempo_segundos: Math.max(0, parseInt(p.tiempo_segundos, 10) || 0)
   };
 }
 
@@ -2491,7 +2499,8 @@ app.get('/admin/preview-resultado', requireAuth, async (req, res) => {
         foto: ev.foto && String(ev.foto).length > 80 ? ev.foto : '',
         total_resp: stats.total,
         v: stats.v,
-        f: stats.f
+        f: stats.f,
+        tiempo_segundos: Math.max(0, parseInt(ev.tiempo_segundos, 10) || 0)
       },
       mmpi,
       resp_map: parseRespuestasSafe(ev.respuestas)
@@ -2551,7 +2560,8 @@ app.get('/admin/preview-avance', requireAuth, async (req, res) => {
         foto: ev.foto && String(ev.foto).length > 80 ? ev.foto : '',
         total_resp: stats.total,
         v: stats.v,
-        f: stats.f
+        f: stats.f,
+        tiempo_segundos: Math.max(0, parseInt(ev.tiempo_segundos, 10) || 0)
       },
       avance: {
         total: stats.total,

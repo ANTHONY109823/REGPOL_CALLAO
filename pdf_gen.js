@@ -216,6 +216,18 @@ function formatearGradoDisplay(grado) {
   return g ? g.toUpperCase() : '—';
 }
 
+function formatearTiempoPDF(segundos) {
+  const s = Math.max(0, parseInt(segundos, 10) || 0);
+  if (!s) return '—';
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) {
+    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+  }
+  return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+
 // ── Encabezado del efectivo — banner plomo con grado, datos y foto ─────────────
 function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   const tieneFoto = ev.foto && String(ev.foto).length > 80;
@@ -241,6 +253,7 @@ function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   const areaTxt = String(ev.area || '—').toUpperCase();
   const armaTxt = formatearArmamentoLegible(ev.armamento || '').toUpperCase();
   const fechaTxt = formatearFechaPDF(ev.fecha);
+  const tiempoTxt = formatearTiempoPDF(ev.tiempo_segundos);
 
   const lineas = [
     gradoTxt,
@@ -280,8 +293,8 @@ function dibujarEncabezadoEfectivo(doc, x0, y, W, ev, totalV, totalF) {
   doc.strokeColor('#c8c8c8').lineWidth(0.5)
      .moveTo(x0 + pad, footY).lineTo(x0 + W - pad, footY).stroke();
   doc.fillColor(COLOR_NEGRO).font('Helvetica').fontSize(dataFs)
-     .text('V: ' + totalV + '          F: ' + totalF + '          FECHA: ' + fechaTxt,
-       x0 + pad, footY + 4, { width: textoW, lineBreak: false });
+     .text('V: ' + totalV + '          F: ' + totalF + '          FECHA: ' + fechaTxt + '          TIEMPO: ' + tiempoTxt,
+       x0 + pad, footY + 4, { width: W - pad * 2, lineBreak: false });
 
   return y + bannerH;
 }

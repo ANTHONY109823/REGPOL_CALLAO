@@ -26,6 +26,49 @@ var ESTADO = {
 var ALERTA_FINAL_MOSTRADA = false;
 var FOTO_BASE64 = '';
 var CAM_STREAM = null;
+var EVAL_TIEMPO_KEY = 'regpol_eval_tiempo_inicio';
+
+function claveTiempoSesion(cip) {
+  return EVAL_TIEMPO_KEY + '_' + String(cip || 'anon').toLowerCase().trim();
+}
+
+function obtenerCipEvaluacion() {
+  var el = document.getElementById('f-cip');
+  return el ? el.value.trim() : '';
+}
+
+function iniciarCronometroEvaluacion(cip) {
+  cip = cip || obtenerCipEvaluacion();
+  if (!cip) return;
+  var key = claveTiempoSesion(cip);
+  try {
+    if (!sessionStorage.getItem(key)) sessionStorage.setItem(key, String(Date.now()));
+  } catch (e) {}
+}
+
+function reiniciarCronometroEvaluacion(cip) {
+  cip = cip || obtenerCipEvaluacion();
+  if (!cip) return;
+  try { sessionStorage.setItem(claveTiempoSesion(cip), String(Date.now())); } catch (e) {}
+}
+
+function obtenerTiempoSesionSegundos(cip) {
+  cip = cip || obtenerCipEvaluacion();
+  if (!cip) return 0;
+  try {
+    var inicio = parseInt(sessionStorage.getItem(claveTiempoSesion(cip)), 10);
+    if (!inicio || isNaN(inicio)) return 0;
+    return Math.max(0, Math.floor((Date.now() - inicio) / 1000));
+  } catch (e) {
+    return 0;
+  }
+}
+
+function limpiarCronometroEvaluacion(cip) {
+  cip = cip || obtenerCipEvaluacion();
+  if (!cip) return;
+  try { sessionStorage.removeItem(claveTiempoSesion(cip)); } catch (e) {}
+}
 
 function toggleAreaOtroEval() {
   if (typeof regpolToggleAreaOtro === 'function') {
@@ -675,7 +718,8 @@ function construirPayloadProgreso() {
     total:     Object.keys(ESTADO.respuestas).filter(function(k) {
       return ESTADO.respuestas[k] === 'V' || ESTADO.respuestas[k] === 'F';
     }).length,
-    respuestas: ESTADO.respuestas
+    respuestas: ESTADO.respuestas,
+    tiempo_segundos: obtenerTiempoSesionSegundos()
   };
 }
 
@@ -716,7 +760,8 @@ function construirPayloadGuardar(completada) {
     armamento: obtenerArmamento(),
     foto:      FOTO_BASE64 || '',
     respuestas: ESTADO.respuestas,
-    completada: !!completada
+    completada: !!completada,
+    tiempo_segundos: obtenerTiempoSesionSegundos()
   };
 }
 
@@ -730,6 +775,7 @@ function ocultarCuestionario() {
 
 function activarCuestionario(scroll) {
   ESTADO.registroCompleto=true;
+  iniciarCronometroEvaluacion();
   var c=document.getElementById('card-cuestionario');
   if(c) c.classList.remove('seccion-bloqueada');
   var r=document.getElementById('card-registro');
@@ -1190,6 +1236,7 @@ function descartarProgreso() {
   document.getElementById('banner-progreso').style.display='none';
   ESTADO.respuestas={};
   ESTADO.bloqueActual=1;
+  reiniciarCronometroEvaluacion();
   activarCuestionario(true);
 }
 
@@ -1244,6 +1291,7 @@ function enviarEvaluacion() {
       subtextoO.textContent=payload.nombres+' | CIP: '+payload.cip;
       // Limpiar progreso guardado
       localStorage.removeItem('progreso_'+payload.cip);
+      limpiarCronometroEvaluacion(payload.cip);
       setTimeout(function(){overlay.classList.remove('visible'); limpiarFormulario();},5000);
     })
     .catch(function(err){

@@ -1472,6 +1472,18 @@ function formatearGradoDisplay(grado) {
   return g ? g.toUpperCase() : '—';
 }
 
+function formatearTiempoEval(segundos) {
+  var s = Math.max(0, parseInt(segundos, 10) || 0);
+  if (!s) return '—';
+  var h = Math.floor(s / 3600);
+  var m = Math.floor((s % 3600) / 60);
+  var sec = s % 60;
+  if (h > 0) {
+    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+  }
+  return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+
 function htmlFotoBannerEfectivo(foto) {
   if (!foto) return '';
   return '<div style="width:88px;min-width:88px;flex-shrink:0;align-self:stretch;display:flex;border:1px solid #aaa;border-radius:6px;overflow:hidden;background:#ddd;">'
@@ -1493,7 +1505,8 @@ function htmlBannerEfectivo(e) {
     + 'ARMA: ' + escHtml(String(textoArmamento(e.armamento) || '—').toUpperCase())
     + '</div>'
     + '<div style="' + dataStyle + 'margin-top:8px;padding-top:6px;border-top:1px solid #d8d8d8;">'
-    + 'V: ' + (e.v || 0) + ' &nbsp; F: ' + (e.f || 0) + ' &nbsp; FECHA: ' + escHtml(String(e.fecha || '—').toUpperCase()) + '</div>'
+    + 'V: ' + (e.v || 0) + ' &nbsp; F: ' + (e.f || 0) + ' &nbsp; FECHA: ' + escHtml(String(e.fecha || '—').toUpperCase())
+    + ' &nbsp; TIEMPO: ' + escHtml(formatearTiempoEval(e.tiempo_segundos)) + '</div>'
     + '</div>' + htmlFotoBannerEfectivo(e.foto);
 }
 
