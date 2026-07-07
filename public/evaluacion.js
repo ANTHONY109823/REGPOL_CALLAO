@@ -54,6 +54,7 @@ function restaurarAreaEvaluacion(valor) {
    INICIO — cargar preguntas desde API
 ================================================================ */
 document.addEventListener('DOMContentLoaded', function() {
+  try { sessionStorage.removeItem('regpol_aviso_unidades_ok'); } catch (e) {}
   cargarConfigUnidad();
 
   document.getElementById('f-nacimiento').addEventListener('input', formatearFechaNacimiento);
@@ -95,7 +96,6 @@ document.addEventListener('DOMContentLoaded', function() {
 var EVAL_CACHE_CONFIG = 'regpol_eval_config_v1';
 var EVAL_CACHE_PREG = 'regpol_eval_preguntas_v1';
 var EVAL_CACHE_TTL = 30 * 60 * 1000;
-var EVAL_AVISO_SESSION = 'regpol_aviso_unidades_ok';
 
 function leerCacheEval(clave) {
   try {
@@ -118,23 +118,28 @@ function escHtmlEval(s) {
 }
 
 function obtenerUnidadesActivasLista(data) {
-  if (data && data.unidadesActivas && data.unidadesActivas.length) return data.unidadesActivas.slice();
-  if (data && data.comisariaActiva) return [data.comisariaActiva];
+  if (!data || !data.ok) return [];
+  if (data.unidadesActivas && data.unidadesActivas.length) return data.unidadesActivas.slice();
+  if (data.comisariaActiva) return [data.comisariaActiva];
   return [];
 }
 
-function debeMostrarAvisoUnidades() {
+function esInicioDesdePortal() {
   try {
-    if (sessionStorage.getItem(EVAL_AVISO_SESSION) === '1') return false;
-  } catch (e) {}
-  return true;
+    return /(?:^|[?&])inicio=1(?:&|$)/.test(window.location.search || '');
+  } catch (e) {
+    return false;
+  }
+}
+
+function debeMostrarAvisoUnidades() {
+  return esInicioDesdePortal();
 }
 
 function intentarMostrarAvisoUnidades(data) {
   if (!debeMostrarAvisoUnidades()) return;
-  var modal = document.getElementById('modal-aviso-unidades');
-  if (modal && !modal.hidden) return;
-  mostrarModalAvisoUnidades(obtenerUnidadesActivasLista(data));
+  var unidades = obtenerUnidadesActivasLista(data);
+  mostrarModalAvisoUnidades(unidades);
 }
 
 function mostrarModalAvisoUnidades(unidades) {
@@ -159,7 +164,6 @@ function mostrarModalAvisoUnidades(unidades) {
 }
 
 function aceptarAvisoUnidades() {
-  try { sessionStorage.setItem(EVAL_AVISO_SESSION, '1'); } catch (e) {}
   var modal = document.getElementById('modal-aviso-unidades');
   if (modal) modal.hidden = true;
   document.body.classList.remove('eval-aviso-unidades-abierto');
@@ -167,16 +171,17 @@ function aceptarAvisoUnidades() {
   if (reg) reg.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function aplicarConfigUnidad(sel, data) {
+function aplicarConfigUnidad(sel, data, opciones) {
+  opciones = opciones || {};
   var activas = [];
-  if (data.ok && data.unidadesActivas && data.unidadesActivas.length) {
+  if (data && data.ok && data.unidadesActivas && data.unidadesActivas.length) {
     activas = data.unidadesActivas;
-  } else if (data.ok && data.comisariaActiva) {
+  } else if (data && data.ok && data.comisariaActiva) {
     activas = [data.comisariaActiva];
   }
-  var divisiones = (data.ok && data.divisiones) ? data.divisiones : [];
+  var divisiones = (data && data.ok && data.divisiones) ? data.divisiones : [];
   var total = poblarSelectEvaluacionDivisiones(sel, divisiones, activas);
-  intentarMostrarAvisoUnidades(data);
+  if (opciones.mostrarAviso) intentarMostrarAvisoUnidades(data);
   if (!total) {
     sel.disabled = true;
     mostrarAlerta('El cuestionario no está habilitado para su dependencia en este momento. Contacte a la Oficina de Psicología.', 'error');
@@ -218,9 +223,12 @@ function cargarConfigUnidad() {
     .then(function(data) {
       if (!data || !data.ok) return;
       guardarCacheEval(EVAL_CACHE_CONFIG, data);
-      aplicarConfigUnidad(sel, data);
+      aplicarConfigUnidad(sel, data, { mostrarAviso: true });
     })
     .catch(function() {
+      if (cached && debeMostrarAvisoUnidades()) {
+        intentarMostrarAvisoUnidades(cached);
+      }
       if (!cached && !configBuiltinEvaluacion()) sel.disabled = false;
     });
 }
