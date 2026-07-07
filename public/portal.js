@@ -513,6 +513,12 @@ function asegurarPanelFotosEncabezado() {
 }
 
 var FOTOS_ENCABEZADO_DEFAULT = ['img/Imagen1.jpg', 'img/saludo.jpg', 'img/lunespatriotico.jpg'];
+
+var CARRUSEL_DEFAULT = [
+  { titulo: '', subtitulo: '', imagen: 'img/Imagen1.jpg' },
+  { titulo: '', subtitulo: '', imagen: 'img/saludo.jpg' },
+  { titulo: '', subtitulo: '', imagen: 'img/lunespatriotico.jpg' }
+];
 var HEADER_FOTOS_INTERVAL_MS = 6500;
 var HEADER_FOTOS_TRANSITION_MS = 900;
 var _headerFotosTimer = null;
@@ -569,6 +575,42 @@ function slidesCarruselValidos(carrusel) {
   return (carrusel || []).filter(function(s) {
     return s && String(s.imagen || '').trim();
   });
+}
+
+function resolverSlidesCarrusel(data) {
+  var slides = slidesCarruselValidos(data && data.carrusel);
+  return slides.length ? slides : CARRUSEL_DEFAULT.slice();
+}
+
+function preloadImagenCarrusel(url) {
+  var src = String(url || '').trim();
+  if (!src) return;
+  var id = 'preload-carrusel-hero';
+  var link = document.getElementById(id);
+  if (!link) {
+    link = document.createElement('link');
+    link.id = id;
+    link.rel = 'preload';
+    link.as = 'image';
+    document.head.appendChild(link);
+  }
+  if (link.getAttribute('href') !== src) link.setAttribute('href', src);
+}
+
+function esperarPrimeraImagenCarrusel(slider, callback) {
+  if (!slider) { if (callback) callback(); return; }
+  var primera = slider.querySelector('.slide.active .slide-img') || slider.querySelector('.slide-img');
+  if (!primera || !primera.getAttribute('src')) { if (callback) callback(); return; }
+  if (primera.complete && primera.naturalWidth > 0) { if (callback) callback(); return; }
+  var listo = false;
+  function done() {
+    if (listo) return;
+    listo = true;
+    if (callback) callback();
+  }
+  primera.addEventListener('load', done, { once: true });
+  primera.addEventListener('error', done, { once: true });
+  setTimeout(done, 6000);
 }
 
 function detenerPresentationSlider() {
@@ -1382,7 +1424,7 @@ function initPresentationSlider() {
 
 function actualizarCarrusel(data) {
   data = data || {};
-  var slides = slidesCarruselValidos(data.carrusel);
+  var slides = resolverSlidesCarrusel(data);
   var heroT  = data.heroTexto || {};
   var slider = document.querySelector('.presentation-slider');
   if (!slider) return;
@@ -1402,6 +1444,7 @@ function actualizarCarrusel(data) {
     return;
   }
 
+  preloadImagenCarrusel(slides[0].imagen);
   slider.classList.remove('slider-sin-imagenes');
   slidesDiv.innerHTML = slides.map(function(s, i) {
     var isActive = i === 0 ? ' active' : '';
@@ -1430,8 +1473,10 @@ function actualizarCarrusel(data) {
       });
     });
   }
-  slider.classList.remove('slider-cargando');
-  initPresentationSlider();
+  esperarPrimeraImagenCarrusel(slider, function() {
+    slider.classList.remove('slider-cargando');
+    initPresentationSlider();
+  });
 }
 
 function actualizarFechaPortal(data) {
@@ -1443,6 +1488,13 @@ function initPortalPagina(config) {
   config = config || {};
   initPortalNav(config.activeNav || '');
   aplicarHeroMarca();
+  if (config.actualizarCarrusel) {
+    var pre = obtenerSiteDataSync();
+    actualizarCarrusel({
+      heroTexto: (pre && pre.heroTexto) || {},
+      carrusel: resolverSlidesCarrusel(pre || {})
+    });
+  }
   if (!esHostEstaticoPortal()) {
     var data = obtenerSiteDataSync();
     if (data) aplicarPortalConfig(config, data);
