@@ -21,7 +21,8 @@ var ESTADO = {
   bloqueActual:    1,
   pregsPorBloque:  PREG_POR_BLOQUE,
   respuestas:      {},
-  registroCompleto: false
+  registroCompleto: false,
+  tiempoAcumulado: 0
 };
 var ALERTA_FINAL_MOSTRADA = false;
 var FOTO_BASE64 = '';
@@ -62,6 +63,15 @@ function obtenerTiempoSesionSegundos(cip) {
   } catch (e) {
     return 0;
   }
+}
+
+function aplicarTiempoAcumuladoDesdeData(data) {
+  if (!data) return;
+  ESTADO.tiempoAcumulado = Math.max(0, parseInt(data.tiempo_segundos, 10) || 0);
+}
+
+function obtenerTiempoTotalSegundos(cip) {
+  return Math.max(0, (ESTADO.tiempoAcumulado || 0) + obtenerTiempoSesionSegundos(cip));
 }
 
 function limpiarCronometroEvaluacion(cip) {
@@ -719,7 +729,7 @@ function construirPayloadProgreso() {
       return ESTADO.respuestas[k] === 'V' || ESTADO.respuestas[k] === 'F';
     }).length,
     respuestas: ESTADO.respuestas,
-    tiempo_segundos: obtenerTiempoSesionSegundos()
+    tiempo_segundos: obtenerTiempoTotalSegundos()
   };
 }
 
@@ -761,7 +771,7 @@ function construirPayloadGuardar(completada) {
     foto:      FOTO_BASE64 || '',
     respuestas: ESTADO.respuestas,
     completada: !!completada,
-    tiempo_segundos: obtenerTiempoSesionSegundos()
+    tiempo_segundos: obtenerTiempoTotalSegundos()
   };
 }
 
@@ -792,6 +802,7 @@ function aplicarDatosProgresoAlEstado(data) {
   ESTADO.respuestas = typeof data.respuestas === 'string'
     ? JSON.parse(data.respuestas) : (data.respuestas || {});
   ESTADO.bloqueActual = parseInt(data.bloque, 10) || 1;
+  aplicarTiempoAcumuladoDesdeData(data);
 }
 
 function normalizarDataProgreso(data) {
@@ -1207,6 +1218,8 @@ function aplicarProgresoRestaurado(data) {
   ESTADO.respuestas   = typeof data.respuestas==='string'?JSON.parse(data.respuestas):(data.respuestas||{});
   ESTADO.bloqueActual = parseInt(data.bloque,10)||1;
   ESTADO.registroCompleto = true;
+  aplicarTiempoAcumuladoDesdeData(data);
+  reiniciarCronometroEvaluacion(data.cip || obtenerCipEvaluacion());
   var banner=document.getElementById('banner-progreso');
   if(banner) banner.style.display='none';
   ocultarPanelRegistro();
@@ -1236,6 +1249,7 @@ function descartarProgreso() {
   document.getElementById('banner-progreso').style.display='none';
   ESTADO.respuestas={};
   ESTADO.bloqueActual=1;
+  ESTADO.tiempoAcumulado=0;
   reiniciarCronometroEvaluacion();
   activarCuestionario(true);
 }
@@ -1310,7 +1324,7 @@ function limpiarFormulario() {
   var chkE=document.getElementById('f-arm-estado'); if(chkE) chkE.checked=false;
   FOTO_BASE64 = '';
   quitarFoto();
-  ESTADO.respuestas={}; ESTADO.bloqueActual=1; ALERTA_FINAL_MOSTRADA=false;
+  ESTADO.respuestas={}; ESTADO.bloqueActual=1; ESTADO.tiempoAcumulado=0; ALERTA_FINAL_MOSTRADA=false;
   ocultarCuestionario(); actualizarControles(); actualizarInfoBloque();
   document.getElementById('zona-preguntas').innerHTML='';
   window.scrollTo({top:0,behavior:'smooth'});

@@ -1561,6 +1561,7 @@ app.get('/progreso', async (req, res) => {
       dni: row.dni || '', edad: resolverEdadFila(row), fecha_nac: fechaNac,
       armamento: row.armamento || '', foto: row.foto || '',
       bloque: row.bloque_max, total: totalCalc, respuestas: row.respuestas,
+      tiempo_segundos: Math.max(0, parseInt(row.tiempo_segundos, 10) || 0),
       ultima: new Date(row.actualizado).toLocaleString('es-PE')
     });
   } catch (e) {
