@@ -1288,7 +1288,7 @@ function renderBienestarPolicial(data, containerId) {
       + '</div>';
   }
   html += '<div class="bienestar-home-card">'
-    + '<i class="fas ' + escHtml(icono) + '" style="font-size:36px;color:#c8a94a;margin-bottom:12px;"></i>'
+    + '<i class="fas bienestar-home-icon ' + escHtml(icono) + '"></i>'
     + '<h4>' + escHtml(sec.titulo || '') + '</h4>'
     + '<p>' + escHtml(sec.descripcion || '') + '</p>'
     + '<a href="' + escHtml(url) + '" class="btn-bienestar"><i class="fas fa-clipboard-check"></i> '
