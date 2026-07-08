@@ -21,10 +21,9 @@
 
 /* Solo estilos del módulo — NO resetear el header/nav del portal */
 .body-bienestar .contenedor {
-  max-width: 100%;
-  width: 100%;
+  max-width: 960px;
   margin: 0 auto;
-  padding: 20px 16px 48px;
+  padding: 24px 20px 60px;
   box-sizing: border-box;
 }
 
@@ -182,8 +181,8 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .card-header-eval { background: var(--verde-pnp); padding: 14px 22px; display: flex; align-items: center; gap: 12px; }
 .card-header-eval i { color: var(--naranja-pnp); font-size: 18px; }
 .card-header-eval h2 { color: var(--blanco); font-size: 15px; font-weight: 700; }
-.card-body-eval { padding: 24px 20px; }
-#card-registro .card-body-eval { padding: 24px clamp(14px, 3vw, 28px); }
+.card-body-eval { padding: 28px 22px; }
+#card-registro .card-body-eval { padding: 28px 22px; }
 
 .seccion-bloqueada { display: none !important; }
 .card-registro-bloqueado .form-grid input:not([type="file"]),
@@ -768,7 +767,7 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
   .form-grid-registro { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 768px) {
-  .body-bienestar .contenedor { padding: 18px 12px 48px; }
+  .body-bienestar .contenedor { padding: 18px 14px 48px; }
   .paginacion { flex-direction: column; align-items: stretch; }
   .btn-eval { justify-content: center; }
   .info-pagina { order: -1; }
