@@ -628,71 +628,6 @@ function quitarFotoNovedad() {
   if (file)    file.value = '';
 }
 
-function previewTarjetaImg(input) {
-  var file = input.files && input.files[0];
-  if (!file) return;
-  if (file.size > 1.5 * 1024 * 1024) {
-    alert('La foto no debe superar 1.5 MB. Comprime la imagen antes de subirla.');
-    input.value = ''; return;
-  }
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var data = e.target.result;
-    var hidden  = document.getElementById('m-tarjeta-foto-data');
-    var preview = document.getElementById('m-tarjeta-foto-preview');
-    if (hidden)  hidden.value = data;
-    if (preview) { preview.src = data; preview.style.display = 'block'; }
-  };
-  reader.readAsDataURL(file);
-}
-
-function quitarFotoTarjeta() {
-  var hidden  = document.getElementById('m-tarjeta-foto-data');
-  var preview = document.getElementById('m-tarjeta-foto-preview');
-  var file    = document.getElementById('m-tarjeta-foto-file');
-  if (hidden)  hidden.value = '';
-  if (preview) { preview.src = ''; preview.style.display = 'none'; }
-  if (file)    file.value = '';
-}
-
-function campoFotoTarjetaCMS(item) {
-  var imgPreviewSrc = (item && item.imagen) || '';
-  var imgPreviewStyle = imgPreviewSrc ? 'display:block;' : 'display:none;';
-  return '<div class="cms-modal-campo">'
-    + '<label class="cms-label">Fotografía para la tarjeta (JPG/PNG/WEBP — máx 1.5 MB)</label>'
-    + '<p style="font-size:11px;color:#666;margin:0 0 8px;">Se muestra en la web en lugar del icono. Si no sube foto, se usa el icono seleccionado.</p>'
-    + '<input type="file" id="m-tarjeta-foto-file" accept="image/jpeg,image/png,image/webp" style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;" onchange="previewTarjetaImg(this)"/>'
-    + '<img id="m-tarjeta-foto-preview" src="' + escHtml(imgPreviewSrc) + '" style="max-width:100%;max-height:120px;border-radius:6px;margin-top:6px;' + imgPreviewStyle + '" alt=""/>'
-    + '<input type="hidden" id="m-tarjeta-foto-data" value="' + escHtml(imgPreviewSrc) + '"/>'
-    + (imgPreviewSrc ? '<button type="button" class="btn-mini btn-mini-danger" onclick="quitarFotoTarjeta()" style="margin-top:4px;"><i class="fas fa-times"></i> Quitar foto</button>' : '')
-    + '</div>';
-}
-
-// ═══════════════════════════════════════════════════════════════
-// CONVENIOS / CURSOS
-// ═══════════════════════════════════════════════════════════════
-function renderListaEditable(containerId, items, tipo) {
-  var el = document.getElementById(containerId);
-  if (!el) return;
-  if (!items.length) {
-    el.innerHTML = '<p class="cms-vacio">No hay registros.</p>';
-    return;
-  }
-  el.innerHTML = items.map(function(item, idx) {
-    var thumb = (tipo === 'convenios' && item.imagen)
-      ? '<img src="' + escHtml(item.imagen) + '" style="width:48px;height:48px;object-fit:cover;border-radius:6px;flex-shrink:0;" alt=""/>'
-      : '<div class="cms-item-icono"><i class="fas ' + escHtml(item.icono || 'fa-file') + '"></i></div>';
-    return '<div class="cms-item">'
-      + thumb
-      + '<div class="cms-item-info"><strong>' + escHtml(item.titulo) + '</strong>'
-      + '<span>' + escHtml(item.descripcion) + ' — <em>' + escHtml(item.estado) + '</em></span></div>'
-      + '<div class="cms-item-acciones">'
-      + '<button type="button" class="btn-mini" onclick="editarItemCMS(\'' + tipo + '\',' + idx + ')"><i class="fas fa-edit"></i></button>'
-      + '<button type="button" class="btn-mini btn-mini-danger" onclick="eliminarItemCMS(\'' + tipo + '\',' + idx + ')"><i class="fas fa-trash"></i></button>'
-      + '</div></div>';
-  }).join('');
-}
-
 // ═══════════════════════════════════════════════════════════════
 // RESEÑA HISTÓRICA
 // ═══════════════════════════════════════════════════════════════
@@ -959,61 +894,13 @@ function abrirModalPilar(idx) {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════
-// CONVENIOS / CURSOS — modal tarjeta
-// ═══════════════════════════════════════════════════════════════
-function abrirModalTarjeta(tipo, idx) {
-  var esNuevo = idx === null;
-  var item = esNuevo
-    ? { titulo: '', descripcion: '', estado: 'DISPONIBLE', url: '#', icono: 'fa-shield-alt', color: '#004d3d', estadoColor: 'green', imagen: '' }
-    : cmsDataActual[tipo][idx];
-  var tituloModal = (esNuevo ? 'Nuevo ' : 'Editar ') + (tipo === 'convenios' ? 'convenio' : 'curso');
-  var body = cmsCampo('Título', 'm-titulo', item.titulo)
-    + cmsCampo('Descripción', 'm-desc', item.descripcion, 'textarea')
-    + cmsCampo('Estado', 'm-estado', item.estado, 'select', ['DISPONIBLE', 'EN PROCESO', 'CERRADO'])
-    + cmsCampo('Enlace (URL o archivo .html)', 'm-url', item.url)
-    + cmsCampo('Icono', 'm-icono', item.icono, 'select', CMS_ICONOS)
-    + (tipo === 'convenios' ? campoFotoTarjetaCMS(item) : '');
-  abrirCmsModal(tituloModal, body, function() {
-    var titulo = leerModal('m-titulo');
-    if (!titulo) { alert('El título es obligatorio.'); return false; }
-    var nuevo = {
-      id:          item.id || (tipo.slice(0, 4) + '-' + Date.now()),
-      titulo:      titulo.toUpperCase(),
-      descripcion: leerModal('m-desc'),
-      estado:      leerModal('m-estado') || 'DISPONIBLE',
-      estadoColor: leerModal('m-estado') === 'EN PROCESO' ? '#f4f806' : 'green',
-      icono:       leerModal('m-icono') || 'fa-shield-alt',
-      color:       item.color || '#004d3d',
-      url:         leerModal('m-url') || '#'
-    };
-    if (tipo === 'convenios') {
-      nuevo.imagen = getVal('m-tarjeta-foto-data') || item.imagen || '';
-    }
-    cmsDataActual[tipo] = cmsDataActual[tipo] || [];
-    if (esNuevo) cmsDataActual[tipo].push(nuevo);
-    else         cmsDataActual[tipo][idx] = nuevo;
-    renderListasCMS();
-    publicarCmsTrasEdicion('Guardado en borrador. Pulse "Publicar cambios" para subir al portal.');
-    return true;
-  });
-}
-
-function agregarConvenioCMS() { abrirModalTarjeta('convenios', null); }
-function agregarCursoCMS()    { abrirModalTarjeta('cursos', null); }
 function agregarNovedadCMS()  { abrirModalNovedad(null); }
 
-function eliminarItemCMS(tipo, idx) {
-  if (!confirm('¿Eliminar este registro?')) return;
-  cmsDataActual[tipo].splice(idx, 1);
-  renderListasCMS();
-}
 function eliminarNovedadCMS(idx) {
   if (!confirm('¿Eliminar esta novedad?')) return;
   cmsDataActual.novedades.splice(idx, 1);
   renderListasCMS();
 }
-function editarItemCMS(tipo, idx)  { abrirModalTarjeta(tipo, idx); }
 function editarNovedadCMS(idx)     { abrirModalNovedad(idx); }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1191,6 +1078,22 @@ function recolectarDatosCMS() {
     data.fotosEncabezado = cmsDataActual.fotosEncabezado.filter(function(f) { return !!(f && String(f).trim()); });
   }
   data.navOcultos = recolectarNavOcultosDesdeFormulario();
+  if (document.getElementById('cms-acceso-titulo-0')) {
+    var accesos = [];
+    var ai = 0;
+    while (document.getElementById('cms-acceso-titulo-' + ai)) {
+      accesos.push({
+        titulo: getVal('cms-acceso-titulo-' + ai),
+        descripcion: getVal('cms-acceso-desc-' + ai)
+      });
+      ai++;
+    }
+    if (accesos.length) data.accesosRapidos = accesos;
+  }
+  delete data.convenios;
+  delete data.cursos;
+  delete data.conveniosPdf;
+  delete data.cursosPdf;
   return data;
 }
 

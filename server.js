@@ -1231,6 +1231,15 @@ function puedePublicarConfiguracionPortal(admin) {
   });
 }
 
+function limpiarClavesLegacyPortalConfig(data) {
+  if (!data || typeof data !== 'object') return data;
+  delete data.convenios;
+  delete data.cursos;
+  delete data.conveniosPdf;
+  delete data.cursosPdf;
+  return data;
+}
+
 function adminPuedeAccederRegistro(admin, unidad, comisaria) {
   if (!debeFiltrarPorUnidadAsignada(admin)) return true;
   const u = (admin.unidad || '').toUpperCase();
@@ -3272,6 +3281,7 @@ app.post('/admin/configuracion', requireAuth, async (req, res) => {
     data.actualizacion = data.actualizacion || (hoy.getDate() + ' DE ' + meses[hoy.getMonth()] + ' ' + hoy.getFullYear());
     data.cmsPublicadoEn = new Date().toISOString();
     if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezadoList(data.fotosEncabezado);
+    limpiarClavesLegacyPortalConfig(data);
     const norm = await normalizarImagenesPortalEnConfig(data);
     const dataFinal = norm.data;
     const json = JSON.stringify(dataFinal);

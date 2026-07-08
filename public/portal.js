@@ -6,7 +6,6 @@
   window.REGPOL_API_BASE = (h === 'localhost' || h === '127.0.0.1') ? 'http://localhost:3000' : prod;
 })();
 
-var REGPOL_WEB_APP = 'https://script.google.com/macros/s/AKfycbzHHCUjXQVNtgVTERGx3RuiGPfSHuhCgTVddHL8ByDJUE-lLQessVsdFCFabayhCC5u/exec';
 var REGPOL_SITE_KEY = 'regpolSiteData_v2';
 
 var PORTAL_MARCA = {
@@ -225,16 +224,22 @@ function saveSiteDataToStorage(data) {
   }
 }
 
-function fetchSiteDataFromServer() {
-  var h = location.hostname;
-  if (h.indexOf('railway.app') !== -1 || h.indexOf('github.io') !== -1) {
-    return Promise.resolve(null);
-  }
-  var url = (typeof WEB_APP_URL !== 'undefined' && WEB_APP_URL) ? WEB_APP_URL : REGPOL_WEB_APP;
-  return fetch(url + '?action=get_site')
-    .then(function(r) { return r.json(); })
-    .then(function(res) { return (res && res.ok && res.data) ? res.data : null; })
-    .catch(function() { return null; });
+function aplicarAccesosRapidos(data) {
+  if (!data || !Array.isArray(data.accesosRapidos) || !data.accesosRapidos.length) return;
+  var secciones = [
+    { id: 'convenios', idx: 0 },
+    { id: 'cursos', idx: 1 }
+  ];
+  secciones.forEach(function(s) {
+    var acc = data.accesosRapidos[s.idx];
+    if (!acc) return;
+    var sec = document.getElementById(s.id);
+    if (!sec) return;
+    var h = sec.querySelector('.section-header h3');
+    var p = sec.querySelector('.section-header p');
+    if (h && acc.titulo) h.textContent = acc.titulo;
+    if (p && acc.descripcion) p.textContent = acc.descripcion;
+  });
 }
 
 var PORTAL_CONFIG_TIMEOUT_MS = 30000;
@@ -348,6 +353,7 @@ function aplicarPortalConfig(config, data) {
     cargarResultadosPdfPortal('curso', config.renderCursosPdf);
   }
   if (config.actualizarFecha) actualizarFechaPortal(data);
+  aplicarAccesosRapidos(data);
   if (config.actualizarCarrusel && resolverSlidesCarrusel(data).length) {
     actualizarCarrusel(data);
   } else if (config.actualizarCarrusel && data.heroTexto) {
@@ -372,26 +378,6 @@ function cargarSiteData() {
     if (data) { saveSiteDataToStorage(data); return data; }
     return obtenerSiteDataSync();
   });
-}
-
-function publicarSiteData(data) {
-  saveSiteDataToStorage(data);
-  var base = apiBasePortal();
-  var token = (typeof TOKEN !== 'undefined' && TOKEN) ? TOKEN : '';
-  if (token) {
-    fetch((base || '') + '/admin/configuracion', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
-      body: JSON.stringify(data)
-    }).catch(function() {});
-  }
-  var url = (typeof WEB_APP_URL !== 'undefined' && WEB_APP_URL) ? WEB_APP_URL : REGPOL_WEB_APP;
-  return fetch(url, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'save_site', data: data })
-  }).catch(function() {});
 }
 
 function esPaginaInicio() {
@@ -816,32 +802,6 @@ function aplicarHeroMarca(heroT) {
   document.querySelectorAll('.hero-overlay .portal-hero-eslogan').forEach(function(el) {
     el.textContent = hero.eslogan;
   });
-}
-
-function renderTarjetas(items, containerId) {
-  var el = document.getElementById(containerId);
-  if (!el) return;
-  if (!items || !items.length) {
-    el.innerHTML = '';
-    return;
-  }
-  el.innerHTML = items.map(function(item) {
-    var url = item.url || '#';
-    var src = String(item.imagen || '').trim();
-    var mediaHtml = src
-      ? '<div class="card-modern-foto"><img src="' + escHtml(src) + '" alt="' + escHtml(item.titulo) + '" loading="lazy" decoding="async"/></div>'
-      : '<div class="icon-wrapper" style="background:' + escHtml(item.color || '#004d3d') + ';">'
-        + '<i class="fas ' + escHtml(item.icono || 'fa-file') + '"></i></div>';
-    return '<a href="' + escHtml(url) + '">' +
-      '<div class="card-modern' + (src ? ' card-modern--foto' : '') + '">' +
-        mediaHtml +
-        '<h4>' + escHtml(item.titulo) + '</h4>' +
-        '<p>' + escHtml(item.descripcion) + '</p>' +
-        '<span class="card-estado" style="color:' + escHtml(item.estadoColor || 'green') + ';">' +
-          escHtml(item.estado) +
-        '</span>' +
-      '</div></a>';
-  }).join('');
 }
 
 function renderPdfList(items, containerId) {
