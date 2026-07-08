@@ -5,16 +5,8 @@
     "subtitulo": "AL SERVICIO DE LA CIUDADANÍA",
     "parrafo": "Compromiso, Honor y Servicio en la Provincia Constitucional"
   },
-  "fotosEncabezado": [
-    "img/Imagen1.jpg",
-    "img/saludo.jpg",
-    "img/lunespatriotico.jpg"
-  ],
-  "carrusel": [
-    { "titulo": "", "subtitulo": "", "imagen": "img/Imagen1.jpg" },
-    { "titulo": "", "subtitulo": "", "imagen": "img/saludo.jpg" },
-    { "titulo": "", "subtitulo": "", "imagen": "img/lunespatriotico.jpg" }
-  ],
+  "fotosEncabezado": [],
+  "carrusel": [],
   "resenaHistorica": {
     "titulo": "Reseña Histórica",
     "intro": "La Región Policial Callao es la entidad encargada de garantizar la seguridad ciudadana en la Provincia Constitucional del Callao, articulando el trabajo de comisarías, unidades especializadas y programas institucionales al servicio de la población.",

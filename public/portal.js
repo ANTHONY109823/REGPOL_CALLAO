@@ -530,13 +530,9 @@ function asegurarPanelFotosEncabezado() {
   return panel;
 }
 
-var FOTOS_ENCABEZADO_DEFAULT = ['img/Imagen1.jpg', 'img/saludo.jpg', 'img/lunespatriotico.jpg'];
+var FOTOS_ENCABEZADO_DEFAULT = [];
 
-var CARRUSEL_DEFAULT = [
-  { titulo: '', subtitulo: '', imagen: 'img/Imagen1.jpg' },
-  { titulo: '', subtitulo: '', imagen: 'img/saludo.jpg' },
-  { titulo: '', subtitulo: '', imagen: 'img/lunespatriotico.jpg' }
-];
+var CARRUSEL_DEFAULT = [];
 var HEADER_FOTOS_INTERVAL_MS = 6500;
 var HEADER_FOTOS_TRANSITION_MS = 900;
 var _headerFotosTimer = null;

@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="style.css?v=47">
     <link rel="stylesheet" href="responsive.css?v=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="preload" as="image" href="img/Imagen1.jpg" fetchpriority="high">
 </head>
 <body class="body-portal portal-home">
 
@@ -41,11 +40,7 @@
     <nav class="nav-main" aria-label="Menú principal"><div class="container"><ul></ul></div></nav>
 
     <section class="presentation-slider slider-cargando" aria-label="Presentación institucional">
-        <div class="slides">
-            <div class="slide active">
-                <img src="img/Imagen1.jpg" alt="REGPOL Callao" class="slide-img" width="1920" height="1080" fetchpriority="high" decoding="async">
-            </div>
-        </div>
+        <div class="slides"></div>
         <div class="hero-overlay">
             <div class="container">
                 <h1 class="portal-hero-titulo animate-text">REGIÓN POLICIAL CALLAO</h1>
@@ -185,7 +180,7 @@
 
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=8"></script>
-<script src="portal.js?v=60"></script>
+<script src="portal.js?v=61"></script>
 <script>
     initPortalInicio();
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') cerrarNovedadModal(); });
