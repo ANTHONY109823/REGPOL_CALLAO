@@ -260,6 +260,54 @@ async function buscarRegistroDuplicadoPorNombre(nombres, cipActual) {
   return null;
 }
 
+async function buscarRegistroDuplicadoPorDni(dni, cipActual) {
+  const dniT = String(dni || '').trim();
+  if (dniT.length < 8) return null;
+  const cipTrim = String(cipActual || '').trim();
+  const sqlCipDistinto = `UPPER(TRIM(cip)) <> UPPER(TRIM($2))`;
+
+  const progR = await pool.query(
+    `SELECT cip, nombres, 'progreso' AS fuente FROM progresos
+     WHERE TRIM(dni)=TRIM($1) AND ${sqlCipDistinto}
+     ORDER BY actualizado DESC LIMIT 1`,
+    [dniT, cipTrim]
+  );
+  if (progR.rows.length) return progR.rows[0];
+
+  const evR = await pool.query(
+    `SELECT cip, nombres, 'evaluacion' AS fuente FROM evaluaciones
+     WHERE TRIM(dni)=TRIM($1) AND ${sqlCipDistinto}
+     ORDER BY fecha DESC LIMIT 1`,
+    [dniT, cipTrim]
+  );
+  if (evR.rows.length) return evR.rows[0];
+
+  return null;
+}
+
+/** Elimina evaluaciones y progresos por CIP y/o DNI (evita huérfanos tras borrar en admin). */
+async function purgarRegistrosPersona(cip, dni) {
+  const cipT = String(cip || '').trim();
+  const dniT = String(dni || '').trim();
+  if (!cipT && !dniT) return;
+  const conds = [];
+  const params = [];
+  let pi = 1;
+  if (cipT) {
+    conds.push(`(UPPER(TRIM(cip))=UPPER(TRIM($${pi})) OR LOWER(TRIM(clave))=LOWER(TRIM($${pi})))`);
+    params.push(cipT);
+    pi++;
+  }
+  if (dniT) {
+    conds.push(`TRIM(dni)=TRIM($${pi})`);
+    params.push(dniT);
+    pi++;
+  }
+  const where = conds.join(' OR ');
+  await pool.query(`DELETE FROM progresos WHERE ${where}`, params);
+  await pool.query(`DELETE FROM evaluaciones WHERE ${where}`, params);
+}
+
 function normalizarFilasPDFGrupo(rows) {
   return deduplicarFilasPorCip(rows).map(function(row) {
     let base;
@@ -1339,6 +1387,15 @@ app.post('/guardar', async (req, res) => {
         [cip]
       );
       if (!sesionProgreso.rows.length) {
+        const dupDni = await buscarRegistroDuplicadoPorDni(dni, cip);
+        if (dupDni) {
+          return res.json({
+            ok: false,
+            error: 'duplicado_dni',
+            cip_existente: dupDni.cip,
+            nombres_existente: dupDni.nombres
+          });
+        }
         const dupNombre = await buscarRegistroDuplicadoPorNombre(nombres, cip);
         if (dupNombre) {
           return res.json({
@@ -1402,6 +1459,15 @@ app.post('/progreso', async (req, res) => {
       [cipTrim]
     );
     if (!sesionCip.rows.length) {
+      const dupDni = await buscarRegistroDuplicadoPorDni(dni, cipTrim);
+      if (dupDni) {
+        return res.json({
+          ok: false,
+          error: 'duplicado_dni',
+          cip_existente: dupDni.cip,
+          nombres_existente: dupDni.nombres
+        });
+      }
       const dupNombre = await buscarRegistroDuplicadoPorNombre(nombres, cip);
       if (dupNombre) {
         return res.json({
@@ -1420,21 +1486,6 @@ app.post('/progreso', async (req, res) => {
     const merged = await mergeRespuestasEnProgreso(clave, respuestas, bloque);
     const totalGuardar = Math.max(totalFinal, merged.total);
     const bloqueGuardar = merged.bloque_max;
-    // Agregar columnas extra a progresos si no existen (BD antiguas)
-    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS bloque_max SMALLINT DEFAULT 0`).catch(()=>{});
-    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS total_resp SMALLINT DEFAULT 0`).catch(()=>{});
-    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS respuestas JSONB`).catch(()=>{});
-    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS unidad VARCHAR(150)`).catch(()=>{});
-    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS cargo VARCHAR(80)`).catch(()=>{});
-    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS sexo VARCHAR(20)`).catch(()=>{});
-    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS armamento TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS foto TEXT`).catch(()=>{});
-    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS grado VARCHAR(80)`).catch(()=>{});
-    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS dni VARCHAR(20)`).catch(()=>{});
-    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS fecha_nac DATE`).catch(()=>{});
-    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS edad SMALLINT`).catch(()=>{});
-    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS area VARCHAR(120)`).catch(()=>{});
-    await pool.query(`ALTER TABLE progresos ADD COLUMN IF NOT EXISTS tiempo_segundos INTEGER DEFAULT 0`).catch(()=>{});
     await pool.query(
       `INSERT INTO progresos (clave,cip,nombres,comisaria,unidad,bloque_max,total_resp,respuestas,tiempo_segundos,actualizado)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
@@ -1465,53 +1516,81 @@ app.get('/verificar-registro', async (req, res) => {
     const nombres = (req.query.nombres || '').trim();
     if (!cip && !dni) return res.json({ ok: false, error: 'CIP requerido' });
 
-    const progR = await pool.query(
-      `SELECT cip, nombres, dni, bloque_max, COALESCE(total_resp, 0) AS total_resp, respuestas
-       FROM progresos
-       WHERE ($1 <> '' AND (UPPER(TRIM(cip)) = UPPER(TRIM($1)) OR LOWER(TRIM(clave)) = LOWER(TRIM($1))))
-          OR ($2 <> '' AND TRIM(dni) = TRIM($2))
-       ORDER BY actualizado DESC LIMIT 1`,
-      [cip, dni]
-    );
-    if (progR.rows.length) {
-      const row = progR.rows[0];
+    function filaVerificacion(row, fuente, completada) {
       const total = Math.max(
         parseInt(row.total_resp, 10) || 0,
         contarRespuestasObj(row.respuestas).total
       );
-      return res.json({
+      const cipRow = (row.cip || '').trim();
+      const conflictoDni = !!(dni && row.dni && String(row.dni).trim() === String(dni).trim()
+        && cip && cipRow && cipRow.toUpperCase() !== cip.toUpperCase());
+      return {
         ok: true,
         registrado: true,
-        fuente: 'progreso',
+        fuente: fuente,
         cip: row.cip,
         nombres: row.nombres || '',
         dni: row.dni || '',
         total: total,
-        completada: false
-      });
+        completada: !!completada,
+        conflicto_dni: conflictoDni
+      };
     }
 
-    const evR = await pool.query(
-      `SELECT id, cip, nombres, dni, completada,
-              ${sqlContarRespuestas('respuestas')} AS total_resp
-       FROM evaluaciones
-       WHERE ($1 <> '' AND UPPER(TRIM(cip)) = UPPER(TRIM($1)))
-          OR ($2 <> '' AND TRIM(dni) = TRIM($2))
-       ORDER BY fecha DESC LIMIT 1`,
-      [cip, dni]
-    );
-    if (evR.rows.length) {
-      const row = evR.rows[0];
-      return res.json({
-        ok: true,
-        registrado: true,
-        fuente: 'evaluacion',
-        cip: row.cip,
-        nombres: row.nombres || '',
-        dni: row.dni || '',
-        total: parseInt(row.total_resp, 10) || 0,
-        completada: !!row.completada
-      });
+    if (cip) {
+      const progCip = await pool.query(
+        `SELECT cip, nombres, dni, bloque_max, COALESCE(total_resp, 0) AS total_resp, respuestas
+         FROM progresos
+         WHERE UPPER(TRIM(cip)) = UPPER(TRIM($1)) OR LOWER(TRIM(clave)) = LOWER(TRIM($1))
+         ORDER BY actualizado DESC LIMIT 1`,
+        [cip]
+      );
+      if (progCip.rows.length) {
+        return res.json(filaVerificacion(progCip.rows[0], 'progreso', false));
+      }
+
+      const evCip = await pool.query(
+        `SELECT id, cip, nombres, dni, completada, respuestas,
+                ${sqlContarRespuestas('respuestas')} AS total_resp
+         FROM evaluaciones
+         WHERE UPPER(TRIM(cip)) = UPPER(TRIM($1))
+         ORDER BY fecha DESC LIMIT 1`,
+        [cip]
+      );
+      if (evCip.rows.length) {
+        const row = evCip.rows[0];
+        return res.json(filaVerificacion(row, 'evaluacion', row.completada));
+      }
+    }
+
+    if (dni) {
+      const progDni = await pool.query(
+        `SELECT cip, nombres, dni, bloque_max, COALESCE(total_resp, 0) AS total_resp, respuestas
+         FROM progresos
+         WHERE TRIM(dni) = TRIM($1)
+         ORDER BY actualizado DESC LIMIT 1`,
+        [dni]
+      );
+      if (progDni.rows.length) {
+        const out = filaVerificacion(progDni.rows[0], 'progreso', false);
+        out.conflicto_dni = true;
+        return res.json(out);
+      }
+
+      const evDni = await pool.query(
+        `SELECT id, cip, nombres, dni, completada, respuestas,
+                ${sqlContarRespuestas('respuestas')} AS total_resp
+         FROM evaluaciones
+         WHERE TRIM(dni) = TRIM($1)
+         ORDER BY fecha DESC LIMIT 1`,
+        [dni]
+      );
+      if (evDni.rows.length) {
+        const row = evDni.rows[0];
+        const out = filaVerificacion(row, 'evaluacion', row.completada);
+        out.conflicto_dni = true;
+        return res.json(out);
+      }
     }
 
     if (nombres) {
@@ -2181,20 +2260,14 @@ app.delete('/admin/evaluaciones/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     }
     const cur = await pool.query(
-      'SELECT id, cip, unidad, comisaria FROM evaluaciones WHERE id=$1',
+      'SELECT id, cip, dni, unidad, comisaria FROM evaluaciones WHERE id=$1',
       [req.params.id]);
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     const row = cur.rows[0];
     if (!adminPuedeAccederRegistro(req.admin, row.unidad, row.comisaria)) {
       return res.status(403).json({ ok: false, error: 'Sin permiso para esta dependencia' });
     }
-    await pool.query('DELETE FROM evaluaciones WHERE id=$1', [row.id]);
-    if (row.cip) {
-      await pool.query(
-        `DELETE FROM progresos WHERE UPPER(TRIM(cip))=UPPER(TRIM($1))
-         OR LOWER(TRIM(clave))=LOWER(TRIM($1))`,
-        [row.cip]);
-    }
+    await purgarRegistrosPersona(row.cip, row.dni);
     invalidarStatsCache();
     res.json({ ok: true });
   } catch (e) {
@@ -2211,7 +2284,7 @@ app.delete('/admin/progresos', requireAuth, async (req, res) => {
     const cip = (req.query.cip || '').trim();
     if (!cip) return res.json({ ok: false, error: 'CIP requerido' });
     const cur = await pool.query(
-      `SELECT cip, unidad, comisaria FROM progresos
+      `SELECT cip, dni, unidad, comisaria FROM progresos
        WHERE UPPER(TRIM(cip))=UPPER(TRIM($1)) OR LOWER(TRIM(clave))=LOWER(TRIM($1))
        LIMIT 1`,
       [cip]);
@@ -2220,10 +2293,7 @@ app.delete('/admin/progresos', requireAuth, async (req, res) => {
     if (!adminPuedeAccederRegistro(req.admin, row.unidad, row.comisaria)) {
       return res.status(403).json({ ok: false, error: 'Sin permiso para esta dependencia' });
     }
-    await pool.query(
-      `DELETE FROM progresos WHERE UPPER(TRIM(cip))=UPPER(TRIM($1))
-       OR LOWER(TRIM(clave))=LOWER(TRIM($1))`,
-      [cip]);
+    await purgarRegistrosPersona(row.cip, row.dni);
     invalidarStatsCache();
     res.json({ ok: true });
   } catch (e) {

@@ -26,6 +26,7 @@ var ESTADO = {
 };
 var ALERTA_FINAL_MOSTRADA = false;
 var FOTO_BASE64 = '';
+var FOTO_EN_SERVIDOR = false;
 var CAM_STREAM = null;
 var EVAL_TIEMPO_KEY = 'regpol_eval_tiempo_inicio';
 
@@ -470,6 +471,7 @@ function aplicarFotoRegistro(dataUrl, nombreArchivo, inputEl) {
     return;
   }
   FOTO_BASE64 = dataUrl;
+  FOTO_EN_SERVIDOR = false;
   actualizarPreviewFoto(FOTO_BASE64);
   limpiarErrorFoto();
   ocultarAlerta();
@@ -590,6 +592,7 @@ function actualizarPreviewFoto(src) {
 
 function quitarFoto() {
   FOTO_BASE64 = '';
+  FOTO_EN_SERVIDOR = false;
   var inp = document.getElementById('f-foto');
   var inpCam = document.getElementById('f-foto-cam');
   if (inp) inp.value = '';
@@ -709,6 +712,21 @@ function ocultarPanelRegistro() {
   ESTADO.registroCompleto = true;
 }
 
+function limpiarProgresoLocal(cip) {
+  if (!cip) return;
+  try { localStorage.removeItem('progreso_' + cip); } catch (e) {}
+}
+
+function marcarFotoEnServidor() {
+  if (FOTO_BASE64) FOTO_EN_SERVIDOR = true;
+}
+
+function fotoParaPayload(incluirSiempre) {
+  if (incluirSiempre) return FOTO_BASE64 || '';
+  if (FOTO_EN_SERVIDOR) return '';
+  return FOTO_BASE64 || '';
+}
+
 function construirPayloadProgreso() {
   return {
     cip:       document.getElementById('f-cip').value.trim(),
@@ -723,7 +741,7 @@ function construirPayloadProgreso() {
     cargo:     (document.getElementById('f-cargo')||{}).value||'',
     area:      obtenerAreaEvaluacion(),
     armamento: obtenerArmamento(),
-    foto:      FOTO_BASE64 || '',
+    foto:      fotoParaPayload(false),
     bloque:    ESTADO.bloqueActual || 1,
     total:     Object.keys(ESTADO.respuestas).filter(function(k) {
       return ESTADO.respuestas[k] === 'V' || ESTADO.respuestas[k] === 'F';
@@ -749,6 +767,7 @@ function guardarRegistroEnServidor(callback) {
         if (callback) callback(false);
         return;
       }
+      marcarFotoEnServidor();
       if (callback) callback(true);
     })
     .catch(function() { if (callback) callback(false); });
@@ -826,6 +845,24 @@ function notificarSesionExistente(cip, info) {
     notificarDuplicadoPorNombre(cip, info.nombres);
     return;
   }
+  if (info && info.conflicto_dni) {
+    msg = 'El DNI ingresado ya está asociado a '
+      + (info.nombres || 'otro efectivo')
+      + ' (CIP ' + (info.cip || '') + '). '
+      + 'Si eliminó ese registro en administración, recargue la página (F5) e intente de nuevo. '
+      + 'Si el DNI es suyo, ingrese el CIP correcto en «¿Ya comenzó?» y pulse Continuar.';
+    mostrarAlerta(msg, 'error');
+    var cardDni = document.getElementById('card-continuar-cip');
+    var inpDni = document.getElementById('f-cip-continuar');
+    if (inpDni) inpDni.value = info.cip || cip;
+    if (cardDni) {
+      cardDni.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      cardDni.classList.add('continuar-cip-destacado');
+      setTimeout(function() { cardDni.classList.remove('continuar-cip-destacado'); }, 8000);
+    }
+    if (inpDni) setTimeout(function() { inpDni.focus(); inpDni.select(); }, 400);
+    return;
+  }
   if (info && info.completada) {
     msg = 'El CIP ' + cip + ' ya tiene una evaluación enviada a Psicología. '
       + 'No puede registrarse de nuevo. Si necesita ayuda, contacte a la Oficina de Psicología.';
@@ -869,7 +906,13 @@ function notificarDuplicadoPorNombre(cipExistente, nombres) {
 }
 
 function mensajeErrorDuplicadoNombre(data) {
-  if (!data || data.error !== 'duplicado_nombre') return null;
+  if (!data) return null;
+  if (data.error === 'duplicado_dni') {
+    return 'El DNI ya está registrado a nombre de ' + (data.nombres_existente || 'otro efectivo')
+      + ' (CIP ' + (data.cip_existente || '') + '). '
+      + 'Si eliminó ese registro, recargue la página (F5) e intente de nuevo.';
+  }
+  if (data.error !== 'duplicado_nombre') return null;
   return 'Ya existe un registro a nombre de ' + (data.nombres_existente || 'esta persona')
     + ' con CIP ' + (data.cip_existente || '') + '. '
     + 'No puede registrarse con otro CIP.';
@@ -1050,10 +1093,13 @@ function guardarBloqueEnServidor(callback) {
 
   localStorage.setItem('progreso_'+payload.cip, JSON.stringify(payload));
 
-  fetch(LOCAL_API+'/progreso',{
-    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
-  }).then(function(r){return r.json();})
-    .then(function(){
+  fetch(LOCAL_API + '/progreso', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(function(r) { return r.json(); })
+    .then(function(d) {
+      marcarFotoEnServidor();
       mostrarIndicadorGuardado('Bloque '+ESTADO.bloqueActual+' guardado ✓');
       if(callback) callback();
     })
@@ -1145,28 +1191,35 @@ function continuarConCIP() {
     if (data.cargo) document.getElementById('f-cargo').value = data.cargo;
     if (data.area) restaurarAreaEvaluacion(data.area);
     restaurarArmamentoDesdeData(data);
-    if (data.foto) { FOTO_BASE64 = data.foto; actualizarPreviewFoto(data.foto); }
+    if (data.foto) { FOTO_BASE64 = data.foto; FOTO_EN_SERVIDOR = true; actualizarPreviewFoto(data.foto); }
     restaurarUnidadDesdeProgreso(data);
     ocultarPanelRegistro();
     aplicarProgresoRestaurado(data);
   });
 }
 
-// Auto-guardar cada respuesta (con pequeña espera para no saturar)
+// Auto-guardar cada respuesta (con espera para no saturar el servidor)
 var _saveTimer = null;
+var _guardandoProgreso = false;
 function autoGuardarProgreso() {
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(function() {
+    if (_enviandoEvaluacion) return;
     var payload = construirPayloadProgreso();
     if (!payload.cip) return;
     localStorage.setItem('progreso_' + payload.cip, JSON.stringify(payload));
+    if (_guardandoProgreso) return;
+    _guardandoProgreso = true;
     fetch(LOCAL_API + '/progreso', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    }).catch(function() {});
+    }).then(function(r) { return r.json(); })
+      .then(function(d) { if (d && d.ok) marcarFotoEnServidor(); })
+      .catch(function() {})
+      .finally(function() { _guardandoProgreso = false; });
     mostrarIndicadorGuardado();
-  }, 350);
+  }, 1800);
 }
 
 /* ================================================================
@@ -1182,13 +1235,7 @@ function verificarProgresoGuardado(cip, callback) {
         var norm = normalizarDataProgreso(data);
         if (norm) { if(callback) callback(norm); return; }
       }
-      var local = localStorage.getItem('progreso_'+cip);
-      if (local) {
-        try {
-          var d = normalizarDataProgreso(JSON.parse(local));
-          if (d) { if(callback) callback(d); return; }
-        } catch (e) { /* ignorar */ }
-      }
+      limpiarProgresoLocal(cip);
       if (callback) callback(null);
     })
     .catch(function(){
@@ -1239,7 +1286,7 @@ function restaurarProgreso() {
   if(data.cargo) document.getElementById('f-cargo').value=data.cargo;
   if(data.area) restaurarAreaEvaluacion(data.area);
   restaurarArmamentoDesdeData(data);
-  if(data.foto) { FOTO_BASE64 = data.foto; actualizarPreviewFoto(data.foto); }
+  if(data.foto) { FOTO_BASE64 = data.foto; FOTO_EN_SERVIDOR = true; actualizarPreviewFoto(data.foto); }
   restaurarUnidadDesdeProgreso(data);
   ocultarPanelRegistro();
   aplicarProgresoRestaurado(data);
@@ -1278,41 +1325,82 @@ function validarYEnviar() {
   enviarEvaluacion();
 }
 
+var _enviandoEvaluacion = false;
+
 function enviarEvaluacion() {
+  if (_enviandoEvaluacion) return;
+  _enviandoEvaluacion = true;
+  clearTimeout(_saveTimer);
+
   var overlay=document.getElementById('overlay-envio');
   var spinner=document.getElementById('spinner-overlay');
   var checkIcon=document.getElementById('check-ok-icon');
   var textoO=document.getElementById('texto-overlay');
   var subtextoO=document.getElementById('subtexto-overlay');
+  var btnFin=document.getElementById('btn-finalizar');
 
+  if (btnFin) btnFin.disabled = true;
   overlay.classList.add('visible');
+  if (spinner) spinner.style.display='block';
+  if (checkIcon) checkIcon.style.display='none';
+  if (textoO) { textoO.textContent='Enviando...'; textoO.style.color=''; }
+  if (subtextoO) subtextoO.textContent='No cierre ni recargue esta página';
 
   var respObj={};
   PREGUNTAS.forEach(function(p){ respObj[p.id]=ESTADO.respuestas[p.id]||''; });
   var payload = construirPayloadGuardar(true);
   payload.respuestas = respObj;
+  payload.foto = fotoParaPayload(true);
 
-  fetch(LOCAL_API+'/guardar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
-    .then(function(r){return r.json();})
+  var ctrl = new AbortController();
+  var timeoutId = setTimeout(function() { ctrl.abort(); }, 120000);
+
+  fetch(LOCAL_API+'/guardar',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload),
+    signal: ctrl.signal
+  })
+    .then(function(r){
+      if (!r.ok) throw new Error('Error del servidor (' + r.status + '). Intente de nuevo.');
+      return r.json();
+    })
     .then(function(data){
+      clearTimeout(timeoutId);
       if(!data.ok) {
         var msgDup = mensajeErrorDuplicadoNombre(data);
         throw new Error(msgDup || data.error || 'Error del servidor');
       }
-      spinner.style.display='none';
-      checkIcon.style.display='block';
+      if (spinner) spinner.style.display='none';
+      if (checkIcon) checkIcon.style.display='block';
       textoO.textContent='¡Cuestionario enviado correctamente!';
       subtextoO.textContent=payload.nombres+' | CIP: '+payload.cip;
-      // Limpiar progreso guardado
-      localStorage.removeItem('progreso_'+payload.cip);
+      limpiarProgresoLocal(payload.cip);
       limpiarCronometroEvaluacion(payload.cip);
-      setTimeout(function(){overlay.classList.remove('visible'); limpiarFormulario();},5000);
+      setTimeout(function(){
+        overlay.classList.remove('visible');
+        limpiarFormulario();
+        _enviandoEvaluacion = false;
+        if (btnFin) btnFin.disabled = false;
+      },5000);
     })
     .catch(function(err){
-      spinner.style.display='none';
-      textoO.textContent='Error: '+(err.message||'Verifique conexión.');
+      clearTimeout(timeoutId);
+      _enviandoEvaluacion = false;
+      if (btnFin) btnFin.disabled = false;
+      if (spinner) spinner.style.display='none';
+      var msg = err.name === 'AbortError'
+        ? 'El envío tardó demasiado. Verifique su conexión y pulse Finalizar de nuevo (no recargue la página).'
+        : (err.message || 'Verifique conexión.');
+      textoO.textContent='Error: ' + msg;
       textoO.style.color='#ffaaaa';
-      setTimeout(function(){overlay.classList.remove('visible');spinner.style.display='block';textoO.textContent='Enviando...';textoO.style.color='';},5000);
+      setTimeout(function(){
+        overlay.classList.remove('visible');
+        if (spinner) spinner.style.display='block';
+        textoO.textContent='Enviando...';
+        textoO.style.color='';
+        if (subtextoO) subtextoO.textContent='No cierre ni recargue esta página';
+      },8000);
     });
 }
 
@@ -1323,6 +1411,7 @@ function limpiarFormulario() {
   var chkP=document.getElementById('f-arm-particular'); if(chkP) chkP.checked=false;
   var chkE=document.getElementById('f-arm-estado'); if(chkE) chkE.checked=false;
   FOTO_BASE64 = '';
+  FOTO_EN_SERVIDOR = false;
   quitarFoto();
   ESTADO.respuestas={}; ESTADO.bloqueActual=1; ESTADO.tiempoAcumulado=0; ALERTA_FINAL_MOSTRADA=false;
   ocultarCuestionario(); actualizarControles(); actualizarInfoBloque();
