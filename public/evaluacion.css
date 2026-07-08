@@ -21,9 +21,11 @@
 
 /* Solo estilos del módulo — NO resetear el header/nav del portal */
 .body-bienestar .contenedor {
-  max-width: 960px;
+  max-width: 100%;
+  width: 100%;
   margin: 0 auto;
-  padding: 24px 20px 60px;
+  padding: 20px 16px 48px;
+  box-sizing: border-box;
 }
 
 .bienestar-comisaria-bar {
@@ -180,7 +182,8 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .card-header-eval { background: var(--verde-pnp); padding: 14px 22px; display: flex; align-items: center; gap: 12px; }
 .card-header-eval i { color: var(--naranja-pnp); font-size: 18px; }
 .card-header-eval h2 { color: var(--blanco); font-size: 15px; font-weight: 700; }
-.card-body-eval { padding: 28px 22px; }
+.card-body-eval { padding: 24px 20px; }
+#card-registro .card-body-eval { padding: 24px clamp(14px, 3vw, 28px); }
 
 .seccion-bloqueada { display: none !important; }
 .card-registro-bloqueado .form-grid input:not([type="file"]),
@@ -217,12 +220,27 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 }
 
 /* FORMULARIO */
-.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+.form-grid { display: grid; gap: 18px 16px; }
+.form-grid-registro {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .campo-full { grid-column: 1 / -1; }
-.campo { display: flex; flex-direction: column; gap: 6px; }
-.campo label { font-size: 11px; font-weight: 700; color: var(--texto-muted); text-transform: uppercase; letter-spacing: .7px; }
+.campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.campo label,
+.campo-arma-titulo { font-size: 11px; font-weight: 700; color: var(--texto-muted); text-transform: uppercase; letter-spacing: .7px; }
 .campo label .req { color: var(--error); margin-left: 2px; }
-.campo input { width: 100%; border: 1.5px solid var(--borde); border-radius: 7px; padding: 11px 14px; font-size: 14px; color: var(--texto); background: var(--blanco); font-family: inherit; transition: border-color .2s, box-shadow .2s; }
+.campo input:not([type="checkbox"]) {
+  width: 100%;
+  border: 1.5px solid var(--borde);
+  border-radius: 7px;
+  padding: 11px 14px;
+  font-size: 14px;
+  color: var(--texto);
+  background: var(--blanco);
+  font-family: inherit;
+  transition: border-color .2s, box-shadow .2s;
+  box-sizing: border-box;
+}
 .campo select {
   width: 100%;
   border: 1.5px solid var(--borde);
@@ -244,14 +262,81 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .campo input:focus { outline: none; border-color: var(--verde-pnp); box-shadow: 0 0 0 3px rgba(0,77,61,.12); }
 .campo input.invalido { border-color: var(--error); box-shadow: 0 0 0 3px rgba(192,57,43,.10); }
 .campo input.valido { border-color: var(--exito); }
-.check-group { display: flex; flex-wrap: wrap; gap: 14px; padding: 10px 0; }
-.check-item { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--texto); font-weight: 500; }
-.check-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--verde-pnp); cursor: pointer; flex-shrink: 0; }
-.campo-foto .foto-carga-wrap {
+
+.campo-arma {
+  justify-content: flex-start;
+}
+.campo-arma-titulo {
+  display: block;
+  margin-bottom: 2px;
+}
+.check-group {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  gap: 10px 14px;
+  padding: 6px 0 0;
+}
+.check-group-arma {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 4px;
+}
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--texto);
+  font-weight: 500;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.check-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--verde-pnp);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: none;
+}
+.check-item label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--texto);
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+  margin: 0;
+  touch-action: manipulation;
+}
+
+.campo-foto {
+  align-items: center;
+  text-align: center;
+}
+.campo-foto > label {
+  width: 100%;
+  text-align: center;
+}
+.campo-foto .msg-error,
+.campo-foto #msg-foto {
+  width: 100%;
+  text-align: center;
+}
+.campo-foto .foto-cajita {
+  width: 120px;
+}
+.campo-foto .foto-carga-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 10px;
+  width: 100%;
 }
 .foto-cajita {
   width: 104px;
@@ -351,12 +436,13 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .campo-foto.invalido .msg-error,
 .campo-foto.invalido #msg-foto { display: block; }
 .foto-nombre-archivo {
-  font-size: 11px;
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-size: 12px;
   color: var(--texto-muted);
-  flex: 1;
-  min-width: 0;
-  align-self: center;
   line-height: 1.35;
+  margin-top: 2px;
 }
 .foto-nombre-archivo.ok { color: var(--exito); font-weight: 600; }
 
@@ -678,14 +764,17 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .footer-simple a { color: var(--naranja-pnp); text-decoration: none; }
 
 /* RESPONSIVE — solo contenido del módulo */
+@media (max-width: 900px) {
+  .form-grid-registro { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 768px) {
-  .body-bienestar .contenedor { padding: 18px 14px 48px; }
+  .body-bienestar .contenedor { padding: 18px 12px 48px; }
   .paginacion { flex-direction: column; align-items: stretch; }
   .btn-eval { justify-content: center; }
   .info-pagina { order: -1; }
   .admin-grid { grid-template-columns: 1fr; }
   .banner-prog-btns { margin-left: 0; width: 100%; }
-  .form-grid { grid-template-columns: 1fr; }
+  .form-grid-registro { grid-template-columns: 1fr; }
   .card-eval { margin-left: 0; margin-right: 0; }
   .continuar-cip-fila { flex-wrap: wrap; }
   .continuar-cip-fila input { min-width: 0; flex: 1 1 120px; }
@@ -695,14 +784,11 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
   .opciones-si-no label { padding: 5px 9px; font-size: 12px; }
   .bienestar-comisaria-nombre { font-size: 1rem; }
   .card-header-eval h2 { font-size: 14px; }
-  .campo-foto .foto-carga-wrap { align-items: center; gap: 8px; }
-  .foto-cajita { width: 92px; }
-  .foto-preview { height: 104px; }
-  .foto-placeholder i { font-size: 22px; }
-  .foto-placeholder span { font-size: 9px; }
-  .foto-btn-mini { padding: 5px 2px; }
-  .foto-btn-mini i { font-size: 13px; }
-  .foto-btn-txt { font-size: 8px; }
-  .foto-nombre-archivo { display: none; }
-  .foto-nombre-archivo.ok { display: block; font-size: 10px; max-width: 72px; }
+  .foto-cajita { width: 112px; }
+  .foto-preview { height: 120px; }
+  .foto-placeholder i { font-size: 24px; }
+  .foto-btn-mini { padding: 6px 4px; }
+  .foto-btn-mini i { font-size: 14px; }
+  .foto-btn-txt { font-size: 9px; }
+  .foto-nombre-archivo { font-size: 11px; }
 }

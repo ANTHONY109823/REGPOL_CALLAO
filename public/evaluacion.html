@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css?v=39" />
   <link rel="stylesheet" href="responsive.css?v=1" />
-  <link rel="stylesheet" href="evaluacion.css?v=14" />
+  <link rel="stylesheet" href="evaluacion.css?v=15" />
 </head>
 <body class="body-portal body-bienestar">
 
@@ -89,7 +89,7 @@
     </div>
     <div class="card-body-eval">
       <p class="registro-intro">Complete sus datos personales. Luego podrá acceder al cuestionario. <strong>Puede guardar su progreso y continuar en otra sesión.</strong></p>
-      <div class="form-grid">
+      <div class="form-grid form-grid-registro">
         <div class="campo campo-full">
           <label for="f-unidad">Dependencia actual <span class="req">*</span></label>
           <select id="f-unidad" class="select-eval">
@@ -174,17 +174,17 @@
           </div>
           <span class="msg-error">Seleccione su área.</span>
         </div>
-        <div class="campo campo-full">
-          <label>Arma</label>
-          <div class="check-group">
-            <label class="check-item">
+        <div class="campo campo-arma">
+          <span class="campo-arma-titulo" id="label-arma">Arma</span>
+          <div class="check-group check-group-arma" role="group" aria-labelledby="label-arma">
+            <div class="check-item">
               <input type="checkbox" id="f-arm-particular" value="PARTICULAR" />
-              <span>Particular</span>
-            </label>
-            <label class="check-item">
+              <label for="f-arm-particular">Particular</label>
+            </div>
+            <div class="check-item">
               <input type="checkbox" id="f-arm-estado" value="DEL ESTADO" />
-              <span>Del Estado</span>
-            </label>
+              <label for="f-arm-estado">Del Estado</label>
+            </div>
           </div>
         </div>
         <div class="campo campo-full campo-foto">
