@@ -205,6 +205,58 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
   text-align: center;
 }
 
+.registro-foto-accion {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--borde);
+}
+
+.registro-foto-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 20px 36px;
+  width: 100%;
+}
+
+.registro-foto-col {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+
+.registro-acciones-inline {
+  flex: 1 1 240px;
+  max-width: 340px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 10px;
+}
+
+.registro-acciones-inline .btn-registro-continuar {
+  width: 100%;
+  max-width: none;
+  white-space: normal;
+  line-height: 1.35;
+  min-height: 52px;
+}
+
+.registro-acciones-inline .registro-aviso {
+  margin: 0;
+  text-align: left;
+  line-height: 1.45;
+}
+
 .btn-registro-continuar {
   width: 100%;
   max-width: 420px;
@@ -313,23 +365,29 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
   touch-action: manipulation;
 }
 
-.campo-foto {
+.campo-foto,
+.registro-foto-col {
   align-items: center;
   text-align: center;
 }
-.campo-foto > label {
+.campo-foto > label,
+.registro-foto-col > label {
   width: 100%;
   text-align: center;
 }
 .campo-foto .msg-error,
-.campo-foto #msg-foto {
+.campo-foto #msg-foto,
+.registro-foto-col .msg-error,
+.registro-foto-col #msg-foto {
   width: 100%;
   text-align: center;
 }
-.campo-foto .foto-cajita {
+.campo-foto .foto-cajita,
+.registro-foto-col .foto-cajita {
   width: 120px;
 }
-.campo-foto .foto-carga-wrap {
+.campo-foto .foto-carga-wrap,
+.registro-foto-col .foto-carga-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -430,10 +488,14 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
   align-items: center;
   justify-content: center;
 }
-.campo-foto.invalido .foto-cajita { border-color: var(--error); }
-.campo-foto.invalido .foto-btn-mini { color: var(--error); }
+.campo-foto.invalido .foto-cajita,
+.registro-foto-col.invalido .foto-cajita { border-color: var(--error); }
+.campo-foto.invalido .foto-btn-mini,
+.registro-foto-col.invalido .foto-btn-mini { color: var(--error); }
 .campo-foto.invalido .msg-error,
-.campo-foto.invalido #msg-foto { display: block; }
+.campo-foto.invalido #msg-foto,
+.registro-foto-col.invalido .msg-error,
+.registro-foto-col.invalido #msg-foto { display: block; }
 .foto-nombre-archivo {
   display: block;
   width: 100%;
@@ -763,6 +825,22 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .footer-simple a { color: var(--naranja-pnp); text-decoration: none; }
 
 /* RESPONSIVE — solo contenido del módulo */
+@media (max-width: 600px) {
+  .registro-foto-fila {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .registro-acciones-inline {
+    max-width: 100%;
+    width: 100%;
+    text-align: center;
+    align-items: center;
+  }
+  .registro-acciones-inline .registro-aviso {
+    text-align: center;
+  }
+}
 @media (max-width: 900px) {
   .form-grid-registro { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

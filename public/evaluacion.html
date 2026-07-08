@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css?v=39" />
   <link rel="stylesheet" href="responsive.css?v=1" />
-  <link rel="stylesheet" href="evaluacion.css?v=16" />
+  <link rel="stylesheet" href="evaluacion.css?v=17" />
 </head>
 <body class="body-portal body-bienestar">
 
@@ -187,41 +187,45 @@
             </div>
           </div>
         </div>
-        <div class="campo campo-full campo-foto">
-          <label for="f-foto">Fotografía del efectivo <span class="req">*</span></label>
-          <div class="foto-carga-wrap">
-            <div class="foto-cajita" id="foto-cajita">
-              <div id="foto-preview" class="foto-preview">
-                <div class="foto-placeholder" id="foto-placeholder">
-                  <i class="fas fa-user" aria-hidden="true"></i>
-                  <span>Sin foto</span>
+        <div class="campo campo-full registro-foto-accion">
+          <div class="registro-foto-fila">
+            <div class="registro-foto-col campo-foto">
+              <label for="f-foto">Fotografía del efectivo <span class="req">*</span></label>
+              <div class="foto-carga-wrap">
+                <div class="foto-cajita" id="foto-cajita">
+                  <div id="foto-preview" class="foto-preview">
+                    <div class="foto-placeholder" id="foto-placeholder">
+                      <i class="fas fa-user" aria-hidden="true"></i>
+                      <span>Sin foto</span>
+                    </div>
+                    <img id="foto-preview-img" alt="Vista previa de la fotografía" />
+                    <button type="button" class="btn-quitar-foto" onclick="quitarFoto()" title="Quitar foto" style="display:none;">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                  <div class="foto-cajita-botones">
+                    <button type="button" class="foto-btn-mini" id="btn-foto-camara" title="Tomar foto ahora">
+                      <i class="fas fa-camera"></i><span class="foto-btn-txt">Cámara</span>
+                    </button>
+                    <button type="button" class="foto-btn-mini" id="btn-foto-galeria" title="Elegir de galería">
+                      <i class="fas fa-images"></i><span class="foto-btn-txt">Galería</span>
+                    </button>
+                  </div>
                 </div>
-                <img id="foto-preview-img" alt="Vista previa de la fotografía" />
-                <button type="button" class="btn-quitar-foto" onclick="quitarFoto()" title="Quitar foto" style="display:none;">
-                  <i class="fas fa-times"></i>
-                </button>
+                <input type="file" id="f-foto" accept="image/jpeg,image/png,image/webp,image/*,.jpg,.jpeg,.png,.webp" />
+                <input type="file" id="f-foto-cam" accept="image/*" capture="user" />
+                <span id="foto-nombre" class="foto-nombre-archivo">Sin foto</span>
               </div>
-              <div class="foto-cajita-botones">
-                <button type="button" class="foto-btn-mini" id="btn-foto-camara" title="Tomar foto ahora">
-                  <i class="fas fa-camera"></i><span class="foto-btn-txt">Cámara</span>
-                </button>
-                <button type="button" class="foto-btn-mini" id="btn-foto-galeria" title="Elegir de galería">
-                  <i class="fas fa-images"></i><span class="foto-btn-txt">Galería</span>
-                </button>
-              </div>
+              <span class="msg-error" id="msg-foto">Suba una foto (JPG, PNG o WEBP, máx. 2 MB).</span>
             </div>
-            <input type="file" id="f-foto" accept="image/jpeg,image/png,image/webp,image/*,.jpg,.jpeg,.png,.webp" />
-            <input type="file" id="f-foto-cam" accept="image/*" capture="user" />
-            <span id="foto-nombre" class="foto-nombre-archivo">Sin foto</span>
+            <div class="registro-acciones registro-acciones-inline">
+              <button type="button" class="btn-eval btn-verde btn-registro-continuar" onclick="continuarAlCuestionario()">
+                <i class="fas fa-user-check"></i> Registrar y continuar al cuestionario
+              </button>
+              <p class="registro-aviso">Todos los campos marcados con * son obligatorios.</p>
+            </div>
           </div>
-          <span class="msg-error" id="msg-foto">Suba una foto (JPG, PNG o WEBP, máx. 2 MB).</span>
         </div>
-      </div>
-      <div class="registro-acciones">
-        <button type="button" class="btn-eval btn-verde btn-registro-continuar" onclick="continuarAlCuestionario()">
-          <i class="fas fa-user-check"></i> Registrar y continuar al cuestionario
-        </button>
-        <p class="registro-aviso">Todos los campos marcados con * son obligatorios.</p>
       </div>
     </div>
     </div>
