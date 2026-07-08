@@ -618,7 +618,7 @@
         <div style="overflow-x:auto;max-height:68vh;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">
           <table class="t" style="margin:0;">
             <thead><tr>
-              <th>División</th><th>Dependencia</th><th>Nombres</th><th>CIP</th><th>DNI</th>
+              <th>División</th><th>Dependencia</th><th>Apellidos y Nombres</th><th>CIP</th><th>DNI</th>
               <th>Fecha</th><th>Edad</th><th>Estado</th><th>Ver</th><th>Eliminar</th>
             </tr></thead>
             <tbody id="tabla-body"><tr><td colspan="10" style="text-align:center;color:#888;padding:24px;font-size:13px;">Seleccione división, unidad o busque por CIP / DNI / nombre y pulse <strong>Buscar</strong>.</td></tr></tbody>
@@ -1498,6 +1498,7 @@ function htmlBannerEfectivo(e) {
     + '<div style="' + dataStyle + '">' + escHtml(formatearGradoDisplay(e.grado)) + '</div>'
     + '<div style="' + dataStyle + 'margin-bottom:2px;">' + escHtml(String(e.nombres || '—').toUpperCase()) + '</div>'
     + '<div style="' + dataStyle + '">'
+    + 'DEPENDENCIA: ' + escHtml(String(e.unidad || e.comisaria || '—').toUpperCase()) + '<br>'
     + 'CIP: ' + escHtml(String(e.cip || '—').toUpperCase()) + ' &nbsp; DNI: ' + escHtml(String(e.dni || '—').toUpperCase()) + '<br>'
     + 'EDAD: ' + escHtml(String(edad).toUpperCase()) + ' &nbsp; SEXO: ' + escHtml(String(e.sexo || '—').toUpperCase()) + '<br>'
     + 'CARGO: ' + escHtml(String(e.cargo || '—').toUpperCase()) + '<br>'
@@ -2317,8 +2318,8 @@ function cargarStatsPsico(){
       ? (d.ultimasEvaluaciones||[]).map(function(e){
           var badge = e.completada ? '<span class="badge ok">Completo</span>'
             : (e.solo_progreso ? '<span class="badge" style="background:#fff3cd;color:#856404;">Avance</span>' : '<span class="badge pend">Parcial</span>');
-          return '<div class="ult-item"><div><span class="ult-nom">'+escHtml(e.nombres)+'</span>'
-            +'<span class="ult-meta"> — '+escHtml(e.comisaria||e.unidad||'')+'</span></div>'
+          return '<div class="ult-item"><div><span class="ult-nom">'+escDatos(e.nombres)+'</span>'
+            +'<span class="ult-meta"> — '+escDatos(e.comisaria||e.unidad||'')+'</span></div>'
             +'<div style="display:flex;align-items:center;gap:8px;">'
             +btnAccionesEval(e)
             +badge+'<span style="color:#bbb;font-size:10.5px;">'+escHtml(formatearFechaHoraLocal(e))+'</span></div></div>';
@@ -2458,11 +2459,11 @@ function badgeEstadoRegistro(r) {
 function filaRegistroRespuesta(r, divNombre) {
   var uni = r.unidad || r.comisaria || '—';
   return '<tr' + (r.solo_progreso ? ' style="background:#fffdf5;"' : '') + '>'
-    + '<td style="font-size:11px;color:#666;">' + escHtml(divNombre) + '</td>'
-    + '<td style="font-size:11px;"><strong>' + escHtml(uni) + '</strong></td>'
-    + '<td><strong>' + escHtml(r.nombres) + '</strong></td>'
-    + '<td>' + escHtml(r.cip) + '</td>'
-    + '<td>' + escHtml(r.dni || '—') + '</td>'
+    + '<td style="font-size:11px;color:#666;">' + escDatos(divNombre) + '</td>'
+    + '<td style="font-size:11px;"><strong>' + escDatos(uni) + '</strong></td>'
+    + '<td><strong>' + escDatos(r.nombres) + '</strong></td>'
+    + '<td>' + escDatos(r.cip) + '</td>'
+    + '<td>' + escDatos(r.dni) + '</td>'
     + '<td style="font-size:11px;">' + escHtml(formatearFechaHoraLocal(r)) + '</td>'
     + '<td style="text-align:center;">' + (r.edad ? escHtml(String(r.edad)) : '—') + '</td>'
     + '<td>' + badgeEstadoRegistro(r) + '</td>'
@@ -4092,6 +4093,7 @@ function llenarSel(id,items,ph){
   items.forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});
 }
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escDatos(s){return escHtml(String(s == null || s === '' ? '—' : s).toUpperCase());}
 function escJs(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
 </script>
 </body>

@@ -117,10 +117,15 @@
           </select>
           <span class="msg-error">Seleccione su grado.</span>
         </div>
-        <div class="campo campo-full">
-          <label for="f-nombres">Apellidos y Nombres Completos <span class="req">*</span></label>
-          <input type="text" id="f-nombres" placeholder="Ej. GARCIA LOPEZ, JUAN CARLOS" autocomplete="name" />
-          <span class="msg-error">Este campo es obligatorio.</span>
+        <div class="campo">
+          <label for="f-apellidos">Apellidos <span class="req">*</span></label>
+          <input type="text" id="f-apellidos" placeholder="Ej. GARCIA LOPEZ" autocomplete="family-name" />
+          <span class="msg-error">Ingrese sus apellidos.</span>
+        </div>
+        <div class="campo">
+          <label for="f-nombres">Nombres <span class="req">*</span></label>
+          <input type="text" id="f-nombres" placeholder="Ej. JUAN CARLOS" autocomplete="given-name" />
+          <span class="msg-error">Ingrese sus nombres.</span>
         </div>
         <div class="campo">
           <label for="f-cip">CIP (8 dígitos) <span class="req">*</span></label>
@@ -215,9 +220,6 @@
         <button type="button" class="btn-eval btn-verde btn-registro-continuar" onclick="continuarAlCuestionario()">
           <i class="fas fa-user-check"></i> Registrar y continuar al cuestionario
         </button>
-        <button type="button" class="btn-eval btn-borde" id="btn-guardar-datos-continuar" onclick="guardarDatosYContinuarCuestionario()" style="display:none;">
-          <i class="fas fa-save"></i> Guardar datos y volver al cuestionario
-        </button>
         <p class="registro-aviso">Todos los campos marcados con * son obligatorios.</p>
       </div>
     </div>
@@ -243,9 +245,6 @@
       <div class="paginacion">
         <button class="btn-eval btn-borde" id="btn-atras" onclick="cambiarBloque(-1)"><i class="fas fa-arrow-left"></i> Anterior</button>
         <span class="info-pagina" id="info-pagina">Bloque 1 de 12</span>
-        <button type="button" class="btn-eval btn-borde" id="btn-editar-datos" onclick="editarDatosPersonales()" title="Corregir dependencia u otros datos antes de enviar">
-          <i class="fas fa-user-edit"></i> Editar datos
-        </button>
         <button class="btn-eval btn-guardar" id="btn-guardar-bloque" onclick="guardarYSalir()" style="background:#c8a94a;color:#fff;border:none;"><i class="fas fa-save"></i> Guardar y salir</button>
         <button class="btn-eval btn-verde" id="btn-siguiente" onclick="cambiarBloque(1)">Siguiente bloque <i class="fas fa-arrow-right"></i></button>
         <button class="btn-eval btn-finalizar" id="btn-finalizar" onclick="validarYEnviar()" style="display:none;"><i class="fas fa-paper-plane"></i> Finalizar y Enviar</button>

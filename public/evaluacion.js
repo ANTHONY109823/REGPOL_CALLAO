@@ -314,46 +314,28 @@ function aplicarUnidadPorDefectoSiVacia() {
   sel.selectedIndex = 1;
 }
 
-function editarDatosPersonales() {
-  var reg = document.getElementById('card-registro');
-  var cont = document.getElementById('card-continuar-cip');
-  ESTADO.registroEstabaOculto = reg && reg.style.display === 'none';
-  if (reg) {
-    reg.style.display = '';
-    reg.classList.remove('card-registro-bloqueado');
-  }
-  if (cont) cont.style.display = 'none';
-  var btnContinuar = document.querySelector('.btn-registro-continuar');
-  var btnGuardar = document.getElementById('btn-guardar-datos-continuar');
-  if (btnContinuar) btnContinuar.style.display = ESTADO.registroCompleto ? 'none' : '';
-  if (btnGuardar) btnGuardar.style.display = ESTADO.registroCompleto ? 'inline-flex' : 'none';
-  aplicarUnidadPorDefectoSiVacia();
-  mostrarAlerta('Actualice sus datos (especialmente la dependencia) y pulse «Guardar datos y volver al cuestionario».', 'info');
-  if (reg) reg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+function obtenerNombresCompletos() {
+  var ap = (document.getElementById('f-apellidos') || {}).value.trim();
+  var nom = (document.getElementById('f-nombres') || {}).value.trim();
+  if (!ap && !nom) return '';
+  if (!nom) return ap;
+  if (!ap) return nom;
+  return ap + ', ' + nom;
 }
 
-function guardarDatosYContinuarCuestionario() {
-  var err = validarRegistro();
-  if (err) {
-    mostrarAlerta(err, 'error');
-    document.getElementById('card-registro').scrollIntoView({ behavior: 'smooth' });
-    return;
+function establecerNombresEnFormulario(str) {
+  var s = String(str || '').trim();
+  var apEl = document.getElementById('f-apellidos');
+  var nomEl = document.getElementById('f-nombres');
+  if (!apEl || !nomEl) return;
+  var idx = s.indexOf(',');
+  if (idx !== -1) {
+    apEl.value = s.slice(0, idx).trim();
+    nomEl.value = s.slice(idx + 1).trim();
+  } else {
+    apEl.value = s;
+    nomEl.value = '';
   }
-  ocultarAlerta();
-  var btn = document.getElementById('btn-guardar-datos-continuar');
-  if (btn) btn.disabled = true;
-  guardarRegistroEnServidor(function(ok) {
-    if (btn) btn.disabled = false;
-    activarCuestionario(true);
-    if (ESTADO.registroEstabaOculto) ocultarPanelRegistro();
-    var btnContinuar = document.querySelector('.btn-registro-continuar');
-    if (btnContinuar) btnContinuar.style.display = '';
-    if (btn) btn.style.display = 'none';
-    mostrarAlerta(ok
-      ? 'Datos actualizados. Ya puede finalizar y enviar su cuestionario.'
-      : 'Datos actualizados en este equipo. Revise conexión si no se guardó en el servidor.', 'exito');
-    setTimeout(ocultarAlerta, 5000);
-  });
 }
 
 function restaurarUnidadDesdeProgreso(data) {
@@ -645,7 +627,8 @@ function validarRegistro() {
   var err='', campos=[
     {id:'f-unidad',  test:function(v){return v.trim().length>0;},      msg:'Seleccione su comisaría.'},
     {id:'f-grado',   test:function(v){return v.trim().length>0;},      msg:'Seleccione su grado.'},
-    {id:'f-nombres', test:function(v){return v.trim().length>2;},      msg:'Ingrese su nombre completo.'},
+    {id:'f-apellidos', test:function(v){return v.trim().length>1;},    msg:'Ingrese sus apellidos.'},
+    {id:'f-nombres', test:function(v){return v.trim().length>1;},      msg:'Ingrese sus nombres.'},
     {id:'f-cip',     test:function(v){return /^\d{8}$/.test(v.trim());}, msg:'CIP: 8 dígitos.'},
     {id:'f-dni',     test:function(v){return /^\d{8}$/.test(v.trim());}, msg:'DNI: 8 dígitos.'},
     {id:'f-nacimiento',test:esFechaValida, msg:'Fecha de nacimiento inválida (18-80 años).'},
@@ -730,7 +713,7 @@ function fotoParaPayload(incluirSiempre) {
 function construirPayloadProgreso() {
   return {
     cip:       document.getElementById('f-cip').value.trim(),
-    nombres:   document.getElementById('f-nombres').value.trim(),
+    nombres:   obtenerNombresCompletos(),
     dni:       document.getElementById('f-dni').value.trim(),
     fecha_nac: fechaNacParaEnvio(),
     edad:      obtenerEdadParaEnvio(),
@@ -777,7 +760,7 @@ function construirPayloadGuardar(completada) {
   return {
     comisaria: obtenerComisariaEvaluacion(),
     unidad:    document.getElementById('f-unidad').value.trim(),
-    nombres:   document.getElementById('f-nombres').value.trim(),
+    nombres:   obtenerNombresCompletos(),
     cip:       document.getElementById('f-cip').value.trim(),
     dni:       document.getElementById('f-dni').value.trim(),
     fecha_nac: fechaNacParaEnvio(),
@@ -799,20 +782,17 @@ function ocultarCuestionario() {
   var c=document.getElementById('card-cuestionario');
   if(c) c.classList.add('seccion-bloqueada');
   var r=document.getElementById('card-registro');
-  if(r) r.classList.remove('card-registro-bloqueado');
+  if(r) {
+    r.style.display = '';
+    r.classList.remove('card-registro-bloqueado');
+  }
 }
 
 function activarCuestionario(scroll) {
-  ESTADO.registroCompleto=true;
   iniciarCronometroEvaluacion();
   var c=document.getElementById('card-cuestionario');
   if(c) c.classList.remove('seccion-bloqueada');
-  var r=document.getElementById('card-registro');
-  if(r) r.classList.add('card-registro-bloqueado');
-  var btnGuardar = document.getElementById('btn-guardar-datos-continuar');
-  if (btnGuardar) btnGuardar.style.display = 'none';
-  var btnContinuar = document.querySelector('.btn-registro-continuar');
-  if (btnContinuar) btnContinuar.style.display = '';
+  ocultarPanelRegistro();
   renderizarBloque(ESTADO.bloqueActual, !!scroll);
 }
 
@@ -954,7 +934,7 @@ function continuarAlCuestionario() {
 
   var cip = document.getElementById('f-cip').value.trim();
   var dni = document.getElementById('f-dni').value.trim();
-  var nombres = document.getElementById('f-nombres').value.trim();
+  var nombres = obtenerNombresCompletos();
   var btn = document.querySelector('.btn-registro-continuar');
   if (btn) btn.disabled = true;
 
@@ -1131,7 +1111,7 @@ function volverAlPanelRegistro() {
   if (total > 0) {
     mostrarBannerProgreso({
       cip: (cip && cip.value.trim()) || '',
-      nombres: (document.getElementById('f-nombres')||{}).value || '',
+      nombres: obtenerNombresCompletos(),
       total: total,
       bloque: ESTADO.bloqueActual
     });
@@ -1177,7 +1157,7 @@ function continuarConCIP() {
       return;
     }
     document.getElementById('f-cip').value = data.cip || cip;
-    if (data.nombres) document.getElementById('f-nombres').value = data.nombres;
+    if (data.nombres) establecerNombresEnFormulario(data.nombres);
     if (data.dni) document.getElementById('f-dni').value = data.dni;
     if (data.fecha_nac) {
       var fn = document.getElementById('f-nacimiento');
@@ -1280,7 +1260,7 @@ function restaurarProgreso() {
   var data=document.getElementById('banner-progreso')._data;
   if(!data) return;
   if(data.cip)     document.getElementById('f-cip').value    =data.cip;
-  if(data.nombres) document.getElementById('f-nombres').value=data.nombres;
+  if(data.nombres) establecerNombresEnFormulario(data.nombres);
   if(data.sexo){ var sel=document.getElementById('f-sexo'); if(sel) sel.value=data.sexo; }
   if(data.grado){ var g=document.getElementById('f-grado'); if(g) g.value=data.grado; }
   if(data.cargo) document.getElementById('f-cargo').value=data.cargo;
@@ -1307,8 +1287,7 @@ function descartarProgreso() {
 function validarYEnviar() {
   var err=validarRegistro();
   if(err){
-    mostrarAlerta(err + ' Use el botón «Editar datos» o complete el Paso 1.', 'error');
-    editarDatosPersonales();
+    mostrarAlerta(err + ' Si el problema persiste, contacte a la Oficina de Psicología.', 'error');
     return;
   }
 
@@ -1318,7 +1297,7 @@ function validarYEnviar() {
     return;
   }
 
-  var nombres=document.getElementById('f-nombres').value.trim();
+  var nombres=obtenerNombresCompletos();
   var dni=document.getElementById('f-dni').value.trim();
   var comis = obtenerComisariaEvaluacion();
   if(!confirm('¿Confirmar envío del cuestionario?\n\n'+nombres+'\nDNI: '+dni+'\nComisaría: '+comis)) return;
@@ -1405,7 +1384,7 @@ function enviarEvaluacion() {
 }
 
 function limpiarFormulario() {
-  ['f-unidad','f-grado','f-nombres','f-cip','f-dni','f-nacimiento','f-sexo','f-cargo','f-area'].forEach(function(id){var el=document.getElementById(id);if(el) el.value='';});
+  ['f-unidad','f-grado','f-apellidos','f-nombres','f-cip','f-dni','f-nacimiento','f-sexo','f-cargo','f-area'].forEach(function(id){var el=document.getElementById(id);if(el) el.value='';});
   var areaOtro=document.getElementById('f-area-otro'); if(areaOtro) areaOtro.value='';
   toggleAreaOtroEval();
   var chkP=document.getElementById('f-arm-particular'); if(chkP) chkP.checked=false;
