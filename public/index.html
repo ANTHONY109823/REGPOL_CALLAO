@@ -4,9 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REGPOL CALLAO - PNP</title>
-    <link rel="stylesheet" href="style.css?v=47">
+    <link rel="stylesheet" href="style.css?v=48">
     <link rel="stylesheet" href="responsive.css?v=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://regpolcallao-production.up.railway.app" crossorigin>
+    <link rel="dns-prefetch" href="https://regpolcallao-production.up.railway.app">
+    <script src="api-config.js?v=2"></script>
+    <script>
+    (function() {
+      var h = location.hostname;
+      var api = (h === 'localhost' || h === '127.0.0.1')
+        ? 'http://localhost:3000'
+        : (window.REGPOL_API_PRODUCTION || 'https://regpolcallao-production.up.railway.app');
+      window.__REGPOL_CONFIG_PROMISE = fetch(api + '/portal/configuracion?t=' + Date.now(), { cache: 'no-store' })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .catch(function() { return null; });
+      try {
+        var raw = localStorage.getItem('regpolSiteData_v2');
+        if (!raw) return;
+        var d = JSON.parse(raw);
+        var img = d.carrusel && d.carrusel[0] && d.carrusel[0].imagen;
+        if (!img) return;
+        var l = document.createElement('link');
+        l.rel = 'preload';
+        l.as = 'image';
+        l.href = img;
+        if (String(img).indexOf('http') === 0) l.crossOrigin = 'anonymous';
+        document.head.appendChild(l);
+      } catch (e) {}
+    })();
+    </script>
 </head>
 <body class="body-portal portal-home">
 
@@ -39,7 +66,7 @@
 
     <nav class="nav-main" aria-label="Menú principal"><div class="container"><ul></ul></div></nav>
 
-    <section class="presentation-slider slider-cargando" aria-label="Presentación institucional">
+    <section class="presentation-slider slider-esperando-api" aria-label="Presentación institucional">
         <div class="slides"></div>
         <div class="hero-overlay">
             <div class="container">
@@ -50,6 +77,36 @@
         </div>
         <div class="slider-dots"></div>
     </section>
+    <script>
+    (function() {
+      try {
+        var raw = localStorage.getItem('regpolSiteData_v2');
+        if (!raw) return;
+        var d = JSON.parse(raw);
+        var list = (d.carrusel || []).filter(function(s) {
+          return s && String(s.imagen || '').trim();
+        });
+        if (!list.length) return;
+        var slider = document.querySelector('.presentation-slider');
+        if (!slider) return;
+        var slidesDiv = slider.querySelector('.slides');
+        if (!slidesDiv) return;
+        var s0 = list[0];
+        var src = String(s0.imagen).trim();
+        var slide = document.createElement('div');
+        slide.className = 'slide active';
+        var img = document.createElement('img');
+        img.src = src;
+        img.className = 'slide-img';
+        img.alt = s0.titulo || 'REGPOL Callao';
+        img.setAttribute('fetchpriority', 'high');
+        img.decoding = 'async';
+        slide.appendChild(img);
+        slidesDiv.appendChild(slide);
+        slider.classList.remove('slider-esperando-api');
+      } catch (e) {}
+    })();
+    </script>
 </div>
 
 <main class="container content-area portal-home-content">
@@ -178,9 +235,8 @@
     </div>
 </footer>
 
-<script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=8"></script>
-<script src="portal.js?v=61"></script>
+<script src="portal.js?v=62"></script>
 <script>
     initPortalInicio();
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') cerrarNovedadModal(); });

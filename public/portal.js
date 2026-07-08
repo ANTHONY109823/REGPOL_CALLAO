@@ -248,7 +248,7 @@ function esHostEstaticoPortal() {
 
 function fetchSiteDataDefault() {
   var cargarJsonLocal = function() {
-    return fetchConTimeout('site-data.json?v=4', 4000)
+    return fetchConTimeout('site-data.json?v=5', 4000)
       .then(function(r) { if (!r.ok) throw new Error('site-data'); return r.json(); })
       .catch(function() {
         if (typeof REGPOL_SITE_DATA_BUILTIN !== 'undefined' && REGPOL_SITE_DATA_BUILTIN) {
@@ -257,28 +257,31 @@ function fetchSiteDataDefault() {
         return null;
       });
   };
-  var base = apiBasePortal();
-  if (base) {
+  var normalizarConfigApi = function(data) {
+    if (!data || data.ok === false) throw new Error('no-config');
+    if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezado(data.fotosEncabezado, false);
+    return data;
+  };
+  var pedirApi = function() {
+    var base = apiBasePortal();
+    if (!base) return Promise.reject(new Error('no-api'));
     var urlApi = base + '/portal/configuracion?t=' + Date.now();
+    if (window.__REGPOL_CONFIG_PROMISE) {
+      return window.__REGPOL_CONFIG_PROMISE.then(function(data) {
+        if (data) return normalizarConfigApi(data);
+        throw new Error('no-config');
+      });
+    }
     return fetchConTimeout(urlApi, PORTAL_CONFIG_TIMEOUT_MS)
       .then(function(r) { if (!r.ok) throw new Error('no-config'); return r.json(); })
-      .then(function(data) {
-        if (!data || data.ok === false) throw new Error('no-config');
-        if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezado(data.fotosEncabezado, false);
-        return data;
-      })
+      .then(normalizarConfigApi)
       .catch(function() {
         return fetchConTimeout(urlApi + '&retry=1', PORTAL_CONFIG_TIMEOUT_MS)
           .then(function(r) { if (!r.ok) throw new Error('no-config'); return r.json(); })
-          .then(function(data) {
-            if (!data || data.ok === false) throw new Error('no-config');
-            if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezado(data.fotosEncabezado, false);
-            return data;
-          });
-      })
-      .catch(cargarJsonLocal);
-  }
-  return cargarJsonLocal();
+          .then(normalizarConfigApi);
+      });
+  };
+  return pedirApi().catch(cargarJsonLocal);
 }
 
 function obtenerSiteDataSync() {
@@ -1404,7 +1407,7 @@ function initPresentationSlider() {
     slider.classList.add('slider-sin-imagenes');
     return;
   }
-  slider.classList.remove('slider-cargando', 'slider-sin-imagenes');
+  slider.classList.remove('slider-esperando-api', 'slider-sin-imagenes');
   irAlSlideInicial(slider);
 
   var FADE_MS = 1200;
@@ -1481,7 +1484,7 @@ function actualizarCarrusel(data) {
     slidesDiv.innerHTML = '';
     if (dotsDiv) dotsDiv.innerHTML = '';
     slider.classList.add('slider-sin-imagenes');
-    slider.classList.remove('slider-cargando');
+    slider.classList.remove('slider-esperando-api');
     _carruselFingerprint = '';
     return;
   }
@@ -1490,7 +1493,7 @@ function actualizarCarrusel(data) {
   var slideCount = slider.querySelectorAll('.slide').length;
   if (fp === _carruselFingerprint && slideCount === slides.length) {
     irAlSlideInicial(slider);
-    slider.classList.remove('slider-cargando');
+    slider.classList.remove('slider-esperando-api');
     if (!initPresentationSlider._timer) initPresentationSlider();
     return;
   }
@@ -1499,7 +1502,6 @@ function actualizarCarrusel(data) {
 
   detenerPresentationSlider();
   preloadImagenCarrusel(slides[0].imagen);
-  slider.classList.add('slider-cargando');
   slider.classList.remove('slider-sin-imagenes');
   slidesDiv.innerHTML = slides.map(function(s, i) {
     var isActive = i === 0 ? ' active' : '';
@@ -1528,12 +1530,10 @@ function actualizarCarrusel(data) {
       });
     });
   }
-  esperarPrimeraImagenCarrusel(slider, function() {
-    if (gen !== _carruselInitGen) return;
-    irAlSlideInicial(slider);
-    slider.classList.remove('slider-cargando');
-    initPresentationSlider();
-  });
+  if (gen !== _carruselInitGen) return;
+  irAlSlideInicial(slider);
+  slider.classList.remove('slider-esperando-api');
+  initPresentationSlider();
 }
 
 function actualizarFechaPortal(data) {
@@ -1545,17 +1545,8 @@ function initPortalPagina(config) {
   config = config || {};
   initPortalNav(config.activeNav || '');
   aplicarHeroMarca();
-  var cachePersistido = tieneSiteDataPersistido();
-  var pre = cachePersistido ? obtenerSiteDataSync() : null;
-  if (config.actualizarCarrusel) {
-    if (pre) {
-      actualizarCarrusel({
-        heroTexto: pre.heroTexto || {},
-        carrusel: resolverSlidesCarrusel(pre)
-      });
-    }
-  }
-  if (!esHostEstaticoPortal() && pre) {
+  var pre = obtenerSiteDataSync();
+  if (pre) {
     aplicarPortalConfig(config, pre);
   }
   return cargarSiteData().then(function(fresh) {
