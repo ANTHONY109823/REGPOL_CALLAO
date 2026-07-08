@@ -1413,25 +1413,22 @@ function validarYEnviar() {
     return;
   }
 
-  // 2) Datos de registro: si falta alguno, mostrar el panel de registro (que está oculto
-  //    durante el cuestionario) para que el usuario pueda corregirlo y reintentar.
-  var err = validarRegistro();
-  if (err) {
+  // 2) Los datos de identificación ya se validaron UNA sola vez al iniciar la prueba
+  //    (continuarAlCuestionario) o se cargaron del servidor al retomar con el CIP.
+  //    No se vuelven a validar ni a pedir aquí para no interrumpir a quien ya llenó
+  //    todo. Como red de seguridad mínima solo se exige nombres + CIP (que el servidor
+  //    necesita); si por algún motivo faltaran, se avisa sin borrar respuestas ni foto.
+  var nombres = obtenerNombresCompletos();
+  var cipActual = (document.getElementById('f-cip') || {}).value || '';
+  if (!nombres || !cipActual.trim()) {
     var reg = document.getElementById('card-registro');
     if (reg) reg.style.display = '';
     var form = document.getElementById('card-registro-formulario');
     if (form) form.style.display = '';
-    mostrarAlerta(err + ' Corrija ese dato en el Paso 1 y vuelva a pulsar «Finalizar y Enviar». Si el problema persiste, contacte a la Oficina de Psicología.', 'error');
-    var campoMal = document.querySelector('#card-registro .invalido');
-    var destino = campoMal || document.getElementById('alerta-global');
-    if (destino) {
-      try { destino.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
-    }
-    if (campoMal && typeof campoMal.focus === 'function') { try { campoMal.focus(); } catch (e) {} }
+    mostrarAlertaVisible('No se pudo leer sus datos de identificación (nombres/CIP). Verifíquelos en el Paso 1 y vuelva a pulsar «Finalizar y Enviar». Sus respuestas están guardadas.', 'error');
     return;
   }
 
-  var nombres = obtenerNombresCompletos();
   var dni = document.getElementById('f-dni').value.trim();
   var comis = obtenerComisariaEvaluacion();
 
