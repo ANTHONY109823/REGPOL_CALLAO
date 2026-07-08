@@ -176,6 +176,16 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
   font-size: 14px !important;
 }
 
+/* Variante verde de éxito — prueba ya enviada */
+.modal-completada-ok .modal-aviso-unidades-panel { border-top-color: var(--exito); }
+.modal-completada-ok .modal-aviso-unidades-header i { color: var(--exito); font-size: 30px; }
+.modal-completada-nota {
+  background: rgba(10, 124, 74, 0.07);
+  border-color: rgba(10, 124, 74, 0.32);
+}
+.modal-completada-nota i { color: var(--exito); }
+.modal-completada-nota p { color: #17492f; }
+
 /* CARDS */
 .card-eval { background: var(--blanco); border-radius: 12px; border-top: 5px solid var(--verde-pnp); box-shadow: var(--sombra); margin-bottom: 24px; overflow: hidden; }
 .card-header-eval { background: var(--verde-pnp); padding: 14px 22px; display: flex; align-items: center; gap: 12px; }

@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css?v=39" />
   <link rel="stylesheet" href="responsive.css?v=1" />
-  <link rel="stylesheet" href="evaluacion.css?v=18" />
+  <link rel="stylesheet" href="evaluacion.css?v=19" />
 </head>
 <body class="body-portal body-bienestar">
 
@@ -287,6 +287,24 @@
   </div>
 </div>
 
+<!-- MODAL PRUEBA YA ENVIADA — CIP/nombres con evaluación completada -->
+<div id="modal-ya-completada" class="modal-aviso-unidades modal-completada-ok" role="dialog" aria-modal="true" aria-labelledby="ya-completada-titulo" hidden>
+  <div class="modal-aviso-unidades-panel">
+    <div class="modal-aviso-unidades-header">
+      <i class="fas fa-circle-check" aria-hidden="true"></i>
+      <h2 id="ya-completada-titulo">¡Su prueba fue enviada con éxito!</h2>
+    </div>
+    <p class="modal-aviso-unidades-lead" id="ya-completada-nombre"></p>
+    <div class="aviso-unidades-espera modal-completada-nota">
+      <i class="fas fa-heart" aria-hidden="true"></i>
+      <p>Su cuestionario ya fue registrado y remitido a la Oficina de Psicología. <strong>Agradecemos su participación.</strong> No es necesario volver a completarlo.</p>
+    </div>
+    <button type="button" class="btn-eval btn-verde modal-aviso-unidades-btn" id="btn-cerrar-ya-completada">
+      <i class="fas fa-check"></i> Entendido
+    </button>
+  </div>
+</div>
+
 <!-- MODAL CÁMARA — captura de fotografía en registro -->
 <div id="modal-camara-foto" class="modal-cam-foto" role="dialog" aria-modal="true" aria-labelledby="modal-cam-titulo" hidden>
   <div class="modal-cam-foto-inner">
@@ -318,7 +336,7 @@
 <script src="divisiones-ui.js?v=5"></script>
 <script src="preguntas.js?v=1"></script>
 <script src="areas-labor.js?v=2"></script>
-<script src="evaluacion.js?v=32"></script>
+<script src="evaluacion.js?v=33"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof regpolPoblarSelectArea === 'function') {

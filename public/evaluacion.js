@@ -136,6 +136,14 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   var btnAvisoUnidades = document.getElementById('btn-aceptar-aviso-unidades');
   if (btnAvisoUnidades) btnAvisoUnidades.addEventListener('click', aceptarAvisoUnidades);
+  var btnCerrarCompletada = document.getElementById('btn-cerrar-ya-completada');
+  if (btnCerrarCompletada) btnCerrarCompletada.addEventListener('click', cerrarModalYaCompletada);
+  var modalCompletada = document.getElementById('modal-ya-completada');
+  if (modalCompletada) {
+    modalCompletada.addEventListener('click', function(ev) {
+      if (ev.target === modalCompletada) cerrarModalYaCompletada();
+    });
+  }
   ['f-cip','f-dni'].forEach(function(id) {
     document.getElementById(id).addEventListener('input', function(e) {
       e.target.value = e.target.value.replace(/\D/g,'');
@@ -259,6 +267,33 @@ function aceptarAvisoUnidades() {
   if (cipCard) cipCard.style.display = '';
   actualizarZonaBarraRegistro();
   setTimeout(function() { scrollABarraContinuarCip(true); }, 80);
+}
+
+function mostrarModalYaCompletada(cip, nombres) {
+  var modal = document.getElementById('modal-ya-completada');
+  if (!modal) {
+    mostrarAlerta('Su prueba ya fue enviada con éxito. Agradecemos su participación.', 'exito');
+    return;
+  }
+  var info = document.getElementById('ya-completada-nombre');
+  if (info) {
+    var partes = [];
+    if (nombres) partes.push(escHtmlEval(nombres));
+    if (cip) partes.push('CIP ' + escHtmlEval(cip));
+    info.innerHTML = partes.length ? partes.join(' &nbsp;|&nbsp; ') : '';
+    info.style.display = partes.length ? '' : 'none';
+  }
+  ocultarAlerta();
+  modal.hidden = false;
+  document.body.classList.add('eval-aviso-unidades-abierto');
+  var btn = document.getElementById('btn-cerrar-ya-completada');
+  if (btn) setTimeout(function() { btn.focus(); }, 120);
+}
+
+function cerrarModalYaCompletada() {
+  var modal = document.getElementById('modal-ya-completada');
+  if (modal) modal.hidden = true;
+  document.body.classList.remove('eval-aviso-unidades-abierto');
 }
 
 function aplicarConfigUnidad(sel, data, opciones) {
@@ -865,7 +900,15 @@ function normalizarDataProgreso(data) {
 
 function notificarSesionExistente(cip, info) {
   var msg;
+  if (info && info.completada) {
+    mostrarModalYaCompletada(info.cip || cip, info.nombres);
+    return;
+  }
   if (info && info.duplicado_por_nombre) {
+    if (info.completada) {
+      mostrarModalYaCompletada(info.cip || cip, info.nombres);
+      return;
+    }
     notificarDuplicadoPorNombre(cip, info.nombres);
     return;
   }
@@ -887,14 +930,9 @@ function notificarSesionExistente(cip, info) {
     if (inpDni) setTimeout(function() { inpDni.focus(); inpDni.select(); }, 400);
     return;
   }
-  if (info && info.completada) {
-    msg = 'El CIP ' + cip + ' ya tiene una evaluación enviada a Psicología. '
-      + 'No puede registrarse de nuevo. Si necesita ayuda, contacte a la Oficina de Psicología.';
-  } else {
-    msg = 'Ya tiene una sesión guardada'
-      + (info && info.nombres ? ' a nombre de ' + info.nombres : '')
-      + '. No complete el formulario otra vez: ingrese su CIP en el recuadro «¿Ya comenzó?» de arriba y pulse Continuar.';
-  }
+  msg = 'Ya tiene una sesión guardada'
+    + (info && info.nombres ? ' a nombre de ' + info.nombres : '')
+    + '. No complete el formulario otra vez: ingrese su CIP en el recuadro «¿Ya comenzó?» de arriba y pulse Continuar.';
   mostrarAlerta(msg, 'error');
 
   var card = document.getElementById('card-continuar-cip');
@@ -1192,7 +1230,7 @@ function continuarConCIP() {
       fetch(LOCAL_API + '/verificar-registro?cip=' + encodeURIComponent(cip))
         .then(function(r) { return r.json(); })
         .then(function(v) {
-          if (v.ok && v.registrado && !v.completada) {
+          if (v.ok && v.registrado) {
             notificarSesionExistente(v.cip || cip, v);
           } else {
             mostrarAlerta('No hay sesión guardada para el CIP ' + cip + '. Complete el Paso 1 si es su primera vez.', 'error');
