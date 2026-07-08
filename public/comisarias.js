@@ -62,11 +62,18 @@ function agregarComisariasExtra(selectEl, extras) {
 function seleccionarComisariaEnSelect(selectEl, valor) {
   var sel = typeof selectEl === 'string' ? document.getElementById(selectEl) : selectEl;
   if (!sel || !valor) return;
-  var buscado = valor.toUpperCase();
+  var buscado = String(valor).trim().toUpperCase();
   for (var i = 0; i < sel.options.length; i++) {
     if (sel.options[i].value.toUpperCase() === buscado) {
       sel.selectedIndex = i;
       return;
     }
   }
+  // La unidad guardada no está en la lista (p. ej. desactivada por el panel):
+  // se agrega para conservar el registro del usuario y no bloquear el envío.
+  var op = document.createElement('option');
+  op.value = valor;
+  op.textContent = valor;
+  sel.appendChild(op);
+  sel.value = valor;
 }

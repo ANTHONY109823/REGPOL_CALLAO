@@ -1332,23 +1332,82 @@ function descartarProgreso() {
 /* ================================================================
    ENVÍO FINAL
 ================================================================ */
+// Muestra la alerta global y la desplaza a la vista (el usuario suele estar
+// al final de la página, en el bloque 12, y no ve la alerta que aparece arriba).
+function mostrarAlertaVisible(msg, tipo) {
+  mostrarAlerta(msg, tipo || 'error');
+  var el = document.getElementById('alerta-global');
+  if (el) {
+    try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+  }
+}
+
+// Bloque (1-based) que contiene la pregunta en la posición idx del arreglo PREGUNTAS.
+function bloqueDePregunta(idx) {
+  return Math.floor(idx / ESTADO.pregsPorBloque) + 1;
+}
+
+function primeraPreguntaSinResponder() {
+  for (var i = 0; i < PREGUNTAS.length; i++) {
+    if (!ESTADO.respuestas[PREGUNTAS[i].id]) return i;
+  }
+  return -1;
+}
+
 function validarYEnviar() {
-  var err=validarRegistro();
-  if(err){
-    mostrarAlerta(err + ' Si el problema persiste, contacte a la Oficina de Psicología.', 'error');
+  if (!PREGUNTAS.length) {
+    mostrarAlertaVisible('El cuestionario aún no cargó. Espere unos segundos e intente de nuevo.', 'error');
     return;
   }
 
-  var sinRes=PREGUNTAS.filter(function(p){return !ESTADO.respuestas[p.id];});
-  if(sinRes.length>0){
-    mostrarAlerta('Faltan '+sinRes.length+' preguntas sin responder. Revise todos los bloques.','error');
+  // 1) Preguntas sin responder: llevar al usuario a la primera pendiente y avisar de forma visible.
+  var idxPendiente = primeraPreguntaSinResponder();
+  if (idxPendiente !== -1) {
+    var sinRes = PREGUNTAS.filter(function(p){ return !ESTADO.respuestas[p.id]; });
+    var bloquePendiente = bloqueDePregunta(idxPendiente);
+    if (bloquePendiente !== ESTADO.bloqueActual) renderizarBloque(bloquePendiente);
+    var fila = document.getElementById('fila-' + PREGUNTAS[idxPendiente].id);
+    if (fila) {
+      fila.classList.add('sin-marcar');
+      try { fila.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    }
+    mostrarAlertaVisible('Faltan ' + sinRes.length + ' pregunta(s) sin responder. Le llevamos a la primera pendiente (bloque ' + bloquePendiente + ').', 'error');
     return;
   }
 
-  var nombres=obtenerNombresCompletos();
-  var dni=document.getElementById('f-dni').value.trim();
+  // 2) Datos de registro: si falta alguno, mostrar el panel de registro (que está oculto
+  //    durante el cuestionario) para que el usuario pueda corregirlo y reintentar.
+  var err = validarRegistro();
+  if (err) {
+    var reg = document.getElementById('card-registro');
+    if (reg) reg.style.display = '';
+    var form = document.getElementById('card-registro-formulario');
+    if (form) form.style.display = '';
+    mostrarAlerta(err + ' Corrija ese dato en el Paso 1 y vuelva a pulsar «Finalizar y Enviar». Si el problema persiste, contacte a la Oficina de Psicología.', 'error');
+    var campoMal = document.querySelector('#card-registro .invalido');
+    var destino = campoMal || document.getElementById('alerta-global');
+    if (destino) {
+      try { destino.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    }
+    if (campoMal && typeof campoMal.focus === 'function') { try { campoMal.focus(); } catch (e) {} }
+    return;
+  }
+
+  var nombres = obtenerNombresCompletos();
+  var dni = document.getElementById('f-dni').value.trim();
   var comis = obtenerComisariaEvaluacion();
-  if(!confirm('¿Confirmar envío del cuestionario?\n\n'+nombres+'\nDNI: '+dni+'\nComisaría: '+comis)) return;
+
+  // confirm() puede quedar suprimido en navegadores in-app (WhatsApp/Facebook);
+  // si falla o no está disponible, no bloqueamos el envío.
+  var confirmar = true;
+  try {
+    if (typeof window.confirm === 'function') {
+      confirmar = window.confirm('¿Confirmar envío del cuestionario?\n\n' + nombres + '\nDNI: ' + dni + '\nComisaría: ' + comis);
+    }
+  } catch (e) {
+    confirmar = true;
+  }
+  if (!confirmar) return;
   enviarEvaluacion();
 }
 
