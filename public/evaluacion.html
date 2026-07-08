@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css?v=39" />
   <link rel="stylesheet" href="responsive.css?v=1" />
-  <link rel="stylesheet" href="evaluacion.css?v=20" />
+  <link rel="stylesheet" href="evaluacion.css?v=21" />
 </head>
 <body class="body-portal body-bienestar">
 
@@ -294,19 +294,55 @@
       <i class="fas fa-paper-plane" aria-hidden="true"></i>
       <h2 id="confirmar-envio-titulo">Confirmar envío del cuestionario</h2>
     </div>
-    <p class="modal-aviso-unidades-lead">Revise sus datos antes de enviar. Una vez enviado, su cuestionario se remite a la Oficina de Psicología.</p>
-    <ul class="confirmar-envio-datos">
-      <li><i class="fas fa-user" aria-hidden="true"></i><span><strong>Efectivo:</strong> <span id="confirmar-envio-nombre">—</span></span></li>
-      <li><i class="fas fa-id-card" aria-hidden="true"></i><span><strong>DNI:</strong> <span id="confirmar-envio-dni">—</span></span></li>
-      <li><i class="fas fa-building" aria-hidden="true"></i><span><strong>Dependencia:</strong> <span id="confirmar-envio-unidad">—</span></span></li>
-    </ul>
-    <div class="modal-confirmar-envio-acciones">
-      <button type="button" class="btn-eval btn-borde" id="btn-cancelar-envio">
-        <i class="fas fa-arrow-left"></i> Revisar
-      </button>
-      <button type="button" class="btn-eval btn-verde" id="btn-confirmar-envio">
-        <i class="fas fa-paper-plane"></i> Sí, enviar
-      </button>
+
+    <!-- VISTA LECTURA -->
+    <div id="confirmar-envio-vista">
+      <p class="modal-aviso-unidades-lead">Revise sus datos antes de enviar. Una vez enviado, su cuestionario se remite a la Oficina de Psicología.</p>
+      <ul class="confirmar-envio-datos">
+        <li><i class="fas fa-user" aria-hidden="true"></i><span><strong>Efectivo:</strong> <span id="confirmar-envio-nombre">—</span></span></li>
+        <li><i class="fas fa-id-card" aria-hidden="true"></i><span><strong>DNI:</strong> <span id="confirmar-envio-dni">—</span></span></li>
+        <li><i class="fas fa-building" aria-hidden="true"></i><span><strong>Dependencia:</strong> <span id="confirmar-envio-unidad">—</span></span></li>
+      </ul>
+      <div class="modal-confirmar-envio-acciones">
+        <button type="button" class="btn-eval btn-borde" id="btn-cancelar-envio">
+          <i class="fas fa-pen"></i> Revisar
+        </button>
+        <button type="button" class="btn-eval btn-verde" id="btn-confirmar-envio">
+          <i class="fas fa-paper-plane"></i> Sí, enviar
+        </button>
+      </div>
+    </div>
+
+    <!-- VISTA EDICIÓN — solo apellidos, nombres, DNI y dependencia -->
+    <div id="confirmar-envio-edicion" hidden>
+      <p class="modal-aviso-unidades-lead">Corrija sus datos si se equivocó. El resto de su registro no cambia.</p>
+      <div class="confirmar-envio-form">
+        <div class="campo-edit">
+          <label for="edit-apellidos">Apellidos</label>
+          <input type="text" id="edit-apellidos" placeholder="Ej. GARCIA LOPEZ" autocomplete="off" />
+        </div>
+        <div class="campo-edit">
+          <label for="edit-nombres">Nombres</label>
+          <input type="text" id="edit-nombres" placeholder="Ej. JUAN CARLOS" autocomplete="off" />
+        </div>
+        <div class="campo-edit">
+          <label for="edit-dni">DNI (8 dígitos)</label>
+          <input type="text" id="edit-dni" placeholder="12345678" maxlength="8" inputmode="numeric" autocomplete="off" />
+        </div>
+        <div class="campo-edit">
+          <label for="edit-unidad">Dependencia</label>
+          <select id="edit-unidad" class="select-eval"></select>
+        </div>
+        <p class="confirmar-envio-msg" id="edit-msg" aria-live="polite"></p>
+      </div>
+      <div class="modal-confirmar-envio-acciones">
+        <button type="button" class="btn-eval btn-borde" id="btn-cancelar-edicion">
+          <i class="fas fa-times"></i> Cancelar
+        </button>
+        <button type="button" class="btn-eval btn-verde" id="btn-guardar-edicion">
+          <i class="fas fa-check"></i> Guardar cambios
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -360,7 +396,7 @@
 <script src="divisiones-ui.js?v=5"></script>
 <script src="preguntas.js?v=1"></script>
 <script src="areas-labor.js?v=2"></script>
-<script src="evaluacion.js?v=35"></script>
+<script src="evaluacion.js?v=36"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof regpolPoblarSelectArea === 'function') {

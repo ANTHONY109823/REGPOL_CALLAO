@@ -206,6 +206,49 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
   text-align: center;
 }
 .confirmar-envio-datos li strong { color: var(--verde-pnp); font-weight: 700; }
+.confirmar-envio-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.confirmar-envio-form .campo-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.confirmar-envio-form label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--verde-pnp);
+}
+.confirmar-envio-form input,
+.confirmar-envio-form select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--borde);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--texto);
+  background: #fff;
+}
+.confirmar-envio-form input:focus,
+.confirmar-envio-form select:focus {
+  outline: none;
+  border-color: var(--verde-pnp);
+  box-shadow: 0 0 0 3px rgba(0, 77, 61, 0.12);
+}
+.confirmar-envio-form input.invalido,
+.confirmar-envio-form select.invalido {
+  border-color: var(--error);
+}
+.confirmar-envio-msg {
+  margin: 0;
+  min-height: 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--error);
+}
 .modal-confirmar-envio-acciones {
   display: flex;
   gap: 10px;

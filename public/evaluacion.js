@@ -150,7 +150,15 @@ document.addEventListener('DOMContentLoaded', function() {
     enviarEvaluacion();
   });
   var btnCancelarEnvio = document.getElementById('btn-cancelar-envio');
-  if (btnCancelarEnvio) btnCancelarEnvio.addEventListener('click', cerrarModalConfirmarEnvio);
+  if (btnCancelarEnvio) btnCancelarEnvio.addEventListener('click', mostrarVistaEdicionEnvio);
+  var btnCancelarEdicion = document.getElementById('btn-cancelar-edicion');
+  if (btnCancelarEdicion) btnCancelarEdicion.addEventListener('click', mostrarVistaLecturaEnvio);
+  var btnGuardarEdicion = document.getElementById('btn-guardar-edicion');
+  if (btnGuardarEdicion) btnGuardarEdicion.addEventListener('click', guardarEdicionEnvio);
+  var editDni = document.getElementById('edit-dni');
+  if (editDni) editDni.addEventListener('input', function(e) {
+    e.target.value = e.target.value.replace(/\D/g, '');
+  });
   var modalConfirmar = document.getElementById('modal-confirmar-envio');
   if (modalConfirmar) {
     modalConfirmar.addEventListener('click', function(ev) {
@@ -1448,26 +1456,105 @@ function validarYEnviar() {
   abrirModalConfirmarEnvio(nombres, dni, comis);
 }
 
-function abrirModalConfirmarEnvio(nombres, dni, comis) {
-  var modal = document.getElementById('modal-confirmar-envio');
-  if (!modal) { enviarEvaluacion(); return; }
+// Refleja en la vista de lectura los datos actuales del formulario (para que,
+// tras editar, el resumen muestre lo corregido antes de enviar).
+function renderVistaConfirmarEnvio() {
   var elNom = document.getElementById('confirmar-envio-nombre');
   var elDni = document.getElementById('confirmar-envio-dni');
   var elUni = document.getElementById('confirmar-envio-unidad');
-  if (elNom) elNom.textContent = nombres || '—';
-  if (elDni) elDni.textContent = dni || '—';
-  if (elUni) elUni.textContent = comis || '—';
+  if (elNom) elNom.textContent = obtenerNombresCompletos() || '—';
+  if (elDni) elDni.textContent = (document.getElementById('f-dni') || {}).value || '—';
+  if (elUni) elUni.textContent = obtenerComisariaEvaluacion() || '—';
+}
+
+function mostrarVistaLecturaEnvio() {
+  var vista = document.getElementById('confirmar-envio-vista');
+  var edicion = document.getElementById('confirmar-envio-edicion');
+  if (vista) vista.hidden = false;
+  if (edicion) edicion.hidden = true;
+  renderVistaConfirmarEnvio();
+  var btn = document.getElementById('btn-confirmar-envio');
+  if (btn) setTimeout(function() { btn.focus(); }, 120);
+}
+
+function abrirModalConfirmarEnvio(nombres, dni, comis) {
+  var modal = document.getElementById('modal-confirmar-envio');
+  if (!modal) { enviarEvaluacion(); return; }
   ocultarAlerta();
   modal.hidden = false;
   document.body.classList.add('eval-aviso-unidades-abierto');
-  var btn = document.getElementById('btn-confirmar-envio');
-  if (btn) setTimeout(function() { btn.focus(); }, 120);
+  mostrarVistaLecturaEnvio();
 }
 
 function cerrarModalConfirmarEnvio() {
   var modal = document.getElementById('modal-confirmar-envio');
   if (modal) modal.hidden = true;
   document.body.classList.remove('eval-aviso-unidades-abierto');
+}
+
+// "Revisar" — permite corregir solo apellidos, nombres, DNI y dependencia.
+// El resto del registro (grado, sexo, cargo, área, foto, etc.) queda intacto.
+function mostrarVistaEdicionEnvio() {
+  var vista = document.getElementById('confirmar-envio-vista');
+  var edicion = document.getElementById('confirmar-envio-edicion');
+  var apEl = document.getElementById('edit-apellidos');
+  var nomEl = document.getElementById('edit-nombres');
+  var dniEl = document.getElementById('edit-dni');
+  var uniEl = document.getElementById('edit-unidad');
+  var msg = document.getElementById('edit-msg');
+
+  if (apEl) { apEl.value = (document.getElementById('f-apellidos') || {}).value || ''; apEl.classList.remove('invalido'); }
+  if (nomEl) { nomEl.value = (document.getElementById('f-nombres') || {}).value || ''; nomEl.classList.remove('invalido'); }
+  if (dniEl) { dniEl.value = (document.getElementById('f-dni') || {}).value || ''; dniEl.classList.remove('invalido'); }
+
+  // Clona las mismas dependencias disponibles del registro y selecciona la actual.
+  if (uniEl) {
+    var fUnidad = document.getElementById('f-unidad');
+    uniEl.innerHTML = fUnidad ? fUnidad.innerHTML : '';
+    var actual = fUnidad ? fUnidad.value : '';
+    if (actual) seleccionarComisariaEnSelect('edit-unidad', actual);
+    uniEl.classList.remove('invalido');
+  }
+  if (msg) msg.textContent = '';
+
+  if (vista) vista.hidden = true;
+  if (edicion) edicion.hidden = false;
+  if (apEl) setTimeout(function() { apEl.focus(); }, 120);
+}
+
+function guardarEdicionEnvio() {
+  var apEl = document.getElementById('edit-apellidos');
+  var nomEl = document.getElementById('edit-nombres');
+  var dniEl = document.getElementById('edit-dni');
+  var uniEl = document.getElementById('edit-unidad');
+  var msg = document.getElementById('edit-msg');
+
+  var ap = apEl ? apEl.value.trim() : '';
+  var nom = nomEl ? nomEl.value.trim() : '';
+  var dni = dniEl ? dniEl.value.replace(/\D/g, '').trim() : '';
+  var uni = uniEl ? uniEl.value.trim() : '';
+
+  [apEl, nomEl, dniEl, uniEl].forEach(function(el) { if (el) el.classList.remove('invalido'); });
+
+  var err = '';
+  if (ap.length < 2) { err = 'Ingrese sus apellidos.'; if (apEl) apEl.classList.add('invalido'); }
+  else if (nom.length < 2) { err = 'Ingrese sus nombres.'; if (nomEl) nomEl.classList.add('invalido'); }
+  else if (!/^\d{8}$/.test(dni)) { err = 'El DNI debe tener exactamente 8 dígitos.'; if (dniEl) dniEl.classList.add('invalido'); }
+  else if (!uni) { err = 'Seleccione su dependencia.'; if (uniEl) uniEl.classList.add('invalido'); }
+
+  if (err) { if (msg) msg.textContent = err; return; }
+
+  // Escribe los cambios en el formulario base: el envío (construirPayloadGuardar)
+  // toma estos valores, de modo que la prueba queda guardada en la dependencia elegida.
+  var fAp = document.getElementById('f-apellidos');
+  var fNom = document.getElementById('f-nombres');
+  var fDni = document.getElementById('f-dni');
+  if (fAp) fAp.value = ap;
+  if (fNom) fNom.value = nom;
+  if (fDni) fDni.value = dni;
+  seleccionarComisariaEnSelect('f-unidad', uni);
+
+  mostrarVistaLecturaEnvio();
 }
 
 var _enviandoEvaluacion = false;
