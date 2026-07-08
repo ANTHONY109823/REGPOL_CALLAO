@@ -880,13 +880,79 @@ function esImagenEncabezadoValida(url) {
   const f = String(url || '').trim();
   if (!f) return false;
   if (/^data:image\/(jpeg|png|webp);base64,/i.test(f)) return true;
+  if (f.indexOf('/portal/header-foto/') === 0 || f.indexOf('/portal/carrusel-imagen/') === 0) return true;
   return !esUrlImagenHotlinkRota(f);
 }
 
 function sanitizarFotosEncabezadoList(fotos) {
   const arr = Array.isArray(fotos) ? fotos : [];
   const limpias = arr.map(f => String(f || '').trim()).filter(esImagenEncabezadoValida);
-  return limpias.length ? limpias : FOTOS_ENCABEZADO_DEFAULT.slice();
+  return limpias;
+}
+
+function parseDataImageUrl(dataUrl) {
+  const s = String(dataUrl || '').trim();
+  const m = s.match(/^data:(image\/[a-z0-9.+-]+);base64,([a-z0-9+/=\s]+)$/i);
+  if (!m) return null;
+  try {
+    const buffer = Buffer.from(m[2].replace(/\s/g, ''), 'base64');
+    if (!buffer.length) return null;
+    return { mime: m[1].toLowerCase(), buffer };
+  } catch (e) {
+    return null;
+  }
+}
+
+async function guardarPortalArchivoDesdeDataUrl(clave, dataUrl) {
+  const parsed = parseDataImageUrl(dataUrl);
+  if (!parsed) return false;
+  await pool.query(
+    `INSERT INTO portal_archivos (clave, mime, nombre, data, updated_at)
+     VALUES ($1, $2, $3, $4, NOW())
+     ON CONFLICT (clave) DO UPDATE SET
+       mime = EXCLUDED.mime, data = EXCLUDED.data, updated_at = NOW()`,
+    [clave, parsed.mime, clave + '.img', parsed.buffer]
+  );
+  return true;
+}
+
+async function normalizarImagenesPortalEnConfig(data) {
+  if (!data || typeof data !== 'object') return { data: data, changed: false };
+  let changed = false;
+
+  if (Array.isArray(data.carrusel)) {
+    for (let i = 0; i < data.carrusel.length; i++) {
+      const sl = data.carrusel[i];
+      if (!sl) continue;
+      const img = String(sl.imagen || '').trim();
+      if (img.indexOf('data:image/') === 0) {
+        const clave = 'carrusel_' + i;
+        if (await guardarPortalArchivoDesdeDataUrl(clave, img)) {
+          sl.imagen = '/portal/carrusel-imagen/' + i;
+          changed = true;
+        }
+      }
+    }
+  }
+
+  if (Array.isArray(data.fotosEncabezado)) {
+    const nuevas = [];
+    for (let i = 0; i < data.fotosEncabezado.length; i++) {
+      const img = String(data.fotosEncabezado[i] || '').trim();
+      if (img.indexOf('data:image/') === 0) {
+        const clave = 'header_foto_' + i;
+        if (await guardarPortalArchivoDesdeDataUrl(clave, img)) {
+          nuevas.push('/portal/header-foto/' + i);
+          changed = true;
+        }
+      } else if (img) {
+        nuevas.push(img);
+      }
+    }
+    if (changed) data.fotosEncabezado = nuevas;
+  }
+
+  return { data: data, changed: changed };
 }
 
 async function corregirFotosEncabezadoPortal() {
@@ -2924,8 +2990,16 @@ app.get('/portal/configuracion', async (req, res) => {
   try {
     const r = await pool.query('SELECT data_json FROM portal_configuracion WHERE id=1');
     if (r.rows.length && r.rows[0].data_json) {
-      const data = typeof r.rows[0].data_json === 'string'
+      let data = typeof r.rows[0].data_json === 'string'
         ? JSON.parse(r.rows[0].data_json) : r.rows[0].data_json;
+      const norm = await normalizarImagenesPortalEnConfig(data);
+      data = norm.data;
+      if (norm.changed) {
+        await pool.query(
+          'UPDATE portal_configuracion SET data_json=$1, updated_at=NOW() WHERE id=1',
+          [JSON.stringify(data)]
+        );
+      }
       if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezadoList(data.fotosEncabezado);
       res.set('Content-Type', 'application/json; charset=utf-8');
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -2955,6 +3029,44 @@ function resenaImgClave(idx) {
 function mimeImagenResenaValido(mime) {
   return /^image\/(jpeg|png|webp)$/i.test(String(mime || ''));
 }
+
+// ── GET /portal/carrusel-imagen/:idx — banner principal ─────────────────────
+app.get('/portal/carrusel-imagen/:idx', async (req, res) => {
+  try {
+    const idx = parseInt(req.params.idx, 10);
+    if (isNaN(idx) || idx < 0) return res.status(404).end();
+    const clave = 'carrusel_' + idx;
+    const r = await pool.query(
+      'SELECT mime, data FROM portal_archivos WHERE clave=$1',
+      [clave]
+    );
+    if (!r.rows.length || !r.rows[0].data) return res.status(404).end();
+    res.set('Content-Type', r.rows[0].mime || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(r.rows[0].data);
+  } catch (e) {
+    res.status(500).end();
+  }
+});
+
+// ── GET /portal/header-foto/:idx — galería del encabezado ───────────────────
+app.get('/portal/header-foto/:idx', async (req, res) => {
+  try {
+    const idx = parseInt(req.params.idx, 10);
+    if (isNaN(idx) || idx < 0) return res.status(404).end();
+    const clave = 'header_foto_' + idx;
+    const r = await pool.query(
+      'SELECT mime, data FROM portal_archivos WHERE clave=$1',
+      [clave]
+    );
+    if (!r.rows.length || !r.rows[0].data) return res.status(404).end();
+    res.set('Content-Type', r.rows[0].mime || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(r.rows[0].data);
+  } catch (e) {
+    res.status(500).end();
+  }
+});
 
 // ── GET /portal/resena-imagen/:idx — fotos del carrusel de reseña ───────────
 app.get('/portal/resena-imagen/:idx', async (req, res) => {
@@ -3160,7 +3272,9 @@ app.post('/admin/configuracion', requireAuth, async (req, res) => {
     data.actualizacion = data.actualizacion || (hoy.getDate() + ' DE ' + meses[hoy.getMonth()] + ' ' + hoy.getFullYear());
     data.cmsPublicadoEn = new Date().toISOString();
     if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezadoList(data.fotosEncabezado);
-    const json = JSON.stringify(data);
+    const norm = await normalizarImagenesPortalEnConfig(data);
+    const dataFinal = norm.data;
+    const json = JSON.stringify(dataFinal);
     await pool.query(
       `INSERT INTO portal_configuracion(id, data_json, updated_at) VALUES(1, $1, NOW())
        ON CONFLICT(id) DO UPDATE SET data_json = EXCLUDED.data_json, updated_at = NOW()`,

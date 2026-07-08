@@ -59,6 +59,18 @@ function apiBasePortal() {
   return window.REGPOL_API_PRODUCTION || 'https://regpolcallao-production.up.railway.app';
 }
 
+function urlImagenPortal(src) {
+  var s = String(src || '').trim();
+  if (!s) return '';
+  if (s.indexOf('data:') === 0 || s.indexOf('blob:') === 0) return s;
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.indexOf('/portal/') === 0) {
+    var base = apiBasePortal();
+    return base ? base.replace(/\/$/, '') + s : s;
+  }
+  return s;
+}
+
 function htmlTarjetaPortalItem(item) {
   var colorEstado = item.estado === 'DISPONIBLE' ? 'green'
     : item.estado === 'CERRADO' ? '#c0392b' : '#856404';
@@ -241,6 +253,19 @@ function limpiarCachePortal() {
   try { localStorage.removeItem(REGPOL_SITE_KEY); } catch (e) {}
 }
 
+function cachePortalTieneCarruselVacio() {
+  try {
+    var raw = localStorage.getItem(REGPOL_SITE_KEY);
+    if (!raw) return false;
+    var d = JSON.parse(raw);
+    var slides = d.carrusel || [];
+    if (!slides.length) return true;
+    return !slides.some(function(s) { return s && String(s.imagen || '').trim(); });
+  } catch (e) {
+    return false;
+  }
+}
+
 function esHostEstaticoPortal() {
   var h = location.hostname;
   return h.indexOf('github.io') !== -1 || h.indexOf('github.com') !== -1;
@@ -323,7 +348,11 @@ function aplicarPortalConfig(config, data) {
     cargarResultadosPdfPortal('curso', config.renderCursosPdf);
   }
   if (config.actualizarFecha) actualizarFechaPortal(data);
-  if (config.actualizarCarrusel) actualizarCarrusel(data);
+  if (config.actualizarCarrusel && resolverSlidesCarrusel(data).length) {
+    actualizarCarrusel(data);
+  } else if (config.actualizarCarrusel && data.heroTexto) {
+    aplicarHeroMarca(data.heroTexto);
+  }
   if (data.navOcultos) portalNavOcultosCache = data.navOcultos;
   initPortalNav((config && config.activeNav) || portalActiveNavId, data.navOcultos || []);
   if (data.navOcultos && data.navOcultos.length) aplicarNavOcultos(data.navOcultos);
@@ -552,6 +581,7 @@ function revocarHeaderFotoBlobs() {
 function urlImagenHeaderParaDom(src) {
   var s = String(src || '').trim();
   if (!s) return '';
+  if (s.indexOf('/portal/') === 0) return urlImagenPortal(s);
   if (s.indexOf('data:image/') !== 0) return s;
   try {
     var parts = s.split(',');
@@ -578,6 +608,7 @@ function esImagenEncabezadoValida(url) {
   var f = String(url || '').trim();
   if (!f) return false;
   if (/^data:image\/(jpeg|png|webp);base64,/i.test(f)) return true;
+  if (f.indexOf('/portal/header-foto/') === 0 || f.indexOf('/portal/carrusel-imagen/') === 0) return true;
   return !esUrlImagenHotlinkRota(f);
 }
 
@@ -1480,11 +1511,12 @@ function actualizarCarrusel(data) {
   if (!slidesDiv) return;
 
   if (!slides.length) {
+    if (slider.querySelector('.slide')) return;
     detenerPresentationSlider();
     slidesDiv.innerHTML = '';
     if (dotsDiv) dotsDiv.innerHTML = '';
-    slider.classList.add('slider-sin-imagenes');
-    slider.classList.remove('slider-esperando-api');
+    slider.classList.add('slider-esperando-api');
+    slider.classList.remove('slider-sin-imagenes');
     _carruselFingerprint = '';
     return;
   }
@@ -1501,12 +1533,12 @@ function actualizarCarrusel(data) {
   var gen = ++_carruselInitGen;
 
   detenerPresentationSlider();
-  preloadImagenCarrusel(slides[0].imagen);
+  preloadImagenCarrusel(urlImagenPortal(slides[0].imagen));
   slider.classList.remove('slider-sin-imagenes');
   slidesDiv.innerHTML = slides.map(function(s, i) {
     var isActive = i === 0 ? ' active' : '';
-    var imgSrc = String(s.imagen || '').trim();
-    var imgTag = '<img src="' + imgSrc + '" alt="' + escHtml(s.titulo || '') + '" class="slide-img" width="1920" height="1080" '
+    var imgSrc = urlImagenPortal(s.imagen);
+    var imgTag = '<img src="' + escHtml(imgSrc) + '" alt="' + escHtml(s.titulo || '') + '" class="slide-img" width="1920" height="1080" '
       + (i === 0 ? 'decoding="async" fetchpriority="high"' : 'loading="lazy" decoding="async"') + '>';
     var caption = (s.titulo || s.subtitulo)
       ? '<div class="slide-caption"><strong>' + escHtml(s.titulo || '') + '</strong>'
@@ -1546,6 +1578,10 @@ function initPortalPagina(config) {
   initPortalNav(config.activeNav || '');
   aplicarHeroMarca();
   var pre = obtenerSiteDataSync();
+  if (pre && cachePortalTieneCarruselVacio()) {
+    limpiarCachePortal();
+    pre = null;
+  }
   if (pre) {
     aplicarPortalConfig(config, pre);
   }

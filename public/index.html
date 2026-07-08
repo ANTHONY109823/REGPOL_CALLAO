@@ -25,6 +25,7 @@
         var d = JSON.parse(raw);
         var img = d.carrusel && d.carrusel[0] && d.carrusel[0].imagen;
         if (!img) return;
+        if (String(img).indexOf('/portal/') === 0) img = api.replace(/\/$/, '') + img;
         var l = document.createElement('link');
         l.rel = 'preload';
         l.as = 'image';
@@ -93,6 +94,8 @@
         if (!slidesDiv) return;
         var s0 = list[0];
         var src = String(s0.imagen).trim();
+        var api = (window.REGPOL_API_PRODUCTION || 'https://regpolcallao-production.up.railway.app');
+        if (src.indexOf('/portal/') === 0) src = api.replace(/\/$/, '') + src;
         var slide = document.createElement('div');
         slide.className = 'slide active';
         var img = document.createElement('img');
@@ -236,7 +239,7 @@
 </footer>
 
 <script src="portal-data.js?v=8"></script>
-<script src="portal.js?v=62"></script>
+<script src="portal.js?v=63"></script>
 <script>
     initPortalInicio();
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') cerrarNovedadModal(); });
