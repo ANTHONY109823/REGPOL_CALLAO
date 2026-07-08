@@ -208,12 +208,41 @@ function mostrarModalAvisoUnidades(unidades) {
   if (btn) setTimeout(function() { btn.focus(); }, 120);
 }
 
+function elementoEvalVisible(el) {
+  return el && window.getComputedStyle(el).display !== 'none';
+}
+
+function actualizarZonaBarraRegistro() {
+  var zona = document.getElementById('zona-barra-registro');
+  if (!zona) return;
+  var cip = document.getElementById('card-continuar-cip');
+  var banner = document.getElementById('banner-progreso');
+  var visible = elementoEvalVisible(cip) || elementoEvalVisible(banner);
+  zona.classList.toggle('zona-barra-oculta', !visible);
+}
+
+function scrollABarraContinuarCip(destacar) {
+  var zona = document.getElementById('zona-barra-registro');
+  var cipCard = document.getElementById('card-continuar-cip');
+  actualizarZonaBarraRegistro();
+  if (zona && !zona.classList.contains('zona-barra-oculta')) {
+    zona.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  if (destacar && cipCard && elementoEvalVisible(cipCard)) {
+    cipCard.classList.add('continuar-cip-destacado');
+    setTimeout(function() { cipCard.classList.remove('continuar-cip-destacado'); }, 6000);
+  }
+}
+
 function aceptarAvisoUnidades() {
   var modal = document.getElementById('modal-aviso-unidades');
   if (modal) modal.hidden = true;
   document.body.classList.remove('eval-aviso-unidades-abierto');
   var reg = document.getElementById('card-registro');
-  if (reg) reg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (reg) reg.style.display = '';
+  var cipCard = document.getElementById('card-continuar-cip');
+  if (cipCard) cipCard.style.display = '';
+  scrollABarraContinuarCip(true);
 }
 
 function aplicarConfigUnidad(sel, data, opciones) {
@@ -692,6 +721,7 @@ function ocultarPanelRegistro() {
   if (r) r.style.display = 'none';
   var c = document.getElementById('card-continuar-cip');
   if (c) c.style.display = 'none';
+  actualizarZonaBarraRegistro();
   ESTADO.registroCompleto = true;
 }
 
@@ -1102,6 +1132,7 @@ function volverAlPanelRegistro() {
   if (reg) reg.style.display = 'none';
   var cont = document.getElementById('card-continuar-cip');
   if (cont) cont.style.display = '';
+  actualizarZonaBarraRegistro();
 
   var cip = document.getElementById('f-cip');
   var cipCont = document.getElementById('f-cip-continuar');
@@ -1118,7 +1149,7 @@ function volverAlPanelRegistro() {
   }
   mostrarAlerta('Progreso guardado. Para continuar ingrese su CIP en el panel superior.', 'exito');
   setTimeout(ocultarAlerta, 4500);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  scrollABarraContinuarCip(true);
 }
 
 function guardarYSalir() {
@@ -1239,6 +1270,7 @@ function mostrarBannerProgreso(data) {
   info.textContent='Bloque '+bloque+' de '+TOTAL_BLOQUES+' — '+total+' / '+TOTAL_PREGUNTAS+' preguntas ('+pct+'%)';
   banner.style.display='flex';
   banner._data=data;
+  actualizarZonaBarraRegistro();
 }
 
 function aplicarProgresoRestaurado(data) {

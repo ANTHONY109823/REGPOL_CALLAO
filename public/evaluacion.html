@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css?v=39" />
   <link rel="stylesheet" href="responsive.css?v=1" />
-  <link rel="stylesheet" href="evaluacion.css?v=12" />
+  <link rel="stylesheet" href="evaluacion.css?v=13" />
 </head>
 <body class="body-portal body-bienestar">
 
@@ -41,43 +41,44 @@
 <!-- CONTENIDO PRINCIPAL -->
 <main class="contenedor">
 
-  <!-- BANNER PROGRESO GUARDADO -->
-  <div id="banner-progreso" class="banner-progreso" style="display:none;">
-    <i class="fas fa-bookmark"></i>
-    <div>
-      <strong>Tienes un progreso guardado</strong>
-      <span id="banner-progreso-info">Página — — preguntas respondidas</span>
+  <!-- Barra superior fija: progreso guardado + continuar con CIP -->
+  <div id="zona-barra-registro" class="zona-barra-registro">
+    <div id="banner-progreso" class="banner-progreso" style="display:none;">
+      <i class="fas fa-bookmark"></i>
+      <div>
+        <strong>Tienes un progreso guardado</strong>
+        <span id="banner-progreso-info">Página — — preguntas respondidas</span>
+      </div>
+      <div class="banner-prog-btns">
+        <button class="btn-prog-continuar" onclick="restaurarProgreso()">
+          <i class="fas fa-play"></i> Continuar donde quedó
+        </button>
+        <button class="btn-prog-nuevo" onclick="descartarProgreso()">
+          <i class="fas fa-trash-alt"></i> Empezar de nuevo
+        </button>
+      </div>
     </div>
-    <div class="banner-prog-btns">
-      <button class="btn-prog-continuar" onclick="restaurarProgreso()">
-        <i class="fas fa-play"></i> Continuar donde quedó
-      </button>
-      <button class="btn-prog-nuevo" onclick="descartarProgreso()">
-        <i class="fas fa-trash-alt"></i> Empezar de nuevo
-      </button>
+
+    <div class="card-eval card-continuar-cip" id="card-continuar-cip">
+      <div class="continuar-cip-compact">
+        <div class="continuar-cip-compact-titulo">
+          <i class="fas fa-play-circle"></i>
+          <span>¿Ya comenzó? Ingrese su <strong>CIP</strong> y continúe</span>
+        </div>
+        <div class="continuar-cip-fila">
+          <input type="text" id="f-cip-continuar" placeholder="CIP" maxlength="20" autocomplete="off"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();continuarConCIP();}" />
+          <button type="button" class="btn-eval btn-verde btn-continuar-cip" onclick="continuarConCIP()">
+            <i class="fas fa-play"></i> Continuar
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="alerta alerta-error" id="alerta-global" role="alert">
     <i class="fas fa-exclamation-circle"></i>
     <span id="texto-alerta-global">Complete todos los campos obligatorios.</span>
-  </div>
-
-  <!-- CONTINUAR SOLO CON CIP (compacto — no tapa el registro) -->
-  <div class="card-eval card-continuar-cip" id="card-continuar-cip">
-    <div class="continuar-cip-compact">
-      <div class="continuar-cip-compact-titulo">
-        <i class="fas fa-play-circle"></i>
-        <span>¿Ya comenzó? Ingrese su <strong>CIP</strong> y continúe</span>
-      </div>
-      <div class="continuar-cip-fila">
-        <input type="text" id="f-cip-continuar" placeholder="CIP" maxlength="20" autocomplete="off"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();continuarConCIP();}" />
-        <button type="button" class="btn-eval btn-verde btn-continuar-cip" onclick="continuarConCIP()">
-          <i class="fas fa-play"></i> Continuar
-        </button>
-      </div>
-    </div>
   </div>
 
   <!-- PASO 1: DATOS DEL EFECTIVO -->
@@ -312,7 +313,7 @@
 <script src="divisiones-ui.js?v=5"></script>
 <script src="preguntas.js?v=1"></script>
 <script src="areas-labor.js?v=2"></script>
-<script src="evaluacion.js?v=29"></script>
+<script src="evaluacion.js?v=30"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof regpolPoblarSelectArea === 'function') {
