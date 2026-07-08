@@ -142,6 +142,7 @@ function fingerprintFotosEncabezado(fotos) {
 }
 
 var _carruselFingerprint = '';
+var _carruselInitGen = 0;
 var _headerFotosFingerprint = '';
 
 function siteDataParaCacheLocal(data) {
@@ -635,6 +636,24 @@ function detenerPresentationSlider() {
     clearInterval(initPresentationSlider._timer);
     initPresentationSlider._timer = null;
   }
+  if (initPresentationSlider._cleanupTimeout) {
+    clearTimeout(initPresentationSlider._cleanupTimeout);
+    initPresentationSlider._cleanupTimeout = null;
+  }
+}
+
+function irAlSlideInicial(slider) {
+  if (!slider) return;
+  var slides = slider.querySelectorAll('.slide');
+  var dots = slider.querySelectorAll('.slider-dots .dot');
+  slides.forEach(function(s, i) {
+    s.classList.remove('was-active');
+    if (i === 0) s.classList.add('active');
+    else s.classList.remove('active');
+  });
+  dots.forEach(function(d, i) {
+    d.classList.toggle('active', i === 0);
+  });
 }
 
 function detenerHeaderFotosCarrusel() {
@@ -1390,13 +1409,11 @@ function initPresentationSlider() {
     return;
   }
   slider.classList.remove('slider-cargando', 'slider-sin-imagenes');
+  irAlSlideInicial(slider);
 
   var FADE_MS = 1200;
   var current = 0;
   var timer = null;
-  slides.forEach(function(s, i) {
-    if (s.classList.contains('active')) current = i;
-  });
 
   function changeSlide(index) {
     if (index < 0 || index >= slides.length || index === current) return;
@@ -1417,10 +1434,13 @@ function initPresentationSlider() {
     dots.forEach(function(d) { d.classList.remove('active'); });
     if (dots[index]) dots[index].classList.add('active');
 
-    clearTimeout(changeSlide._cleanup);
+    if (initPresentationSlider._cleanupTimeout) {
+      clearTimeout(initPresentationSlider._cleanupTimeout);
+    }
     if (prev) {
-      changeSlide._cleanup = setTimeout(function() {
+      initPresentationSlider._cleanupTimeout = setTimeout(function() {
         prev.classList.remove('was-active');
+        initPresentationSlider._cleanupTimeout = null;
       }, FADE_MS + 80);
     }
     current = index;
@@ -1473,12 +1493,17 @@ function actualizarCarrusel(data) {
   var fp = fingerprintCarruselSlides(slides);
   var slideCount = slider.querySelectorAll('.slide').length;
   if (fp === _carruselFingerprint && slideCount === slides.length) {
+    irAlSlideInicial(slider);
+    slider.classList.remove('slider-cargando');
+    if (!initPresentationSlider._timer) initPresentationSlider();
     return;
   }
   _carruselFingerprint = fp;
+  var gen = ++_carruselInitGen;
 
   detenerPresentationSlider();
   preloadImagenCarrusel(slides[0].imagen);
+  slider.classList.add('slider-cargando');
   slider.classList.remove('slider-sin-imagenes');
   slidesDiv.innerHTML = slides.map(function(s, i) {
     var isActive = i === 0 ? ' active' : '';
@@ -1508,6 +1533,8 @@ function actualizarCarrusel(data) {
     });
   }
   esperarPrimeraImagenCarrusel(slider, function() {
+    if (gen !== _carruselInitGen) return;
+    irAlSlideInicial(slider);
     slider.classList.remove('slider-cargando');
     initPresentationSlider();
   });
@@ -1530,13 +1557,6 @@ function initPortalPagina(config) {
         heroTexto: pre.heroTexto || {},
         carrusel: resolverSlidesCarrusel(pre)
       });
-    } else {
-      var sliderEstatico = document.querySelector('.presentation-slider');
-      if (sliderEstatico) {
-        esperarPrimeraImagenCarrusel(sliderEstatico, function() {
-          sliderEstatico.classList.remove('slider-cargando');
-        });
-      }
     }
   }
   if (!esHostEstaticoPortal() && pre) {
@@ -1684,6 +1704,14 @@ function renderSorteosResultados(list) {
 
 function initPortalInicio() {
   var navInicial = navDesdeHash() || 'inicio';
+  window.addEventListener('pageshow', function(ev) {
+    if (!ev.persisted) return;
+    var slider = document.querySelector('.presentation-slider');
+    if (!slider) return;
+    detenerPresentationSlider();
+    irAlSlideInicial(slider);
+    if (slider.querySelectorAll('.slide').length) initPresentationSlider();
+  });
   return initPortalPagina({
     activeNav: navInicial,
     renderNovedades: 'lista-novedades',
