@@ -176,6 +176,50 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
   font-size: 14px !important;
 }
 
+/* Modal confirmar envío — reemplaza el confirm() nativo */
+.confirmar-envio-datos {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  border: 1.5px solid var(--borde);
+  border-radius: 10px;
+  background: var(--fondo-suave);
+  overflow: hidden;
+}
+.confirmar-envio-datos li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 14px;
+  font-size: 14px;
+  color: var(--texto);
+  line-height: 1.4;
+  border-bottom: 1px solid var(--borde);
+}
+.confirmar-envio-datos li:last-child { border-bottom: none; }
+.confirmar-envio-datos li i {
+  color: var(--verde-pnp);
+  font-size: 15px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+.confirmar-envio-datos li strong { color: var(--verde-pnp); font-weight: 700; }
+.modal-confirmar-envio-acciones {
+  display: flex;
+  gap: 10px;
+}
+.modal-confirmar-envio-acciones .btn-eval {
+  flex: 1;
+  justify-content: center;
+  padding: 13px 16px !important;
+  font-size: 14px !important;
+}
+@media (max-width: 480px) {
+  .modal-confirmar-envio-acciones { flex-direction: column-reverse; }
+}
+
 /* Variante verde de éxito — prueba ya enviada */
 .modal-completada-ok .modal-aviso-unidades-panel { border-top-color: var(--exito); }
 .modal-completada-ok .modal-aviso-unidades-header i { color: var(--exito); font-size: 30px; }

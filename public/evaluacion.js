@@ -144,6 +144,19 @@ document.addEventListener('DOMContentLoaded', function() {
       if (ev.target === modalCompletada) cerrarModalYaCompletada();
     });
   }
+  var btnConfirmarEnvio = document.getElementById('btn-confirmar-envio');
+  if (btnConfirmarEnvio) btnConfirmarEnvio.addEventListener('click', function() {
+    cerrarModalConfirmarEnvio();
+    enviarEvaluacion();
+  });
+  var btnCancelarEnvio = document.getElementById('btn-cancelar-envio');
+  if (btnCancelarEnvio) btnCancelarEnvio.addEventListener('click', cerrarModalConfirmarEnvio);
+  var modalConfirmar = document.getElementById('modal-confirmar-envio');
+  if (modalConfirmar) {
+    modalConfirmar.addEventListener('click', function(ev) {
+      if (ev.target === modalConfirmar) cerrarModalConfirmarEnvio();
+    });
+  }
   ['f-cip','f-dni'].forEach(function(id) {
     document.getElementById(id).addEventListener('input', function(e) {
       e.target.value = e.target.value.replace(/\D/g,'');
@@ -1432,18 +1445,29 @@ function validarYEnviar() {
   var dni = document.getElementById('f-dni').value.trim();
   var comis = obtenerComisariaEvaluacion();
 
-  // confirm() puede quedar suprimido en navegadores in-app (WhatsApp/Facebook);
-  // si falla o no está disponible, no bloqueamos el envío.
-  var confirmar = true;
-  try {
-    if (typeof window.confirm === 'function') {
-      confirmar = window.confirm('¿Confirmar envío del cuestionario?\n\n' + nombres + '\nDNI: ' + dni + '\nComisaría: ' + comis);
-    }
-  } catch (e) {
-    confirmar = true;
-  }
-  if (!confirmar) return;
-  enviarEvaluacion();
+  abrirModalConfirmarEnvio(nombres, dni, comis);
+}
+
+function abrirModalConfirmarEnvio(nombres, dni, comis) {
+  var modal = document.getElementById('modal-confirmar-envio');
+  if (!modal) { enviarEvaluacion(); return; }
+  var elNom = document.getElementById('confirmar-envio-nombre');
+  var elDni = document.getElementById('confirmar-envio-dni');
+  var elUni = document.getElementById('confirmar-envio-unidad');
+  if (elNom) elNom.textContent = nombres || '—';
+  if (elDni) elDni.textContent = dni || '—';
+  if (elUni) elUni.textContent = comis || '—';
+  ocultarAlerta();
+  modal.hidden = false;
+  document.body.classList.add('eval-aviso-unidades-abierto');
+  var btn = document.getElementById('btn-confirmar-envio');
+  if (btn) setTimeout(function() { btn.focus(); }, 120);
+}
+
+function cerrarModalConfirmarEnvio() {
+  var modal = document.getElementById('modal-confirmar-envio');
+  if (modal) modal.hidden = true;
+  document.body.classList.remove('eval-aviso-unidades-abierto');
 }
 
 var _enviandoEvaluacion = false;
