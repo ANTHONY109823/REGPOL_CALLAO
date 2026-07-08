@@ -1222,12 +1222,43 @@ function bienestarPolicialDefault() {
   };
 }
 
-function urlVideoBienestarPortal(path) {
+function urlVideoBienestarPortal(path, version) {
   var p = String(path || '/portal/bienestar-video').trim();
   if (!p) return '';
   if (/^https?:\/\//i.test(p)) return p;
   var base = apiBasePortal() || '';
-  return base + p + (p.indexOf('?') === -1 ? '?t=' + Date.now() : '');
+  var url = base + p;
+  var v = String(version || '').trim();
+  if (v) url += (url.indexOf('?') === -1 ? '?' : '&') + 'v=' + encodeURIComponent(v);
+  return url;
+}
+
+function initBienestarVideoLazy(wrap) {
+  if (!wrap) return;
+  var video = wrap.querySelector('.bienestar-video');
+  if (!video) return;
+  var src = video.getAttribute('data-src');
+  if (!src || video.dataset.lazyReady) return;
+  video.dataset.lazyReady = '1';
+
+  function attachSrc() {
+    if (video.getAttribute('src')) return;
+    video.setAttribute('src', src);
+    video.preload = 'metadata';
+    video.load();
+  }
+
+  if ('IntersectionObserver' in window) {
+    var obs = new IntersectionObserver(function(entries) {
+      if (entries.some(function(en) { return en.isIntersecting; })) {
+        attachSrc();
+        obs.disconnect();
+      }
+    }, { rootMargin: '120px' });
+    obs.observe(wrap);
+  } else {
+    attachSrc();
+  }
 }
 
 function renderBienestarPolicial(data, containerId) {
@@ -1246,12 +1277,13 @@ function renderBienestarPolicial(data, containerId) {
   }
   var html = '';
   if (sec.videoTutorial) {
-    var videoSrc = urlVideoBienestarPortal(sec.videoTutorial);
+    var videoV = (data && data.cmsPublicadoEn) || sec.videoTutorialUpdatedAt || '';
+    var videoSrc = urlVideoBienestarPortal(sec.videoTutorial, videoV);
     var videoTitulo = (sec.videoTutorialTitulo || 'Video tutorial — Cómo usar el cuestionario').trim();
     html += '<div class="bienestar-video-wrap">'
       + (videoTitulo ? '<p class="bienestar-video-titulo"><i class="fas fa-play-circle"></i> ' + escHtml(videoTitulo) + '</p>' : '')
-      + '<video class="bienestar-video" controls playsinline preload="metadata" '
-      + 'src="' + escHtml(videoSrc) + '">'
+      + '<video class="bienestar-video" controls playsinline preload="none" '
+      + 'data-src="' + escHtml(videoSrc) + '">'
       + 'Su navegador no puede reproducir este video.</video>'
       + '</div>';
   }
@@ -1263,6 +1295,8 @@ function renderBienestarPolicial(data, containerId) {
     + escHtml(sec.botonTexto || 'INICIAR EVALUACIÓN') + '</a>'
     + '</div>';
   el.innerHTML = html;
+  var videoWrap = el.querySelector('.bienestar-video-wrap');
+  if (videoWrap) initBienestarVideoLazy(videoWrap);
 }
 
 var _novedadesCache = [];

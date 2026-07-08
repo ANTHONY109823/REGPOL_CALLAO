@@ -3159,42 +3159,97 @@ function mimeVideoBienestarValido(mime) {
   return /^video\/(mp4|webm|quicktime)$/i.test(String(mime || ''));
 }
 
+async function obtenerMetaVideoBienestar() {
+  const r = await pool.query(
+    'SELECT mime, octet_length(data) AS size FROM portal_archivos WHERE clave=$1',
+    [BIENESTAR_VIDEO_CLAVE]
+  );
+  if (!r.rows.length || !r.rows[0].size) return null;
+  return {
+    mime: r.rows[0].mime || 'video/mp4',
+    size: parseInt(r.rows[0].size, 10) || 0
+  };
+}
+
+async function leerRangoVideoBienestar(inicioPg, cantidad) {
+  const r = await pool.query(
+    'SELECT substring(data FROM $2 FOR $3) AS chunk FROM portal_archivos WHERE clave=$1',
+    [BIENESTAR_VIDEO_CLAVE, inicioPg, cantidad]
+  );
+  return r.rows.length ? r.rows[0].chunk : null;
+}
+
+function enviarCabecerasVideoBienestar(res, mime, size) {
+  res.setHeader('Content-Type', mime || 'video/mp4');
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.setHeader('Content-Length', String(size));
+}
+
 function enviarVideoBienestar(req, res, buf, mime) {
   if (!buf || !buf.length) return res.status(404).end();
   const size = buf.length;
-  const type = mime || 'video/mp4';
-  res.setHeader('Content-Type', type);
-  res.setHeader('Accept-Ranges', 'bytes');
-  res.setHeader('Cache-Control', 'public, max-age=3600');
+  enviarCabecerasVideoBienestar(res, mime, size);
   const range = req.headers.range;
   if (range) {
     const m = /^bytes=(\d*)-(\d*)$/i.exec(String(range));
     if (m) {
-      let start = m[1] ? parseInt(m[1], 10) : 0;
-      let end = m[2] ? parseInt(m[2], 10) : size - 1;
+      let start = m[1] !== '' ? parseInt(m[1], 10) : 0;
+      let end = m[2] !== '' ? parseInt(m[2], 10) : size - 1;
       if (isNaN(start) || start < 0) start = 0;
       if (isNaN(end) || end >= size) end = size - 1;
       if (start <= end) {
         res.status(206);
         res.setHeader('Content-Range', 'bytes ' + start + '-' + end + '/' + size);
         res.setHeader('Content-Length', String(end - start + 1));
+        if (req.method === 'HEAD') return res.end();
         return res.end(buf.subarray(start, end + 1));
       }
     }
   }
-  res.setHeader('Content-Length', String(size));
+  if (req.method === 'HEAD') return res.end();
   res.end(buf);
 }
 
 // ── GET /portal/bienestar-video — video tutorial público ─────────────────────
 app.get('/portal/bienestar-video', async (req, res) => {
   try {
+    const meta = await obtenerMetaVideoBienestar();
+    if (!meta || !meta.size) return res.status(404).end();
+
+    const range = req.headers.range;
+    if (range) {
+      const m = /^bytes=(\d*)-(\d*)$/i.exec(String(range));
+      if (m) {
+        let start = m[1] !== '' ? parseInt(m[1], 10) : 0;
+        let end = m[2] !== '' ? parseInt(m[2], 10) : meta.size - 1;
+        if (isNaN(start) || start < 0) start = 0;
+        if (isNaN(end) || end >= meta.size) end = meta.size - 1;
+        if (start > end) return res.status(416).end();
+        const chunk = await leerRangoVideoBienestar(start + 1, end - start + 1);
+        if (!chunk) return res.status(404).end();
+        res.status(206);
+        res.setHeader('Content-Type', meta.mime);
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('Content-Range', 'bytes ' + start + '-' + end + '/' + meta.size);
+        res.setHeader('Content-Length', String(end - start + 1));
+        if (req.method === 'HEAD') return res.end();
+        return res.end(chunk);
+      }
+    }
+
+    if (req.method === 'HEAD') {
+      enviarCabecerasVideoBienestar(res, meta.mime, meta.size);
+      return res.end();
+    }
+
     const r = await pool.query(
       'SELECT mime, data FROM portal_archivos WHERE clave=$1',
       [BIENESTAR_VIDEO_CLAVE]
     );
     if (!r.rows.length || !r.rows[0].data) return res.status(404).end();
-    enviarVideoBienestar(req, res, r.rows[0].data, r.rows[0].mime);
+    enviarVideoBienestar(req, res, r.rows[0].data, r.rows[0].mime || meta.mime);
   } catch (e) {
     res.status(500).end();
   }

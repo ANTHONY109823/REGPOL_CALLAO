@@ -928,6 +928,7 @@ function actualizarEstadoVideoBienestarCMS() {
         return;
       }
       cmsDataActual.bienestarPolicial.videoTutorial = '/portal/bienestar-video';
+      cmsDataActual.bienestarPolicial.videoTutorialUpdatedAt = new Date().toISOString();
       if (preview) {
         preview.src = base + '/portal/bienestar-video?t=' + Date.now();
         preview.style.display = 'block';
@@ -983,6 +984,7 @@ function subirVideoBienestarCMS() {
       }
       cmsDataActual.bienestarPolicial = cmsDataActual.bienestarPolicial || {};
       cmsDataActual.bienestarPolicial.videoTutorial = '/portal/bienestar-video';
+      cmsDataActual.bienestarPolicial.videoTutorialUpdatedAt = new Date().toISOString();
       actualizarEstadoVideoBienestarCMS();
       guardarSitioWeb(function(ok) {
         if (ok) mostrarAlertaCMS('Video subido y publicado correctamente.', 'ok');
@@ -1065,6 +1067,7 @@ function recolectarDatosCMS() {
     botonTexto: getVal('cms-bienestar-boton-texto') || 'INICIAR EVALUACIÓN',
     botonUrl: getVal('cms-bienestar-boton-url') || 'evaluacion.html',
     videoTutorial: (cmsDataActual.bienestarPolicial || {}).videoTutorial || '',
+    videoTutorialUpdatedAt: (cmsDataActual.bienestarPolicial || {}).videoTutorialUpdatedAt || '',
     videoTutorialTitulo: getVal('cms-bienestar-video-titulo') || 'Video tutorial — Cómo usar el cuestionario',
     visible: (function() {
       var el = document.getElementById('cms-bienestar-visible');
