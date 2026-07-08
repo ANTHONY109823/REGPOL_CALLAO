@@ -221,12 +221,25 @@ function actualizarZonaBarraRegistro() {
   zona.classList.toggle('zona-barra-oculta', !visible);
 }
 
+function offsetScrollEvaluacion() {
+  var nav = document.querySelector('.nav-main');
+  if (!nav) return 8;
+  var st = window.getComputedStyle(nav);
+  if (st.position === 'fixed' || st.position === 'sticky') {
+    return nav.getBoundingClientRect().height + 8;
+  }
+  return 8;
+}
+
 function scrollABarraContinuarCip(destacar) {
   var zona = document.getElementById('zona-barra-registro');
   var cipCard = document.getElementById('card-continuar-cip');
   actualizarZonaBarraRegistro();
-  if (zona && !zona.classList.contains('zona-barra-oculta')) {
-    zona.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (zona && zona.classList.contains('zona-barra-oculta')) return;
+  var target = zona || document.getElementById('card-registro');
+  if (target) {
+    var top = target.getBoundingClientRect().top + window.pageYOffset - offsetScrollEvaluacion();
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   }
   if (destacar && cipCard && elementoEvalVisible(cipCard)) {
     cipCard.classList.add('continuar-cip-destacado');
@@ -240,9 +253,12 @@ function aceptarAvisoUnidades() {
   document.body.classList.remove('eval-aviso-unidades-abierto');
   var reg = document.getElementById('card-registro');
   if (reg) reg.style.display = '';
+  var form = document.getElementById('card-registro-formulario');
+  if (form) form.style.display = '';
   var cipCard = document.getElementById('card-continuar-cip');
   if (cipCard) cipCard.style.display = '';
-  scrollABarraContinuarCip(true);
+  actualizarZonaBarraRegistro();
+  setTimeout(function() { scrollABarraContinuarCip(true); }, 80);
 }
 
 function aplicarConfigUnidad(sel, data, opciones) {
@@ -719,8 +735,6 @@ function restaurarArmamentoDesdeData(data) {
 function ocultarPanelRegistro() {
   var r = document.getElementById('card-registro');
   if (r) r.style.display = 'none';
-  var c = document.getElementById('card-continuar-cip');
-  if (c) c.style.display = 'none';
   actualizarZonaBarraRegistro();
   ESTADO.registroCompleto = true;
 }
@@ -1127,9 +1141,11 @@ function volverAlPanelRegistro() {
   var zona = document.getElementById('zona-preguntas');
   if (zona) zona.innerHTML = '';
 
-  // Ocultar formulario completo — solo panel compacto CIP
+  // Mostrar solo barra CIP (formulario oculto)
   var reg = document.getElementById('card-registro');
-  if (reg) reg.style.display = 'none';
+  if (reg) reg.style.display = '';
+  var form = document.getElementById('card-registro-formulario');
+  if (form) form.style.display = 'none';
   var cont = document.getElementById('card-continuar-cip');
   if (cont) cont.style.display = '';
   actualizarZonaBarraRegistro();
