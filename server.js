@@ -2859,17 +2859,66 @@ app.get('/pdf/efectivo', requireAuth, async (req, res) => {
   }
 });
 
-function filtrarFilasPorArea(rows, areaRaw) {
-  const area = String(areaRaw || '').trim();
-  if (!area) return rows || [];
-  const sinArea = area === '__SIN__' || /^(\( )?SIN[_\s-]?Á?REA\)?$/i.test(area);
-  if (sinArea) {
-    return (rows || []).filter(function(r) { return !String(r.area || '').trim(); });
+function filtrarFilasInformeGrupo(rows, filtros) {
+  filtros = filtros || {};
+  let out = rows || [];
+
+  const area = String(filtros.area || '').trim();
+  if (area) {
+    const sinArea = area === '__SIN__' || /^(\( )?SIN[_\s-]?Á?REA\)?$/i.test(area);
+    if (sinArea) {
+      out = out.filter(function(r) { return !String(r.area || '').trim(); });
+    } else {
+      const a = area.toUpperCase();
+      out = out.filter(function(r) {
+        return String(r.area || '').trim().toUpperCase() === a;
+      });
+    }
   }
-  const a = area.toUpperCase();
-  return (rows || []).filter(function(r) {
-    return String(r.area || '').trim().toUpperCase() === a;
-  });
+
+  const grado = String(filtros.grado || '').trim();
+  if (grado) {
+    if (grado === '__SIN__') {
+      out = out.filter(function(r) { return !String(r.grado || '').trim(); });
+    } else {
+      const g = grado.toUpperCase();
+      out = out.filter(function(r) {
+        return String(r.grado || '').trim().toUpperCase() === g;
+      });
+    }
+  }
+
+  const sexo = String(filtros.sexo || '').trim();
+  if (sexo) {
+    const s = sexo.toUpperCase();
+    out = out.filter(function(r) {
+      return String(r.sexo || '').trim().toUpperCase() === s;
+    });
+  }
+
+  const estado = String(filtros.estado || '').trim().toUpperCase();
+  if (estado === 'COMPLETO' || estado === 'COMPLETOS') {
+    out = out.filter(function(r) {
+      if (typeof r.completa === 'boolean') return r.completa;
+      const total = parseInt(r.total_resp, 10) || 0;
+      return !!r.completada || total >= 566;
+    });
+  } else if (estado === 'AVANCE' || estado === 'INCOMPLETO' || estado === 'EN_AVANCE') {
+    out = out.filter(function(r) {
+      if (typeof r.completa === 'boolean') return !r.completa;
+      const total = parseInt(r.total_resp, 10) || 0;
+      return !(!!r.completada || total >= 566);
+    });
+  }
+
+  return out;
+}
+
+function etiquetaFiltroInforme(valor, sinLabel) {
+  const v = String(valor || '').trim();
+  if (!v) return '';
+  if (v === '__SIN__') return sinLabel || 'SIN DATO';
+  return v.toUpperCase();
 }
 
 // ── Datos compartidos del informe por unidad (PDF de grupo y vista previa web) ─
@@ -2877,7 +2926,13 @@ async function obtenerFilasInformeGrupo(req) {
   const division  = (req.query.division  || '').toUpperCase();
   const comisaria = (req.query.comisaria || '').toUpperCase();
   const unidad    = (req.query.unidad    || '').toUpperCase();
-  const areaFiltro = String(req.query.area || '').trim();
+  const filtros = {
+    area: String(req.query.area || '').trim(),
+    grado: String(req.query.grado || '').trim(),
+    sexo: String(req.query.sexo || '').trim(),
+    estado: String(req.query.estado || '').trim(),
+    riesgo: String(req.query.riesgo || '').trim()
+  };
   if (!division && !comisaria && !unidad) return { error: 'Parámetro requerido', status: 400 };
 
   const { where, params } = await buildWhere(req.query, 'WHERE 1=1', []);
@@ -2891,15 +2946,38 @@ async function obtenerFilasInformeGrupo(req) {
       progresos.filter(function(p) { return !cipsEval.has((p.cip || '').toUpperCase()); })
     )
   );
-  merged = filtrarFilasPorArea(merged, areaFiltro);
+  // área / grado / sexo / estado
+  merged = filtrarFilasInformeGrupo(merged, {
+    area: filtros.area,
+    grado: filtros.grado,
+    sexo: filtros.sexo,
+    estado: filtros.estado
+  });
+
+  // Riesgo requiere diagnóstico MMPI (solo evaluaciones completas)
+  const riesgoFiltro = String(filtros.riesgo || '').trim().toUpperCase();
+  if (riesgoFiltro === 'BAJO' || riesgoFiltro === 'MODERADO' || riesgoFiltro === 'ALTO') {
+    merged = merged.filter(function(ev) {
+      const d = calcularDiagnosticoFila(ev);
+      return !!(d.completa && d.diag && String(d.diag.nivel || '').toUpperCase() === riesgoFiltro);
+    });
+  }
+
   if (!merged.length) return { error: 'Sin evaluaciones para este filtro', status: 404 };
 
   let label = division || comisaria || unidad;
-  if (areaFiltro) {
-    const sinArea = areaFiltro === '__SIN__' || /^(\( )?SIN[_\s-]?Á?REA\)?$/i.test(areaFiltro);
-    label += ' — ' + (sinArea ? 'SIN ÁREA' : areaFiltro.toUpperCase());
+  const extras = [];
+  if (filtros.area) extras.push(etiquetaFiltroInforme(filtros.area, 'SIN ÁREA'));
+  if (filtros.estado) {
+    const e = filtros.estado.toUpperCase();
+    extras.push(e === 'AVANCE' || e === 'EN_AVANCE' || e === 'INCOMPLETO' ? 'EN AVANCE' : 'COMPLETOS');
   }
-  return { label: label, merged: merged };
+  if (filtros.riesgo) extras.push('RIESGO ' + filtros.riesgo.toUpperCase());
+  if (filtros.grado) extras.push(etiquetaFiltroInforme(filtros.grado, 'SIN GRADO'));
+  if (filtros.sexo) extras.push(filtros.sexo.toUpperCase());
+  if (extras.length) label += ' — ' + extras.join(' · ');
+
+  return { label: label, merged: merged, filtros: filtros };
 }
 
 // ── GET /admin/preview-grupo — dashboard interactivo del informe por unidad ───
@@ -2930,6 +3008,8 @@ app.get('/admin/preview-grupo', requireAuth, async (req, res) => {
         cip: ev.cip || '',
         dni: ev.dni || '',
         area: ev.area || '',
+        grado: ev.grado || '',
+        sexo: ev.sexo || '',
         fecha: String(ev.fecha || '').substring(0, 10),
         edad: resolverEdadFila(ev),
         v: stats.v,
@@ -2943,9 +3023,15 @@ app.get('/admin/preview-grupo', requireAuth, async (req, res) => {
     });
 
     const areasSet = {};
+    const gradosSet = {};
+    const sexosSet = {};
     rows.forEach(function(r) {
       const a = String(r.area || '').trim();
       if (a) areasSet[a.toUpperCase()] = a;
+      const g = String(r.grado || '').trim();
+      if (g) gradosSet[g.toUpperCase()] = g;
+      const s = String(r.sexo || '').trim();
+      if (s) sexosSet[s.toUpperCase()] = s;
     });
 
     res.json({
@@ -2957,6 +3043,8 @@ app.get('/admin/preview-grupo', requireAuth, async (req, res) => {
       riesgo: riesgo,
       alertas_escala: alertasEscala,
       areas: Object.keys(areasSet).sort().map(function(k) { return areasSet[k]; }),
+      grados: Object.keys(gradosSet).sort().map(function(k) { return gradosSet[k]; }),
+      sexos: Object.keys(sexosSet).sort().map(function(k) { return sexosSet[k]; }),
       rows: rows
     });
   } catch (e) {

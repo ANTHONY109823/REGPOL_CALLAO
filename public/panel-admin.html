@@ -1809,7 +1809,8 @@ function onFiltroRespuestasChange() {
 }
 
 // ── Informe por unidad: dashboard interactivo (mismo contenido que el PDF) ────
-var _grupoDatos = null, _grupoFiltroNivel = '', _grupoUnidadActual = '', _grupoFiltroArea = '';
+var _grupoDatos = null, _grupoUnidadActual = '';
+var _grupoFiltros = { area: '', estado: '', riesgo: '', grado: '', sexo: '' };
 
 var GRUPO_ESCALAS = [
   ['L', 'L — Mentira'], ['F', 'F — Infrecuencia'], ['K', 'K — Corrección'],
@@ -1828,8 +1829,7 @@ function cerrarModalPdfGrupo() {
   var wrap = document.getElementById('grupo-dash-wrap');
   if (wrap) wrap.innerHTML = '';
   _grupoDatos = null;
-  _grupoFiltroNivel = '';
-  _grupoFiltroArea = '';
+  _grupoFiltros = { area: '', estado: '', riesgo: '', grado: '', sexo: '' };
   cerrarModal('modal-pdf-grupo');
 }
 
@@ -1840,15 +1840,47 @@ function nivelInfoGrupo(row) {
   return { label: row.nivel, color: n ? n.color : '#555555', key: row.nivel };
 }
 
-function filasGrupoPorArea(rows, area) {
-  if (!area) return rows || [];
-  if (area === '__SIN__') {
-    return (rows || []).filter(function(r) { return !String(r.area || '').trim(); });
+function etiquetaFiltroGrupo(valor, sinLabel) {
+  if (!valor) return '';
+  if (valor === '__SIN__') return sinLabel || 'SIN DATO';
+  if (valor === 'COMPLETO') return 'COMPLETOS';
+  if (valor === 'AVANCE') return 'EN AVANCE';
+  return String(valor).toUpperCase();
+}
+
+function filasGrupoFiltradas(rows) {
+  var out = rows || [];
+  var f = _grupoFiltros || {};
+
+  if (f.area) {
+    if (f.area === '__SIN__') {
+      out = out.filter(function(r) { return !String(r.area || '').trim(); });
+    } else {
+      var a = String(f.area).trim().toUpperCase();
+      out = out.filter(function(r) { return String(r.area || '').trim().toUpperCase() === a; });
+    }
   }
-  var a = String(area).trim().toUpperCase();
-  return (rows || []).filter(function(r) {
-    return String(r.area || '').trim().toUpperCase() === a;
-  });
+  if (f.grado) {
+    if (f.grado === '__SIN__') {
+      out = out.filter(function(r) { return !String(r.grado || '').trim(); });
+    } else {
+      var g = String(f.grado).trim().toUpperCase();
+      out = out.filter(function(r) { return String(r.grado || '').trim().toUpperCase() === g; });
+    }
+  }
+  if (f.sexo) {
+    var s = String(f.sexo).trim().toUpperCase();
+    out = out.filter(function(r) { return String(r.sexo || '').trim().toUpperCase() === s; });
+  }
+  if (f.estado === 'COMPLETO') {
+    out = out.filter(function(r) { return !!r.completa; });
+  } else if (f.estado === 'AVANCE') {
+    out = out.filter(function(r) { return !r.completa; });
+  }
+  if (f.riesgo === 'BAJO' || f.riesgo === 'MODERADO' || f.riesgo === 'ALTO') {
+    out = out.filter(function(r) { return !!r.completa && String(r.nivel || '').toUpperCase() === f.riesgo; });
+  }
+  return out;
 }
 
 function resumenGrupoDesdeFilas(rows) {
@@ -1875,14 +1907,26 @@ function resumenGrupoDesdeFilas(rows) {
 
 function datosGrupoVistaActual() {
   if (!_grupoDatos) return null;
-  var rows = filasGrupoPorArea(_grupoDatos.rows || [], _grupoFiltroArea);
-  return resumenGrupoDesdeFilas(rows);
+  return resumenGrupoDesdeFilas(filasGrupoFiltradas(_grupoDatos.rows || []));
 }
 
-function etiquetaAreaFiltroGrupo(area) {
-  if (!area) return '';
-  if (area === '__SIN__') return 'SIN ÁREA';
-  return String(area).toUpperCase();
+function resumenFiltrosActivosGrupo() {
+  var f = _grupoFiltros || {};
+  var partes = [];
+  if (f.area) partes.push(etiquetaFiltroGrupo(f.area, 'SIN ÁREA'));
+  if (f.estado) partes.push(etiquetaFiltroGrupo(f.estado));
+  if (f.riesgo) partes.push('RIESGO ' + f.riesgo);
+  if (f.grado) partes.push(etiquetaFiltroGrupo(f.grado, 'SIN GRADO'));
+  if (f.sexo) partes.push(f.sexo.toUpperCase());
+  return partes;
+}
+
+function actualizarTituloInformeGrupo() {
+  var titulo = document.getElementById('modal-pdf-grupo-titulo');
+  if (!titulo || !_grupoUnidadActual) return;
+  var extras = resumenFiltrosActivosGrupo();
+  titulo.innerHTML = '<i class="fas fa-chart-pie"></i> Informe de unidad — ' + escHtml(_grupoUnidadActual)
+    + (extras.length ? ' · ' + escHtml(extras.join(' · ')) : '');
 }
 
 function verPdfUnidadRespuestas() {
@@ -1893,8 +1937,7 @@ function verPdfUnidadRespuestas() {
     return;
   }
   _grupoUnidadActual = u;
-  _grupoFiltroNivel = '';
-  _grupoFiltroArea = '';
+  _grupoFiltros = { area: '', estado: '', riesgo: '', grado: '', sexo: '' };
 
   var modal = document.getElementById('modal-pdf-grupo');
   var titulo = document.getElementById('modal-pdf-grupo-titulo');
@@ -1931,20 +1974,40 @@ function renderDashboardGrupo() {
   var wrap = document.getElementById('grupo-dash-wrap');
   if (!full || !d || !wrap) return;
   var h = '';
-  var areaLabel = etiquetaAreaFiltroGrupo(_grupoFiltroArea);
+  var extras = resumenFiltrosActivosGrupo();
+  var f = _grupoFiltros || {};
 
-  // Filtros (área + búsqueda) — arriba para ver situación por área
-  h += '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">'
-    + '<label style="font-size:11px;font-weight:700;color:#004d3d;display:flex;align-items:center;gap:6px;">Área'
-    + '<select class="gd-filtro-area" id="gd-filtro-area" onchange="cambiarFiltroAreaGrupo()" title="Filtrar informe por área de labor">'
-    + '<option value="">Todas las áreas</option></select></label>'
-    + '<input class="gd-buscar" id="gd-buscar" type="text" placeholder="Filtrar por nombre, CIP o DNI..." oninput="aplicarFiltroGrupo()"/>'
+  // Barra de filtros
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px;">'
+    + '<label style="font-size:10.5px;font-weight:700;color:#004d3d;display:flex;flex-direction:column;gap:3px;">Área'
+    + '<select class="gd-filtro-area" id="gd-filtro-area" onchange="cambiarFiltrosGrupo()" title="Filtrar por área">'
+    + '<option value="">Todas</option></select></label>'
+    + '<label style="font-size:10.5px;font-weight:700;color:#004d3d;display:flex;flex-direction:column;gap:3px;">Estado'
+    + '<select class="gd-filtro-area" id="gd-filtro-estado" onchange="cambiarFiltrosGrupo()">'
+    + '<option value="">Todos</option>'
+    + '<option value="COMPLETO"' + (f.estado === 'COMPLETO' ? ' selected' : '') + '>Completos</option>'
+    + '<option value="AVANCE"' + (f.estado === 'AVANCE' ? ' selected' : '') + '>En avance</option>'
+    + '</select></label>'
+    + '<label style="font-size:10.5px;font-weight:700;color:#004d3d;display:flex;flex-direction:column;gap:3px;">Riesgo'
+    + '<select class="gd-filtro-area" id="gd-filtro-riesgo" onchange="cambiarFiltrosGrupo()">'
+    + '<option value="">Todos</option>'
+    + '<option value="BAJO"' + (f.riesgo === 'BAJO' ? ' selected' : '') + '>Bajo</option>'
+    + '<option value="MODERADO"' + (f.riesgo === 'MODERADO' ? ' selected' : '') + '>Moderado</option>'
+    + '<option value="ALTO"' + (f.riesgo === 'ALTO' ? ' selected' : '') + '>Alto</option>'
+    + '</select></label>'
+    + '<label style="font-size:10.5px;font-weight:700;color:#004d3d;display:flex;flex-direction:column;gap:3px;">Grado'
+    + '<select class="gd-filtro-area" id="gd-filtro-grado" onchange="cambiarFiltrosGrupo()">'
+    + '<option value="">Todos</option></select></label>'
+    + '<label style="font-size:10.5px;font-weight:700;color:#004d3d;display:flex;flex-direction:column;gap:3px;">Sexo'
+    + '<select class="gd-filtro-area" id="gd-filtro-sexo" onchange="cambiarFiltrosGrupo()">'
+    + '<option value="">Todos</option></select></label>'
+    + '<input class="gd-buscar" id="gd-buscar" type="text" placeholder="Nombre, CIP o DNI..." oninput="aplicarFiltroGrupo()"/>'
     + '<span id="gd-filtro-info" style="font-size:11px;color:#666;"></span></div>';
-  if (areaLabel) {
-    h += '<p style="font-size:12px;color:#004d3d;font-weight:600;margin:0 0 10px;"><i class="fas fa-filter"></i> Vista filtrada por área: <strong>' + escHtml(areaLabel) + '</strong></p>';
+  if (extras.length) {
+    h += '<p style="font-size:12px;color:#004d3d;font-weight:600;margin:0 0 10px;"><i class="fas fa-filter"></i> Filtros activos: <strong>' + escHtml(extras.join(' · ')) + '</strong></p>';
   }
 
-  // KPIs (recalculados según área)
+  // KPIs
   var kpis = [
     { n: d.total, l: 'Evaluados', c: '#004d3d' },
     { n: d.completos, l: 'Completos', c: '#1a7a3a' },
@@ -1955,13 +2018,13 @@ function renderDashboardGrupo() {
     return '<div class="gd-kpi" style="border-left-color:' + k.c + ';"><div class="n" style="color:' + k.c + ';">' + k.n + '</div><div class="l">' + k.l + '</div></div>';
   }).join('') + '</div>';
 
-  // Índice de medición — nivel de riesgo
+  // Índice de riesgo
   h += '<div class="gd-sec">Índice de medición — Nivel de riesgo institucional (sobre ' + d.completos + (d.completos === 1 ? ' evaluación completa' : ' evaluaciones completas') + ')</div>';
   h += '<div class="gd-riesgo">' + GRUPO_NIVELES.map(function(n) {
     var cant = d.riesgo[n.key] || 0;
     var pct = d.completos ? Math.round((cant / d.completos) * 100) : 0;
-    var sel = _grupoFiltroNivel === n.key ? ' sel' : '';
-    return '<div class="gd-riesgo-card' + sel + '" style="background:' + n.color + ';" onclick="filtrarNivelGrupo(\'' + n.key + '\')" title="Clic para filtrar el listado por este nivel">'
+    var sel = f.riesgo === n.key ? ' sel' : '';
+    return '<div class="gd-riesgo-card' + sel + '" style="background:' + n.color + ';" onclick="filtrarNivelGrupo(\'' + n.key + '\')" title="Clic para filtrar por este nivel de riesgo">'
       + '<div class="n">' + cant + '</div><div class="l">' + n.label + ' (' + pct + '%)</div></div>';
   }).join('') + '</div>';
   if (d.completos > 0) {
@@ -1971,7 +2034,7 @@ function renderDashboardGrupo() {
       return '<div style="width:' + ((cant / d.completos) * 100) + '%;background:' + n.color + ';"></div>';
     }).join('') + '</div>';
   } else {
-    h += '<p style="font-size:11.5px;color:#856404;margin:2px 0 12px;">Aún no hay evaluaciones completas para calcular el índice de riesgo' + (areaLabel ? ' en esta área' : '') + '.</p>';
+    h += '<p style="font-size:11.5px;color:#856404;margin:2px 0 12px;">Aún no hay evaluaciones completas para calcular el índice de riesgo' + (extras.length ? ' con estos filtros' : '') + '.</p>';
   }
 
   // Escalas en alerta
@@ -1988,19 +2051,21 @@ function renderDashboardGrupo() {
   });
   h += '</div>';
 
-  // Listado con diagnóstico al costado
+  // Listado
   h += '<div class="gd-sec" style="margin-top:10px;">Listado de efectivos evaluados — Diagnóstico individual</div>';
-  h += '<div style="overflow-x:auto;"><table class="t" style="min-width:860px;"><thead><tr>'
-    + '<th>N°</th><th>Apellidos y Nombres</th><th>Área</th><th>CIP</th><th>DNI</th><th>Fecha</th><th>V</th><th>F</th><th>Avance</th><th>Edad</th><th>Nivel de Riesgo</th>'
+  h += '<div style="overflow-x:auto;"><table class="t" style="min-width:980px;"><thead><tr>'
+    + '<th>N°</th><th>Apellidos y Nombres</th><th>Área</th><th>Grado</th><th>Sexo</th><th>CIP</th><th>DNI</th><th>Fecha</th><th>V</th><th>F</th><th>Avance</th><th>Edad</th><th>Nivel de Riesgo</th>'
     + '</tr></thead><tbody id="gd-tbody">';
   d.rows.forEach(function(r, i) {
     var ni = nivelInfoGrupo(r);
     var alertas = (r.completa && r.alertas && r.alertas.length)
       ? '<div class="gd-alertas">Alertas: ' + escHtml(r.alertas.join(', ')) + '</div>' : '';
-    h += '<tr data-nivel="' + ni.key + '" data-idx="' + i + '">'
+    h += '<tr data-idx="' + i + '">'
       + '<td>' + (i + 1) + '</td>'
       + '<td style="font-weight:700;">' + escHtml((r.nombres || '—').toUpperCase()) + '</td>'
       + '<td style="font-size:11px;">' + escHtml((r.area || '—').toUpperCase()) + '</td>'
+      + '<td style="font-size:10.5px;">' + escHtml((r.grado || '—').toUpperCase()) + '</td>'
+      + '<td style="font-size:11px;">' + escHtml((r.sexo || '—').toUpperCase()) + '</td>'
       + '<td>' + escHtml(r.cip || '—') + '</td>'
       + '<td>' + escHtml(r.dni || '—') + '</td>'
       + '<td>' + escHtml(r.fecha || '—') + '</td>'
@@ -2013,63 +2078,101 @@ function renderDashboardGrupo() {
   h += '</tbody></table></div>';
 
   wrap.innerHTML = h;
-  poblarSelectAreasGrupo(full);
+  poblarSelectsFiltrosGrupo(full);
   aplicarFiltroGrupo();
+  actualizarTituloInformeGrupo();
 }
 
-function poblarSelectAreasGrupo(full) {
-  var sel = document.getElementById('gd-filtro-area');
-  if (!sel || !full) return;
+function contarCampoGrupo(rows, campo) {
   var counts = {};
-  var sinArea = 0;
-  (full.rows || []).forEach(function(r) {
-    var a = String(r.area || '').trim();
-    if (!a) { sinArea++; return; }
-    var key = a.toUpperCase();
-    if (!counts[key]) counts[key] = { label: a, n: 0 };
+  var sin = 0;
+  (rows || []).forEach(function(r) {
+    var v = String(r[campo] || '').trim();
+    if (!v) { sin++; return; }
+    var key = v.toUpperCase();
+    if (!counts[key]) counts[key] = { label: v, n: 0 };
     counts[key].n++;
   });
-  var keys = Object.keys(counts).sort();
-  var html = '<option value="">Todas las áreas (' + (full.rows || []).length + ')</option>';
-  keys.forEach(function(k) {
-    html += '<option value="' + escHtml(counts[k].label) + '">' + escHtml(counts[k].label) + ' (' + counts[k].n + ')</option>';
-  });
-  if (sinArea) {
-    html += '<option value="__SIN__">Sin área (' + sinArea + ')</option>';
-  }
-  sel.innerHTML = html;
-  sel.value = _grupoFiltroArea || '';
+  return { counts: counts, sin: sin };
 }
 
-function cambiarFiltroAreaGrupo() {
-  var sel = document.getElementById('gd-filtro-area');
-  _grupoFiltroArea = sel ? sel.value : '';
-  _grupoFiltroNivel = '';
+function poblarSelectsFiltrosGrupo(full) {
+  var rows = full.rows || [];
+  var f = _grupoFiltros || {};
+  var total = rows.length;
+
+  // Área
+  var selA = document.getElementById('gd-filtro-area');
+  if (selA) {
+    var ca = contarCampoGrupo(rows, 'area');
+    var htmlA = '<option value="">Todas (' + total + ')</option>';
+    Object.keys(ca.counts).sort().forEach(function(k) {
+      htmlA += '<option value="' + escHtml(ca.counts[k].label) + '">' + escHtml(ca.counts[k].label) + ' (' + ca.counts[k].n + ')</option>';
+    });
+    if (ca.sin) htmlA += '<option value="__SIN__">Sin área (' + ca.sin + ')</option>';
+    selA.innerHTML = htmlA;
+    selA.value = f.area || '';
+  }
+
+  // Grado
+  var selG = document.getElementById('gd-filtro-grado');
+  if (selG) {
+    var cg = contarCampoGrupo(rows, 'grado');
+    var htmlG = '<option value="">Todos (' + total + ')</option>';
+    Object.keys(cg.counts).sort().forEach(function(k) {
+      htmlG += '<option value="' + escHtml(cg.counts[k].label) + '">' + escHtml(cg.counts[k].label) + ' (' + cg.counts[k].n + ')</option>';
+    });
+    if (cg.sin) htmlG += '<option value="__SIN__">Sin grado (' + cg.sin + ')</option>';
+    selG.innerHTML = htmlG;
+    selG.value = f.grado || '';
+  }
+
+  // Sexo
+  var selS = document.getElementById('gd-filtro-sexo');
+  if (selS) {
+    var cs = contarCampoGrupo(rows, 'sexo');
+    var htmlS = '<option value="">Todos (' + total + ')</option>';
+    Object.keys(cs.counts).sort().forEach(function(k) {
+      htmlS += '<option value="' + escHtml(cs.counts[k].label) + '">' + escHtml(cs.counts[k].label) + ' (' + cs.counts[k].n + ')</option>';
+    });
+    selS.innerHTML = htmlS;
+    selS.value = f.sexo || '';
+  }
+
+  var selE = document.getElementById('gd-filtro-estado');
+  if (selE) selE.value = f.estado || '';
+  var selR = document.getElementById('gd-filtro-riesgo');
+  if (selR) selR.value = f.riesgo || '';
+}
+
+function leerFiltrosGrupoDesdeUI() {
+  return {
+    area: (document.getElementById('gd-filtro-area') || {}).value || '',
+    estado: (document.getElementById('gd-filtro-estado') || {}).value || '',
+    riesgo: (document.getElementById('gd-filtro-riesgo') || {}).value || '',
+    grado: (document.getElementById('gd-filtro-grado') || {}).value || '',
+    sexo: (document.getElementById('gd-filtro-sexo') || {}).value || ''
+  };
+}
+
+function cambiarFiltrosGrupo() {
   var b = document.getElementById('gd-buscar');
   var txt = b ? b.value : '';
+  _grupoFiltros = leerFiltrosGrupoDesdeUI();
   renderDashboardGrupo();
   var b2 = document.getElementById('gd-buscar');
   if (b2) b2.value = txt;
   aplicarFiltroGrupo();
-  var titulo = document.getElementById('modal-pdf-grupo-titulo');
-  if (titulo && _grupoUnidadActual) {
-    var extra = etiquetaAreaFiltroGrupo(_grupoFiltroArea);
-    titulo.innerHTML = '<i class="fas fa-chart-pie"></i> Informe de unidad — ' + escHtml(_grupoUnidadActual)
-      + (extra ? ' · ' + escHtml(extra) : '');
-  }
 }
 
 function filtrarNivelGrupo(nivel) {
-  _grupoFiltroNivel = _grupoFiltroNivel === nivel ? '' : nivel;
   var b = document.getElementById('gd-buscar');
   var txt = b ? b.value : '';
-  var areaSel = document.getElementById('gd-filtro-area');
-  var areaVal = areaSel ? areaSel.value : _grupoFiltroArea;
+  _grupoFiltros = leerFiltrosGrupoDesdeUI();
+  _grupoFiltros.riesgo = _grupoFiltros.riesgo === nivel ? '' : nivel;
   renderDashboardGrupo();
   var b2 = document.getElementById('gd-buscar');
   if (b2) b2.value = txt;
-  var a2 = document.getElementById('gd-filtro-area');
-  if (a2) a2.value = areaVal;
   aplicarFiltroGrupo();
 }
 
@@ -2083,18 +2186,16 @@ function aplicarFiltroGrupo() {
   Array.prototype.forEach.call(tbody.rows, function(tr) {
     tot++;
     var row = d.rows[parseInt(tr.getAttribute('data-idx'), 10)] || {};
-    var txt = ((row.nombres || '') + ' ' + (row.cip || '') + ' ' + (row.dni || '') + ' ' + (row.area || '')).toUpperCase();
-    var okNivel = !_grupoFiltroNivel || tr.getAttribute('data-nivel') === _grupoFiltroNivel;
-    var okTxt = !q || txt.indexOf(q) !== -1;
-    var show = okNivel && okTxt;
+    var txt = ((row.nombres || '') + ' ' + (row.cip || '') + ' ' + (row.dni || '') + ' ' + (row.area || '') + ' ' + (row.grado || '')).toUpperCase();
+    var show = !q || txt.indexOf(q) !== -1;
     tr.style.display = show ? '' : 'none';
     if (show) vis++;
   });
   var info = document.getElementById('gd-filtro-info');
   if (info) {
     var partes = [vis + ' de ' + tot + ' registro' + (tot === 1 ? '' : 's')];
-    if (_grupoFiltroArea) partes.push('área: ' + etiquetaAreaFiltroGrupo(_grupoFiltroArea));
-    if (_grupoFiltroNivel) partes.push('riesgo: ' + _grupoFiltroNivel + ' (clic de nuevo en la tarjeta para quitar)');
+    var extras = resumenFiltrosActivosGrupo();
+    if (extras.length) partes.push(extras.join(' · '));
     info.textContent = partes.join(' — ');
   }
 }
@@ -2108,8 +2209,13 @@ function descargarPdfGrupoActual() {
   }
   var btn = document.getElementById('pdf-grupo-descargar');
   if (btn) btn.disabled = true;
+  var f = _grupoFiltros || {};
   var q = 'unidad=' + encodeURIComponent(u);
-  if (_grupoFiltroArea) q += '&area=' + encodeURIComponent(_grupoFiltroArea);
+  if (f.area) q += '&area=' + encodeURIComponent(f.area);
+  if (f.estado) q += '&estado=' + encodeURIComponent(f.estado);
+  if (f.riesgo) q += '&riesgo=' + encodeURIComponent(f.riesgo);
+  if (f.grado) q += '&grado=' + encodeURIComponent(f.grado);
+  if (f.sexo) q += '&sexo=' + encodeURIComponent(f.sexo);
   fetch(API + '/pdf/grupo?' + q, { headers: hdr() })
     .then(function(r) {
       if (!r.ok) {
@@ -2123,9 +2229,10 @@ function descargarPdfGrupoActual() {
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
-      var suf = _grupoFiltroArea
-        ? '_' + etiquetaAreaFiltroGrupo(_grupoFiltroArea).replace(/\s+/g, '_')
-        : '';
+      var extras = resumenFiltrosActivosGrupo().map(function(x) {
+        return x.replace(/\s+/g, '_');
+      });
+      var suf = extras.length ? '_' + extras.join('_') : '';
       a.download = 'Cuestionario_' + u.replace(/\s+/g, '_') + suf + '.pdf';
       document.body.appendChild(a);
       a.click();
