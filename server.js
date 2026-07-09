@@ -2970,11 +2970,6 @@ async function obtenerFilasInformeGrupo(req) {
   if (filtros.area) extras.push(etiquetaFiltroInforme(filtros.area, 'SIN ÁREA'));
   if (filtros.grado) extras.push(etiquetaFiltroInforme(filtros.grado, 'SIN GRADO'));
   if (filtros.sexo) extras.push(filtros.sexo.toUpperCase());
-  if (filtros.estado) {
-    const e = filtros.estado.toUpperCase();
-    extras.push(e === 'AVANCE' || e === 'EN_AVANCE' || e === 'INCOMPLETO' ? 'EN AVANCE' : 'COMPLETOS');
-  }
-  if (filtros.riesgo) extras.push('RIESGO ' + filtros.riesgo.toUpperCase());
   if (extras.length) label += ' — ' + extras.join(' · ');
 
   return { label: label, merged: merged, filtros: filtros };
