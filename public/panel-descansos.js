@@ -155,7 +155,6 @@
     var q = qsFiltros();
     if (modo === 'pdf-list') return api() + '/admin/descansos/export/pdf?modo=listado&' + q + '&token=' + encodeURIComponent(token());
     if (modo === 'pdf-dash') return api() + '/admin/descansos/export/pdf?modo=dashboard&' + q + '&token=' + encodeURIComponent(token());
-    if (modo === 'csv') return api() + '/admin/descansos/export/csv?' + q + '&token=' + encodeURIComponent(token());
     return '#';
   }
 

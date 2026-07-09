@@ -6,6 +6,11 @@ const PDFDocument = require('pdfkit');
 const XLSX = require('xlsx');
 
 const GRADOS_MEDICO = ['CAPITAN S. PNP', 'MAYOR S. PNP', 'CMDTE S. PNP', 'CIVIL'];
+const GRADOS_EFECTIVO = [
+  'CORONEL PNP', 'COMANDANTE PNP', 'MAYOR PNP', 'CAPITAN PNP', 'TENIENTE PNP', 'ALFEREZ PNP',
+  'SUPERIOR PNP', 'BRIGADIER PNP', 'TECNICO DE 1RA PNP', 'TECNICO DE 2DA PNP', 'TECNICO DE 3RA PNP',
+  'SUBOFICIAL DE 1RA PNP', 'SUBOFICIAL DE 2DA PNP', 'SUBOFICIAL DE 3RA PNP'
+];
 const TIPOS_DOCUMENTO = [
   'Descanso médico domiciliario',
   'Exoneración de esfuerzo físico',
@@ -309,11 +314,7 @@ function registrarRutas(app, pool, requireAuth) {
       ok: true,
       grados_medico: GRADOS_MEDICO,
       tipos_documento: TIPOS_DOCUMENTO,
-      grados_efectivo: [
-        'CORONEL PNP', 'COMANDANTE PNP', 'MAYOR PNP', 'CAPITAN PNP', 'TENIENTE PNP', 'ALFEREZ PNP',
-        'SUPERIOR PNP', 'BRIGADIER PNP', 'TECNICO DE 1RA PNP', 'TECNICO DE 2DA PNP', 'TECNICO DE 3RA PNP',
-        'SUBOFICIAL DE 1RA PNP', 'SUBOFICIAL DE 2DA PNP', 'SUBOFICIAL DE 3RA PNP'
-      ]
+      grados_efectivo: GRADOS_EFECTIVO
     });
   });
 
@@ -434,30 +435,78 @@ function registrarRutas(app, pool, requireAuth) {
   // Rutas específicas ANTES de /:id
   app.get('/admin/descansos/meta/filtros', requireAuth, requireDescansos, async function(req, res) {
     try {
-      const anio = parseInt(req.query.anio, 10) || null;
-      let where = "estado <> 'anulado'";
-      const params = [];
-      if (anio) {
-        params.push(anio);
-        where += ' AND EXTRACT(YEAR FROM COALESCE(fecha_inicio, fecha_registro)) = $1';
-      }
-      const divs = await pool.query(
-        `SELECT DISTINCT division AS k FROM descansos_medicos WHERE ${where} AND division <> '' ORDER BY 1`,
-        params
+      // Catálogo completo (no solo valores ya usados en registros del año)
+      const divsCat = await pool.query(
+        'SELECT nombre FROM divisiones ORDER BY orden, nombre'
       );
-      const unis = await pool.query(
-        `SELECT DISTINCT unidad AS k, division FROM descansos_medicos WHERE ${where} AND unidad <> '' ORDER BY 1`,
-        params
+      const unisCat = await pool.query(
+        `SELECT u.nombre AS k, COALESCE(d.nombre, '') AS division
+         FROM unidades_pol u
+         LEFT JOIN divisiones d ON d.id = u.division_id
+         ORDER BY d.orden NULLS LAST, d.nombre, u.orden, u.nombre`
       );
-      const grados = await pool.query(
-        `SELECT DISTINCT grado AS k FROM descansos_medicos WHERE ${where} AND grado <> '' ORDER BY 1`,
-        params
+
+      // Incluir también valores históricos presentes en registros (por si difieren del catálogo)
+      const divExtras = await pool.query(
+        `SELECT DISTINCT division AS k FROM descansos_medicos
+         WHERE estado <> 'anulado' AND division <> '' ORDER BY 1`
       );
+      const extrasUni = await pool.query(
+        `SELECT DISTINCT unidad AS k, division
+         FROM descansos_medicos
+         WHERE estado <> 'anulado' AND unidad <> ''
+         ORDER BY 1`
+      );
+      const extrasGrado = await pool.query(
+        `SELECT DISTINCT grado AS k FROM descansos_medicos
+         WHERE estado <> 'anulado' AND grado <> ''
+         ORDER BY 1`
+      );
+
+      const divSet = {};
+      const divisiones = [];
+      divsCat.rows.forEach(function(r) {
+        if (!r.nombre || divSet[r.nombre]) return;
+        divSet[r.nombre] = true;
+        divisiones.push(r.nombre);
+      });
+      divExtras.rows.forEach(function(r) {
+        if (!r.k || divSet[r.k]) return;
+        divSet[r.k] = true;
+        divisiones.push(r.k);
+      });
+
+      const uniSet = {};
+      const unidades = [];
+      unisCat.rows.forEach(function(r) {
+        if (!r.k || uniSet[r.k]) return;
+        uniSet[r.k] = true;
+        unidades.push({ k: r.k, division: r.division || '' });
+      });
+      extrasUni.rows.forEach(function(r) {
+        if (!r.k || uniSet[r.k]) return;
+        uniSet[r.k] = true;
+        unidades.push({ k: r.k, division: r.division || '' });
+      });
+
+      const gradoSet = {};
+      const grados = [];
+      GRADOS_EFECTIVO.forEach(function(g) {
+        if (gradoSet[g]) return;
+        gradoSet[g] = true;
+        grados.push(g);
+      });
+      extrasGrado.rows.forEach(function(r) {
+        if (!r.k || gradoSet[r.k]) return;
+        gradoSet[r.k] = true;
+        grados.push(r.k);
+      });
+
       res.json({
         ok: true,
-        divisiones: divs.rows.map(function(r) { return r.k; }),
-        unidades: unis.rows,
-        grados: grados.rows.map(function(r) { return r.k; }),
+        divisiones: divisiones,
+        unidades: unidades,
+        grados: grados,
         tipos_documento: TIPOS_DOCUMENTO,
         grados_medico: GRADOS_MEDICO
       });
@@ -1076,6 +1125,7 @@ module.exports = {
   registrarRutas,
   puedeDescansos,
   GRADOS_MEDICO,
+  GRADOS_EFECTIVO,
   TIPOS_DOCUMENTO,
   CODIGO_BARRAS_HISTORICO
 };
