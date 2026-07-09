@@ -1810,7 +1810,7 @@ function onFiltroRespuestasChange() {
 
 // ── Informe por unidad: dashboard interactivo (mismo contenido que el PDF) ────
 var _grupoDatos = null, _grupoUnidadActual = '';
-var _grupoFiltros = { area: '', grado: '', sexo: '' };
+var _grupoFiltros = { area: '', grado: '', sexo: '', riesgo: '' };
 
 var GRUPO_ESCALAS = [
   ['L', 'L — Mentira'], ['F', 'F — Infrecuencia'], ['K', 'K — Corrección'],
@@ -1829,7 +1829,7 @@ function cerrarModalPdfGrupo() {
   var wrap = document.getElementById('grupo-dash-wrap');
   if (wrap) wrap.innerHTML = '';
   _grupoDatos = null;
-  _grupoFiltros = { area: '', grado: '', sexo: '' };
+  _grupoFiltros = { area: '', grado: '', sexo: '', riesgo: '' };
   cerrarModal('modal-pdf-grupo');
 }
 
@@ -1866,6 +1866,12 @@ function aplicarCriterioGrupo(rows, tipo, valor) {
     var s = String(valor).trim().toUpperCase();
     return out.filter(function(r) { return String(r.sexo || '').trim().toUpperCase() === s; });
   }
+  if (tipo === 'riesgo') {
+    var n = String(valor).trim().toUpperCase();
+    if (n === 'BAJO' || n === 'MODERADO' || n === 'ALTO') {
+      return out.filter(function(r) { return !!r.completa && String(r.nivel || '').toUpperCase() === n; });
+    }
+  }
   return out;
 }
 
@@ -1882,6 +1888,7 @@ function filasGrupoHasta(rows, hasta) {
 }
 
 function filasGrupoFiltradas(rows) {
+  // Cascada Área → Grado → Sexo (el riesgo de las tarjetas solo afecta el listado)
   return filasGrupoHasta(rows, null);
 }
 
@@ -1944,6 +1951,7 @@ function resumenFiltrosActivosGrupo() {
   if (f.area) partes.push(etiquetaFiltroGrupo(f.area, 'SIN ÁREA'));
   if (f.grado) partes.push(etiquetaFiltroGrupo(f.grado, 'SIN GRADO'));
   if (f.sexo) partes.push(f.sexo.toUpperCase());
+  if (f.riesgo) partes.push('RIESGO ' + f.riesgo);
   return partes;
 }
 
@@ -1963,7 +1971,7 @@ function verPdfUnidadRespuestas() {
     return;
   }
   _grupoUnidadActual = u;
-  _grupoFiltros = { area: '', grado: '', sexo: '' };
+  _grupoFiltros = { area: '', grado: '', sexo: '', riesgo: '' };
 
   var modal = document.getElementById('modal-pdf-grupo');
   var titulo = document.getElementById('modal-pdf-grupo-titulo');
@@ -2032,12 +2040,13 @@ function renderDashboardGrupo() {
     return '<div class="gd-kpi" style="border-left-color:' + k.c + ';"><div class="n" style="color:' + k.c + ';">' + k.n + '</div><div class="l">' + k.l + '</div></div>';
   }).join('') + '</div>';
 
-  // Índice de riesgo (solo informativo; no filtra)
+  // Índice de riesgo — clic en tarjeta filtra el listado (como antes)
   h += '<div class="gd-sec">Índice de medición — Nivel de riesgo institucional (sobre ' + d.completos + (d.completos === 1 ? ' evaluación completa' : ' evaluaciones completas') + ')</div>';
   h += '<div class="gd-riesgo">' + GRUPO_NIVELES.map(function(n) {
     var cant = d.riesgo[n.key] || 0;
     var pct = d.completos ? Math.round((cant / d.completos) * 100) : 0;
-    return '<div class="gd-riesgo-card" style="background:' + n.color + ';cursor:default;" title="' + n.label + '">'
+    var sel = f.riesgo === n.key ? ' sel' : '';
+    return '<div class="gd-riesgo-card' + sel + '" style="background:' + n.color + ';" onclick="filtrarNivelGrupo(\'' + n.key + '\')" title="Clic para filtrar el listado por este nivel (clic de nuevo para quitar)">'
       + '<div class="n">' + cant + '</div><div class="l">' + n.label + ' (' + pct + '%)</div></div>';
   }).join('') + '</div>';
   if (d.completos > 0) {
@@ -2073,7 +2082,7 @@ function renderDashboardGrupo() {
     var ni = nivelInfoGrupo(r);
     var alertas = (r.completa && r.alertas && r.alertas.length)
       ? '<div class="gd-alertas">Alertas: ' + escHtml(r.alertas.join(', ')) + '</div>' : '';
-    h += '<tr data-idx="' + i + '">'
+    h += '<tr data-nivel="' + ni.key + '" data-idx="' + i + '">'
       + '<td>' + (i + 1) + '</td>'
       + '<td style="font-weight:700;">' + escHtml((r.nombres || '—').toUpperCase()) + '</td>'
       + '<td style="font-size:11px;">' + escHtml((r.area || '—').toUpperCase()) + '</td>'
@@ -2154,11 +2163,13 @@ function leerFiltrosGrupoDesdeUI() {
   return {
     area: (document.getElementById('gd-filtro-area') || {}).value || '',
     grado: (document.getElementById('gd-filtro-grado') || {}).value || '',
-    sexo: (document.getElementById('gd-filtro-sexo') || {}).value || ''
+    sexo: (document.getElementById('gd-filtro-sexo') || {}).value || '',
+    riesgo: (_grupoFiltros && _grupoFiltros.riesgo) || ''
   };
 }
 
 function cambiarFiltrosGrupo(origen) {
+  var riesgoPrev = (_grupoFiltros && _grupoFiltros.riesgo) || '';
   var nuevos = leerFiltrosGrupoDesdeUI();
   if (origen) {
     var idx = GRUPO_FILTRO_CADENA.indexOf(origen);
@@ -2166,9 +2177,19 @@ function cambiarFiltrosGrupo(origen) {
       for (var i = idx + 1; i < GRUPO_FILTRO_CADENA.length; i++) {
         nuevos[GRUPO_FILTRO_CADENA[i]] = '';
       }
+      // Al cambiar Área/Grado/Sexo se limpia el filtro de riesgo de las tarjetas
+      nuevos.riesgo = '';
     }
+  } else {
+    nuevos.riesgo = riesgoPrev;
   }
   _grupoFiltros = nuevos;
+  renderDashboardGrupo();
+}
+
+function filtrarNivelGrupo(nivel) {
+  if (!_grupoFiltros) _grupoFiltros = { area: '', grado: '', sexo: '', riesgo: '' };
+  _grupoFiltros.riesgo = _grupoFiltros.riesgo === nivel ? '' : nivel;
   renderDashboardGrupo();
 }
 
@@ -2176,12 +2197,20 @@ function aplicarFiltroGrupo() {
   var tbody = document.getElementById('gd-tbody');
   var d = datosGrupoVistaActual();
   if (!tbody || !d) return;
-  var tot = tbody.rows.length;
+  var riesgo = (_grupoFiltros && _grupoFiltros.riesgo) || '';
+  var vis = 0, tot = 0;
+  Array.prototype.forEach.call(tbody.rows, function(tr) {
+    tot++;
+    var ok = !riesgo || tr.getAttribute('data-nivel') === riesgo;
+    tr.style.display = ok ? '' : 'none';
+    if (ok) vis++;
+  });
   var info = document.getElementById('gd-filtro-info');
   if (info) {
-    var partes = [tot + ' registro' + (tot === 1 ? '' : 's')];
+    var partes = [vis + ' de ' + tot + ' registro' + (tot === 1 ? '' : 's')];
     var extras = resumenFiltrosActivosGrupo();
     if (extras.length) partes.push(extras.join(' · '));
+    if (riesgo) partes.push('(clic de nuevo en la tarjeta para quitar)');
     info.textContent = partes.join(' — ');
   }
 }
@@ -2200,6 +2229,7 @@ function descargarPdfGrupoActual() {
   if (f.area) q += '&area=' + encodeURIComponent(f.area);
   if (f.grado) q += '&grado=' + encodeURIComponent(f.grado);
   if (f.sexo) q += '&sexo=' + encodeURIComponent(f.sexo);
+  if (f.riesgo) q += '&riesgo=' + encodeURIComponent(f.riesgo);
 
   function nombrePdfSeguro(base) {
     return String(base || 'informe')
