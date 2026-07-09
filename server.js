@@ -2191,6 +2191,25 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
       } catch (e) { /* ignorar */ }
     }
 
+    let dmResumen = {
+      total: 0, anio: 0, web: 0, historico: 0, activos: 0
+    };
+    try {
+      const anioActual = new Date().getFullYear();
+      const dmR = await pool.query(
+        `SELECT
+           COUNT(*) FILTER (WHERE estado <> 'anulado')::int AS total,
+           COUNT(*) FILTER (WHERE estado <> 'anulado'
+             AND EXTRACT(YEAR FROM COALESCE(fecha_inicio, fecha_registro)) = $1)::int AS anio,
+           COUNT(*) FILTER (WHERE estado <> 'anulado' AND origen = 'web')::int AS web,
+           COUNT(*) FILTER (WHERE estado <> 'anulado' AND origen = 'historico')::int AS historico,
+           COUNT(*) FILTER (WHERE estado = 'activo')::int AS activos
+         FROM descansos_medicos`,
+        [anioActual]
+      );
+      if (dmR.rows[0]) dmResumen = dmR.rows[0];
+    } catch (e) { /* tabla puede no existir aún */ }
+
     const ultEvalR = await pool.query(
       `SELECT 'evaluacion' AS tipo, nombres AS titulo,
         COALESCE(unidad, comisaria, '') AS detalle,
@@ -2234,7 +2253,12 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
         sorteos_publicados: sorteosR.rows[0].publicados || 0,
         portal_actualizacion: portalActualizacion,
         portal_novedades: novedadesCount,
-        inscripciones_total: (inscConv.rows[0].total || 0) + (inscCurso.rows[0].total || 0)
+        inscripciones_total: (inscConv.rows[0].total || 0) + (inscCurso.rows[0].total || 0),
+        descansos_total: dmResumen.total || 0,
+        descansos_anio: dmResumen.anio || 0,
+        descansos_web: dmResumen.web || 0,
+        descansos_historico: dmResumen.historico || 0,
+        descansos_activos: dmResumen.activos || 0
       },
       actividad
     });
@@ -3202,6 +3226,27 @@ app.get('/portal/configuracion', async (req, res) => {
         );
       }
       if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezadoList(data.fotosEncabezado);
+      if (!data.descansosPortal) {
+        data.descansosPortal = {
+          tituloSeccion: 'DESCANSOS MÉDICOS',
+          subtitulo: 'Registro y consulta de descansos médicos del personal',
+          visible: true,
+          tarjetaRegistrar: {
+            titulo: 'Registrar descanso médico',
+            descripcion: 'Formulario completo con PDF y N.º de código de barras.',
+            botonTexto: 'REGISTRAR',
+            botonUrl: 'descansos.html',
+            icono: 'fa-file-medical'
+          },
+          tarjetaConsultar: {
+            titulo: 'Consultar ingreso',
+            descripcion: 'Verifique con CIP y código de barras si el DM ya fue ingresado.',
+            botonTexto: 'CONSULTAR',
+            botonUrl: 'descansos.html#consulta',
+            icono: 'fa-search'
+          }
+        };
+      }
       res.set('Content-Type', 'application/json; charset=utf-8');
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
       return res.send(JSON.stringify(data));

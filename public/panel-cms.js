@@ -17,8 +17,32 @@ var CMS_ICONOS = [
   { v: 'fa-map-marker-alt', l: 'Ubicación' },
   { v: 'fa-bullhorn',       l: 'Megáfono' },
   { v: 'fa-camera',         l: 'Cámara' },
-  { v: 'fa-trophy',         l: 'Trofeo' }
+  { v: 'fa-trophy',         l: 'Trofeo' },
+  { v: 'fa-notes-medical',  l: 'Médico' },
+  { v: 'fa-file-medical',   l: 'Documento médico' }
 ];
+
+function descansosPortalDefault() {
+  return {
+    tituloSeccion: 'DESCANSOS MÉDICOS',
+    subtitulo: 'Registro y consulta de descansos médicos del personal',
+    visible: true,
+    tarjetaRegistrar: {
+      titulo: 'Registrar descanso médico',
+      descripcion: 'Formulario completo con PDF y N.º de código de barras.',
+      botonTexto: 'REGISTRAR',
+      botonUrl: 'descansos.html',
+      icono: 'fa-file-medical'
+    },
+    tarjetaConsultar: {
+      titulo: 'Consultar ingreso',
+      descripcion: 'Verifique con CIP y código de barras si el DM ya fue ingresado.',
+      botonTexto: 'CONSULTAR',
+      botonUrl: 'descansos.html#consulta',
+      icono: 'fa-search'
+    }
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════
 // INIT
@@ -54,6 +78,7 @@ function initCMS() {
       videoTutorialTitulo: 'Video tutorial — Cómo usar el cuestionario',
       visible: true
     };
+    if (!cmsDataActual.descansosPortal) cmsDataActual.descansosPortal = descansosPortalDefault();
     poblarFormulariosCMS();
     renderListasCMS();
   };
@@ -158,6 +183,22 @@ function poblarFormulariosCMS() {
       return '<option value="' + escHtml(o.v) + '"' + (o.v === iconoBien ? ' selected' : '') + '>' + escHtml(o.l) + '</option>';
     }).join('');
   }
+  var dmDef = descansosPortalDefault();
+  var dm = d.descansosPortal || dmDef;
+  var dmReg = dm.tarjetaRegistrar || dmDef.tarjetaRegistrar;
+  var dmCon = dm.tarjetaConsultar || dmDef.tarjetaConsultar;
+  setVal('cms-dm-titulo-seccion', dm.tituloSeccion || dmDef.tituloSeccion);
+  setVal('cms-dm-subtitulo', dm.subtitulo || dmDef.subtitulo);
+  setVal('cms-dm-reg-titulo', dmReg.titulo || '');
+  setVal('cms-dm-reg-desc', dmReg.descripcion || '');
+  setVal('cms-dm-reg-boton', dmReg.botonTexto || 'REGISTRAR');
+  setVal('cms-dm-reg-url', dmReg.botonUrl || 'descansos.html');
+  setVal('cms-dm-con-titulo', dmCon.titulo || '');
+  setVal('cms-dm-con-desc', dmCon.descripcion || '');
+  setVal('cms-dm-con-boton', dmCon.botonTexto || 'CONSULTAR');
+  setVal('cms-dm-con-url', dmCon.botonUrl || 'descansos.html#consulta');
+  var chkDm = document.getElementById('cms-dm-visible');
+  if (chkDm) chkDm.checked = dm.visible !== false;
   renderParrafosResenaCMS();
   renderPilaresCMS();
   inicializarBannerImg('resena',   (d.resenaHistorica || {}).imagenBanner || '');
@@ -1073,6 +1114,31 @@ function recolectarDatosCMS() {
       var el = document.getElementById('cms-bienestar-visible');
       return el ? el.checked : true;
     })()
+  };
+  var dmPrev = (cmsDataActual && cmsDataActual.descansosPortal) || descansosPortalDefault();
+  var dmRegPrev = dmPrev.tarjetaRegistrar || {};
+  var dmConPrev = dmPrev.tarjetaConsultar || {};
+  data.descansosPortal = {
+    tituloSeccion: getVal('cms-dm-titulo-seccion') || 'DESCANSOS MÉDICOS',
+    subtitulo: getVal('cms-dm-subtitulo') || 'Registro y consulta de descansos médicos del personal',
+    visible: (function() {
+      var el = document.getElementById('cms-dm-visible');
+      return el ? el.checked : true;
+    })(),
+    tarjetaRegistrar: {
+      titulo: getVal('cms-dm-reg-titulo') || 'Registrar descanso médico',
+      descripcion: getVal('cms-dm-reg-desc'),
+      botonTexto: getVal('cms-dm-reg-boton') || 'REGISTRAR',
+      botonUrl: getVal('cms-dm-reg-url') || 'descansos.html',
+      icono: dmRegPrev.icono || 'fa-file-medical'
+    },
+    tarjetaConsultar: {
+      titulo: getVal('cms-dm-con-titulo') || 'Consultar ingreso',
+      descripcion: getVal('cms-dm-con-desc'),
+      botonTexto: getVal('cms-dm-con-boton') || 'CONSULTAR',
+      botonUrl: getVal('cms-dm-con-url') || 'descansos.html#consulta',
+      icono: dmConPrev.icono || 'fa-search'
+    }
   };
   data.imagenBannerNovedades = leerBannerImg('novedades');
   if (document.getElementById('editor-fotos-encabezado')) {

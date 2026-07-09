@@ -161,23 +161,10 @@
 
     <section id="descansos" class="portal-seccion">
         <div class="section-header">
-            <h3>DESCANSOS MÉDICOS</h3>
-            <p style="color:#666;font-size:13px;margin-top:6px;">Registro y consulta de descansos médicos del personal</p>
+            <h3 id="descansos-titulo-seccion">DESCANSOS MÉDICOS</h3>
+            <p id="descansos-subtitulo" style="color:#666;font-size:13px;margin-top:6px;">Registro y consulta de descansos médicos del personal</p>
         </div>
-        <div class="grid-modern" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
-            <a href="descansos.html" class="bienestar-home-card" style="text-decoration:none;display:block;">
-                <i class="fas fa-file-medical bienestar-home-icon" style="color:#c0392b;"></i>
-                <h4>Registrar descanso médico</h4>
-                <p>Formulario completo con PDF y N.º de código de barras.</p>
-                <span class="btn-bienestar" style="display:inline-flex;"><i class="fas fa-edit"></i> REGISTRAR</span>
-            </a>
-            <a href="descansos.html#consulta" class="bienestar-home-card" style="text-decoration:none;display:block;">
-                <i class="fas fa-search bienestar-home-icon" style="color:#004d3d;"></i>
-                <h4>Consultar ingreso</h4>
-                <p>Verifique con CIP y código de barras si el DM ya fue ingresado.</p>
-                <span class="btn-bienestar" style="display:inline-flex;"><i class="fas fa-search"></i> CONSULTAR</span>
-            </a>
-        </div>
+        <div id="contenido-descansos"></div>
     </section>
 
     <section id="bienestar" class="portal-seccion">
@@ -259,8 +246,8 @@
     </div>
 </footer>
 
-<script src="portal-data.js?v=8"></script>
-<script src="portal.js?v=66"></script>
+<script src="portal-data.js?v=9"></script>
+<script src="portal.js?v=67"></script>
 <script>
     initPortalInicio();
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') cerrarNovedadModal(); });

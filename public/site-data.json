@@ -48,6 +48,25 @@
     "botonUrl": "evaluacion.html",
     "visible": true
   },
+  "descansosPortal": {
+    "tituloSeccion": "DESCANSOS MÉDICOS",
+    "subtitulo": "Registro y consulta de descansos médicos del personal",
+    "visible": true,
+    "tarjetaRegistrar": {
+      "titulo": "Registrar descanso médico",
+      "descripcion": "Formulario completo con PDF y N.º de código de barras.",
+      "botonTexto": "REGISTRAR",
+      "botonUrl": "descansos.html",
+      "icono": "fa-file-medical"
+    },
+    "tarjetaConsultar": {
+      "titulo": "Consultar ingreso",
+      "descripcion": "Verifique con CIP y código de barras si el DM ya fue ingresado.",
+      "botonTexto": "CONSULTAR",
+      "botonUrl": "descansos.html#consulta",
+      "icono": "fa-search"
+    }
+  },
   "novedades": [
     {
       "id": "nov-1",

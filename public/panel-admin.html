@@ -518,6 +518,7 @@
       <div class="sb-item" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> NOVEDADES</div>
       <div class="sb-item" onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> CONVENIOS (WEB)</div>
       <div class="sb-item" onclick="irCMS('cursos',this)"><i class="fas fa-graduation-cap"></i> CURSOS (WEB)</div>
+      <div class="sb-item" onclick="irCMS('descansos',this)"><i class="fas fa-notes-medical"></i> DESCANSOS (WEB)</div>
       <div class="sb-item" onclick="irCMS('bienestar',this)"><i class="fas fa-heart"></i> BIENESTAR (WEB)</div>
       <div class="sb-item" onclick="irCMS('resena',this)"><i class="fas fa-landmark"></i> RESEÑA HISTÓRICA</div>
       <div class="sb-item" onclick="irCMS('labor',this)"><i class="fas fa-tasks"></i> NUESTRA LABOR</div>
@@ -540,6 +541,7 @@
           <div class="stat" style="border-color:#c8e6e8;"><div class="n" id="sys-convenios" style="color:#004d3d;">—</div><div class="l">Convocatorias convenios</div></div>
           <div class="stat" style="border-color:#c8e6e8;"><div class="n" id="sys-cursos" style="color:#004d3d;">—</div><div class="l">Convocatorias cursos</div></div>
           <div class="stat" style="border-color:#ffe082;"><div class="n" id="sys-inscritos" style="color:#856404;">—</div><div class="l">Inscripciones totales</div></div>
+          <div class="stat" style="border-color:#f5c6cb;"><div class="n" id="sys-descansos" style="color:#c0392b;">—</div><div class="l">Descansos médicos (año)</div></div>
         </div>
         <div class="breakdown-grid">
           <div class="bl-box">
@@ -556,6 +558,12 @@
             <div class="bl-head"><i class="fas fa-graduation-cap"></i> Educación / Cursos</div>
             <div id="sys-mod-cursos" class="sys-mod-body"><p style="color:#bbb;padding:12px;text-align:center;">Cargando...</p></div>
           </div>
+          <div class="bl-box">
+            <div class="bl-head"><i class="fas fa-notes-medical"></i> Descansos médicos</div>
+            <div id="sys-mod-descansos" class="sys-mod-body"><p style="color:#bbb;padding:12px;text-align:center;">Cargando...</p></div>
+          </div>
+        </div>
+        <div class="breakdown-grid" style="margin-top:14px;">
           <div class="bl-box">
             <div class="bl-head"><i class="fas fa-globe"></i> Portal Web</div>
             <div id="sys-mod-portal" class="sys-mod-body"><p style="color:#bbb;padding:12px;text-align:center;">Cargando...</p></div>
@@ -740,6 +748,45 @@
         <!-- PANEL: Cursos -->
         <div id="cms-panel-cursos" class="cms-panel">
           <div id="cms-lista-cursos"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
+        </div>
+
+        <!-- PANEL: Descansos médicos (web) -->
+        <div id="cms-panel-descansos" class="cms-panel">
+          <p style="font-size:12px;color:#666;margin:0 0 14px;">Edita la sección <strong>Descansos médicos</strong> de la página principal (títulos y tarjetas Registrar / Consultar).</p>
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;cursor:pointer;">
+            <input type="checkbox" id="cms-dm-visible" checked style="width:16px;height:16px;accent-color:#004d3d;"/>
+            <span style="font-size:13px;font-weight:600;color:#004d3d;">Mostrar sección en el portal web</span>
+          </label>
+          <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Título de la sección</label>
+          <input type="text" id="cms-dm-titulo-seccion" class="cms-input" style="width:100%;margin-bottom:12px;" placeholder="DESCANSOS MÉDICOS"/>
+          <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Subtítulo</label>
+          <input type="text" id="cms-dm-subtitulo" class="cms-input" style="width:100%;margin-bottom:16px;" placeholder="Registro y consulta de descansos médicos del personal"/>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+            <div style="background:#fafafa;border:1.5px solid #e0e0e0;border-radius:10px;padding:14px;">
+              <strong style="color:#c0392b;font-size:13px;display:block;margin-bottom:10px;"><i class="fas fa-file-medical"></i> Tarjeta Registrar</strong>
+              <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Título</label>
+              <input type="text" id="cms-dm-reg-titulo" class="cms-input" style="width:100%;margin-bottom:8px;" placeholder="Registrar descanso médico"/>
+              <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Descripción</label>
+              <textarea id="cms-dm-reg-desc" rows="3" class="cms-textarea" style="width:100%;margin-bottom:8px;" placeholder="Formulario completo..."></textarea>
+              <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Texto del botón</label>
+              <input type="text" id="cms-dm-reg-boton" class="cms-input" style="width:100%;margin-bottom:8px;" placeholder="REGISTRAR"/>
+              <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Enlace</label>
+              <input type="text" id="cms-dm-reg-url" class="cms-input" style="width:100%;" placeholder="descansos.html"/>
+            </div>
+            <div style="background:#fafafa;border:1.5px solid #e0e0e0;border-radius:10px;padding:14px;">
+              <strong style="color:#004d3d;font-size:13px;display:block;margin-bottom:10px;"><i class="fas fa-search"></i> Tarjeta Consultar</strong>
+              <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Título</label>
+              <input type="text" id="cms-dm-con-titulo" class="cms-input" style="width:100%;margin-bottom:8px;" placeholder="Consultar ingreso"/>
+              <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Descripción</label>
+              <textarea id="cms-dm-con-desc" rows="3" class="cms-textarea" style="width:100%;margin-bottom:8px;" placeholder="Verifique con CIP..."></textarea>
+              <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Texto del botón</label>
+              <input type="text" id="cms-dm-con-boton" class="cms-input" style="width:100%;margin-bottom:8px;" placeholder="CONSULTAR"/>
+              <label style="font-size:11px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Enlace</label>
+              <input type="text" id="cms-dm-con-url" class="cms-input" style="width:100%;" placeholder="descansos.html#consulta"/>
+            </div>
+          </div>
+          <p style="font-size:11px;color:#666;margin:0 0 12px;">La gestión operativa (listado, Excel, dashboard) está en <strong>Gestión → Descansos médicos</strong>.</p>
+          <button class="btn btn-v" onclick="guardarSitioWeb()"><i class="fas fa-save"></i> Guardar Descansos (web)</button>
         </div>
 
         <!-- PANEL: Bienestar Policial -->
@@ -1525,10 +1572,10 @@
 
 <script src="api-config.js?v=2"></script>
 <script src="fecha-local.js?v=1"></script>
-<script src="portal-data.js?v=8"></script>
-<script src="portal.js?v=65"></script>
+<script src="portal-data.js?v=9"></script>
+<script src="portal.js?v=67"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=25"></script>
+<script src="panel-cms.js?v=26"></script>
 <script src="panel-descansos.js?v=4"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
@@ -2834,6 +2881,7 @@ function cargarStatsSistema(){
     set('sys-convenios', r.convenios_convocatorias || 0);
     set('sys-cursos', r.cursos_convocatorias || 0);
     set('sys-inscritos', r.inscripciones_total || 0);
+    set('sys-descansos', r.descansos_anio || 0);
 
     var psico = document.getElementById('sys-mod-psico');
     if (psico) {
@@ -2859,11 +2907,20 @@ function cargarStatsSistema(){
         + sysModKpi('Pendientes de revisión', r.cursos_pendientes || 0)
         + sysModKpi('Ganadores registrados', r.cursos_ganadores || 0);
     }
+    var dm = document.getElementById('sys-mod-descansos');
+    if (dm) {
+      dm.innerHTML = sysModKpi('Total activos', r.descansos_activos || 0)
+        + sysModKpi('Del año en curso', r.descansos_anio || 0)
+        + sysModKpi('Registro web', r.descansos_web || 0)
+        + sysModKpi('Históricos (Excel)', r.descansos_historico || 0)
+        + sysModKpi('Total (sin anulados)', r.descansos_total || 0)
+        + '<p style="margin:10px 0 0;font-size:11px;color:#666;">Detalle en <strong>Gestión → Descansos médicos</strong>. Textos web en <strong>Portal Web → DESCANSOS (WEB)</strong>.</p>';
+    }
     var portal = document.getElementById('sys-mod-portal');
     if (portal) {
       portal.innerHTML = sysModKpi('Última publicación CMS', r.portal_actualizacion || '—')
         + sysModKpi('Novedades en portal', r.portal_novedades || 0)
-        + '<p style="margin:10px 0 0;font-size:11px;color:#666;">Edite contenido en <strong>Portal Web</strong> (carrusel, novedades, reseña).</p>';
+        + '<p style="margin:10px 0 0;font-size:11px;color:#666;">Edite contenido en <strong>Portal Web</strong> (carrusel, novedades, descansos, reseña).</p>';
     }
     var act = document.getElementById('sys-actividad');
     if (act) {

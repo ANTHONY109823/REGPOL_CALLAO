@@ -330,6 +330,7 @@ function aplicarPortalConfig(config, data) {
   if (config.renderResena) renderResenaHistorica(data, config.renderResena);
   if (config.renderLabor) renderNuestraLabor(data, config.renderLabor);
   if (config.renderBienestar) renderBienestarPolicial(data, config.renderBienestar);
+  if (config.renderDescansos) renderDescansosPortal(data, config.renderDescansos);
   if (config.renderNovedades) renderNovedades(data, config.renderNovedades, config.limiteNovedades);
   if (config.renderConvenios && (!data.navOcultos || data.navOcultos.indexOf('convenios') === -1)) {
     var elConv = document.getElementById(config.renderConvenios);
@@ -1223,6 +1224,63 @@ function bienestarPolicialDefault() {
   };
 }
 
+function descansosPortalDefault() {
+  return {
+    tituloSeccion: 'DESCANSOS MÉDICOS',
+    subtitulo: 'Registro y consulta de descansos médicos del personal',
+    visible: true,
+    tarjetaRegistrar: {
+      titulo: 'Registrar descanso médico',
+      descripcion: 'Formulario completo con PDF y N.º de código de barras.',
+      botonTexto: 'REGISTRAR',
+      botonUrl: 'descansos.html',
+      icono: 'fa-file-medical'
+    },
+    tarjetaConsultar: {
+      titulo: 'Consultar ingreso',
+      descripcion: 'Verifique con CIP y código de barras si el DM ya fue ingresado.',
+      botonTexto: 'CONSULTAR',
+      botonUrl: 'descansos.html#consulta',
+      icono: 'fa-search'
+    }
+  };
+}
+
+function renderDescansosPortal(data, containerId) {
+  var el = document.getElementById(containerId);
+  var secWrap = document.getElementById('descansos');
+  var def = descansosPortalDefault();
+  var sec = (data && data.descansosPortal) ? data.descansosPortal : def;
+  if (secWrap) secWrap.style.display = (sec.visible === false) ? 'none' : '';
+  var tituloSec = document.getElementById('descansos-titulo-seccion');
+  if (tituloSec) tituloSec.textContent = sec.tituloSeccion || def.tituloSeccion;
+  var sub = document.getElementById('descansos-subtitulo');
+  if (sub) {
+    var subTxt = sec.subtitulo || def.subtitulo || '';
+    sub.textContent = subTxt;
+    sub.style.display = subTxt ? '' : 'none';
+  }
+  if (!el) return;
+  if (sec.visible === false) { el.innerHTML = ''; return; }
+  var reg = sec.tarjetaRegistrar || def.tarjetaRegistrar;
+  var con = sec.tarjetaConsultar || def.tarjetaConsultar;
+  function tarjeta(t, colorIcon) {
+    var icono = t.icono || 'fa-notes-medical';
+    var url = t.botonUrl || '#';
+    return '<a href="' + escHtml(url) + '" class="bienestar-home-card" style="text-decoration:none;display:block;">'
+      + '<i class="fas ' + escHtml(icono) + ' bienestar-home-icon" style="color:' + colorIcon + ';"></i>'
+      + '<h4>' + escHtml(t.titulo || '') + '</h4>'
+      + '<p>' + escHtml(t.descripcion || '') + '</p>'
+      + '<span class="btn-bienestar" style="display:inline-flex;"><i class="fas ' + escHtml(icono) + '"></i> '
+      + escHtml(t.botonTexto || '') + '</span>'
+      + '</a>';
+  }
+  el.innerHTML = '<div class="grid-modern" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">'
+    + tarjeta(reg, '#c0392b')
+    + tarjeta(con, '#004d3d')
+    + '</div>';
+}
+
 function urlVideoBienestarPortal(path, version) {
   var p = String(path || '/portal/bienestar-video').trim();
   if (!p) return '';
@@ -1741,7 +1799,8 @@ function initPortalInicio() {
     renderCursosPdf: 'lista-pdf-cursos',
     renderResena: 'contenido-resena',
     renderLabor: 'contenido-labor',
-    renderBienestar: 'contenido-bienestar'
+    renderBienestar: 'contenido-bienestar',
+    renderDescansos: 'contenido-descansos'
   }).then(function(data) {
     cargarSorteosPortal();
     cargarUnidadesPublico();
