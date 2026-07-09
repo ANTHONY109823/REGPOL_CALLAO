@@ -96,7 +96,8 @@ function resolverEdad(ev) {
 
 // N°, Nombres, CIP, DNI, Fecha, V, F, Avance, Edad, Nivel de Riesgo
 function calcularAnchurasTabla(W) {
-  const ratios = [0.04, 0.235, 0.09, 0.09, 0.095, 0.045, 0.045, 0.085, 0.055, 0.22];
+  // N°, Nombres, Área, CIP, DNI, Fecha, V, F, Avance, Edad, Nivel de Riesgo
+  const ratios = [0.035, 0.20, 0.10, 0.08, 0.08, 0.085, 0.04, 0.04, 0.075, 0.05, 0.215];
   const cols = ratios.map(function(r) { return Math.floor(W * r); });
   const sum = cols.reduce(function(a, b) { return a + b; }, 0);
   cols[1] += W - sum;
@@ -611,7 +612,7 @@ function generarPDFComisaria(comisaria, evaluaciones) {
     const x0 = 28;
     const W  = A4_W - 56;
     const cols = calcularAnchurasTabla(W);
-    const heads = ['N°', 'Apellidos y Nombres', 'CIP', 'DNI', 'Fecha', 'V', 'F', 'Avance', 'Edad', 'Nivel de Riesgo'];
+    const heads = ['N°', 'Apellidos y Nombres', 'Área', 'CIP', 'DNI', 'Fecha', 'V', 'F', 'Avance', 'Edad', 'Nivel de Riesgo'];
     const marginBottom = 34;
     const maxRowY = A4_H - marginBottom - 24;
     const lista = evaluaciones || [];
@@ -680,6 +681,7 @@ function generarPDFComisaria(comisaria, evaluaciones) {
       const fila = [
         String(idx + 1),
         String(ev.nombres || '—').toUpperCase(),
+        String(ev.area || '—').toUpperCase(),
         String(ev.cip || '—').toUpperCase(),
         String(ev.dni || '—').toUpperCase(),
         fecha,
@@ -692,9 +694,9 @@ function generarPDFComisaria(comisaria, evaluaciones) {
       const opciones = {
         par: idx % 2 === 0,
         rowH: 17,
-        colors: { 9: riesgo.color },
-        bolds: { 9: true },
-        wrapCols: { 9: true }
+        colors: { 10: riesgo.color },
+        bolds: { 10: true },
+        wrapCols: { 10: true }
       };
       if (rowY + 17 > maxRowY) rowY = abrirPagina({ heads: heads, cols: cols });
       rowY += dibujarFilaTabla(doc, x0, rowY, W, cols, fila, opciones);
@@ -702,7 +704,7 @@ function generarPDFComisaria(comisaria, evaluaciones) {
 
     if (!lista.length) {
       dibujarFilaTabla(doc, x0, rowY, W, cols,
-        ['—', 'Sin registros para este filtro', '—', '—', '—', '—', '—', '—', '—', '—'],
+        ['—', 'Sin registros para este filtro', '—', '—', '—', '—', '—', '—', '—', '—', '—'],
         { par: false, rowH: 17 });
     }
 

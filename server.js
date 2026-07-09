@@ -1875,6 +1875,7 @@ function mapearProgresoParaPDF(p) {
     dni: p.dni || '',
     comisaria: p.comisaria || '',
     unidad: p.unidad || '',
+    area: p.area || '',
     grado: p.grado || '',
     cargo: p.cargo || '',
     sexo: p.sexo || '',
@@ -2858,11 +2859,25 @@ app.get('/pdf/efectivo', requireAuth, async (req, res) => {
   }
 });
 
+function filtrarFilasPorArea(rows, areaRaw) {
+  const area = String(areaRaw || '').trim();
+  if (!area) return rows || [];
+  const sinArea = area === '__SIN__' || /^(\( )?SIN[_\s-]?Á?REA\)?$/i.test(area);
+  if (sinArea) {
+    return (rows || []).filter(function(r) { return !String(r.area || '').trim(); });
+  }
+  const a = area.toUpperCase();
+  return (rows || []).filter(function(r) {
+    return String(r.area || '').trim().toUpperCase() === a;
+  });
+}
+
 // ── Datos compartidos del informe por unidad (PDF de grupo y vista previa web) ─
 async function obtenerFilasInformeGrupo(req) {
   const division  = (req.query.division  || '').toUpperCase();
   const comisaria = (req.query.comisaria || '').toUpperCase();
   const unidad    = (req.query.unidad    || '').toUpperCase();
+  const areaFiltro = String(req.query.area || '').trim();
   if (!division && !comisaria && !unidad) return { error: 'Parámetro requerido', status: 400 };
 
   const { where, params } = await buildWhere(req.query, 'WHERE 1=1', []);
@@ -2871,13 +2886,20 @@ async function obtenerFilasInformeGrupo(req) {
 
   const cipsEval = new Set(r.rows.map(function(row) { return (row.cip || '').toUpperCase(); }));
   const progresos = await consultarProgresosParaPDFGrupo(req.admin, req.query);
-  const merged = normalizarFilasPDFGrupo(
+  let merged = normalizarFilasPDFGrupo(
     r.rows.concat(
       progresos.filter(function(p) { return !cipsEval.has((p.cip || '').toUpperCase()); })
     )
   );
+  merged = filtrarFilasPorArea(merged, areaFiltro);
   if (!merged.length) return { error: 'Sin evaluaciones para este filtro', status: 404 };
-  return { label: division || comisaria || unidad, merged };
+
+  let label = division || comisaria || unidad;
+  if (areaFiltro) {
+    const sinArea = areaFiltro === '__SIN__' || /^(\( )?SIN[_\s-]?Á?REA\)?$/i.test(areaFiltro);
+    label += ' — ' + (sinArea ? 'SIN ÁREA' : areaFiltro.toUpperCase());
+  }
+  return { label: label, merged: merged };
 }
 
 // ── GET /admin/preview-grupo — dashboard interactivo del informe por unidad ───
@@ -2907,6 +2929,7 @@ app.get('/admin/preview-grupo', requireAuth, async (req, res) => {
         nombres: ev.nombres || '',
         cip: ev.cip || '',
         dni: ev.dni || '',
+        area: ev.area || '',
         fecha: String(ev.fecha || '').substring(0, 10),
         edad: resolverEdadFila(ev),
         v: stats.v,
@@ -2919,6 +2942,12 @@ app.get('/admin/preview-grupo', requireAuth, async (req, res) => {
       };
     });
 
+    const areasSet = {};
+    rows.forEach(function(r) {
+      const a = String(r.area || '').trim();
+      if (a) areasSet[a.toUpperCase()] = a;
+    });
+
     res.json({
       ok: true,
       label: datos.label,
@@ -2927,6 +2956,7 @@ app.get('/admin/preview-grupo', requireAuth, async (req, res) => {
       incompletos: rows.length - completos,
       riesgo: riesgo,
       alertas_escala: alertasEscala,
+      areas: Object.keys(areasSet).sort().map(function(k) { return areasSet[k]; }),
       rows: rows
     });
   } catch (e) {
