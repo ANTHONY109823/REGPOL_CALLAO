@@ -125,6 +125,9 @@ async function initTablasDescansos(pool) {
       codigo_barras     VARCHAR(80) DEFAULT '',
       grado_medico      VARCHAR(60) DEFAULT '',
       nombres_medico    VARCHAR(200) DEFAULT '',
+      cip_medico        VARCHAR(20) DEFAULT '',
+      dni_medico        VARCHAR(20) DEFAULT '',
+      cmp_cop_medico    VARCHAR(40) DEFAULT '',
       centro_asistencial VARCHAR(200) DEFAULT '',
       pdf_data          TEXT DEFAULT '',
       pdf_nombre        VARCHAR(200) DEFAULT '',
@@ -135,6 +138,9 @@ async function initTablasDescansos(pool) {
       creado_por        VARCHAR(60) DEFAULT '',
       actualizado       TIMESTAMPTZ DEFAULT NOW()
     );
+    ALTER TABLE descansos_medicos ADD COLUMN IF NOT EXISTS cip_medico VARCHAR(20) DEFAULT '';
+    ALTER TABLE descansos_medicos ADD COLUMN IF NOT EXISTS dni_medico VARCHAR(20) DEFAULT '';
+    ALTER TABLE descansos_medicos ADD COLUMN IF NOT EXISTS cmp_cop_medico VARCHAR(40) DEFAULT '';
     CREATE INDEX IF NOT EXISTS idx_dm_cip ON descansos_medicos(cip);
     CREATE INDEX IF NOT EXISTS idx_dm_codigo ON descansos_medicos(codigo_barras);
     CREATE INDEX IF NOT EXISTS idx_dm_unidad ON descansos_medicos(unidad);
@@ -235,6 +241,14 @@ function validarRegistro(body, opts) {
     errores.push('Grado del médico inválido');
   }
   const nombres_medico = limpio(body.nombres_medico, 200);
+  const cip_medico = soloDigitos(body.cip_medico).slice(0, 20);
+  const dni_medico = soloDigitos(body.dni_medico).slice(0, 20);
+  const cmp_cop_medico = limpio(body.cmp_cop_medico, 40);
+  if (!opts.historico) {
+    if (!cip_medico) errores.push('N.º de CIP del médico obligatorio');
+    if (!dni_medico) errores.push('N.º de DNI del médico obligatorio');
+    if (!cmp_cop_medico) errores.push('N.º de CMP/COP del médico obligatorio');
+  }
   const centro_asistencial = limpio(body.centro_asistencial, 200);
   const pdf_data = String(body.pdf_data || '');
   const pdf_nombre = limpio(body.pdf_nombre, 200);
@@ -265,6 +279,9 @@ function validarRegistro(body, opts) {
       codigo_barras,
       grado_medico,
       nombres_medico,
+      cip_medico,
+      dni_medico,
+      cmp_cop_medico,
       centro_asistencial,
       pdf_data: pdf_data || '',
       pdf_nombre: pdf_nombre || '',
@@ -324,17 +341,17 @@ function registrarRutas(app, pool, requireAuth) {
         `INSERT INTO descansos_medicos (
           cip, grado, apellido_paterno, apellido_materno, nombres, dni, division, unidad,
           fecha_inicio, dias, fecha_termino, cie, diagnostico, tipo_documento, codigo_barras,
-          grado_medico, nombres_medico, centro_asistencial, pdf_data, pdf_nombre,
-          origen, estado, observacion, creado_por
+          grado_medico, nombres_medico, cip_medico, dni_medico, cmp_cop_medico, centro_asistencial,
+          pdf_data, pdf_nombre, origen, estado, observacion, creado_por
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
-          $21,'activo',$22,$23
+          $21,$22,$23,$24,'activo',$25,$26
         ) RETURNING id, cip, codigo_barras, fecha_registro`,
         [
           d.cip, d.grado, d.apellido_paterno, d.apellido_materno, d.nombres, d.dni, d.division, d.unidad,
           d.fecha_inicio, d.dias, d.fecha_termino, d.cie, d.diagnostico, d.tipo_documento, d.codigo_barras,
-          d.grado_medico, d.nombres_medico, d.centro_asistencial, d.pdf_data, d.pdf_nombre,
-          d.origen, d.observacion, 'web'
+          d.grado_medico, d.nombres_medico, d.cip_medico, d.dni_medico, d.cmp_cop_medico, d.centro_asistencial,
+          d.pdf_data, d.pdf_nombre, d.origen, d.observacion, 'web'
         ]
       );
       const row = ins.rows[0];
@@ -399,8 +416,8 @@ function registrarRutas(app, pool, requireAuth) {
       const r = await pool.query(
         `SELECT id, cip, grado, apellido_paterno, apellido_materno, nombres, dni, division, unidad,
                 fecha_inicio, dias, fecha_termino, cie, diagnostico, tipo_documento, codigo_barras,
-                grado_medico, nombres_medico, centro_asistencial, pdf_nombre, origen, estado,
-                observacion, fecha_registro, creado_por,
+                grado_medico, nombres_medico, cip_medico, dni_medico, cmp_cop_medico, centro_asistencial,
+                pdf_nombre, origen, estado, observacion, fecha_registro, creado_por,
                 (pdf_data IS NOT NULL AND pdf_data <> '') AS tiene_pdf
          FROM descansos_medicos
          WHERE ${f.where}
@@ -531,7 +548,8 @@ function registrarRutas(app, pool, requireAuth) {
       const r = await pool.query(
         `SELECT cip, grado, apellido_paterno, apellido_materno, nombres, dni, division, unidad,
                 fecha_inicio, dias, fecha_termino, cie, diagnostico, tipo_documento, codigo_barras,
-                grado_medico, nombres_medico, centro_asistencial, origen, fecha_registro
+                grado_medico, nombres_medico, cip_medico, dni_medico, cmp_cop_medico, centro_asistencial,
+                origen, fecha_registro
          FROM descansos_medicos WHERE ${f.where}
          ORDER BY COALESCE(fecha_inicio, fecha_registro::date) DESC`,
         f.params
@@ -539,7 +557,8 @@ function registrarRutas(app, pool, requireAuth) {
       const cols = [
         'cip', 'grado', 'apellido_paterno', 'apellido_materno', 'nombres', 'dni', 'division', 'unidad',
         'fecha_inicio', 'dias', 'fecha_termino', 'cie', 'diagnostico', 'tipo_documento', 'codigo_barras',
-        'grado_medico', 'nombres_medico', 'centro_asistencial', 'origen', 'fecha_registro'
+        'grado_medico', 'nombres_medico', 'cip_medico', 'dni_medico', 'cmp_cop_medico', 'centro_asistencial',
+        'origen', 'fecha_registro'
       ];
       const lines = [cols.join(';')];
       r.rows.forEach(function(row) {
@@ -707,6 +726,9 @@ function registrarRutas(app, pool, requireAuth) {
         tipo_documento: mapearColumna(headers, ['tipo documento', 'documento', 'tipo dm']),
         grado_medico: mapearColumna(headers, ['grado medico', 'grado médico', 'grado med']),
         nombres_medico: mapearColumna(headers, ['medico', 'médico', 'nombres medico', 'nombre medico']),
+        cip_medico: mapearColumna(headers, ['cip medico', 'cip del medico', 'cip médico']),
+        dni_medico: mapearColumna(headers, ['dni medico', 'dni del medico', 'dni médico']),
+        cmp_cop: mapearColumna(headers, ['cmp', 'cop', 'cmp/cop', 'nro cmp', 'cmp cop']),
         centro: mapearColumna(headers, ['centro', 'centro asistencial', 'hospital', 'establecimiento'])
       };
       if (!col.cip && !col.nombres) {
@@ -746,6 +768,9 @@ function registrarRutas(app, pool, requireAuth) {
           tipo_documento: filaValor(row, col.tipo_documento),
           grado_medico: filaValor(row, col.grado_medico),
           nombres_medico: filaValor(row, col.nombres_medico),
+          cip_medico: filaValor(row, col.cip_medico),
+          dni_medico: filaValor(row, col.dni_medico),
+          cmp_cop_medico: filaValor(row, col.cmp_cop),
           centro_asistencial: filaValor(row, col.centro),
           codigo_barras: CODIGO_BARRAS_HISTORICO
         };
@@ -761,14 +786,16 @@ function registrarRutas(app, pool, requireAuth) {
           `INSERT INTO descansos_medicos (
             cip, grado, apellido_paterno, apellido_materno, nombres, dni, division, unidad,
             fecha_inicio, dias, fecha_termino, cie, diagnostico, tipo_documento, codigo_barras,
-            grado_medico, nombres_medico, centro_asistencial, origen, estado, creado_por
+            grado_medico, nombres_medico, cip_medico, dni_medico, cmp_cop_medico, centro_asistencial,
+            origen, estado, creado_por
           ) VALUES (
-            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'historico','activo',$19
+            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,'historico','activo',$22
           )`,
           [
             d.cip, d.grado, d.apellido_paterno, d.apellido_materno, d.nombres, d.dni, d.division, d.unidad,
             d.fecha_inicio, d.dias, d.fecha_termino, d.cie, d.diagnostico, d.tipo_documento, CODIGO_BARRAS_HISTORICO,
-            d.grado_medico, d.nombres_medico, d.centro_asistencial, req.admin.usuario || ''
+            d.grado_medico, d.nombres_medico, d.cip_medico, d.dni_medico, d.cmp_cop_medico, d.centro_asistencial,
+            req.admin.usuario || ''
           ]
         );
         insertados++;
@@ -913,17 +940,17 @@ function registrarRutas(app, pool, requireAuth) {
         `INSERT INTO descansos_medicos (
           cip, grado, apellido_paterno, apellido_materno, nombres, dni, division, unidad,
           fecha_inicio, dias, fecha_termino, cie, diagnostico, tipo_documento, codigo_barras,
-          grado_medico, nombres_medico, centro_asistencial, pdf_data, pdf_nombre,
-          origen, estado, observacion, creado_por
+          grado_medico, nombres_medico, cip_medico, dni_medico, cmp_cop_medico, centro_asistencial,
+          pdf_data, pdf_nombre, origen, estado, observacion, creado_por
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
-          $21,'activo',$22,$23
+          $21,$22,$23,$24,'activo',$25,$26
         ) RETURNING id`,
         [
           d.cip, d.grado, d.apellido_paterno, d.apellido_materno, d.nombres, d.dni, d.division, d.unidad,
           d.fecha_inicio, d.dias, d.fecha_termino, d.cie, d.diagnostico, d.tipo_documento, d.codigo_barras,
-          d.grado_medico, d.nombres_medico, d.centro_asistencial, d.pdf_data, d.pdf_nombre,
-          d.origen, d.observacion, req.admin.usuario || ''
+          d.grado_medico, d.nombres_medico, d.cip_medico, d.dni_medico, d.cmp_cop_medico, d.centro_asistencial,
+          d.pdf_data, d.pdf_nombre, d.origen, d.observacion, req.admin.usuario || ''
         ]
       );
       res.json({ ok: true, id: ins.rows[0].id });
@@ -954,14 +981,16 @@ function registrarRutas(app, pool, requireAuth) {
           cip=$1, grado=$2, apellido_paterno=$3, apellido_materno=$4, nombres=$5, dni=$6,
           division=$7, unidad=$8, fecha_inicio=$9, dias=$10, fecha_termino=$11, cie=$12,
           diagnostico=$13, tipo_documento=$14, codigo_barras=$15, grado_medico=$16,
-          nombres_medico=$17, centro_asistencial=$18, pdf_data=$19, pdf_nombre=$20,
-          observacion=$21, actualizado=NOW()
-         WHERE id=$22`,
+          nombres_medico=$17, cip_medico=$18, dni_medico=$19, cmp_cop_medico=$20,
+          centro_asistencial=$21, pdf_data=$22, pdf_nombre=$23,
+          observacion=$24, actualizado=NOW()
+         WHERE id=$25`,
         [
           d.cip, d.grado, d.apellido_paterno, d.apellido_materno, d.nombres, d.dni,
           d.division, d.unidad, d.fecha_inicio, d.dias, d.fecha_termino, d.cie,
           d.diagnostico, d.tipo_documento, esHist ? CODIGO_BARRAS_HISTORICO : d.codigo_barras,
-          d.grado_medico, d.nombres_medico, d.centro_asistencial, pdf_data || '', pdf_nombre || '',
+          d.grado_medico, d.nombres_medico, d.cip_medico, d.dni_medico, d.cmp_cop_medico,
+          d.centro_asistencial, pdf_data || '', pdf_nombre || '',
           d.observacion, req.params.id
         ]
       );
@@ -988,8 +1017,8 @@ function registrarRutas(app, pool, requireAuth) {
       const r = await pool.query(
         `SELECT id, cip, grado, apellido_paterno, apellido_materno, nombres, dni, division, unidad,
                 fecha_inicio, dias, fecha_termino, cie, diagnostico, tipo_documento, codigo_barras,
-                grado_medico, nombres_medico, centro_asistencial, pdf_nombre, origen, estado,
-                observacion, fecha_registro, creado_por,
+                grado_medico, nombres_medico, cip_medico, dni_medico, cmp_cop_medico, centro_asistencial,
+                pdf_nombre, origen, estado, observacion, fecha_registro, creado_por,
                 (pdf_data IS NOT NULL AND pdf_data <> '') AS tiene_pdf
          FROM descansos_medicos WHERE id=$1`,
         [req.params.id]

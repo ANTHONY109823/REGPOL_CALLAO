@@ -88,7 +88,10 @@
           <div class="fi-group"><label>N.º código de barras *</label><input id="dm-barcode" required maxlength="80" placeholder="Obligatorio"></div>
           <div class="fi-group"><label>Grado del médico *</label><select id="dm-grado-med" required></select></div>
           <div class="fi-group"><label>Apellidos y nombres del médico *</label><input id="dm-nom-med" required maxlength="200"></div>
-          <div class="fi-group fi-full"><label>Centro asistencial *</label><input id="dm-centro" required maxlength="200"></div>
+          <div class="fi-group"><label>N.º de CIP del médico *</label><input id="dm-cip-med" required inputmode="numeric" maxlength="20"></div>
+          <div class="fi-group"><label>N.º de DNI del médico *</label><input id="dm-dni-med" required inputmode="numeric" maxlength="20"></div>
+          <div class="fi-group"><label>N.º de CMP/COP *</label><input id="dm-cmp-med" required maxlength="40" placeholder="CMP o COP"></div>
+          <div class="fi-group"><label>Centro asistencial *</label><input id="dm-centro" required maxlength="200"></div>
           <div class="fi-group fi-full">
             <div class="pdf-box">
               <label>PDF del descanso médico * (máx. 5 MB)</label>
@@ -170,24 +173,28 @@ async function init() {
 
   var cfg = await fetch(API + '/config').then(function(r){return r.json();}).catch(function(){return {};});
   var sel = document.getElementById('dm-unidad');
-  if (typeof llenarSelectUnidadesAgrupadas === 'function' && cfg.divisiones) {
-    llenarSelectUnidadesAgrupadas(sel, cfg.divisiones, { placeholder: '— Seleccionar unidad —' });
-  } else {
-    sel.innerHTML = '<option value="">— Seleccionar unidad —</option>';
-    (cfg.divisiones || []).forEach(function(d) {
-      var og = document.createElement('optgroup');
-      og.label = d.nombre;
-      (d.unidades || []).forEach(function(u) {
-        var o = document.createElement('option');
-        o.value = u.nombre; o.textContent = u.nombre;
-        og.appendChild(o);
-      });
-      sel.appendChild(og);
+  sel.innerHTML = '<option value="">— Seleccionar unidad —</option>';
+  (cfg.divisiones || []).forEach(function(d) {
+    var og = document.createElement('optgroup');
+    og.label = d.nombre || 'Sin división';
+    (d.unidades || []).forEach(function(u) {
+      var nom = typeof u === 'string' ? u : (u.nombre || '');
+      if (!nom) return;
+      var o = document.createElement('option');
+      o.value = nom;
+      o.textContent = nom;
+      og.appendChild(o);
     });
+    if (og.children.length) sel.appendChild(og);
+  });
+  if (!sel.options.length || sel.options.length === 1) {
+    alerta('reg-alerta', false, 'No se pudieron cargar las unidades. Recargue la página.');
   }
 
   document.getElementById('dm-cip').addEventListener('input', function(e){ e.target.value = e.target.value.replace(/\D/g,''); });
   document.getElementById('con-cip').addEventListener('input', function(e){ e.target.value = e.target.value.replace(/\D/g,''); });
+  document.getElementById('dm-cip-med').addEventListener('input', function(e){ e.target.value = e.target.value.replace(/\D/g,''); });
+  document.getElementById('dm-dni-med').addEventListener('input', function(e){ e.target.value = e.target.value.replace(/\D/g,''); });
 
   function recalcTermino() {
     var ini = document.getElementById('dm-inicio').value;
@@ -246,6 +253,9 @@ async function enviarDM(ev) {
     codigo_barras: document.getElementById('dm-barcode').value,
     grado_medico: document.getElementById('dm-grado-med').value,
     nombres_medico: document.getElementById('dm-nom-med').value,
+    cip_medico: document.getElementById('dm-cip-med').value,
+    dni_medico: document.getElementById('dm-dni-med').value,
+    cmp_cop_medico: document.getElementById('dm-cmp-med').value,
     centro_asistencial: document.getElementById('dm-centro').value,
     pdf_data: PDF_DATA,
     pdf_nombre: PDF_NOMBRE

@@ -180,6 +180,8 @@
       + '<p><strong>Diagnóstico:</strong> ' + esc(row.diagnostico) + '</p>'
       + '<p><strong>Documento:</strong> ' + esc(row.tipo_documento) + '</p>'
       + '<p><strong>Médico:</strong> ' + esc(row.grado_medico) + ' ' + esc(row.nombres_medico) + '</p>'
+      + '<p><strong>CIP médico:</strong> ' + esc(row.cip_medico) + ' &nbsp; <strong>DNI médico:</strong> ' + esc(row.dni_medico)
+      + ' &nbsp; <strong>CMP/COP:</strong> ' + esc(row.cmp_cop_medico) + '</p>'
       + '<p><strong>Centro:</strong> ' + esc(row.centro_asistencial) + '</p>'
       + '<p><strong>Origen:</strong> ' + esc(row.origen) + ' &nbsp; <strong>Fecha registro:</strong> '
       + esc(row.fecha_registro ? new Date(row.fecha_registro).toLocaleString('es-PE') : '') + '</p>'
