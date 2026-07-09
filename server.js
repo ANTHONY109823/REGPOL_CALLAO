@@ -3052,18 +3052,27 @@ app.get('/admin/preview-grupo', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /pdf/grupo?division=X | ?comisaria=X | ?unidad=X ─────────────────────
+// ── GET /pdf/grupo?division=X | ?comisaria=X | ?unidad=X [&area|&grado|&sexo|&estado|&riesgo]
 app.get('/pdf/grupo', requireAuth, async (req, res) => {
   try {
     const datos = await obtenerFilasInformeGrupo(req);
     if (datos.error) return res.status(datos.status).json({ error: datos.error });
 
-    const label  = datos.label;
-    const buf    = await generarPDFAsync('generarPDFComisaria', [label, datos.merged]);
-    const nom    = 'Cuestionario_' + label.replace(/\s+/g,'_') + '.pdf';
+    const label = datos.label;
+    const buf = await generarPDFAsync('generarPDFComisaria', [label, datos.merged]);
+
+    // Content-Disposition solo admite ASCII; tildes, "—", "·" rompen la descarga
+    const nomSeguro = String(label || 'informe')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9._-]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '')
+      .slice(0, 120) || 'informe';
+    const nom = 'Cuestionario_' + nomSeguro + '.pdf';
     const inline = req.query.inline === '1' || req.query.ver === '1';
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', (inline ? 'inline' : 'attachment') + `; filename="${nom}"`);
+    res.setHeader('Content-Disposition', (inline ? 'inline' : 'attachment') + '; filename="' + nom + '"');
     res.send(buf);
   } catch (e) {
     res.status(500).json({ error: e.message });

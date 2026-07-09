@@ -2291,10 +2291,21 @@ function descargarPdfGrupoActual() {
   var f = _grupoFiltros || {};
   var q = 'unidad=' + encodeURIComponent(u);
   if (f.area) q += '&area=' + encodeURIComponent(f.area);
-  if (f.estado) q += '&estado=' + encodeURIComponent(f.estado);
-  if (f.riesgo) q += '&riesgo=' + encodeURIComponent(f.riesgo);
   if (f.grado) q += '&grado=' + encodeURIComponent(f.grado);
   if (f.sexo) q += '&sexo=' + encodeURIComponent(f.sexo);
+  if (f.estado) q += '&estado=' + encodeURIComponent(f.estado);
+  if (f.riesgo) q += '&riesgo=' + encodeURIComponent(f.riesgo);
+
+  function nombrePdfSeguro(base) {
+    return String(base || 'informe')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9._-]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '')
+      .slice(0, 120) || 'informe';
+  }
+
   fetch(API + '/pdf/grupo?' + q, { headers: hdr() })
     .then(function(r) {
       if (!r.ok) {
@@ -2308,11 +2319,9 @@ function descargarPdfGrupoActual() {
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
-      var extras = resumenFiltrosActivosGrupo().map(function(x) {
-        return x.replace(/\s+/g, '_');
-      });
-      var suf = extras.length ? '_' + extras.join('_') : '';
-      a.download = 'Cuestionario_' + u.replace(/\s+/g, '_') + suf + '.pdf';
+      var extras = resumenFiltrosActivosGrupo();
+      var raw = u + (extras.length ? '_' + extras.join('_') : '');
+      a.download = 'Cuestionario_' + nombrePdfSeguro(raw) + '.pdf';
       document.body.appendChild(a);
       a.click();
       a.remove();
