@@ -2865,7 +2865,7 @@ function filtrarFilasInformeGrupo(rows, filtros) {
 
   const area = String(filtros.area || '').trim();
   if (area) {
-    const sinArea = area === '__SIN__' || /^(\( )?SIN[_\s-]?Á?REA\)?$/i.test(area);
+    const sinArea = area === '__SIN__';
     if (sinArea) {
       out = out.filter(function(r) { return !String(r.area || '').trim(); });
     } else {
@@ -2896,21 +2896,6 @@ function filtrarFilasInformeGrupo(rows, filtros) {
     });
   }
 
-  const estado = String(filtros.estado || '').trim().toUpperCase();
-  if (estado === 'COMPLETO' || estado === 'COMPLETOS') {
-    out = out.filter(function(r) {
-      if (typeof r.completa === 'boolean') return r.completa;
-      const total = parseInt(r.total_resp, 10) || 0;
-      return !!r.completada || total >= 566;
-    });
-  } else if (estado === 'AVANCE' || estado === 'INCOMPLETO' || estado === 'EN_AVANCE') {
-    out = out.filter(function(r) {
-      if (typeof r.completa === 'boolean') return !r.completa;
-      const total = parseInt(r.total_resp, 10) || 0;
-      return !(!!r.completada || total >= 566);
-    });
-  }
-
   return out;
 }
 
@@ -2930,7 +2915,6 @@ async function obtenerFilasInformeGrupo(req) {
     area: String(req.query.area || '').trim(),
     grado: String(req.query.grado || '').trim(),
     sexo: String(req.query.sexo || '').trim(),
-    estado: String(req.query.estado || '').trim(),
     riesgo: String(req.query.riesgo || '').trim()
   };
   if (!division && !comisaria && !unidad) return { error: 'Parámetro requerido', status: 400 };
@@ -2946,15 +2930,13 @@ async function obtenerFilasInformeGrupo(req) {
       progresos.filter(function(p) { return !cipsEval.has((p.cip || '').toUpperCase()); })
     )
   );
-  // área / grado / sexo / estado
   merged = filtrarFilasInformeGrupo(merged, {
     area: filtros.area,
     grado: filtros.grado,
-    sexo: filtros.sexo,
-    estado: filtros.estado
+    sexo: filtros.sexo
   });
 
-  // Riesgo requiere diagnóstico MMPI (solo evaluaciones completas)
+  // Riesgo (clic en tarjetas): solo evaluaciones completas con ese nivel
   const riesgoFiltro = String(filtros.riesgo || '').trim().toUpperCase();
   if (riesgoFiltro === 'BAJO' || riesgoFiltro === 'MODERADO' || riesgoFiltro === 'ALTO') {
     merged = merged.filter(function(ev) {
@@ -3018,18 +3000,6 @@ app.get('/admin/preview-grupo', requireAuth, async (req, res) => {
       };
     });
 
-    const areasSet = {};
-    const gradosSet = {};
-    const sexosSet = {};
-    rows.forEach(function(r) {
-      const a = String(r.area || '').trim();
-      if (a) areasSet[a.toUpperCase()] = a;
-      const g = String(r.grado || '').trim();
-      if (g) gradosSet[g.toUpperCase()] = g;
-      const s = String(r.sexo || '').trim();
-      if (s) sexosSet[s.toUpperCase()] = s;
-    });
-
     res.json({
       ok: true,
       label: datos.label,
@@ -3038,9 +3008,6 @@ app.get('/admin/preview-grupo', requireAuth, async (req, res) => {
       incompletos: rows.length - completos,
       riesgo: riesgo,
       alertas_escala: alertasEscala,
-      areas: Object.keys(areasSet).sort().map(function(k) { return areasSet[k]; }),
-      grados: Object.keys(gradosSet).sort().map(function(k) { return gradosSet[k]; }),
-      sexos: Object.keys(sexosSet).sort().map(function(k) { return sexosSet[k]; }),
       rows: rows
     });
   } catch (e) {
@@ -3048,7 +3015,7 @@ app.get('/admin/preview-grupo', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /pdf/grupo?division=X | ?comisaria=X | ?unidad=X [&area|&grado|&sexo|&estado|&riesgo]
+// ── GET /pdf/grupo?unidad=X [&area|&grado|&sexo|&riesgo] ─────────────────────
 app.get('/pdf/grupo', requireAuth, async (req, res) => {
   try {
     const datos = await obtenerFilasInformeGrupo(req);

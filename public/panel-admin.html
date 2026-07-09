@@ -136,7 +136,6 @@
     .gd-esc-bar{flex:1;background:#eef2ef;border-radius:4px;height:10px;overflow:hidden;}
     .gd-esc-fill{height:100%;border-radius:4px;transition:width .6s;}
     .gd-esc-n{width:24px;text-align:right;font-weight:700;}
-    .gd-buscar{padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;width:100%;max-width:280px;margin:2px 0 10px;}
     .gd-filtro-area{padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;max-width:280px;margin:2px 0 10px;background:#fff;}
     .gd-badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:10.5px;font-weight:800;color:#fff;white-space:nowrap;}
     .gd-alertas{font-size:10px;color:#7a1a1a;margin-top:2px;}
@@ -1809,8 +1808,11 @@ function onFiltroRespuestasChange() {
 }
 
 // ── Informe por unidad: dashboard interactivo (mismo contenido que el PDF) ────
+// Flujo: Área → Grado → Sexo (cascada). Tarjetas de riesgo filtran solo el listado.
+// PDF respeta Área + Grado + Sexo + riesgo de tarjeta. "Quitar filtros" vuelve al inicio.
 var _grupoDatos = null, _grupoUnidadActual = '';
 var _grupoFiltros = { area: '', grado: '', sexo: '', riesgo: '' };
+var GRUPO_FILTRO_CADENA = ['area', 'grado', 'sexo'];
 
 var GRUPO_ESCALAS = [
   ['L', 'L — Mentira'], ['F', 'F — Infrecuencia'], ['K', 'K — Corrección'],
@@ -1825,11 +1827,15 @@ var GRUPO_NIVELES = [
   { key: 'ALTO', color: '#c0392b', label: 'Riesgo Alto' }
 ];
 
+function filtrosGrupoVacios() {
+  return { area: '', grado: '', sexo: '', riesgo: '' };
+}
+
 function cerrarModalPdfGrupo() {
   var wrap = document.getElementById('grupo-dash-wrap');
   if (wrap) wrap.innerHTML = '';
   _grupoDatos = null;
-  _grupoFiltros = { area: '', grado: '', sexo: '', riesgo: '' };
+  _grupoFiltros = filtrosGrupoVacios();
   cerrarModal('modal-pdf-grupo');
 }
 
@@ -1839,9 +1845,6 @@ function nivelInfoGrupo(row) {
   var n = GRUPO_NIVELES.filter(function(x) { return x.key === row.nivel; })[0];
   return { label: row.nivel, color: n ? n.color : '#555555', key: row.nivel };
 }
-
-// Orden en cascada: Área → Grado → Sexo
-var GRUPO_FILTRO_CADENA = ['area', 'grado', 'sexo'];
 
 function etiquetaFiltroGrupo(valor, sinLabel) {
   if (!valor) return '';
@@ -1866,16 +1869,10 @@ function aplicarCriterioGrupo(rows, tipo, valor) {
     var s = String(valor).trim().toUpperCase();
     return out.filter(function(r) { return String(r.sexo || '').trim().toUpperCase() === s; });
   }
-  if (tipo === 'riesgo') {
-    var n = String(valor).trim().toUpperCase();
-    if (n === 'BAJO' || n === 'MODERADO' || n === 'ALTO') {
-      return out.filter(function(r) { return !!r.completa && String(r.nivel || '').toUpperCase() === n; });
-    }
-  }
   return out;
 }
 
-// Filas aplicando solo filtros anteriores a `hasta` (excluido). Si hasta es null, aplica todos.
+// Aplica filtros de la cascada hasta `hasta` (excluido). Si hasta es null, aplica Área+Grado+Sexo.
 function filasGrupoHasta(rows, hasta) {
   var out = rows || [];
   var f = _grupoFiltros || {};
@@ -1887,33 +1884,22 @@ function filasGrupoHasta(rows, hasta) {
   return out;
 }
 
-function filasGrupoFiltradas(rows) {
-  // Cascada Área → Grado → Sexo (el riesgo de las tarjetas solo afecta el listado)
-  return filasGrupoHasta(rows, null);
-}
-
 function valorExisteEnCascada(rows, tipo, valor) {
   if (!valor) return true;
-  if (tipo === 'area' || tipo === 'grado' || tipo === 'sexo') {
-    var campo = tipo;
-    if (valor === '__SIN__') {
-      return (rows || []).some(function(r) { return !String(r[campo] || '').trim(); });
-    }
-    var v = String(valor).trim().toUpperCase();
-    return (rows || []).some(function(r) { return String(r[campo] || '').trim().toUpperCase() === v; });
+  var campo = tipo;
+  if (valor === '__SIN__') {
+    return (rows || []).some(function(r) { return !String(r[campo] || '').trim(); });
   }
-  return false;
+  var v = String(valor).trim().toUpperCase();
+  return (rows || []).some(function(r) { return String(r[campo] || '').trim().toUpperCase() === v; });
 }
 
-// Si un filtro superior cambia, limpia los inferiores que ya no aplican al subconjunto
 function saneearFiltrosCascadaGrupo(rows) {
-  var f = _grupoFiltros || {};
+  var f = _grupoFiltros || filtrosGrupoVacios();
   var base = rows || [];
   GRUPO_FILTRO_CADENA.forEach(function(key) {
     var subset = filasGrupoHasta(base, key);
-    if (f[key] && !valorExisteEnCascada(subset, key, f[key])) {
-      f[key] = '';
-    }
+    if (f[key] && !valorExisteEnCascada(subset, key, f[key])) f[key] = '';
   });
   _grupoFiltros = f;
 }
@@ -1942,7 +1928,7 @@ function resumenGrupoDesdeFilas(rows) {
 
 function datosGrupoVistaActual() {
   if (!_grupoDatos) return null;
-  return resumenGrupoDesdeFilas(filasGrupoFiltradas(_grupoDatos.rows || []));
+  return resumenGrupoDesdeFilas(filasGrupoHasta(_grupoDatos.rows || [], null));
 }
 
 function resumenFiltrosActivosGrupo() {
@@ -1950,7 +1936,7 @@ function resumenFiltrosActivosGrupo() {
   var partes = [];
   if (f.area) partes.push(etiquetaFiltroGrupo(f.area, 'SIN ÁREA'));
   if (f.grado) partes.push(etiquetaFiltroGrupo(f.grado, 'SIN GRADO'));
-  if (f.sexo) partes.push(f.sexo.toUpperCase());
+  if (f.sexo) partes.push(String(f.sexo).toUpperCase());
   if (f.riesgo) partes.push('RIESGO ' + f.riesgo);
   return partes;
 }
@@ -1971,7 +1957,7 @@ function verPdfUnidadRespuestas() {
     return;
   }
   _grupoUnidadActual = u;
-  _grupoFiltros = { area: '', grado: '', sexo: '', riesgo: '' };
+  _grupoFiltros = filtrosGrupoVacios();
 
   var modal = document.getElementById('modal-pdf-grupo');
   var titulo = document.getElementById('modal-pdf-grupo-titulo');
@@ -1986,9 +1972,7 @@ function verPdfUnidadRespuestas() {
   if (modal) modal.classList.add('open');
 
   fetch(API + '/admin/preview-grupo?unidad=' + encodeURIComponent(u), { headers: hdr() })
-    .then(function(r) {
-      return r.json().catch(function() { return {}; });
-    })
+    .then(function(r) { return r.json().catch(function() { return {}; }); })
     .then(function(d) {
       if (!d || !d.ok) throw new Error((d && d.error) || 'No hay evaluaciones para esta unidad.');
       _grupoDatos = d;
@@ -2012,8 +1996,8 @@ function renderDashboardGrupo() {
   var h = '';
   var extras = resumenFiltrosActivosGrupo();
   var f = _grupoFiltros || {};
+  var hayFiltros = extras.length > 0;
 
-  // Barra de filtros en cascada: Área → Grado → Sexo
   h += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px;">'
     + '<label style="font-size:10.5px;font-weight:700;color:#004d3d;display:flex;flex-direction:column;gap:3px;">Área'
     + '<select class="gd-filtro-area" id="gd-filtro-area" onchange="cambiarFiltrosGrupo(\'area\')" title="1. Filtrar por área">'
@@ -2026,15 +2010,14 @@ function renderDashboardGrupo() {
     + '<option value="">Todos</option></select></label>'
     + '<button type="button" class="btn" id="gd-btn-limpiar" onclick="limpiarFiltrosGrupo()" title="Quitar todos los filtros y ver el informe completo"'
     + ' style="background:#fff;color:#004d3d;border:1.5px solid #004d3d;padding:7px 12px;font-size:12px;align-self:flex-end;'
-    + (extras.length ? '' : 'opacity:.45;cursor:default;') + '"'
-    + (extras.length ? '' : ' disabled') + '>'
+    + (hayFiltros ? '' : 'opacity:.45;cursor:default;') + '"'
+    + (hayFiltros ? '' : ' disabled') + '>'
     + '<i class="fas fa-times"></i> Quitar filtros</button>'
     + '<span id="gd-filtro-info" style="font-size:11px;color:#666;align-self:center;"></span></div>';
-  if (extras.length) {
+  if (hayFiltros) {
     h += '<p style="font-size:12px;color:#004d3d;font-weight:600;margin:0 0 10px;"><i class="fas fa-filter"></i> Filtros activos: <strong>' + escHtml(extras.join(' · ')) + '</strong></p>';
   }
 
-  // KPIs
   var kpis = [
     { n: d.total, l: 'Evaluados', c: '#004d3d' },
     { n: d.completos, l: 'Completos', c: '#1a7a3a' },
@@ -2045,7 +2028,6 @@ function renderDashboardGrupo() {
     return '<div class="gd-kpi" style="border-left-color:' + k.c + ';"><div class="n" style="color:' + k.c + ';">' + k.n + '</div><div class="l">' + k.l + '</div></div>';
   }).join('') + '</div>';
 
-  // Índice de riesgo — clic en tarjeta filtra el listado (como antes)
   h += '<div class="gd-sec">Índice de medición — Nivel de riesgo institucional (sobre ' + d.completos + (d.completos === 1 ? ' evaluación completa' : ' evaluaciones completas') + ')</div>';
   h += '<div class="gd-riesgo">' + GRUPO_NIVELES.map(function(n) {
     var cant = d.riesgo[n.key] || 0;
@@ -2061,10 +2043,9 @@ function renderDashboardGrupo() {
       return '<div style="width:' + ((cant / d.completos) * 100) + '%;background:' + n.color + ';"></div>';
     }).join('') + '</div>';
   } else {
-    h += '<p style="font-size:11.5px;color:#856404;margin:2px 0 12px;">Aún no hay evaluaciones completas para calcular el índice de riesgo' + (extras.length ? ' con estos filtros' : '') + '.</p>';
+    h += '<p style="font-size:11.5px;color:#856404;margin:2px 0 12px;">Aún no hay evaluaciones completas para calcular el índice de riesgo' + (hayFiltros ? ' con estos filtros' : '') + '.</p>';
   }
 
-  // Escalas en alerta
   h += '<div class="gd-sec">Escalas en alerta — N° de efectivos con elevación clínica</div><div style="padding:2px 2px 8px;">';
   var maxA = 1;
   GRUPO_ESCALAS.forEach(function(e) { maxA = Math.max(maxA, (d.alertas_escala && d.alertas_escala[e[0]]) || 0); });
@@ -2078,7 +2059,6 @@ function renderDashboardGrupo() {
   });
   h += '</div>';
 
-  // Listado
   h += '<div class="gd-sec" style="margin-top:10px;">Listado de efectivos evaluados — Diagnóstico individual</div>';
   h += '<div style="overflow-x:auto;"><table class="t" style="min-width:980px;"><thead><tr>'
     + '<th>N°</th><th>Apellidos y Nombres</th><th>Área</th><th>Grado</th><th>Sexo</th><th>CIP</th><th>DNI</th><th>Fecha</th><th>V</th><th>F</th><th>Avance</th><th>Edad</th><th>Nivel de Riesgo</th>'
@@ -2106,7 +2086,7 @@ function renderDashboardGrupo() {
 
   wrap.innerHTML = h;
   poblarSelectsFiltrosGrupo(full);
-  aplicarFiltroGrupo();
+  aplicarFiltroListadoRiesgoGrupo();
   actualizarTituloInformeGrupo();
 }
 
@@ -2123,7 +2103,7 @@ function contarCampoGrupo(rows, campo) {
   return { counts: counts, sin: sin };
 }
 
-function htmlOpcionesCampoGrupo(rows, campo, valorActual, todosLabel, sinLabel) {
+function htmlOpcionesCampoGrupo(rows, campo, todosLabel, sinLabel) {
   var total = (rows || []).length;
   var c = contarCampoGrupo(rows, campo);
   var html = '<option value="">' + escHtml(todosLabel || 'Todos') + ' (' + total + ')</option>';
@@ -2140,74 +2120,56 @@ function poblarSelectsFiltrosGrupo(full) {
   var all = full.rows || [];
   var f = _grupoFiltros || {};
 
-  // 1. Área — sobre toda la unidad
   var selA = document.getElementById('gd-filtro-area');
   if (selA) {
-    selA.innerHTML = htmlOpcionesCampoGrupo(all, 'area', f.area, 'Todas', 'Sin área');
+    selA.innerHTML = htmlOpcionesCampoGrupo(all, 'area', 'Todas', 'Sin área');
     selA.value = f.area || '';
   }
-
-  // 2. Grado — solo del área seleccionada
-  var rowsGrado = filasGrupoHasta(all, 'grado');
   var selG = document.getElementById('gd-filtro-grado');
   if (selG) {
-    selG.innerHTML = htmlOpcionesCampoGrupo(rowsGrado, 'grado', f.grado, 'Todos', 'Sin grado');
+    selG.innerHTML = htmlOpcionesCampoGrupo(filasGrupoHasta(all, 'grado'), 'grado', 'Todos', 'Sin grado');
     selG.value = f.grado || '';
   }
-
-  // 3. Sexo — solo de área + grado
-  var rowsSexo = filasGrupoHasta(all, 'sexo');
   var selS = document.getElementById('gd-filtro-sexo');
   if (selS) {
-    selS.innerHTML = htmlOpcionesCampoGrupo(rowsSexo, 'sexo', f.sexo, 'Todos', null);
+    selS.innerHTML = htmlOpcionesCampoGrupo(filasGrupoHasta(all, 'sexo'), 'sexo', 'Todos', null);
     selS.value = f.sexo || '';
   }
 }
 
-function leerFiltrosGrupoDesdeUI() {
-  return {
+function cambiarFiltrosGrupo(origen) {
+  var nuevos = {
     area: (document.getElementById('gd-filtro-area') || {}).value || '',
     grado: (document.getElementById('gd-filtro-grado') || {}).value || '',
     sexo: (document.getElementById('gd-filtro-sexo') || {}).value || '',
-    riesgo: (_grupoFiltros && _grupoFiltros.riesgo) || ''
+    riesgo: ''
   };
-}
-
-function cambiarFiltrosGrupo(origen) {
-  var riesgoPrev = (_grupoFiltros && _grupoFiltros.riesgo) || '';
-  var nuevos = leerFiltrosGrupoDesdeUI();
   if (origen) {
     var idx = GRUPO_FILTRO_CADENA.indexOf(origen);
     if (idx !== -1) {
       for (var i = idx + 1; i < GRUPO_FILTRO_CADENA.length; i++) {
         nuevos[GRUPO_FILTRO_CADENA[i]] = '';
       }
-      // Al cambiar Área/Grado/Sexo se limpia el filtro de riesgo de las tarjetas
-      nuevos.riesgo = '';
     }
-  } else {
-    nuevos.riesgo = riesgoPrev;
   }
   _grupoFiltros = nuevos;
   renderDashboardGrupo();
 }
 
 function filtrarNivelGrupo(nivel) {
-  if (!_grupoFiltros) _grupoFiltros = { area: '', grado: '', sexo: '', riesgo: '' };
+  if (!_grupoFiltros) _grupoFiltros = filtrosGrupoVacios();
   _grupoFiltros.riesgo = _grupoFiltros.riesgo === nivel ? '' : nivel;
   renderDashboardGrupo();
 }
 
 function limpiarFiltrosGrupo() {
-  _grupoFiltros = { area: '', grado: '', sexo: '', riesgo: '' };
+  _grupoFiltros = filtrosGrupoVacios();
   renderDashboardGrupo();
-  actualizarTituloInformeGrupo();
 }
 
-function aplicarFiltroGrupo() {
+function aplicarFiltroListadoRiesgoGrupo() {
   var tbody = document.getElementById('gd-tbody');
-  var d = datosGrupoVistaActual();
-  if (!tbody || !d) return;
+  if (!tbody) return;
   var riesgo = (_grupoFiltros && _grupoFiltros.riesgo) || '';
   var vis = 0, tot = 0;
   Array.prototype.forEach.call(tbody.rows, function(tr) {
@@ -2226,6 +2188,16 @@ function aplicarFiltroGrupo() {
   }
 }
 
+function nombrePdfSeguroGrupo(base) {
+  return String(base || 'informe')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 120) || 'informe';
+}
+
 function descargarPdfGrupoActual() {
   var u = _grupoUnidadActual;
   if (!u) return;
@@ -2242,16 +2214,6 @@ function descargarPdfGrupoActual() {
   if (f.sexo) q += '&sexo=' + encodeURIComponent(f.sexo);
   if (f.riesgo) q += '&riesgo=' + encodeURIComponent(f.riesgo);
 
-  function nombrePdfSeguro(base) {
-    return String(base || 'informe')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9._-]+/g, '_')
-      .replace(/_+/g, '_')
-      .replace(/^_|_$/g, '')
-      .slice(0, 120) || 'informe';
-  }
-
   fetch(API + '/pdf/grupo?' + q, { headers: hdr() })
     .then(function(r) {
       if (!r.ok) {
@@ -2266,8 +2228,7 @@ function descargarPdfGrupoActual() {
       var a = document.createElement('a');
       a.href = url;
       var extras = resumenFiltrosActivosGrupo();
-      var raw = u + (extras.length ? '_' + extras.join('_') : '');
-      a.download = 'Cuestionario_' + nombrePdfSeguro(raw) + '.pdf';
+      a.download = 'Cuestionario_' + nombrePdfSeguroGrupo(u + (extras.length ? '_' + extras.join('_') : '')) + '.pdf';
       document.body.appendChild(a);
       a.click();
       a.remove();
