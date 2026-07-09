@@ -2328,6 +2328,104 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
   }
 });
 
+// ── PUT /admin/registro-datos — editar apellidos, nombres, DNI y unidad (Admin/Super Admin)
+app.put('/admin/registro-datos', requireAuth, async (req, res) => {
+  try {
+    if (!puedeGestionarEvaluaciones(req.admin)) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso. Solo Admin o Super Admin.' });
+    }
+
+    const idParsed = req.body.id != null && req.body.id !== '' ? parseInt(req.body.id, 10) : null;
+    const id = Number.isFinite(idParsed) ? idParsed : null;
+    const cip = String(req.body.cip || '').trim();
+    const soloProgreso = !!req.body.solo_progreso;
+    const apellidos = String(req.body.apellidos || '').trim().toUpperCase();
+    const nombresSolo = String(req.body.nombres || '').trim().toUpperCase();
+    const dni = String(req.body.dni || '').trim();
+    const unidad = String(req.body.unidad || req.body.comisaria || '').trim().toUpperCase();
+
+    if (!apellidos) return res.json({ ok: false, error: 'Ingrese los apellidos' });
+    if (!nombresSolo) return res.json({ ok: false, error: 'Ingrese los nombres' });
+    if (!/^\d{8}$/.test(dni)) return res.json({ ok: false, error: 'El DNI debe tener 8 dígitos' });
+    if (!unidad) return res.json({ ok: false, error: 'Seleccione la dependencia' });
+    if (!id && !cip) return res.json({ ok: false, error: 'Registro no identificado' });
+
+    const nombres = apellidos + ', ' + nombresSolo;
+
+    let row = null;
+    if (soloProgreso || !id) {
+      if (!cip) return res.json({ ok: false, error: 'CIP requerido' });
+      const cur = await pool.query(
+        `SELECT cip, dni, nombres, unidad, comisaria FROM progresos
+         WHERE UPPER(TRIM(cip))=UPPER(TRIM($1)) OR LOWER(TRIM(clave))=LOWER(TRIM($1))
+         LIMIT 1`,
+        [cip]
+      );
+      if (!cur.rows.length) return res.json({ ok: false, error: 'Avance no encontrado' });
+      row = cur.rows[0];
+    } else {
+      const cur = await pool.query(
+        'SELECT id, cip, dni, nombres, unidad, comisaria FROM evaluaciones WHERE id=$1',
+        [id]
+      );
+      if (!cur.rows.length) return res.json({ ok: false, error: 'Evaluación no encontrada' });
+      row = cur.rows[0];
+    }
+
+    if (!adminPuedeAccederRegistro(req.admin, row.unidad, row.comisaria)) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso para esta dependencia' });
+    }
+    if (!adminPuedeAccederRegistro(req.admin, unidad, unidad)) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso para asignar esa dependencia' });
+    }
+
+    const cipRef = String(row.cip || cip || '').trim();
+    const dupDni = await buscarRegistroDuplicadoPorDni(dni, cipRef);
+    if (dupDni) {
+      return res.json({
+        ok: false,
+        error: 'El DNI ya está registrado en otro CIP (' + (dupDni.cip || '—') + ')'
+      });
+    }
+    const dupNom = await buscarRegistroDuplicadoPorNombre(nombres, cipRef);
+    if (dupNom) {
+      return res.json({
+        ok: false,
+        error: 'Ese nombre ya está registrado en otro CIP (' + (dupNom.cip || '—') + ')'
+      });
+    }
+
+    // Misma lógica que el cuestionario: comisaria y unidad reciben el mismo valor
+    if (id && !soloProgreso) {
+      await pool.query(
+        `UPDATE evaluaciones SET nombres=$1, dni=$2, comisaria=$3, unidad=$4
+         WHERE id=$5`,
+        [nombres, dni, unidad, unidad, id]
+      );
+    }
+    if (cipRef) {
+      await pool.query(
+        `UPDATE progresos SET nombres=$1, dni=$2, comisaria=$3, unidad=$4, actualizado=NOW()
+         WHERE UPPER(TRIM(cip))=UPPER(TRIM($5)) OR LOWER(TRIM(clave))=LOWER(TRIM($5))`,
+        [nombres, dni, unidad, unidad, cipRef]
+      );
+      // Si hay evaluación del mismo CIP (p. ej. se editó desde progreso), sincronizar también
+      if (soloProgreso || !id) {
+        await pool.query(
+          `UPDATE evaluaciones SET nombres=$1, dni=$2, comisaria=$3, unidad=$4
+           WHERE UPPER(TRIM(cip))=UPPER(TRIM($5))`,
+          [nombres, dni, unidad, unidad, cipRef]
+        );
+      }
+    }
+
+    invalidarStatsCache();
+    res.json({ ok: true, nombres, dni, unidad, comisaria: unidad });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 // ── DELETE /admin/evaluaciones/:id — eliminar evaluación individual ─────────────
 app.delete('/admin/evaluaciones/:id', requireAuth, async (req, res) => {
   try {

@@ -149,6 +149,41 @@
     .btn-a{background:#2980b9;color:#fff;} .btn-a:hover{background:#2471a3;}
     .btn-o{background:#c8a94a;color:#fff;} .btn-o:hover{background:#b09040;}
     .btn-p{background:#8e44ad;color:#fff;} .btn-p:hover{background:#7d3a99;}
+    .btn-editar-datos{background:#004d3d;color:#fff;} .btn-editar-datos:hover{background:#006b55;}
+
+    /* ── MODAL EDITAR DATOS (estilo confirmar envío) ── */
+    .modal-editar-datos{
+      position:fixed;inset:0;z-index:12000;display:none;align-items:center;justify-content:center;
+      padding:20px;background:rgba(0,45,36,.72);backdrop-filter:blur(3px);}
+    .modal-editar-datos.open{display:flex;}
+    .modal-editar-datos-panel{
+      width:100%;max-width:520px;background:#fff;border-radius:14px;
+      box-shadow:0 12px 40px rgba(0,0,0,.28);padding:26px 24px 22px;border-top:5px solid #f39c12;}
+    .modal-editar-datos-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+    .modal-editar-datos-header i{font-size:26px;color:#f39c12;}
+    .modal-editar-datos-header h2{margin:0;font-size:18px;font-weight:800;color:#004d3d;line-height:1.25;}
+    .modal-editar-datos-lead{margin:0 0 12px;font-size:14px;color:#555;line-height:1.45;}
+    .editar-datos-form{display:flex;flex-direction:column;gap:12px;margin-bottom:18px;}
+    .editar-datos-form .campo-edit{display:flex;flex-direction:column;gap:5px;}
+    .editar-datos-form label{font-size:12.5px;font-weight:700;color:#004d3d;}
+    .editar-datos-form input,.editar-datos-form select{
+      width:100%;padding:10px 12px;border:1.5px solid #dde8e5;border-radius:8px;
+      font-size:14px;color:#1a1a1a;background:#fff;font-family:inherit;}
+    .editar-datos-form input:focus,.editar-datos-form select:focus{
+      outline:none;border-color:#004d3d;box-shadow:0 0 0 3px rgba(0,77,61,.12);}
+    .editar-datos-form input.invalido,.editar-datos-form select.invalido{border-color:#c0392b;}
+    .editar-datos-msg{margin:0;min-height:16px;font-size:12.5px;font-weight:600;color:#c0392b;}
+    .modal-editar-datos-acciones{display:flex;gap:10px;}
+    .modal-editar-datos-acciones .btn-eval-modal{
+      flex:1;justify-content:center;padding:13px 16px;font-size:14px;font-weight:700;
+      display:inline-flex;align-items:center;gap:7px;border-radius:7px;cursor:pointer;
+      font-family:inherit;transition:all .2s;}
+    .btn-eval-modal.btn-borde{background:#fff;color:#004d3d;border:2px solid #004d3d;}
+    .btn-eval-modal.btn-borde:hover{background:#f0f7f4;}
+    .btn-eval-modal.btn-verde{background:#004d3d;color:#fff;border:none;}
+    .btn-eval-modal.btn-verde:hover{background:#002d24;}
+    .btn-eval-modal:disabled{opacity:.45;cursor:not-allowed;}
+    @media (max-width:480px){.modal-editar-datos-acciones{flex-direction:column-reverse;}}
 
     /* ── MODAL ── */
     .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
@@ -619,9 +654,9 @@
           <table class="t" style="margin:0;">
             <thead><tr>
               <th>División</th><th>Dependencia</th><th>Apellidos y Nombres</th><th>CIP</th><th>DNI</th>
-              <th>Fecha</th><th>Edad</th><th>Estado</th><th>Ver</th><th>Eliminar</th>
+              <th>Fecha</th><th>Edad</th><th>Estado</th><th>Editar</th><th>Ver</th><th>Eliminar</th>
             </tr></thead>
-            <tbody id="tabla-body"><tr><td colspan="10" style="text-align:center;color:#888;padding:24px;font-size:13px;">Seleccione división, unidad o busque por CIP / DNI / nombre y pulse <strong>Buscar</strong>.</td></tr></tbody>
+            <tbody id="tabla-body"><tr><td colspan="11" style="text-align:center;color:#888;padding:24px;font-size:13px;">Seleccione división, unidad o busque por CIP / DNI / nombre y pulse <strong>Buscar</strong>.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1251,6 +1286,48 @@
   </div>
 </div>
 
+<!-- MODAL: Editar datos de registro (Admin / Super Admin) -->
+<div id="modal-editar-datos" class="modal-editar-datos" role="dialog" aria-modal="true" aria-labelledby="editar-datos-titulo" hidden
+  onclick="if(event.target===this)cerrarModalEditarDatos()">
+  <div class="modal-editar-datos-panel">
+    <div class="modal-editar-datos-header">
+      <i class="fas fa-user-edit" aria-hidden="true"></i>
+      <h2 id="editar-datos-titulo">Editar datos</h2>
+    </div>
+    <p class="modal-editar-datos-lead">Corrija apellidos, nombres, DNI o dependencia. Al cambiar la unidad, el registro pasará a esa dependencia.</p>
+    <input type="hidden" id="ed-id"/>
+    <input type="hidden" id="ed-cip"/>
+    <input type="hidden" id="ed-solo-progreso"/>
+    <div class="editar-datos-form">
+      <div class="campo-edit">
+        <label for="ed-apellidos">Apellidos</label>
+        <input type="text" id="ed-apellidos" placeholder="Ej. GARCIA LOPEZ" autocomplete="off"/>
+      </div>
+      <div class="campo-edit">
+        <label for="ed-nombres">Nombres</label>
+        <input type="text" id="ed-nombres" placeholder="Ej. JUAN CARLOS" autocomplete="off"/>
+      </div>
+      <div class="campo-edit">
+        <label for="ed-dni">DNI (8 dígitos)</label>
+        <input type="text" id="ed-dni" placeholder="12345678" maxlength="8" inputmode="numeric" autocomplete="off"/>
+      </div>
+      <div class="campo-edit">
+        <label for="ed-unidad">Dependencia</label>
+        <select id="ed-unidad"></select>
+      </div>
+      <p class="editar-datos-msg" id="ed-msg" aria-live="polite"></p>
+    </div>
+    <div class="modal-editar-datos-acciones">
+      <button type="button" class="btn-eval-modal btn-borde" onclick="cerrarModalEditarDatos()">
+        <i class="fas fa-times"></i> Cancelar
+      </button>
+      <button type="button" class="btn-eval-modal btn-verde" id="btn-guardar-editar-datos" onclick="guardarEditarDatos()">
+        <i class="fas fa-check"></i> Guardar cambios
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Pregunta -->
 <div id="modal-pregunta" class="modal">
   <div class="modal-box" style="width:460px;">
@@ -1670,6 +1747,22 @@ function btnAccionesEval(r) {
   return '<span style="color:#bbb;font-size:10px;">—</span>';
 }
 
+function btnEditarDatosEval(r) {
+  if (!puedeVerEvaluaciones()) return '';
+  if (!r || (!r.id && !r.cip)) return '';
+  window._editarDatosCache = window._editarDatosCache || {};
+  var key = (r.solo_progreso ? 'p:' : 'e:') + String(r.id || r.cip);
+  window._editarDatosCache[key] = {
+    id: r.id || null,
+    cip: r.cip || '',
+    nombres: r.nombres || '',
+    dni: r.dni || '',
+    unidad: r.unidad || r.comisaria || '',
+    solo_progreso: !!r.solo_progreso
+  };
+  return '<button type="button" class="btn btn-editar-datos" style="font-size:11px;padding:3px 8px;" title="Editar datos" onclick="abrirModalEditarDatosPorClave(\'' + escJs(key) + '\')"><i class="fas fa-pen"></i> Editar</button>';
+}
+
 function btnEliminarEval(r) {
   if (!puedeVerEvaluaciones()) return '';
   var nom = escJs(r.nombres || '');
@@ -1694,7 +1787,7 @@ function vaciarTablaRespuestas(msg) {
   var body = document.getElementById('tabla-body');
   var texto = msg || 'Seleccione división, unidad o busque por CIP / DNI / nombre y pulse Buscar.';
   if (body) {
-    body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#888;padding:24px;font-size:13px;">'
+    body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#888;padding:24px;font-size:13px;">'
       + escHtml(texto) + '</td></tr>';
   }
   set('tabla-info', '');
@@ -1936,6 +2029,152 @@ function eliminarRegistroEval(id, cip, soloProgreso, nombre) {
       else alert(d.error || 'No se pudo eliminar.');
     })
     .catch(function() { alert('Error de conexión.'); });
+}
+
+function partirNombresRegistro(str) {
+  var s = String(str || '').trim();
+  var idx = s.indexOf(',');
+  if (idx !== -1) {
+    return { apellidos: s.slice(0, idx).trim(), nombres: s.slice(idx + 1).trim() };
+  }
+  return { apellidos: s, nombres: '' };
+}
+
+function seleccionarUnidadEditar(valor) {
+  var sel = document.getElementById('ed-unidad');
+  if (!sel || !valor) return;
+  var buscado = String(valor).trim().toUpperCase();
+  for (var i = 0; i < sel.options.length; i++) {
+    if (String(sel.options[i].value).toUpperCase() === buscado) {
+      sel.selectedIndex = i;
+      return;
+    }
+  }
+  var op = document.createElement('option');
+  op.value = valor;
+  op.textContent = valor;
+  sel.appendChild(op);
+  sel.value = valor;
+}
+
+function abrirModalEditarDatosPorClave(key) {
+  var cache = window._editarDatosCache || {};
+  abrirModalEditarDatos(cache[key]);
+}
+
+function abrirModalEditarDatos(r) {
+  if (!puedeVerEvaluaciones()) {
+    alert('Sin permiso. Solo Admin o Super Admin pueden editar datos.');
+    return;
+  }
+  if (!r) return;
+  var partes = partirNombresRegistro(r.nombres);
+  document.getElementById('ed-id').value = r.id || '';
+  document.getElementById('ed-cip').value = r.cip || '';
+  document.getElementById('ed-solo-progreso').value = r.solo_progreso ? '1' : '';
+  document.getElementById('ed-apellidos').value = partes.apellidos;
+  document.getElementById('ed-nombres').value = partes.nombres;
+  document.getElementById('ed-dni').value = String(r.dni || '').replace(/\D/g, '').slice(0, 8);
+  document.getElementById('ed-msg').textContent = '';
+  ['ed-apellidos', 'ed-nombres', 'ed-dni', 'ed-unidad'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('invalido');
+  });
+  llenarSelectUnidadesAgrupadas('ed-unidad', window._divisionesData || DIVISIONES_DATA || [], '— Seleccionar dependencia —');
+  seleccionarUnidadEditar(r.unidad || '');
+  var modal = document.getElementById('modal-editar-datos');
+  if (modal) {
+    modal.hidden = false;
+    modal.classList.add('open');
+  }
+  var dniEl = document.getElementById('ed-dni');
+  if (dniEl && !dniEl._editarBound) {
+    dniEl._editarBound = true;
+    dniEl.addEventListener('input', function() {
+      this.value = this.value.replace(/\D/g, '').slice(0, 8);
+    });
+  }
+}
+
+function cerrarModalEditarDatos() {
+  var modal = document.getElementById('modal-editar-datos');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.hidden = true;
+  }
+}
+
+function guardarEditarDatos() {
+  if (!puedeVerEvaluaciones()) {
+    alert('Sin permiso. Solo Admin o Super Admin pueden editar datos.');
+    return;
+  }
+  var ap = (document.getElementById('ed-apellidos').value || '').trim().toUpperCase();
+  var nom = (document.getElementById('ed-nombres').value || '').trim().toUpperCase();
+  var dni = (document.getElementById('ed-dni').value || '').replace(/\D/g, '').slice(0, 8);
+  var uni = (document.getElementById('ed-unidad').value || '').trim();
+  var msg = document.getElementById('ed-msg');
+  var btn = document.getElementById('btn-guardar-editar-datos');
+
+  document.getElementById('ed-apellidos').value = ap;
+  document.getElementById('ed-nombres').value = nom;
+  document.getElementById('ed-dni').value = dni;
+
+  ['ed-apellidos', 'ed-nombres', 'ed-dni', 'ed-unidad'].forEach(function(id) {
+    document.getElementById(id).classList.remove('invalido');
+  });
+  if (msg) msg.textContent = '';
+
+  if (!ap) {
+    document.getElementById('ed-apellidos').classList.add('invalido');
+    if (msg) msg.textContent = 'Ingrese los apellidos.';
+    return;
+  }
+  if (!nom) {
+    document.getElementById('ed-nombres').classList.add('invalido');
+    if (msg) msg.textContent = 'Ingrese los nombres.';
+    return;
+  }
+  if (!/^\d{8}$/.test(dni)) {
+    document.getElementById('ed-dni').classList.add('invalido');
+    if (msg) msg.textContent = 'El DNI debe tener 8 dígitos.';
+    return;
+  }
+  if (!uni) {
+    document.getElementById('ed-unidad').classList.add('invalido');
+    if (msg) msg.textContent = 'Seleccione la dependencia.';
+    return;
+  }
+
+  var body = {
+    id: document.getElementById('ed-id').value || null,
+    cip: document.getElementById('ed-cip').value || '',
+    solo_progreso: document.getElementById('ed-solo-progreso').value === '1',
+    apellidos: ap,
+    nombres: nom,
+    dni: dni,
+    unidad: uni
+  };
+  if (btn) btn.disabled = true;
+  fetch(API + '/admin/registro-datos', {
+    method: 'PUT',
+    headers: hdr(),
+    body: JSON.stringify(body)
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (btn) btn.disabled = false;
+      if (!d.ok) {
+        if (msg) msg.textContent = d.error || 'No se pudo guardar.';
+        return;
+      }
+      cerrarModalEditarDatos();
+      cargarTabla(window._tablaPaginaActual || 1);
+    })
+    .catch(function() {
+      if (btn) btn.disabled = false;
+      if (msg) msg.textContent = 'Error de conexión.';
+    });
 }
 
 function eliminarEvaluacionesUnidad() {
@@ -2467,6 +2706,7 @@ function filaRegistroRespuesta(r, divNombre) {
     + '<td style="font-size:11px;">' + escHtml(formatearFechaHoraLocal(r)) + '</td>'
     + '<td style="text-align:center;">' + (r.edad ? escHtml(String(r.edad)) : '—') + '</td>'
     + '<td>' + badgeEstadoRegistro(r) + '</td>'
+    + '<td>' + btnEditarDatosEval(r) + '</td>'
     + '<td>' + btnAccionesEval(r) + '</td>'
     + '<td>' + btnEliminarEval(r) + '</td>'
     + '</tr>';
@@ -2503,7 +2743,7 @@ function renderTablaRespuestasPorDivision(rows) {
     });
     totalMostrado += regs.length;
     html += '<tr class="fila-division">'
-      + '<td colspan="10" style="background:#004d3d;color:#fff;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.35px;">'
+      + '<td colspan="11" style="background:#004d3d;color:#fff;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.35px;">'
       + '<i class="fas fa-sitemap" style="margin-right:6px;"></i>' + escHtml(divNombre)
       + ' <span style="font-weight:500;opacity:.9;">(' + regs.length + ' registro' + (regs.length === 1 ? '' : 's') + ')</span>'
       + '</td></tr>';
@@ -2511,7 +2751,7 @@ function renderTablaRespuestasPorDivision(rows) {
   });
 
   if (!html) {
-    return { html: '<tr><td colspan="10" style="text-align:center;color:#bbb;padding:22px;">Sin registros para los filtros seleccionados.</td></tr>', total: 0 };
+    return { html: '<tr><td colspan="11" style="text-align:center;color:#bbb;padding:22px;">Sin registros para los filtros seleccionados.</td></tr>', total: 0 };
   }
   return { html: html, total: totalMostrado };
 }
@@ -2525,7 +2765,7 @@ function cargarTabla(pag){
   }
   actualizarBotonesEliminarEval();
   var body = document.getElementById('tabla-body');
-  if (body) body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#bbb;padding:18px;">Cargando...</td></tr>';
+  if (body) body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#bbb;padding:18px;">Cargando...</td></tr>';
   var div = encodeURIComponent(val('f-div'));
   var uni = encodeURIComponent(val('f-uni'));
   var bus = encodeURIComponent(val('f-bus'));
@@ -2533,7 +2773,7 @@ function cargarTabla(pag){
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.ok) {
-        if (body) body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#c0392b;padding:18px;">' + escHtml(d.error || 'Error al cargar') + '</td></tr>';
+        if (body) body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#c0392b;padding:18px;">' + escHtml(d.error || 'Error al cargar') + '</td></tr>';
         return;
       }
       var rendered = renderTablaRespuestasPorDivision(d.rows || []);
@@ -2543,7 +2783,7 @@ function cargarTabla(pag){
       if (pags) pags.innerHTML = '';
     })
     .catch(function() {
-      if (body) body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#c0392b;padding:18px;">Error de conexión.</td></tr>';
+      if (body) body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#c0392b;padding:18px;">Error de conexión.</td></tr>';
     });
 }
 
