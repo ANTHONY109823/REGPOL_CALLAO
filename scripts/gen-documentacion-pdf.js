@@ -86,26 +86,38 @@ const SECCIONES = [
       '• bienestar — Acceso amplio a evaluaciones (redirige a panel-admin.html).',
       '• usuario — Admin de área según permisos JSONB.',
       '',
-      'Permisos granulares: evaluaciones, descargas, cms_cursos, cms_convenios, cms_inicio, cms_resena, cms_labor, cms_novedades.',
+      'Permisos granulares: evaluaciones, descargas, cms_cursos, cms_convenios, cms_descansos, cms_inicio, cms_resena, cms_labor, cms_novedades.',
       'Rutas de panel: panel-admin.html (gestión) o panel-usuario.html (solo lectura/CMS limitado según permisos).'
     ]
   },
   {
     titulo: '6. Módulos funcionales',
     cuerpo: [
-      'Portal público (index.html, portal.js): inicio, novedades, reseña histórica, nuestra labor, unidades, convenios, cursos, carrusel de encabezado.',
+      'Portal público (index.html, portal.js): inicio, novedades, reseña histórica, nuestra labor, unidades, convenios, cursos, descansos médicos, carrusel de encabezado.',
       'Evaluación MMPI-2 (evaluacion.html, evaluacion.js): registro por CIP, guardado de progreso, envío final a evaluaciones.',
-      'Panel admin (panel-admin.html): dashboard por rol, evaluaciones, preguntas, descargas PDF/CSV, CMS, convocatorias, inscripciones, sorteos, usuarios.',
+      'Descansos médicos (descansos.html): módulo independiente — registro web con PDF + código de barras, consulta pública CIP+código.',
+      'Panel admin (panel-admin.html): dashboard por rol, evaluaciones, preguntas, descargas PDF/CSV, CMS, convocatorias, inscripciones, sorteos, descansos médicos, usuarios.',
       'Panel usuario (panel-usuario.html): vista modular según permisos del operador.',
       'Sorteo en vivo (sorteo-live.html): visualización pública de resultados.'
+    ]
+  },
+  {
+    titulo: '6b. Descansos médicos (detalle)',
+    cuerpo: [
+      'Permiso: cms_descansos. Super Admin (unitic) + oficina con ese permiso. Independiente de Psicología, Educación y Convenios.',
+      'Registro web: CIP, grado, apellidos, nombres, unidad, fechas, días, CIE, diagnóstico, tipo documento, código de barras, médico, centro, PDF obligatorio.',
+      'Consulta pública: CIP + N.º código de barras → solo confirma ingreso + nombres + CIP. Históricos con código ---- no consultables.',
+      'Panel: listado con filtros división/unidad/grado, ver/anular, fecha de registro, dashboard imprimible por unidad, export CSV/PDF.',
+      'Import Excel históricos (sin código de barras → ----) para dashboard del año. Cotejo Excel hospital por CIP (DNI respaldo).',
+      'Tablas: descansos_medicos, descansos_cotejos. API: /portal/descansos/*, /admin/descansos/*.'
     ]
   },
   {
     titulo: '7. API REST — Endpoints principales',
     cuerpo: [
       'Públicos (sin token):',
-      'GET /health, /config, /preguntas, /progreso, /portal/configuracion, /portal/items, /portal/sorteos, /unidades-publico',
-      'POST /guardar, /progreso, /portal/items/:id/inscribir, /admin/login',
+      'GET /health, /config, /preguntas, /progreso, /portal/configuracion, /portal/items, /portal/sorteos, /portal/descansos/catalogos, /unidades-publico',
+      'POST /guardar, /progreso, /portal/items/:id/inscribir, /portal/descansos/registrar, /portal/descansos/consultar, /admin/login',
       '',
       'Autenticados (x-admin-token):',
       'Evaluaciones: GET /evaluaciones, /stats, /listar, /descargar, /admin/avances, /admin/registro-cip',

@@ -10,6 +10,7 @@ const REGPOL_NAV = [
   { id: 'novedades', href: 'index.html#novedades', label: 'NOVEDADES' },
   { id: 'convenios', href: 'index.html#convenios', label: 'CONVENIOS' },
   { id: 'cursos',    href: 'index.html#cursos',    label: 'CURSOS' },
+  { id: 'descansos', href: 'index.html#descansos', label: 'DESCANSOS MÉDICOS', icon: 'fa-notes-medical' },
   { id: 'bienestar', href: 'index.html#bienestar', label: 'BIENESTAR',          icon: 'fa-heart' },
   { id: 'resena',    href: 'index.html#resena',    label: 'RESEÑA HISTÓRICA' },
   { id: 'labor',     href: 'index.html#labor',     label: 'NUESTRA LABOR' },

@@ -346,10 +346,11 @@
     var esU = rol === 'unitic';
     var tieneCursos = esU || perms.indexOf('cms_cursos') !== -1;
     var tieneConvenios = esU || perms.indexOf('cms_convenios') !== -1;
+    var tieneDescansos = esU || perms.indexOf('cms_descansos') !== -1;
     var tieneEval = esU || perms.indexOf('evaluaciones') !== -1;
     var tieneDesc = esU || perms.indexOf('descargas') !== -1 || tieneEval;
     var tienePsico = esU || rol === 'bienestar' || tieneEval || tieneDesc;
-    var tieneGestion = esU || tienePsico || tieneCursos || tieneConvenios;
+    var tieneGestion = esU || tienePsico || tieneCursos || tieneConvenios || tieneDescansos;
 
     var st = document.getElementById('panel-perm-style');
     if (!st) {
@@ -360,23 +361,26 @@
     st.textContent = [
       '[data-rol-unitic]{display:none!important}',
       '[data-perm-evaluaciones],[data-perm-descargas],[data-perm-preguntas]{display:none!important}',
-      '#sb-grp-psico,#sb-grp-convenios,#sb-grp-cursos,#sb-sec-gestion{display:none!important}',
+      '#sb-grp-psico,#sb-grp-convenios,#sb-grp-cursos,#sb-grp-descansos,#sb-sec-gestion{display:none!important}',
       esU ? '[data-rol-unitic],#sb-sec-portal{display:block!important}' : '',
       tieneEval ? '[data-perm-evaluaciones],[data-perm-preguntas]{display:flex!important}' : '',
       tieneDesc ? '[data-perm-descargas]{display:flex!important}' : '',
       tienePsico ? '#sb-grp-psico{display:block!important}' : '',
       tieneConvenios ? '#sb-grp-convenios{display:block!important}' : '',
       tieneCursos ? '#sb-grp-cursos{display:block!important}' : '',
+      tieneDescansos ? '#sb-grp-descansos{display:block!important}' : '',
       tieneGestion ? '#sb-sec-gestion{display:block!important}' : ''
     ].join('\n');
 
     var badge = document.querySelector('.super-badge');
     if (badge) {
       if (esU) badge.textContent = 'SUPER ADMIN';
+      else if (tieneDescansos && !tieneCursos && !tieneConvenios && !tienePsico) badge.textContent = 'DESCANSOS MÉDICOS';
       else if (tieneCursos && tieneConvenios) badge.textContent = 'CONVENIOS + EDUCACIÓN';
       else if (tieneCursos) badge.textContent = 'EDUCACIÓN';
       else if (tieneConvenios) badge.textContent = 'CONVENIOS';
       else if (tienePsico) badge.textContent = 'PSICOLOGÍA';
+      else if (tieneDescansos) badge.textContent = 'DESCANSOS MÉDICOS';
       else badge.textContent = 'USUARIO';
     }
     var nombreEl = document.getElementById('ph-nombre');
@@ -470,6 +474,24 @@
           </div>
           <div class="sb-item" data-page="consulta-cip" onclick="ir('consulta-cip',this)">
             <i class="fas fa-search"></i> CONSULTA POR CIP
+          </div>
+        </div>
+      </div>
+
+      <div class="sb-group" id="sb-grp-descansos" style="margin-top:4px;">
+        <div class="sb-group-header" onclick="toggleGrupo(this)">
+          <div class="gi"><i class="fas fa-notes-medical" style="color:#c0392b;font-size:13px;"></i> DESCANSOS MÉDICOS</div>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="sb-group-body">
+          <div class="sb-item" data-page="descansos" onclick="ir('descansos',this)">
+            <i class="fas fa-list"></i> LISTADO Y FILTROS
+          </div>
+          <div class="sb-item" data-page="descansos-dash" onclick="ir('descansos-dash',this)">
+            <i class="fas fa-chart-bar"></i> DASHBOARD DM
+          </div>
+          <div class="sb-item" data-page="descansos-import" onclick="ir('descansos-import',this)">
+            <i class="fas fa-file-excel"></i> IMPORTAR EXCEL / COTEJO
           </div>
         </div>
       </div>
@@ -966,6 +988,83 @@
       </div>
     </div>
 
+    <!-- DESCANSOS MÉDICOS: listado -->
+    <div id="page-descansos" class="page">
+      <div class="card">
+        <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-notes-medical" style="color:#c0392b;"></i> Descansos médicos — Listado</h3>
+        <p style="font-size:12.5px;color:#666;margin-bottom:12px;">Filtros por división, unidad y grado. Incluye históricos (código ----) y registros web.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:12px;">
+          <div><label style="font-size:11px;font-weight:700;display:block;">Año</label>
+            <input type="number" id="dm-f-anio" style="width:90px;padding:7px;" onchange="dmAplicarFiltros()"></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">División</label>
+            <select id="dm-f-division" style="min-width:160px;padding:7px;" onchange="dmOnDivisionChange();dmAplicarFiltros()"></select></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">Unidad</label>
+            <select id="dm-f-unidad" style="min-width:180px;padding:7px;" onchange="dmAplicarFiltros()"></select></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">Grado</label>
+            <select id="dm-f-grado" style="min-width:140px;padding:7px;" onchange="dmAplicarFiltros()"></select></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">Tipo doc.</label>
+            <select id="dm-f-tipo_documento" style="min-width:160px;padding:7px;" onchange="dmAplicarFiltros()"></select></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">Origen</label>
+            <select id="dm-f-origen" style="padding:7px;" onchange="dmAplicarFiltros()">
+              <option value="">Todos</option>
+              <option value="web">Web</option>
+              <option value="historico">Histórico</option>
+              <option value="panel">Panel</option>
+            </select></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">CIE</label>
+            <input id="dm-f-cie" style="width:90px;padding:7px;" onkeydown="if(event.key==='Enter')dmAplicarFiltros()"></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">Diagnóstico</label>
+            <input id="dm-f-diagnostico" style="width:140px;padding:7px;" onkeydown="if(event.key==='Enter')dmAplicarFiltros()"></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">Buscar</label>
+            <input id="dm-f-q" placeholder="CIP / nombre" style="width:140px;padding:7px;" onkeydown="if(event.key==='Enter')dmAplicarFiltros()"></div>
+          <button class="btn btn-v" type="button" onclick="dmAplicarFiltros()"><i class="fas fa-filter"></i> Filtrar</button>
+          <button class="btn" type="button" style="background:#888;color:#fff;" onclick="dmLimpiarFiltros()">Limpiar</button>
+          <button class="btn btn-r" type="button" onclick="dmExport('pdf-list')"><i class="fas fa-file-pdf"></i> PDF listado</button>
+          <button class="btn" type="button" style="background:#1a7a3a;color:#fff;" onclick="dmExport('csv')"><i class="fas fa-file-csv"></i> CSV</button>
+          <span id="dm-total-label" style="font-size:12px;color:#666;margin-left:auto;"></span>
+        </div>
+        <div id="dm-tabla-wrap"><p style="color:#bbb;text-align:center;padding:24px;">Cargando...</p></div>
+      </div>
+    </div>
+
+    <!-- DESCANSOS MÉDICOS: dashboard -->
+    <div id="page-descansos-dash" class="page">
+      <div class="card">
+        <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-chart-bar"></i> Dashboard — Descansos médicos</h3>
+        <p style="font-size:12.5px;color:#666;margin-bottom:12px;">Usa los mismos filtros del listado (división / unidad / grado / año). Puede imprimir el resumen filtrado por unidad.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn btn-v" type="button" onclick="dmAplicarFiltros()"><i class="fas fa-sync"></i> Actualizar</button>
+          <button class="btn btn-r" type="button" onclick="dmExport('pdf-dash')"><i class="fas fa-print"></i> Imprimir / PDF dashboard</button>
+          <button class="btn" type="button" style="background:#888;color:#fff;" onclick="ir('descansos',null)">Ir a filtros / listado</button>
+        </div>
+        <div id="dm-dash-body"><p style="color:#bbb;padding:16px;">Abra esta sección o aplique filtros para cargar.</p></div>
+      </div>
+    </div>
+
+    <!-- DESCANSOS MÉDICOS: import / cotejo -->
+    <div id="page-descansos-import" class="page">
+      <div class="card">
+        <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-file-excel"></i> Importar Excel históricos</h3>
+        <p style="font-size:12.5px;color:#666;margin-bottom:10px;line-height:1.5;">
+          Suba Excel anteriores <strong>sin código de barras</strong>. Se guardará como <code>----</code>.
+          Sirven para listado y dashboard (al menos de este año). No aparecen en la consulta pública web.
+        </p>
+        <input type="file" id="dm-excel-historico" accept=".xlsx,.xls,.csv">
+        <button class="btn btn-o" type="button" style="margin-top:10px;" onclick="dmImportarHistorico()"><i class="fas fa-upload"></i> Subir históricos</button>
+        <p id="dm-import-msg" style="font-size:12px;color:#555;margin-top:8px;"></p>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-hospital"></i> Cotejo Excel hospital</h3>
+        <p style="font-size:12.5px;color:#666;margin-bottom:10px;">Cruce por CIP (DNI de respaldo) contra registros del año filtrado.</p>
+        <input type="file" id="dm-excel-hospital" accept=".xlsx,.xls,.csv">
+        <button class="btn btn-v" type="button" style="margin-top:10px;" onclick="dmCotejarHospital()"><i class="fas fa-exchange-alt"></i> Cotejar</button>
+        <p id="dm-cotejo-msg" style="font-size:12px;color:#555;margin-top:8px;"></p>
+        <div id="dm-cotejo-resultado"></div>
+        <h4 style="margin:18px 0 8px;font-size:13px;color:#004d3d;">Historial de cotejos</h4>
+        <div id="dm-cotejos-hist"></div>
+      </div>
+    </div>
+
     <!-- MODAL CMS -->
     <div id="cms-modal" class="cms-modal" role="dialog" aria-modal="true" aria-hidden="true">
       <div class="cms-modal-backdrop" onclick="cerrarCmsModal()"></div>
@@ -983,6 +1082,17 @@
     </div>
 
   </main>
+</div>
+
+<!-- Modal detalle DM -->
+<div class="modal" id="dm-modal" style="display:none;align-items:center;justify-content:center;" onclick="if(event.target===this)dmCerrarModal()">
+  <div class="modal-box" style="width:min(640px,95vw);">
+    <h3><i class="fas fa-notes-medical"></i> Detalle descanso médico</h3>
+    <div id="dm-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn" style="background:#999;color:#fff;" type="button" onclick="dmCerrarModal()">Cerrar</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL: Item (curso / convenio) -->
@@ -1379,6 +1489,7 @@
       <div class="perm-box">
         <div class="pb-title">Educación (Cursos)</div>
         <label><input type="checkbox" value="cms_cursos" class="perm-chk"> Gestionar cursos e inscripciones</label>
+        <label><input type="checkbox" value="cms_descansos" class="perm-chk"> Descansos médicos (listado, dashboard, Excel)</label>
         <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Solo operaciones de cursos. No edita el portal web.</p>
       </div>
       <div class="perm-box" style="background:#fff8e6;border-color:#f0d78c;">
@@ -1421,10 +1532,11 @@
 
 <script src="api-config.js?v=2"></script>
 <script src="fecha-local.js?v=1"></script>
-<script src="portal-data.js?v=7"></script>
-<script src="portal.js?v=64"></script>
+<script src="portal-data.js?v=8"></script>
+<script src="portal.js?v=65"></script>
 <script src="divisiones-ui.js?v=4"></script>
 <script src="panel-cms.js?v=25"></script>
+<script src="panel-descansos.js?v=1"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[], SESION=null;
@@ -1435,7 +1547,8 @@ var ETIQUETAS_PERM={
   preguntas:'PREGUNTAS DEL TEST',
   descargas:'RESPUESTAS',
   cms_convenios:'Gestión Convenios',
-  cms_cursos:'Gestión Cursos'
+  cms_cursos:'Gestión Cursos',
+  cms_descansos:'Descansos médicos'
 };
 
 function normalizarPermisosPanel(p) {
@@ -1450,6 +1563,7 @@ function puedeEntrarPanel(s) {
   var perms = normalizarPermisosPanel(s.permisos);
   return s.rol === 'unitic' || s.rol === 'bienestar'
     || perms.indexOf('cms_cursos') !== -1 || perms.indexOf('cms_convenios') !== -1
+    || perms.indexOf('cms_descansos') !== -1
     || perms.indexOf('cms_inicio') !== -1 || perms.indexOf('cms_resena') !== -1
     || perms.indexOf('cms_labor') !== -1 || perms.indexOf('cms_novedades') !== -1
     || perms.indexOf('evaluaciones') !== -1 || perms.indexOf('descargas') !== -1;
@@ -2555,6 +2669,7 @@ function puedePublicarResultadosPdf(tipo){
 }
 function puedeGestionConvenios(){ return puedeGestionarConvocatorias() || puedeGestionarSorteosConvenio(); }
 function puedeGestionCursos(){ return puedeGestionarConvocatorias() || puedePublicarResultadosPdf('curso'); }
+function puedeGestionDescansos(){ return esUnitic() || tienePermiso('cms_descansos'); }
 
 function aplicarPermisosSidebar(s){
   if (typeof regpolAplicarPermisosPanel === 'function') regpolAplicarPermisosPanel(s);
@@ -2628,6 +2743,7 @@ function ir(page, el){
   if(page==='resultados-pdf'&&!puedePublicarResultadosPdf(RESULTADOS_PDF_TIPO)){alert('Sin acceso a publicación de resultados.');return;}
   if(page==='inscritos'&&!puedeOperarInscritosConvenio()){alert('Sin acceso a inscritos de convenios.');return;}
   if(page==='consulta-cip'&&!puedeConsultarCip()){alert('Sin acceso a consulta por CIP.');return;}
+  if((page==='descansos'||page==='descansos-dash'||page==='descansos-import')&&!puedeGestionDescansos()){alert('Sin acceso a Descansos médicos.');return;}
   if((page==='usuarios'||page==='divisiones'||page==='menu-publicacion')&&!esUnitic()){alert('Solo el Super Admin puede acceder a esta sección.');return;}
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
   var pg=document.getElementById('page-'+page);
@@ -2652,6 +2768,9 @@ function ir(page, el){
   if(page==='resultados-pdf' && !ya){ cargarResultadosPdfAdmin(); }
   if(page==='menu-publicacion'){ cargarPaginaMenuPublicacion(); }
   if(page==='sorteos')             { aplicarModoSorteosUI(); cargarItemsSorteo(SORTEOS_TIPO_FILTRO||'convenio'); cargarSorteos(); }
+  if(page==='descansos' || page==='descansos-dash' || page==='descansos-import'){
+    if(typeof dmInit === 'function') dmInit();
+  }
   panelPaginasCargadas[page] = true;
 }
 
@@ -2675,12 +2794,14 @@ function toggleGrupo(header){
 function tipoDashboardLocal(){
   if (!SESION) return 'none';
   if (esUnitic()) return 'unitic';
+  if (puedeGestionDescansos() && !puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos()) return 'descansos';
   if (puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos()) return 'psico';
   if (puedeGestionConvenios() && !puedeGestionCursos() && !puedeGestionPsicologia()) return 'convenios';
   if (puedeGestionCursos() && !puedeGestionConvenios() && !puedeGestionPsicologia()) return 'cursos';
   if (puedeGestionPsicologia()) return 'psico';
   if (puedeGestionConvenios()) return 'convenios';
   if (puedeGestionCursos()) return 'cursos';
+  if (puedeGestionDescansos()) return 'descansos';
   return 'gestion';
 }
 
@@ -2693,6 +2814,11 @@ function cargarDashboard(force){
   if (p) p.style.display = modo === 'psico' ? '' : 'none';
   if (g) g.style.display = (modo === 'convenios' || modo === 'cursos' || modo === 'gestion') ? '' : 'none';
   if (modo === 'none') return;
+  if (modo === 'descansos') {
+    var el = document.querySelector('[data-page="descansos-dash"]');
+    if (el) ir('descansos-dash', el);
+    return;
+  }
   if (modo === 'unitic') cargarStatsSistema(force);
   else if (modo === 'psico') cargarStatsPsico(force);
   else cargarStatsGestion(modo === 'convenios' ? 'convenio' : 'curso', force);

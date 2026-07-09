@@ -24,6 +24,7 @@ var REGPOL_NAV_FALLBACK = [
   { id: 'novedades', href: 'index.html#novedades', label: 'NOVEDADES' },
   { id: 'convenios', href: 'index.html#convenios', label: 'CONVENIOS' },
   { id: 'cursos',    href: 'index.html#cursos',    label: 'CURSOS' },
+  { id: 'descansos', href: 'index.html#descansos', label: 'DESCANSOS MÉDICOS', icon: 'fa-notes-medical' },
   { id: 'bienestar', href: 'index.html#bienestar', label: 'BIENESTAR',          icon: 'fa-heart' },
   { id: 'resena',    href: 'index.html#resena',    label: 'RESE\u00d1A HIST\u00d3RICA' },
   { id: 'labor',     href: 'index.html#labor',    label: 'NUESTRA LABOR' },
@@ -393,7 +394,7 @@ function marcarNavActivo(activeId) {
 
 function navDesdeHash() {
   var h = (location.hash || '').replace('#', '').trim();
-  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'bienestar', 'resena', 'labor', 'unidades'];
+  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'descansos', 'bienestar', 'resena', 'labor', 'unidades'];
   return ids.indexOf(h) >= 0 ? h : '';
 }
 
@@ -457,7 +458,7 @@ function initPortalScrollNav() {
       if (history.pushState) history.pushState(null, '', '#' + hash);
     });
   }
-  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'bienestar', 'resena', 'labor', 'unidades'];
+  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'descansos', 'bienestar', 'resena', 'labor', 'unidades'];
   var ticking = false;
   function onScroll() {
     if (ticking) return;
@@ -1758,6 +1759,7 @@ function aplicarNavOcultos(ocultos) {
     novedades: 'novedades',
     convenios: 'convenios',
     cursos: 'cursos',
+    descansos: 'descansos',
     bienestar: 'bienestar',
     resena: 'resena',
     labor: 'labor',

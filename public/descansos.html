@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Descansos médicos — REGPOL Callao</title>
+  <link rel="stylesheet" href="style.css?v=40">
+  <link rel="stylesheet" href="responsive.css?v=1">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    .dm-wrap{max-width:920px;margin:0 auto;padding:24px 16px 48px;}
+    .dm-tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+    .dm-tab{background:#e8f0ec;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:13px;color:#004d3d;cursor:pointer;}
+    .dm-tab.on{background:#004d3d;color:#fff;}
+    .dm-card{background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:22px;}
+    .dm-card h2{color:#004d3d;font-size:16px;margin:0 0 6px;}
+    .dm-card .sub{color:#666;font-size:13px;margin-bottom:16px;}
+    .fi-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media(max-width:700px){.fi-grid{grid-template-columns:1fr;}}
+    .fi-group label{font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:4px;}
+    .fi-group input,.fi-group select,.fi-group textarea{width:100%;padding:9px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit;box-sizing:border-box;}
+    .fi-full{grid-column:1/-1;}
+    .fi-alerta{padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600;margin-bottom:12px;display:none;}
+    .fi-alerta.ok{background:#d4edda;color:#1a7a3a;display:block;}
+    .fi-alerta.error{background:#f8d7da;color:#842029;display:block;}
+    .pdf-box{border:2px dashed #c8a94a;border-radius:9px;padding:14px;background:#fffdf5;}
+    .btn-dm{background:#004d3d;color:#fff;border:none;padding:12px 22px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;}
+    .btn-dm:hover{background:#006b55;}
+    .btn-dm:disabled{opacity:.6;cursor:wait;}
+    .panel{display:none;}
+    .panel.on{display:block;}
+    .consulta-ok{background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:18px;margin-top:12px;}
+  </style>
+</head>
+<body class="body-portal">
+<div class="header-social-portal">
+  <div class="container portal-flex">
+    <a href="panel-admin.html" target="_blank" rel="noopener noreferrer" class="btn-pnp-social ingresar"
+       onclick="window.open('panel-admin.html','regpol_panel_unitic','noopener,noreferrer');return false;">
+      <i class="fas fa-sign-in-alt"></i> INGRESAR
+    </a>
+    <div class="social-buttons-group">
+      <a href="https://www.facebook.com/region.policial.callao.2025" target="_blank" class="btn-pnp-social fb"><i class="fab fa-facebook"></i> Facebook</a>
+      <a href="https://www.tiktok.com/@regionpolicialcallao" target="_blank" class="btn-pnp-social tk"><i class="fab fa-tiktok"></i> TikTok</a>
+      <a href="https://wa.me/51980122452" target="_blank" class="btn-pnp-social wa"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+    </div>
+  </div>
+</div>
+<header class="main-header">
+  <div class="container header-flex">
+    <div class="logo-container">
+      <img src="img/regpol-callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90">
+    </div>
+    <div class="title-text">
+      <h1 class="portal-eslogan">REGIÓN POLICIAL CALLAO</h1>
+      <p class="portal-subtitulo">DESCANSOS MÉDICOS</p>
+    </div>
+  </div>
+</header>
+<nav class="nav-main"><div class="container"><ul></ul></div></nav>
+
+<main class="dm-wrap">
+  <div class="dm-tabs">
+    <button type="button" class="dm-tab on" id="tab-reg" onclick="mostrarPanel('reg')"><i class="fas fa-file-medical"></i> Registrar DM</button>
+    <button type="button" class="dm-tab" id="tab-con" onclick="mostrarPanel('con')"><i class="fas fa-search"></i> Consultar ingreso</button>
+    <a href="index.html#descansos" style="margin-left:auto;align-self:center;font-size:13px;color:#004d3d;font-weight:600;"><i class="fas fa-arrow-left"></i> Volver</a>
+  </div>
+
+  <div id="panel-reg" class="panel on">
+    <div class="dm-card">
+      <h2><i class="fas fa-notes-medical"></i> Registro de descanso médico</h2>
+      <p class="sub">Complete todos los campos. El PDF y el N.º de código de barras son obligatorios.</p>
+      <div id="reg-alerta" class="fi-alerta"></div>
+      <form id="form-dm" onsubmit="enviarDM(event)">
+        <div class="fi-grid">
+          <div class="fi-group"><label>CIP *</label><input id="dm-cip" required inputmode="numeric" maxlength="20"></div>
+          <div class="fi-group"><label>Grado (efectivo) *</label><select id="dm-grado" required></select></div>
+          <div class="fi-group"><label>Apellido paterno *</label><input id="dm-apepat" required maxlength="100"></div>
+          <div class="fi-group"><label>Apellido materno</label><input id="dm-apemat" maxlength="100"></div>
+          <div class="fi-group fi-full"><label>Nombres *</label><input id="dm-nombres" required maxlength="150"></div>
+          <div class="fi-group fi-full"><label>Unidad *</label><select id="dm-unidad" required></select></div>
+          <div class="fi-group"><label>Fecha inicio DM *</label><input type="date" id="dm-inicio" required></div>
+          <div class="fi-group"><label>Días del DM *</label><input type="number" id="dm-dias" min="1" required></div>
+          <div class="fi-group"><label>Fecha término</label><input type="date" id="dm-termino"></div>
+          <div class="fi-group"><label>Código CIE</label><input id="dm-cie" maxlength="40"></div>
+          <div class="fi-group fi-full"><label>Diagnóstico</label><textarea id="dm-dx" rows="2"></textarea></div>
+          <div class="fi-group"><label>Tipo de documento *</label><select id="dm-tipo" required></select></div>
+          <div class="fi-group"><label>N.º código de barras *</label><input id="dm-barcode" required maxlength="80" placeholder="Obligatorio"></div>
+          <div class="fi-group"><label>Grado del médico *</label><select id="dm-grado-med" required></select></div>
+          <div class="fi-group"><label>Apellidos y nombres del médico *</label><input id="dm-nom-med" required maxlength="200"></div>
+          <div class="fi-group fi-full"><label>Centro asistencial *</label><input id="dm-centro" required maxlength="200"></div>
+          <div class="fi-group fi-full">
+            <div class="pdf-box">
+              <label>PDF del descanso médico * (máx. 5 MB)</label>
+              <input type="file" id="dm-pdf" accept="application/pdf,.pdf" required>
+              <p id="dm-pdf-name" style="font-size:12px;color:#666;margin:8px 0 0;"></p>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:16px;text-align:right;">
+          <button type="submit" class="btn-dm" id="btn-reg"><i class="fas fa-save"></i> Registrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="panel-con" class="panel">
+    <div class="dm-card">
+      <h2><i class="fas fa-search"></i> Consulta de ingreso</h2>
+      <p class="sub">Ingrese CIP y N.º de código de barras. Solo se confirma el ingreso (nombres + CIP).</p>
+      <div id="con-alerta" class="fi-alerta"></div>
+      <form onsubmit="consultarDM(event)">
+        <div class="fi-grid">
+          <div class="fi-group"><label>CIP *</label><input id="con-cip" required inputmode="numeric" maxlength="20"></div>
+          <div class="fi-group"><label>N.º código de barras *</label><input id="con-barcode" required maxlength="80"></div>
+        </div>
+        <div style="margin-top:16px;">
+          <button type="submit" class="btn-dm"><i class="fas fa-search"></i> Consultar</button>
+        </div>
+      </form>
+      <div id="con-resultado"></div>
+    </div>
+  </div>
+</main>
+
+<script src="api-config.js?v=2"></script>
+<script src="portal-data.js?v=8"></script>
+<script src="portal.js?v=65"></script>
+<script src="divisiones-ui.js?v=4"></script>
+<script>
+var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : '';
+var PDF_DATA = '';
+var PDF_NOMBRE = '';
+var CATALOGOS = null;
+
+function mostrarPanel(which) {
+  document.getElementById('panel-reg').classList.toggle('on', which === 'reg');
+  document.getElementById('panel-con').classList.toggle('on', which === 'con');
+  document.getElementById('tab-reg').classList.toggle('on', which === 'reg');
+  document.getElementById('tab-con').classList.toggle('on', which === 'con');
+}
+
+function opts(arr, placeholder) {
+  return '<option value="">' + (placeholder || '— Seleccionar —') + '</option>'
+    + (arr || []).map(function(x){ return '<option value="'+x+'">'+x+'</option>'; }).join('');
+}
+
+function sumarDiasISO(fecha, dias) {
+  if (!fecha || !dias) return '';
+  var d = new Date(fecha + 'T12:00:00');
+  d.setDate(d.getDate() + (parseInt(dias, 10) || 0) - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function alerta(id, ok, msg) {
+  var el = document.getElementById(id);
+  el.className = 'fi-alerta ' + (ok ? 'ok' : 'error');
+  el.textContent = msg;
+}
+
+async function init() {
+  if (typeof initPortalPagina === 'function') initPortalPagina({ activeNav: 'descansos' });
+  else if (typeof initPortalNav === 'function') initPortalNav('descansos');
+
+  var cat = await fetch(API + '/portal/descansos/catalogos').then(function(r){return r.json();}).catch(function(){return {};});
+  CATALOGOS = cat;
+  document.getElementById('dm-grado').innerHTML = opts(cat.grados_efectivo || []);
+  document.getElementById('dm-grado-med').innerHTML = opts(cat.grados_medico || []);
+  document.getElementById('dm-tipo').innerHTML = opts(cat.tipos_documento || []);
+
+  var cfg = await fetch(API + '/config').then(function(r){return r.json();}).catch(function(){return {};});
+  var sel = document.getElementById('dm-unidad');
+  if (typeof llenarSelectUnidadesAgrupadas === 'function' && cfg.divisiones) {
+    llenarSelectUnidadesAgrupadas(sel, cfg.divisiones, { placeholder: '— Seleccionar unidad —' });
+  } else {
+    sel.innerHTML = '<option value="">— Seleccionar unidad —</option>';
+    (cfg.divisiones || []).forEach(function(d) {
+      var og = document.createElement('optgroup');
+      og.label = d.nombre;
+      (d.unidades || []).forEach(function(u) {
+        var o = document.createElement('option');
+        o.value = u.nombre; o.textContent = u.nombre;
+        og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+  }
+
+  document.getElementById('dm-cip').addEventListener('input', function(e){ e.target.value = e.target.value.replace(/\D/g,''); });
+  document.getElementById('con-cip').addEventListener('input', function(e){ e.target.value = e.target.value.replace(/\D/g,''); });
+
+  function recalcTermino() {
+    var ini = document.getElementById('dm-inicio').value;
+    var dias = document.getElementById('dm-dias').value;
+    var t = sumarDiasISO(ini, dias);
+    if (t) document.getElementById('dm-termino').value = t;
+  }
+  document.getElementById('dm-inicio').addEventListener('change', recalcTermino);
+  document.getElementById('dm-dias').addEventListener('input', recalcTermino);
+
+  document.getElementById('dm-pdf').addEventListener('change', function(e) {
+    var f = e.target.files && e.target.files[0];
+    PDF_DATA = ''; PDF_NOMBRE = '';
+    document.getElementById('dm-pdf-name').textContent = '';
+    if (!f) return;
+    if (f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name)) {
+      alerta('reg-alerta', false, 'Solo se acepta PDF');
+      e.target.value = '';
+      return;
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      alerta('reg-alerta', false, 'PDF máximo 5 MB');
+      e.target.value = '';
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function() {
+      PDF_DATA = reader.result;
+      PDF_NOMBRE = f.name;
+      document.getElementById('dm-pdf-name').textContent = 'Archivo: ' + f.name;
+    };
+    reader.readAsDataURL(f);
+  });
+
+  if ((location.hash || '').indexOf('consulta') >= 0) mostrarPanel('con');
+}
+
+async function enviarDM(ev) {
+  ev.preventDefault();
+  if (!PDF_DATA) { alerta('reg-alerta', false, 'Adjunte el PDF del descanso'); return; }
+  var btn = document.getElementById('btn-reg');
+  btn.disabled = true;
+  var body = {
+    cip: document.getElementById('dm-cip').value,
+    grado: document.getElementById('dm-grado').value,
+    apellido_paterno: document.getElementById('dm-apepat').value,
+    apellido_materno: document.getElementById('dm-apemat').value,
+    nombres: document.getElementById('dm-nombres').value,
+    unidad: document.getElementById('dm-unidad').value,
+    fecha_inicio: document.getElementById('dm-inicio').value,
+    dias: document.getElementById('dm-dias').value,
+    fecha_termino: document.getElementById('dm-termino').value,
+    cie: document.getElementById('dm-cie').value,
+    diagnostico: document.getElementById('dm-dx').value,
+    tipo_documento: document.getElementById('dm-tipo').value,
+    codigo_barras: document.getElementById('dm-barcode').value,
+    grado_medico: document.getElementById('dm-grado-med').value,
+    nombres_medico: document.getElementById('dm-nom-med').value,
+    centro_asistencial: document.getElementById('dm-centro').value,
+    pdf_data: PDF_DATA,
+    pdf_nombre: PDF_NOMBRE
+  };
+  try {
+    var r = await fetch(API + '/portal/descansos/registrar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    var d = await r.json();
+    if (!d.ok) { alerta('reg-alerta', false, d.error || 'Error al registrar'); btn.disabled = false; return; }
+    alerta('reg-alerta', true, 'Registrado correctamente. CIP ' + d.cip + (d.nombres ? ' — ' + d.nombres : ''));
+    document.getElementById('form-dm').reset();
+    PDF_DATA = ''; PDF_NOMBRE = '';
+    document.getElementById('dm-pdf-name').textContent = '';
+  } catch (e) {
+    alerta('reg-alerta', false, 'Error de conexión');
+  }
+  btn.disabled = false;
+}
+
+async function consultarDM(ev) {
+  ev.preventDefault();
+  document.getElementById('con-resultado').innerHTML = '';
+  try {
+    var r = await fetch(API + '/portal/descansos/consultar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cip: document.getElementById('con-cip').value,
+        codigo_barras: document.getElementById('con-barcode').value
+      })
+    });
+    var d = await r.json();
+    if (!d.ok) { alerta('con-alerta', false, d.error || 'No encontrado'); return; }
+    alerta('con-alerta', true, d.mensaje || 'Ingresado');
+    document.getElementById('con-resultado').innerHTML =
+      '<div class="consulta-ok"><strong>' + (d.nombres || '') + '</strong><br>CIP: ' + (d.cip || '') + '</div>';
+  } catch (e) {
+    alerta('con-alerta', false, 'Error de conexión');
+  }
+}
+
+init();
+</script>
+</body>
+</html>

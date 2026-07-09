@@ -13,6 +13,7 @@ const crypto   = require('crypto');
 const { Pool } = require('pg');
 const { Worker } = require('worker_threads');
 const { calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido, significadoEscalaMMPI, diagnosticoFinalMMPI, calcularDiagnosticoFila } = require('./pdf_gen');
+const descansosMedicos = require('./descansos_medicos');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -542,6 +543,8 @@ async function initDB() {
     CREATE INDEX IF NOT EXISTS idx_admin_sesiones_expira ON admin_sesiones(expira);
   `);
 
+  await descansosMedicos.initTablasDescansos(pool);
+
   // Admins por defecto — la contraseña inicial se toma de variables de entorno.
   // Solo se insertan si el usuario no existe (ON CONFLICT DO NOTHING); las cuentas
   // ya creadas conservan su contraseña y se cambian desde el panel de usuarios.
@@ -557,6 +560,7 @@ async function initDB() {
     ['convenios',    sha256(seedPass('SEED_PASS_CONVENIOS',  'Convenios2026!')),  'usuario', 'Oficina de Convenios',   null, '["cms_convenios"]'],
     ['educacion',    sha256(seedPass('SEED_PASS_EDUCACION',  'Educacion2026!')),  'usuario', 'Oficina de Educación',   null, '["cms_cursos"]'],
     ['imagen',       sha256(seedPass('SEED_PASS_IMAGEN',     'Imagen2026!')),     'usuario', 'Oficina de Imagen',      null, '["cms_inicio","cms_resena","cms_labor","cms_novedades"]'],
+    ['descansos',    sha256(seedPass('SEED_PASS_DESCANSOS',  'Descansos2026!')),  'usuario', 'Oficina Descansos Médicos', null, '["cms_descansos"]'],
   ];
   for (const [u,h,r,n,un,p] of adminsDefecto) {
     await pool.query(
@@ -4464,6 +4468,9 @@ function iniciarDB() {
       setTimeout(iniciarDB, 15000);
     });
 }
+
+// ── Módulo Descansos médicos (independiente) ─────────────────────────────────
+descansosMedicos.registrarRutas(app, pool, requireAuth);
 
 app.listen(PORT, '0.0.0.0', function() {
   console.log('\n=== REGPOL Callao — Puerto ' + PORT + ' ===');
