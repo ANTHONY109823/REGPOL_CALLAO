@@ -21,9 +21,9 @@
     var p = new URLSearchParams();
     var anio = (document.getElementById('dm-f-anio') || {}).value || DM_ANIO;
     if (anio) p.set('anio', anio);
-    ['division', 'unidad', 'grado', 'cie', 'diagnostico', 'tipo_documento', 'q'].forEach(function(k) {
+    ['division', 'unidad', 'grado', 'tipo_documento'].forEach(function(k) {
       var el = document.getElementById('dm-f-' + k);
-      if (el && el.value) p.set(k === 'tipo_documento' ? 'tipo_documento' : k, el.value);
+      if (el && el.value) p.set(k, el.value);
     });
     var origen = (document.getElementById('dm-f-origen') || {}).value;
     if (origen) p.set('origen', origen);
@@ -309,7 +309,7 @@
   }
 
   function limpiarFiltros() {
-    ['division', 'unidad', 'grado', 'cie', 'diagnostico', 'tipo_documento', 'q', 'origen'].forEach(function(k) {
+    ['division', 'unidad', 'grado', 'tipo_documento', 'origen'].forEach(function(k) {
       var el = document.getElementById('dm-f-' + k);
       if (el) el.value = '';
     });

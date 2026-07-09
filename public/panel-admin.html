@@ -1011,12 +1011,6 @@
               <option value="historico">Histórico</option>
               <option value="panel">Panel</option>
             </select></div>
-          <div><label style="font-size:11px;font-weight:700;display:block;">CIE</label>
-            <input id="dm-f-cie" style="width:90px;padding:7px;" onkeydown="if(event.key==='Enter')dmAplicarFiltros()"></div>
-          <div><label style="font-size:11px;font-weight:700;display:block;">Diagnóstico</label>
-            <input id="dm-f-diagnostico" style="width:140px;padding:7px;" onkeydown="if(event.key==='Enter')dmAplicarFiltros()"></div>
-          <div><label style="font-size:11px;font-weight:700;display:block;">Buscar</label>
-            <input id="dm-f-q" placeholder="CIP / nombre" style="width:140px;padding:7px;" onkeydown="if(event.key==='Enter')dmAplicarFiltros()"></div>
           <button class="btn btn-v" type="button" onclick="dmAplicarFiltros()"><i class="fas fa-filter"></i> Filtrar</button>
           <button class="btn" type="button" style="background:#888;color:#fff;" onclick="dmLimpiarFiltros()">Limpiar</button>
           <button class="btn btn-r" type="button" onclick="dmExport('pdf-list')"><i class="fas fa-file-pdf"></i> PDF listado</button>
@@ -1536,7 +1530,7 @@
 <script src="portal.js?v=65"></script>
 <script src="divisiones-ui.js?v=4"></script>
 <script src="panel-cms.js?v=25"></script>
-<script src="panel-descansos.js?v=2"></script>
+<script src="panel-descansos.js?v=3"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[], SESION=null;
