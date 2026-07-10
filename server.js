@@ -650,38 +650,24 @@ async function initDB() {
 
 const DIVISIONES_CANON = [
   { nombre: 'DIVOPUS 1', orden: 1, unidades: [
-    'JEFATURA DIVOPUS 1',
     'CIA CALLAO', 'CIA LA PUNTA', 'CIA BELLAVISTA', 'CIA CIUDADELA CHALACA',
-    'CIA CIUDAD DEL PESCADOR', 'CIA RAMON CASTILLA', 'CIA LA LEGUA', 'CIA LA PERLA',
-    'OD CALLAO'
+    'CIA CIUDAD DEL PESCADOR', 'CIA RAMON CASTILLA', 'CIA LA LEGUA', 'CIA LA PERLA'
   ]},
   { nombre: 'DIVOPUS 2', orden: 2, unidades: [
-    'JEFATURA DIVOPUS 2',
     'CIA JUAN INGUNZA', 'CIA SARITA COLONIA', 'CIA BOCANEGRA',
-    'CIA MANUEL DULANTO', 'CIA PLAYA RIMAC', 'CIA CARMEN DE LA LEGUA',
-    'OD VIPOL'
+    'CIA MANUEL DULANTO', 'CIA PLAYA RIMAC', 'CIA CARMEN DE LA LEGUA'
   ]},
   { nombre: 'DIVOPUS 3', orden: 3, unidades: [
-    'JEFATURA DIVOPUS 3',
     'CIA VENTANILLA', 'CIA OQUENDO', 'CIA MI PERU',
-    'CIA PACHACUTEC', 'CIA VILLA LOS REYES', 'CIA MARQUEZ',
-    'OD VENTANILLA'
+    'CIA PACHACUTEC', 'CIA VILLA LOS REYES', 'CIA MARQUEZ'
   ]},
   { nombre: 'DIVUES', orden: 4, unidades: [
-    'JEFATURA DIVUES',
     'ESCVER CALLAO', 'ESCVER VENTANILLA', 'UNIEME CALLAO', 'UNIEME VENTANILLA',
     'UNIDIR CALLAO', 'UNIPAPIE', 'USEG CALLAO', 'UNISEINT CALLAO',
     'UNIPIAT CALLAO', 'USE CALLAO', 'USE VENTANILLA', 'UNIPIRV CALLAO',
-    'UTSEVI CALLAO', 'SECTSV VENTANILLA', 'SECTSV CALLAO', 'UNISEEST'
+    'UTSEVI CALLAO', 'SECTSV VENTANILLA'
   ]},
-  { nombre: 'DIVPOCOM', orden: 5, unidades: ['DIVPOCOM'] },
-  { nombre: 'DIVREINT', orden: 6, unidades: ['DIVREINT CALLAO'] },
-  { nombre: 'UNICOPE 105', orden: 7, unidades: ['UNICOPE 105'] },
-  { nombre: 'UNIDADES ADM. RPC', orden: 8, unidades: [
-    'UNIDADES ADM. RPC', 'REGPOL CALLAO', 'AYUDANTIA', 'ESTADO MAYOR', 'UNITIC',
-    'UNIPLEDU', 'UNIASJUR', 'UNITRDOC', 'OFIMA', 'OFAD', 'OFAD AREABA',
-    'OFAD AREBAP', 'OFAD ARELOG', 'OFAD AREREHUM', 'OFAD AREARMUN'
-  ]}
+  { nombre: 'UNIDADES ADM. RPC', orden: 5, unidades: ['UNIDADES ADM. RPC'] }
 ];
 
 async function obtenerDivisionesAgrupadas() {
@@ -702,9 +688,7 @@ async function obtenerDivisionesAgrupadas() {
 
 async function sincronizarDivisionesUnidades() {
   function tipoUnidadDivision(nombreDiv) {
-    if (nombreDiv === 'DIVUES' || nombreDiv === 'DIVPOCOM' || nombreDiv === 'DIVREINT' || nombreDiv === 'UNICOPE 105') {
-      return 'especializada';
-    }
+    if (nombreDiv === 'DIVUES') return 'especializada';
     if (nombreDiv === 'UNIDADES ADM. RPC') return 'administrativa';
     return 'comisaria';
   }
@@ -4543,4 +4527,10 @@ app.listen(PORT, '0.0.0.0', function() {
   console.log('\n=== REGPOL Callao — Puerto ' + PORT + ' ===');
   setImmediate(precalentarEstaticos);
   iniciarDB();
+  // Nómina RRHH en background (no bloquea psicología ni healthcheck)
+  setTimeout(function() {
+    if (typeof recursosHumanos.programarSincronizacionNomina === 'function') {
+      recursosHumanos.programarSincronizacionNomina(pool);
+    }
+  }, 8000);
 });

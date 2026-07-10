@@ -325,9 +325,10 @@ async function asegurarCatalogoRRHH(pool) {
     }
     for (let u = 0; u < div.unidades.length; u++) {
       const nombre = div.unidades[u];
+      // Solo inserta si no existe: no mueve unidades ya usadas por Psicología/portal
       await pool.query(
         `INSERT INTO unidades_pol (nombre, division_id, tipo, orden) VALUES ($1,$2,$3,$4)
-         ON CONFLICT (nombre) DO UPDATE SET division_id=EXCLUDED.division_id, tipo=EXCLUDED.tipo, orden=EXCLUDED.orden`,
+         ON CONFLICT (nombre) DO NOTHING`,
         [nombre, divId, div.tipo, u + 1]
       );
     }
@@ -388,7 +389,19 @@ async function initTablasRRHH(pool) {
   `);
 
   await asegurarCatalogoRRHH(pool);
-  await sincronizarNominaSegunVersion(pool);
+  // La nómina NO se sincroniza aquí: bloquearía el API (psicología / progreso / preview).
+  // Se programa en background tras el listen.
+}
+
+function programarSincronizacionNomina(pool) {
+  setTimeout(function() {
+    sincronizarNominaSegunVersion(pool).then(function(r) {
+      if (r && r.skipped) return;
+      console.log('RRHH background:', r && r.ok ? ('ok ' + (r.creados || 0) + ' regs') : (r && r.error));
+    }).catch(function(e) {
+      console.error('RRHH background error:', e.message);
+    });
+  }, 3000);
 }
 
 async function getConfigValor(pool, clave) {
@@ -1068,6 +1081,7 @@ function registrarRutas(app, pool, requireAuth) {
 
 module.exports = {
   initTablasRRHH: initTablasRRHH,
+  programarSincronizacionNomina: programarSincronizacionNomina,
   registrarRutas: registrarRutas,
   puedeRRHH: puedeRRHH,
   normalizarCip: normalizarCip,
