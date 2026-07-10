@@ -8,11 +8,14 @@ const XLSX = require('xlsx');
 const PDFDocument = require('pdfkit');
 
 const SITUACIONES = ['ACTIVO', 'BAJA', 'VACACIONES', 'CURSO', 'SUSPENSION', 'OTRO'];
+/** Subir este valor fuerza reimportación de la nómina al arrancar. */
+const RRHH_IMPORT_VERSION = '3';
 
 const CATALOGO_RRHH = [
   {
     nombre: 'DIVOPUS 1', orden: 1, tipo: 'comisaria',
     unidades: [
+      'JEFATURA DIVOPUS 1',
       'CIA CALLAO', 'CIA LA PUNTA', 'CIA BELLAVISTA', 'CIA CIUDADELA CHALACA',
       'CIA CIUDAD DEL PESCADOR', 'CIA RAMON CASTILLA', 'CIA LA LEGUA', 'CIA LA PERLA',
       'OD CALLAO'
@@ -21,6 +24,7 @@ const CATALOGO_RRHH = [
   {
     nombre: 'DIVOPUS 2', orden: 2, tipo: 'comisaria',
     unidades: [
+      'JEFATURA DIVOPUS 2',
       'CIA JUAN INGUNZA', 'CIA SARITA COLONIA', 'CIA BOCANEGRA',
       'CIA MANUEL DULANTO', 'CIA PLAYA RIMAC', 'CIA CARMEN DE LA LEGUA',
       'OD VIPOL'
@@ -29,6 +33,7 @@ const CATALOGO_RRHH = [
   {
     nombre: 'DIVOPUS 3', orden: 3, tipo: 'comisaria',
     unidades: [
+      'JEFATURA DIVOPUS 3',
       'CIA VENTANILLA', 'CIA OQUENDO', 'CIA MI PERU',
       'CIA PACHACUTEC', 'CIA VILLA LOS REYES', 'CIA MARQUEZ',
       'OD VENTANILLA'
@@ -37,10 +42,11 @@ const CATALOGO_RRHH = [
   {
     nombre: 'DIVUES', orden: 4, tipo: 'especializada',
     unidades: [
+      'JEFATURA DIVUES',
       'ESCVER CALLAO', 'ESCVER VENTANILLA', 'UNIEME CALLAO', 'UNIEME VENTANILLA',
       'UNIDIR CALLAO', 'UNIPAPIE', 'USEG CALLAO', 'UNISEINT CALLAO',
       'UNIPIAT CALLAO', 'USE CALLAO', 'USE VENTANILLA', 'UNIPIRV CALLAO',
-      'UTSEVI CALLAO', 'SECTSV VENTANILLA', 'SECTSV CALLAO', 'UNISEEST', 'DIVUES JEFATURA'
+      'UTSEVI CALLAO', 'SECTSV VENTANILLA', 'SECTSV CALLAO', 'UNISEEST'
     ]
   },
   {
@@ -60,8 +66,7 @@ const CATALOGO_RRHH = [
     unidades: [
       'UNIDADES ADM. RPC', 'REGPOL CALLAO', 'AYUDANTIA', 'ESTADO MAYOR', 'UNITIC',
       'UNIPLEDU', 'UNIASJUR', 'UNITRDOC', 'OFIMA', 'OFAD', 'OFAD AREABA',
-      'OFAD AREBAP', 'OFAD ARELOG', 'OFAD AREREHUM', 'OFAD AREARMUN',
-      'OFICINA DE DISCIPLINA REGIONAL'
+      'OFAD AREBAP', 'OFAD ARELOG', 'OFAD AREREHUM', 'OFAD AREARMUN'
     ]
   }
 ];
@@ -156,33 +161,34 @@ function limpiarUnidadExcel(raw) {
     .trim();
 }
 
-/** @returns {{ division: string, unidad: string }} */
+/** @returns {{ division: string, unidad: string, area: string }} */
 function mapearUnidadExcel(rawUnidad) {
   const u = limpiarUnidadExcel(rawUnidad).toUpperCase();
-  if (!u) return { division: 'UNIDADES ADM. RPC', unidad: 'UNIDADES ADM. RPC' };
+  const vacio = { division: 'UNIDADES ADM. RPC', unidad: 'UNIDADES ADM. RPC', area: '' };
+  if (!u) return vacio;
 
   if (/UNICOPE|CENEME\s*105/.test(u)) {
-    return { division: 'UNICOPE 105', unidad: 'UNICOPE 105' };
+    return { division: 'UNICOPE 105', unidad: 'UNICOPE 105', area: '' };
   }
   if (/DIVISION DE POLICIA COMUNITARIA|DIVPOCOM/.test(u)) {
-    return { division: 'DIVPOCOM', unidad: 'DIVPOCOM' };
+    return { division: 'DIVPOCOM', unidad: 'DIVPOCOM', area: '' };
   }
   if (/DIVREINT/.test(u)) {
-    return { division: 'DIVREINT', unidad: 'DIVREINT CALLAO' };
+    return { division: 'DIVREINT', unidad: 'DIVREINT CALLAO', area: '' };
   }
 
-  // Oficinas de Disciplina
+  // Oficinas de Disciplina (sí son unidades propias OD)
   if (/OFICINA DE DISCIPLINA/.test(u) || /^OD\b/.test(u)) {
-    if (/VENTANILLA/.test(u)) return { division: 'DIVOPUS 3', unidad: 'OD VENTANILLA' };
-    if (/INGUNZA|VIPOL/.test(u)) return { division: 'DIVOPUS 2', unidad: 'OD VIPOL' };
-    if (/CALLAO/.test(u) && !/REGION/.test(u)) return { division: 'DIVOPUS 1', unidad: 'OD CALLAO' };
-    if (/IG DIRINV.*DIVOPUS CALLAO/.test(u)) return { division: 'DIVOPUS 1', unidad: 'OD CALLAO' };
-    if (/IG DIRINV.*INGUNZA/.test(u)) return { division: 'DIVOPUS 2', unidad: 'OD VIPOL' };
-    if (/IG DIRINV.*VENTANILLA/.test(u)) return { division: 'DIVOPUS 3', unidad: 'OD VENTANILLA' };
-    return { division: 'DIVOPUS 1', unidad: 'OD CALLAO' };
+    if (/VENTANILLA/.test(u)) return { division: 'DIVOPUS 3', unidad: 'OD VENTANILLA', area: '' };
+    if (/INGUNZA|VIPOL/.test(u)) return { division: 'DIVOPUS 2', unidad: 'OD VIPOL', area: '' };
+    if (/CALLAO/.test(u) && !/REGION/.test(u)) return { division: 'DIVOPUS 1', unidad: 'OD CALLAO', area: '' };
+    if (/IG DIRINV.*DIVOPUS CALLAO/.test(u)) return { division: 'DIVOPUS 1', unidad: 'OD CALLAO', area: '' };
+    if (/IG DIRINV.*INGUNZA/.test(u)) return { division: 'DIVOPUS 2', unidad: 'OD VIPOL', area: '' };
+    if (/IG DIRINV.*VENTANILLA/.test(u)) return { division: 'DIVOPUS 3', unidad: 'OD VENTANILLA', area: '' };
+    return { division: 'DIVOPUS 1', unidad: 'OD CALLAO', area: '' };
   }
 
-  // Comisarías → CIA
+  // Comisarías → CIA (si trae OFIADM, es ÁREA de la CIA, no unidad aparte ni ADM RPC)
   const comisarias = [
     [/COM\.?\s*CALLAO/, 'CIA CALLAO', 'DIVOPUS 1'],
     [/COM\.?\s*LA PUNTA/, 'CIA LA PUNTA', 'DIVOPUS 1'],
@@ -207,63 +213,96 @@ function mapearUnidadExcel(rawUnidad) {
   ];
   for (let i = 0; i < comisarias.length; i++) {
     if (comisarias[i][0].test(u)) {
-      return { division: comisarias[i][2], unidad: comisarias[i][1] };
+      return {
+        division: comisarias[i][2],
+        unidad: comisarias[i][1],
+        area: /OFIADM/.test(u) ? 'OFIADM' : ''
+      };
     }
   }
 
-  // DIVUES
-  if (/ESCVER CALLAO|UNOPES ESCVER CALLAO/.test(u)) return { division: 'DIVUES', unidad: 'ESCVER CALLAO' };
-  if (/ESCVER VENTANILLA|UNOPES ESCVER VENTANILLA/.test(u)) return { division: 'DIVUES', unidad: 'ESCVER VENTANILLA' };
-  if (/UNEME CALLAO|UNIEME CALLAO/.test(u)) return { division: 'DIVUES', unidad: 'UNIEME CALLAO' };
-  if (/UNEME VENTANILLA|UNIEME VENTANILLA/.test(u)) return { division: 'DIVUES', unidad: 'UNIEME VENTANILLA' };
-  if (/UNIDIR/.test(u)) return { division: 'DIVUES', unidad: 'UNIDIR CALLAO' };
-  if (/UNIPAPIE|PATRULLAJE A PIE/.test(u)) return { division: 'DIVUES', unidad: 'UNIPAPIE' };
-  if (/UPIAT|UNIPIAT/.test(u)) return { division: 'DIVUES', unidad: 'UNIPIAT CALLAO' };
-  if (/USE CALLAO/.test(u) && !/VENTANILLA/.test(u)) return { division: 'DIVUES', unidad: 'USE CALLAO' };
-  if (/USE VENTANILLA/.test(u)) return { division: 'DIVUES', unidad: 'USE VENTANILLA' };
-  if (/DEPPIRV|UNIPIRV/.test(u)) return { division: 'DIVUES', unidad: 'UNIPIRV CALLAO' };
-  if (/SECTSV.*VENTANILLA|UTSEVI VENTANILLA/.test(u)) return { division: 'DIVUES', unidad: 'SECTSV VENTANILLA' };
-  if (/SECTSV|UTSEVI CALLAO/.test(u)) return { division: 'DIVUES', unidad: 'SECTSV CALLAO' };
-  if (/UNISEEST/.test(u)) return { division: 'DIVUES', unidad: 'UNISEEST' };
-  if (/^DIVUES$/.test(u) || /DIVUES_JEFATURA|DIVUES JEFATURA/.test(u)) {
-    return { division: 'DIVUES', unidad: 'DIVUES JEFATURA' };
+  // OFIADM de DIVOPUS (sin COM): área de la CIA sede — NO va a UNIDADES ADM. RPC
+  if (/OFIADM/.test(u)) {
+    if (/INGUNZA|VIPOL|DIVOPUS\s*2/.test(u)) {
+      return { division: 'DIVOPUS 2', unidad: 'CIA JUAN INGUNZA', area: 'OFIADM' };
+    }
+    if (/VENTANILLA|DIVOPUS\s*3/.test(u)) {
+      return { division: 'DIVOPUS 3', unidad: 'CIA VENTANILLA', area: 'OFIADM' };
+    }
+    if (/CALLAO|DIVOPUS\s*1/.test(u)) {
+      return { division: 'DIVOPUS 1', unidad: 'CIA CALLAO', area: 'OFIADM' };
+    }
   }
 
-  // Jefaturas DIVOPUS sin comisaría → ADM
-  if (u === 'DIVOPUS CALLAO') {
-    return { division: 'UNIDADES ADM. RPC', unidad: 'UNIDADES ADM. RPC' };
+  // Jefaturas (solo nombre de división / JEF)
+  if (/^DIVUES$/.test(u) || /DIVUES.*JEFATURA|JEFATURA DIVUES/.test(u)) {
+    return { division: 'DIVUES', unidad: 'JEFATURA DIVUES', area: '' };
   }
-  if (u === 'DIVOPUS INGUNZA VALDIVIA' || /DIVOPUS INGUNZA.*(JEF|OFIADM)/.test(u)) {
-    return { division: 'UNIDADES ADM. RPC', unidad: 'UNIDADES ADM. RPC' };
+  if (
+    u === 'DIVOPUS CALLAO' ||
+    u === 'DIVOPUS 1' ||
+    /^DIVOPUS CALLAO\s*JEF/.test(u) ||
+    /JEFATURA DIVOPUS\s*1/.test(u)
+  ) {
+    return { division: 'DIVOPUS 1', unidad: 'JEFATURA DIVOPUS 1', area: '' };
   }
-  if (u === 'DIVOPUS VENTANILLA') {
-    return { division: 'UNIDADES ADM. RPC', unidad: 'UNIDADES ADM. RPC' };
+  if (
+    u === 'DIVOPUS INGUNZA VALDIVIA' ||
+    u === 'DIVOPUS 2' ||
+    /DIVOPUS INGUNZA.*\bJEF\b/.test(u) ||
+    /DIVOPUS.*VIPOL.*JEF/.test(u) ||
+    /JEFATURA DIVOPUS\s*2/.test(u)
+  ) {
+    return { division: 'DIVOPUS 2', unidad: 'JEFATURA DIVOPUS 2', area: '' };
+  }
+  if (
+    u === 'DIVOPUS VENTANILLA' ||
+    u === 'DIVOPUS 3' ||
+    /DIVOPUS VENTANILLA.*\bJEF\b/.test(u) ||
+    /JEFATURA DIVOPUS\s*3/.test(u)
+  ) {
+    return { division: 'DIVOPUS 3', unidad: 'JEFATURA DIVOPUS 3', area: '' };
   }
 
-  // Oficinas administrativas
-  if (/^AYU$|AYUDANTIA/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'AYUDANTIA' };
-  if (/ESTADO MAYOR/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'ESTADO MAYOR' };
-  if (/UNITIC/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'UNITIC' };
-  if (/UNIPLEDU|OFIEDP|OFIEST|OFIPLOPE|EM UNIPLEDU/.test(u)) {
-    return { division: 'UNIDADES ADM. RPC', unidad: 'UNIPLEDU' };
+  // DIVUES unidades operativas
+  if (/ESCVER CALLAO|UNOPES ESCVER CALLAO/.test(u)) return { division: 'DIVUES', unidad: 'ESCVER CALLAO', area: '' };
+  if (/ESCVER VENTANILLA|UNOPES ESCVER VENTANILLA/.test(u)) return { division: 'DIVUES', unidad: 'ESCVER VENTANILLA', area: '' };
+  if (/UNEME CALLAO|UNIEME CALLAO/.test(u)) return { division: 'DIVUES', unidad: 'UNIEME CALLAO', area: '' };
+  if (/UNEME VENTANILLA|UNIEME VENTANILLA/.test(u)) return { division: 'DIVUES', unidad: 'UNIEME VENTANILLA', area: '' };
+  if (/UNIDIR/.test(u)) return { division: 'DIVUES', unidad: 'UNIDIR CALLAO', area: '' };
+  if (/UNIPAPIE|PATRULLAJE A PIE/.test(u)) return { division: 'DIVUES', unidad: 'UNIPAPIE', area: '' };
+  if (/UPIAT|UNIPIAT/.test(u)) return { division: 'DIVUES', unidad: 'UNIPIAT CALLAO', area: '' };
+  if (/USE CALLAO/.test(u) && !/VENTANILLA/.test(u)) return { division: 'DIVUES', unidad: 'USE CALLAO', area: '' };
+  if (/USE VENTANILLA/.test(u)) return { division: 'DIVUES', unidad: 'USE VENTANILLA', area: '' };
+  if (/DEPPIRV|UNIPIRV/.test(u)) return { division: 'DIVUES', unidad: 'UNIPIRV CALLAO', area: '' };
+  if (/SECTSV.*VENTANILLA|UTSEVI VENTANILLA/.test(u)) return { division: 'DIVUES', unidad: 'SECTSV VENTANILLA', area: '' };
+  if (/SECTSV|UTSEVI CALLAO/.test(u)) return { division: 'DIVUES', unidad: 'SECTSV CALLAO', area: '' };
+  if (/UNISEEST/.test(u)) return { division: 'DIVUES', unidad: 'UNISEEST', area: '' };
+
+  // Oficinas administrativas regionales → UNIDADES ADM. RPC
+  if (/^AYU$|AYUDANTIA/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'AYUDANTIA', area: '' };
+  if (/ESTADO MAYOR/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'ESTADO MAYOR', area: '' };
+  if (/UNITIC/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'UNITIC', area: '' };
+  if (/UNIPLEDU|OFIEDP|OFIEST|OFIPLOPE|EM UNIPLEDU|EDUCACION/.test(u)) {
+    return { division: 'UNIDADES ADM. RPC', unidad: 'UNIPLEDU', area: '' };
   }
-  if (/UNIASJUR|ASESORIA JURIDICA/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'UNIASJUR' };
+  if (/UNIASJUR|ASESORIA JURIDICA/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'UNIASJUR', area: '' };
   if (/UNITRDOC|MESPAR|TRAMITE DOCUMENTARIO/.test(u)) {
-    return { division: 'UNIDADES ADM. RPC', unidad: 'UNITRDOC' };
+    return { division: 'UNIDADES ADM. RPC', unidad: 'UNITRDOC', area: '' };
   }
-  if (/OFIMA|IMAGEN/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'OFIMA' };
-  if (/AREARMUN|ARMAMENTO/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'OFAD AREARMUN' };
-  if (/AREABA|BIENESTAR|SUBSISTENCIAS/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'OFAD AREABA' };
-  if (/AREBAP/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'OFAD AREBAP' };
-  if (/ARELOG|LOGISTICA/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'OFAD ARELOG' };
-  if (/AREREHUM|UNIREHUM|RECURSOS HUMANOS/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'OFAD AREREHUM' };
+  if (/OFIMA|IMAGEN/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'OFIMA', area: '' };
+  if (/AREARMUN|ARMAMENTO/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'OFAD AREARMUN', area: '' };
+  if (/AREABA|BIENESTAR|SUBSISTENCIAS/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'OFAD AREABA', area: '' };
+  if (/AREBAP/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'OFAD AREBAP', area: '' };
+  if (/ARELOG|LOGISTICA/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'OFAD ARELOG', area: '' };
+  if (/AREREHUM|UNIREHUM|RECURSOS HUMANOS/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'OFAD AREREHUM', area: '' };
   if (/^OFAD$|EM OFAD|OFICINA DE ADMINISTRACION/.test(u)) {
-    return { division: 'UNIDADES ADM. RPC', unidad: 'OFAD' };
+    return { division: 'UNIDADES ADM. RPC', unidad: 'OFAD', area: '' };
   }
-  if (/REGPOL CALLAO/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'REGPOL CALLAO' };
-  if (/IG DIRINV/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'UNIDADES ADM. RPC' };
+  if (/REGPOL CALLAO/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'REGPOL CALLAO', area: '' };
+  if (/IG DIRINV/.test(u)) return { division: 'UNIDADES ADM. RPC', unidad: 'UNIDADES ADM. RPC', area: '' };
 
-  return { division: 'UNIDADES ADM. RPC', unidad: 'UNIDADES ADM. RPC' };
+  return vacio;
 }
 
 async function asegurarCatalogoRRHH(pool) {
@@ -324,10 +363,14 @@ async function initTablasRRHH(pool) {
       fec_uni DATE,
       documentos TEXT DEFAULT '',
       escalafon VARCHAR(80) DEFAULT '',
+      area VARCHAR(80) DEFAULT '',
+      unidad_origen VARCHAR(200) DEFAULT '',
       creado_en TIMESTAMPTZ DEFAULT NOW(),
       actualizado_en TIMESTAMPTZ DEFAULT NOW(),
       actualizado_por VARCHAR(60) DEFAULT ''
     );
+    ALTER TABLE personal_rrhh ADD COLUMN IF NOT EXISTS area VARCHAR(80) DEFAULT '';
+    ALTER TABLE personal_rrhh ADD COLUMN IF NOT EXISTS unidad_origen VARCHAR(200) DEFAULT '';
     CREATE INDEX IF NOT EXISTS idx_rrhh_unidad ON personal_rrhh(unidad_nombre);
     CREATE INDEX IF NOT EXISTS idx_rrhh_division ON personal_rrhh(division_nombre);
     CREATE INDEX IF NOT EXISTS idx_rrhh_situacion ON personal_rrhh(situacion);
@@ -345,7 +388,48 @@ async function initTablasRRHH(pool) {
   `);
 
   await asegurarCatalogoRRHH(pool);
-  await importarNominaSiVacia(pool);
+  await sincronizarNominaSegunVersion(pool);
+}
+
+async function getConfigValor(pool, clave) {
+  try {
+    const r = await pool.query('SELECT valor FROM configuracion WHERE clave=$1', [clave]);
+    return r.rows.length ? String(r.rows[0].valor || '') : '';
+  } catch (e) {
+    return '';
+  }
+}
+
+async function setConfigValor(pool, clave, valor) {
+  await pool.query(
+    `INSERT INTO configuracion (clave, valor, actualizado) VALUES ($1,$2,NOW())
+     ON CONFLICT (clave) DO UPDATE SET valor=$2, actualizado=NOW()`,
+    [clave, String(valor)]
+  );
+}
+
+async function sincronizarNominaSegunVersion(pool) {
+  const actual = await getConfigValor(pool, 'rrhh_import_version');
+  const cnt = await pool.query('SELECT COUNT(*)::int AS n FROM personal_rrhh');
+  const total = cnt.rows[0].n;
+  if (actual === RRHH_IMPORT_VERSION && total > 0) {
+    console.log('RRHH: nómina al día (v' + RRHH_IMPORT_VERSION + ', ' + total + ' registros).');
+    return { ok: true, skipped: true, total: total };
+  }
+  console.log('RRHH: reprocesando nómina (mapa v' + RRHH_IMPORT_VERSION + ')…');
+  await pool.query('DELETE FROM personal_rrhh');
+  const file = rutaNominaExcel();
+  if (!fs.existsSync(file)) {
+    console.warn('RRHH: no se encontró data/nomina-rrhh-callao.xlsx');
+    return { ok: false, error: 'Archivo de nómina no encontrado' };
+  }
+  const res = await importarNominaDesdeArchivo(pool, file, 'sistema-v' + RRHH_IMPORT_VERSION);
+  if (res.ok) await setConfigValor(pool, 'rrhh_import_version', RRHH_IMPORT_VERSION);
+  return res;
+}
+
+async function importarNominaSiVacia(pool) {
+  return sincronizarNominaSegunVersion(pool);
 }
 
 async function resolverUnidadId(pool, divisionNombre, unidadNombre) {
@@ -389,20 +473,6 @@ function rutaNominaExcel() {
   return path.join(__dirname, 'data', 'nomina-rrhh-callao.xlsx');
 }
 
-async function importarNominaSiVacia(pool) {
-  const cnt = await pool.query('SELECT COUNT(*)::int AS n FROM personal_rrhh');
-  if (cnt.rows[0].n > 0) {
-    console.log('RRHH: nómina ya cargada (' + cnt.rows[0].n + ' registros).');
-    return { ok: true, skipped: true, total: cnt.rows[0].n };
-  }
-  const file = rutaNominaExcel();
-  if (!fs.existsSync(file)) {
-    console.warn('RRHH: no se encontró data/nomina-rrhh-callao.xlsx — sin carga inicial.');
-    return { ok: false, error: 'Archivo de nómina no encontrado' };
-  }
-  return importarNominaDesdeArchivo(pool, file, 'sistema');
-}
-
 async function importarNominaDesdeArchivo(pool, filePath, adminUsuario) {
   const wb = XLSX.readFile(filePath, { cellDates: true });
   const sheetName = wb.SheetNames.find(function(n) {
@@ -442,12 +512,12 @@ async function importarNominaDesdeArchivo(pool, filePath, adminUsuario) {
           cip, dni, apellidos_nombres, grado, cod_grado, espec, cargo, sexo, fecha_nac,
           unidad_id, unidad_nombre, division_nombre, cod_unidad, situacion, estado_cip, categoria,
           telefono, correo, domicilio, fec_alta, fec_asc, fec_inc, fec_uni, documentos, escalafon,
-          actualizado_por
+          area, unidad_origen, actualizado_por
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,
           $10,$11,$12,$13,$14,$15,$16,
           $17,$18,$19,$20,$21,$22,$23,$24,$25,
-          $26
+          $26,$27,$28
         )
         ON CONFLICT (cip) DO UPDATE SET
           dni=EXCLUDED.dni,
@@ -474,6 +544,8 @@ async function importarNominaDesdeArchivo(pool, filePath, adminUsuario) {
           fec_uni=EXCLUDED.fec_uni,
           documentos=EXCLUDED.documentos,
           escalafon=EXCLUDED.escalafon,
+          area=EXCLUDED.area,
+          unidad_origen=EXCLUDED.unidad_origen,
           actualizado_en=NOW(),
           actualizado_por=EXCLUDED.actualizado_por`,
         [
@@ -502,6 +574,8 @@ async function importarNominaDesdeArchivo(pool, filePath, adminUsuario) {
           parseFecha(row['FEC.UNI']),
           limpio(row['DOCUMENTOS'], 500),
           limpio(row['ESCALAFON'], 80),
+          limpio(mapped.area, 80),
+          limpio(row['UNIDAD'], 200),
           adminUsuario || 'sistema'
         ]
       );
@@ -588,6 +662,8 @@ function filaPublica(r) {
     fec_uni: r.fec_uni,
     documentos: r.documentos,
     escalafon: r.escalafon,
+    area: r.area || '',
+    unidad_origen: r.unidad_origen || '',
     actualizado_en: r.actualizado_en,
     actualizado_por: r.actualizado_por
   };
@@ -769,9 +845,9 @@ function registrarRutas(app, pool, requireAuth) {
         `UPDATE personal_rrhh SET
           dni=$1, apellidos_nombres=$2, grado=$3, cargo=$4, sexo=$5, fecha_nac=$6,
           unidad_id=$7, unidad_nombre=$8, division_nombre=$9, situacion=$10, categoria=$11,
-          telefono=$12, correo=$13, domicilio=$14,
-          actualizado_en=NOW(), actualizado_por=$15
-         WHERE cip=$16`,
+          telefono=$12, correo=$13, domicilio=$14, area=$15,
+          actualizado_en=NOW(), actualizado_por=$16
+         WHERE cip=$17`,
         [
           limpio(soloDigitos(b.dni != null ? b.dni : prev.dni), 20),
           limpio(b.apellidos_nombres != null ? b.apellidos_nombres : prev.apellidos_nombres, 200).toUpperCase(),
@@ -783,6 +859,7 @@ function registrarRutas(app, pool, requireAuth) {
           limpio(b.telefono != null ? b.telefono : prev.telefono, 40),
           limpio(b.correo != null ? b.correo : prev.correo, 120),
           limpio(b.domicilio != null ? b.domicilio : prev.domicilio, 500),
+          limpio(b.area != null ? b.area : prev.area, 80),
           adminUser, cip
         ]
       );

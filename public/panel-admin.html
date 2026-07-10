@@ -1707,6 +1707,8 @@
     </div>
     <label>Unidad</label>
     <select id="rrhh-m-unidad"></select>
+    <label>Área <span style="font-weight:400;color:#999;">(ej. OFIADM de la CIA)</span></label>
+    <input type="text" id="rrhh-m-area" placeholder="Opcional"/>
     <label>Situación</label>
     <select id="rrhh-m-situacion">
       <option value="ACTIVO">ACTIVO</option>
@@ -1785,7 +1787,7 @@
 <script src="divisiones-ui.js?v=4"></script>
 <script src="panel-cms.js?v=26"></script>
 <script src="panel-descansos.js?v=4"></script>
-<script src="panel-rrhh.js?v=2"></script>
+<script src="panel-rrhh.js?v=3"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[], SESION=null;
