@@ -305,6 +305,27 @@
     .rrhh-acc-uni{border:1px solid #dde8e5;border-radius:7px;margin:6px 0;overflow:hidden;}
     .rrhh-acc-n{margin-left:auto;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px;font-size:11px;}
     #rrhh-stats.stats-grid{margin-bottom:12px;}
+    /* RRHH: acciones en horizontal */
+    #rrhh-wrap-lista table.t td .btn-acciones-celda,
+    #rrhh-acordeon table.t td .btn-acciones-celda{
+      flex-direction:row;flex-wrap:nowrap;gap:4px;align-items:center;max-width:none;min-width:168px;
+    }
+    #rrhh-wrap-lista table.t td .btn-acciones-celda .btn-mini,
+    #rrhh-acordeon table.t td .btn-acciones-celda .btn-mini{
+      width:auto;white-space:nowrap;padding:4px 8px;
+    }
+    #rrhh-wrap-lista table.t th.col-acciones,
+    #rrhh-wrap-lista table.t td.col-acciones,
+    #rrhh-acordeon table.t th.col-acciones,
+    #rrhh-acordeon table.t td.col-acciones{
+      min-width:180px;vertical-align:middle;white-space:nowrap;
+    }
+    #rrhh-wrap-lista table.t th.col-num,
+    #rrhh-wrap-lista table.t td.col-num,
+    #rrhh-acordeon table.t th.col-num,
+    #rrhh-acordeon table.t td.col-num{
+      width:44px;text-align:center;color:#666;font-weight:600;
+    }
     .uni-nom{flex:1;}
     .uni-tipo{font-size:10.5px;background:#e8f5e9;color:#1a7a3a;border-radius:10px;
       padding:1px 7px;margin:0 6px;font-weight:600;}
@@ -763,9 +784,9 @@
           <div style="overflow-x:auto;max-height:62vh;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">
             <table class="t" style="margin:0;">
               <thead><tr>
-                <th>CIP</th><th>Grado</th><th>Apellidos y nombres</th><th>Unidad</th><th>Situación</th><th>Categoría</th><th>Acciones</th>
+                <th class="col-num">N°</th><th>CIP</th><th>Grado</th><th>Apellidos y nombres</th><th>Unidad</th><th>Situación</th><th>Categoría</th><th class="col-acciones">Acciones</th>
               </tr></thead>
-              <tbody id="rrhh-tabla-body"><tr><td colspan="7" style="text-align:center;color:#888;padding:24px;">Pulse Buscar para cargar la nómina.</td></tr></tbody>
+              <tbody id="rrhh-tabla-body"><tr><td colspan="8" style="text-align:center;color:#888;padding:24px;">Pulse Buscar para cargar la nómina.</td></tr></tbody>
             </table>
           </div>
           <div id="rrhh-paginacion" style="margin-top:10px;display:flex;align-items:center;gap:6px;"></div>
@@ -1764,7 +1785,7 @@
 <script src="divisiones-ui.js?v=4"></script>
 <script src="panel-cms.js?v=26"></script>
 <script src="panel-descansos.js?v=4"></script>
-<script src="panel-rrhh.js?v=1"></script>
+<script src="panel-rrhh.js?v=2"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[], SESION=null;

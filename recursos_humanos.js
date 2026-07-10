@@ -520,6 +520,15 @@ async function importarNominaDesdeArchivo(pool, filePath, adminUsuario) {
   return { ok: true, creados: creados, errores: errores, detalleErrores: detalleErrores };
 }
 
+function ordenJerarquiaGradoSQL(alias) {
+  const a = alias ? alias + '.' : '';
+  // COD.GRADO oficial PNP: menor = mayor jerarquía (20 GRAL … 80 ALFZ … 110+ suboficiales)
+  return `CASE
+    WHEN NULLIF(TRIM(${a}cod_grado), '') ~ '^[0-9]+$' THEN CAST(TRIM(${a}cod_grado) AS INTEGER)
+    ELSE 9999
+  END ASC, ${a}apellidos_nombres ASC`;
+}
+
 function buildWhereRRHH(q) {
   const where = ['1=1'];
   const params = [];
@@ -625,7 +634,7 @@ function registrarRutas(app, pool, requireAuth) {
       if (modo === 'acordeon') {
         const r = await pool.query(
           `SELECT * FROM personal_rrhh WHERE ${sql}
-           ORDER BY division_nombre, unidad_nombre, apellidos_nombres`,
+           ORDER BY division_nombre, unidad_nombre, ${ordenJerarquiaGradoSQL('')}`,
           params
         );
         const grupos = {};
@@ -662,7 +671,7 @@ function registrarRutas(app, pool, requireAuth) {
         `SELECT id, cip, dni, apellidos_nombres, grado, unidad_nombre, division_nombre,
                 situacion, categoria, actualizado_en
          FROM personal_rrhh WHERE ${sql}
-         ORDER BY division_nombre, unidad_nombre, apellidos_nombres
+         ORDER BY ${ordenJerarquiaGradoSQL('')}, division_nombre, unidad_nombre
          LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
         params.concat([porPagina, offset])
       );
@@ -887,7 +896,7 @@ function registrarRutas(app, pool, requireAuth) {
           `SELECT cip, dni, apellidos_nombres, grado, cargo, categoria, situacion,
                   division_nombre, unidad_nombre, sexo, telefono, correo
            FROM personal_rrhh WHERE ${sql}
-           ORDER BY division_nombre, unidad_nombre, apellidos_nombres`,
+           ORDER BY ${ordenJerarquiaGradoSQL('')}, division_nombre, unidad_nombre`,
           params
         );
         aoa = [['CIP', 'DNI', 'Apellidos y Nombres', 'Grado', 'Cargo', 'Categoría', 'Situación', 'División', 'Unidad', 'Sexo', 'Teléfono', 'Correo']];
