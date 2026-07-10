@@ -292,6 +292,19 @@
       padding:5px 8px;border-radius:5px;font-size:12.5px;}
     .uni-row:nth-child(odd){background:#f0f7f0;}
     .uni-num{width:24px;font-weight:700;color:#888;font-size:11px;flex-shrink:0;}
+
+    /* ── RRHH acordeón ── */
+    .rrhh-acc-div{border:1.5px solid #c8e6c9;border-radius:9px;margin-bottom:10px;overflow:hidden;}
+    .rrhh-acc-div-h,.rrhh-acc-uni-h{background:#004d3d;color:#fff;padding:10px 14px;cursor:pointer;
+      display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;user-select:none;}
+    .rrhh-acc-uni-h{background:#0a6b56;font-size:12.5px;font-weight:600;}
+    .rrhh-acc-div-h.collapsed i,.rrhh-acc-uni-h.collapsed i{transform:rotate(-90deg);}
+    .rrhh-acc-div-h i,.rrhh-acc-uni-h i{transition:transform .15s;font-size:11px;}
+    .rrhh-acc-div-b,.rrhh-acc-uni-b{padding:8px 10px;}
+    .rrhh-acc-div-b.hidden,.rrhh-acc-uni-b.hidden{display:none;}
+    .rrhh-acc-uni{border:1px solid #dde8e5;border-radius:7px;margin:6px 0;overflow:hidden;}
+    .rrhh-acc-n{margin-left:auto;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px;font-size:11px;}
+    #rrhh-stats.stats-grid{margin-bottom:12px;}
     .uni-nom{flex:1;}
     .uni-tipo{font-size:10.5px;background:#e8f5e9;color:#1a7a3a;border-radius:10px;
       padding:1px 7px;margin:0 6px;font-weight:600;}
@@ -347,10 +360,11 @@
     var tieneCursos = esU || perms.indexOf('cms_cursos') !== -1;
     var tieneConvenios = esU || perms.indexOf('cms_convenios') !== -1;
     var tieneDescansos = esU || perms.indexOf('cms_descansos') !== -1;
+    var tieneRRHH = esU || perms.indexOf('recursos_humanos') !== -1;
     var tieneEval = esU || perms.indexOf('evaluaciones') !== -1;
     var tieneDesc = esU || perms.indexOf('descargas') !== -1 || tieneEval;
     var tienePsico = esU || rol === 'bienestar' || tieneEval || tieneDesc;
-    var tieneGestion = esU || tienePsico || tieneCursos || tieneConvenios || tieneDescansos;
+    var tieneGestion = esU || tienePsico || tieneCursos || tieneConvenios || tieneDescansos || tieneRRHH;
 
     var st = document.getElementById('panel-perm-style');
     if (!st) {
@@ -361,7 +375,7 @@
     st.textContent = [
       '[data-rol-unitic]{display:none!important}',
       '[data-perm-evaluaciones],[data-perm-descargas],[data-perm-preguntas]{display:none!important}',
-      '#sb-grp-psico,#sb-grp-convenios,#sb-grp-cursos,#sb-grp-descansos,#sb-sec-gestion{display:none!important}',
+      '#sb-grp-psico,#sb-grp-convenios,#sb-grp-cursos,#sb-grp-descansos,#sb-sec-gestion,#sb-sec-rrhh{display:none!important}',
       esU ? '[data-rol-unitic],#sb-sec-portal{display:block!important}' : '',
       tieneEval ? '[data-perm-evaluaciones],[data-perm-preguntas]{display:flex!important}' : '',
       tieneDesc ? '[data-perm-descargas]{display:flex!important}' : '',
@@ -369,18 +383,21 @@
       tieneConvenios ? '#sb-grp-convenios{display:block!important}' : '',
       tieneCursos ? '#sb-grp-cursos{display:block!important}' : '',
       tieneDescansos ? '#sb-grp-descansos{display:block!important}' : '',
+      (esU || tieneRRHH) ? '#sb-sec-rrhh{display:block!important}' : '',
       tieneGestion ? '#sb-sec-gestion{display:block!important}' : ''
     ].join('\n');
 
     var badge = document.querySelector('.super-badge');
     if (badge) {
       if (esU) badge.textContent = 'SUPER ADMIN';
+      else if (tieneRRHH && !tieneCursos && !tieneConvenios && !tienePsico && !tieneDescansos) badge.textContent = 'RECURSOS HUMANOS';
       else if (tieneDescansos && !tieneCursos && !tieneConvenios && !tienePsico) badge.textContent = 'DESCANSOS MÉDICOS';
       else if (tieneCursos && tieneConvenios) badge.textContent = 'CONVENIOS + EDUCACIÓN';
       else if (tieneCursos) badge.textContent = 'EDUCACIÓN';
       else if (tieneConvenios) badge.textContent = 'CONVENIOS';
       else if (tienePsico) badge.textContent = 'PSICOLOGÍA';
       else if (tieneDescansos) badge.textContent = 'DESCANSOS MÉDICOS';
+      else if (tieneRRHH) badge.textContent = 'RECURSOS HUMANOS';
       else badge.textContent = 'USUARIO';
     }
     var nombreEl = document.getElementById('ph-nombre');
@@ -505,6 +522,17 @@
       </div>
       <div class="sb-item" data-page="divisiones" onclick="ir('divisiones',this)">
         <i class="fas fa-sitemap"></i> DIVISIONES / UNIDADES
+      </div>
+    </div>
+
+    <!-- RECURSOS HUMANOS (Super Admin + permiso recursos_humanos) -->
+    <div class="sb-section" id="sb-sec-rrhh">
+      <div class="sb-section-label">Recursos Humanos</div>
+      <div class="sb-item" data-page="rrhh-nomina" onclick="ir('rrhh-nomina',this)">
+        <i class="fas fa-id-badge"></i> NÓMINA
+      </div>
+      <div class="sb-item" data-page="rrhh-reportes" onclick="ir('rrhh-reportes',this)">
+        <i class="fas fa-chart-bar"></i> REPORTES Y CUADROS
       </div>
     </div>
 
@@ -700,6 +728,66 @@
           <i class="fas fa-plus"></i> Nueva división
         </button>
         <div id="div-lista"></div>
+      </div>
+    </div>
+
+    <!-- RRHH — NÓMINA -->
+    <div id="page-rrhh-nomina" class="page">
+      <div class="card">
+        <h3><i class="fas fa-id-badge"></i> Recursos Humanos — Nómina</h3>
+        <div id="rrhh-stats" class="stats-grid"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;">
+          <button class="btn btn-v" type="button" onclick="rrhhNuevo()"><i class="fas fa-user-plus"></i> Nuevo efectivo</button>
+          <button class="btn-mini btn-mini-solid" type="button" id="rrhh-btn-lista" onclick="setModoRRHH('lista')"><i class="fas fa-list"></i> Lista</button>
+          <button class="btn-mini" type="button" id="rrhh-btn-acordeon" onclick="setModoRRHH('acordeon')"><i class="fas fa-sitemap"></i> Acordeón</button>
+          <button class="btn-mini" type="button" onclick="exportarRRHH('listado','xlsx')" title="Exportar listado filtrado"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+        </div>
+        <div class="filtros" style="flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;">
+          <select id="rrhh-f-div" onchange="onFiltroDivisionRRHH()"><option value="">Todas las divisiones</option></select>
+          <select id="rrhh-f-uni"><option value="">Todas las unidades</option></select>
+          <select id="rrhh-f-sit">
+            <option value="">Toda situación</option>
+            <option value="ACTIVO">ACTIVO</option>
+            <option value="BAJA">BAJA</option>
+            <option value="VACACIONES">VACACIONES</option>
+            <option value="CURSO">CURSO</option>
+            <option value="SUSPENSION">SUSPENSIÓN</option>
+            <option value="OTRO">OTRO</option>
+          </select>
+          <input id="rrhh-f-bus" type="text" placeholder="CIP / DNI / Nombres..." style="min-width:180px;flex:1;"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();cargarNominaRRHH(1);}"/>
+          <button class="btn btn-v" type="button" onclick="cargarNominaRRHH(1)"><i class="fas fa-search"></i> Buscar</button>
+        </div>
+        <div class="tinfo" id="rrhh-tabla-info"></div>
+        <div id="rrhh-wrap-lista">
+          <div style="overflow-x:auto;max-height:62vh;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">
+            <table class="t" style="margin:0;">
+              <thead><tr>
+                <th>CIP</th><th>Grado</th><th>Apellidos y nombres</th><th>Unidad</th><th>Situación</th><th>Categoría</th><th>Acciones</th>
+              </tr></thead>
+              <tbody id="rrhh-tabla-body"><tr><td colspan="7" style="text-align:center;color:#888;padding:24px;">Pulse Buscar para cargar la nómina.</td></tr></tbody>
+            </table>
+          </div>
+          <div id="rrhh-paginacion" style="margin-top:10px;display:flex;align-items:center;gap:6px;"></div>
+        </div>
+        <div id="rrhh-wrap-acordeon" style="display:none;">
+          <div id="rrhh-acordeon"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RRHH — REPORTES -->
+    <div id="page-rrhh-reportes" class="page">
+      <div class="card">
+        <h3><i class="fas fa-chart-bar"></i> Reportes y cuadros — Personal</h3>
+        <p style="font-size:12px;color:#666;margin:-6px 0 12px;">Cuadro numérico por unidad (estilo Hoja2). Primero revise la vista previa y luego exporte.</p>
+        <div class="filtros" style="flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+          <select id="rrhh-r-div"><option value="">Todas las divisiones</option></select>
+          <button class="btn btn-v" type="button" onclick="cargarCuadroRRHH()"><i class="fas fa-eye"></i> Ver vista previa</button>
+          <button class="btn-mini btn-mini-ok" type="button" onclick="exportarRRHH('cuadro','xlsx')"><i class="fas fa-file-excel"></i> Exportar Excel</button>
+          <button class="btn-mini btn-mini-pdf" type="button" onclick="exportarRRHH('cuadro','pdf')"><i class="fas fa-file-pdf"></i> PDF</button>
+        </div>
+        <div id="rrhh-cuadro-preview"><p style="color:#888;padding:12px;">Pulse <strong>Ver vista previa</strong> para generar el cuadro.</p></div>
       </div>
     </div>
 
@@ -1532,6 +1620,11 @@
         <label><input type="checkbox" value="cms_descansos" class="perm-chk"> Descansos médicos (listado, dashboard, Excel)</label>
         <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Solo operaciones de cursos. No edita el portal web.</p>
       </div>
+      <div class="perm-box">
+        <div class="pb-title">Recursos Humanos</div>
+        <label><input type="checkbox" value="recursos_humanos" class="perm-chk"> Nómina, altas/bajas y cuadros de personal</label>
+        <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Acceso solo al módulo RRHH (no visible en la web pública).</p>
+      </div>
       <div class="perm-box" style="background:#fff8e6;border-color:#f0d78c;">
         <div class="pb-title">Portal Web</div>
         <p style="font-size:11px;color:#666;margin:0;line-height:1.45;">El contenido público del sitio (novedades, carrusel, tarjetas, menú) lo gestiona únicamente el <strong>Super Admin</strong>.</p>
@@ -1540,6 +1633,100 @@
     <div class="modal-footer">
       <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-usuario')">Cancelar</button>
       <button class="btn btn-v" onclick="guardarUsuario()"><i class="fas fa-save"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RRHH: Ficha efectivo -->
+<div id="modal-rrhh-ficha" class="modal">
+  <div class="modal-box" style="width:min(640px,96vw);max-height:92vh;overflow-y:auto;">
+    <h3 id="rrhh-m-titulo"><i class="fas fa-id-card"></i> Efectivo</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <label>CIP</label>
+        <input type="text" id="rrhh-m-cip" maxlength="8" placeholder="8 dígitos (oficiales con 00)"/>
+      </div>
+      <div>
+        <label>DNI</label>
+        <input type="text" id="rrhh-m-dni" maxlength="8" placeholder="DNI"/>
+      </div>
+    </div>
+    <label>Apellidos y nombres</label>
+    <input type="text" id="rrhh-m-nombres" placeholder="APELLIDOS, NOMBRES"/>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <label>Grado</label>
+        <input type="text" id="rrhh-m-grado"/>
+      </div>
+      <div>
+        <label>Cargo</label>
+        <input type="text" id="rrhh-m-cargo"/>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+      <div>
+        <label>Sexo</label>
+        <select id="rrhh-m-sexo">
+          <option value="">—</option>
+          <option value="M">M</option>
+          <option value="F">F</option>
+        </select>
+      </div>
+      <div>
+        <label>Fecha nac.</label>
+        <input type="date" id="rrhh-m-fnac"/>
+      </div>
+      <div>
+        <label>Categoría</label>
+        <select id="rrhh-m-categoria">
+          <option value="OFICIAL">OFICIAL</option>
+          <option value="SUBALTERNO">SUBALTERNO</option>
+        </select>
+      </div>
+    </div>
+    <label>Unidad</label>
+    <select id="rrhh-m-unidad"></select>
+    <label>Situación</label>
+    <select id="rrhh-m-situacion">
+      <option value="ACTIVO">ACTIVO</option>
+      <option value="BAJA">BAJA</option>
+      <option value="VACACIONES">VACACIONES</option>
+      <option value="CURSO">CURSO</option>
+      <option value="SUSPENSION">SUSPENSIÓN</option>
+      <option value="OTRO">OTRO</option>
+    </select>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <label>Teléfono</label>
+        <input type="text" id="rrhh-m-tel"/>
+      </div>
+      <div>
+        <label>Correo</label>
+        <input type="text" id="rrhh-m-correo"/>
+      </div>
+    </div>
+    <label>Domicilio</label>
+    <input type="text" id="rrhh-m-domicilio"/>
+    <div id="rrhh-m-auditoria"></div>
+    <div id="rrhh-m-del-box" style="display:none;"></div>
+    <div class="modal-footer">
+      <button class="btn" style="background:#999;color:#fff;" type="button" onclick="cerrarModalRRHH('modal-rrhh-ficha')">Cancelar</button>
+      <button class="btn btn-v" type="button" id="rrhh-m-guardar" onclick="rrhhGuardar()"><i class="fas fa-save"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RRHH: Eliminar -->
+<div id="modal-rrhh-eliminar" class="modal">
+  <div class="modal-box" style="width:min(420px,94vw);">
+    <h3><i class="fas fa-trash" style="color:#c0392b;"></i> Eliminar de nómina</h3>
+    <p style="font-size:13px;color:#444;line-height:1.45;">Se eliminará el efectivo de Recursos Humanos. <strong>No se borran</strong> evaluaciones psicológicas ni descansos médicos.</p>
+    <p style="font-size:13px;">Confirme escribiendo el CIP: <strong id="rrhh-del-cip-label"></strong></p>
+    <label>CIP a eliminar</label>
+    <input type="text" id="rrhh-del-cip-confirm" placeholder="Ingrese el CIP" maxlength="8"/>
+    <div class="modal-footer">
+      <button class="btn" style="background:#999;color:#fff;" type="button" onclick="cerrarModalRRHH('modal-rrhh-eliminar')">Cancelar</button>
+      <button class="btn btn-r" type="button" onclick="rrhhConfirmarEliminar()"><i class="fas fa-trash"></i> Eliminar</button>
     </div>
   </div>
 </div>
@@ -1577,6 +1764,7 @@
 <script src="divisiones-ui.js?v=4"></script>
 <script src="panel-cms.js?v=26"></script>
 <script src="panel-descansos.js?v=4"></script>
+<script src="panel-rrhh.js?v=1"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var TOKEN='', CMS_INICIADO=false, PREGUNTAS_CACHE=[], SESION=null;
@@ -1588,7 +1776,8 @@ var ETIQUETAS_PERM={
   descargas:'RESPUESTAS',
   cms_convenios:'Gestión Convenios',
   cms_cursos:'Gestión Cursos',
-  cms_descansos:'Descansos médicos'
+  cms_descansos:'Descansos médicos',
+  recursos_humanos:'Recursos Humanos'
 };
 
 function normalizarPermisosPanel(p) {
@@ -1606,7 +1795,8 @@ function puedeEntrarPanel(s) {
     || perms.indexOf('cms_descansos') !== -1
     || perms.indexOf('cms_inicio') !== -1 || perms.indexOf('cms_resena') !== -1
     || perms.indexOf('cms_labor') !== -1 || perms.indexOf('cms_novedades') !== -1
-    || perms.indexOf('evaluaciones') !== -1 || perms.indexOf('descargas') !== -1;
+    || perms.indexOf('evaluaciones') !== -1 || perms.indexOf('descargas') !== -1
+    || perms.indexOf('recursos_humanos') !== -1;
 }
 
 function mostrarPanelListo() {
@@ -2710,6 +2900,7 @@ function puedePublicarResultadosPdf(tipo){
 function puedeGestionConvenios(){ return puedeGestionarConvocatorias() || puedeGestionarSorteosConvenio(); }
 function puedeGestionCursos(){ return puedeGestionarConvocatorias() || puedePublicarResultadosPdf('curso'); }
 function puedeGestionDescansos(){ return esUnitic() || tienePermiso('cms_descansos'); }
+function puedeGestionRRHH(){ return esUnitic() || tienePermiso('recursos_humanos'); }
 
 function aplicarPermisosSidebar(s){
   if (typeof regpolAplicarPermisosPanel === 'function') regpolAplicarPermisosPanel(s);
@@ -2767,6 +2958,11 @@ function irPublicarResultados(tipo, el){
 function iniciarPanel(s){
   s=s||SESION;
   if (s && s.rol === 'unitic') setTimeout(cargarFiltrosTabla, 300);
+  if (puedeGestionRRHH() && !esUnitic() && !puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos() && !puedeGestionDescansos()) {
+    var rrhhEl = document.querySelector('[data-page="rrhh-nomina"]');
+    ir('rrhh-nomina', rrhhEl);
+    return;
+  }
   var dashEl = document.querySelector('[data-page="dashboard"]');
   ir('dashboard', dashEl);
 }
@@ -2784,6 +2980,7 @@ function ir(page, el){
   if(page==='inscritos'&&!puedeOperarInscritosConvenio()){alert('Sin acceso a inscritos de convenios.');return;}
   if(page==='consulta-cip'&&!puedeConsultarCip()){alert('Sin acceso a consulta por CIP.');return;}
   if((page==='descansos'||page==='descansos-dash'||page==='descansos-import')&&!puedeGestionDescansos()){alert('Sin acceso a Descansos médicos.');return;}
+  if((page==='rrhh-nomina'||page==='rrhh-reportes')&&!puedeGestionRRHH()){alert('Sin acceso a Recursos Humanos.');return;}
   if((page==='usuarios'||page==='divisiones'||page==='menu-publicacion')&&!esUnitic()){alert('Solo el Super Admin puede acceder a esta sección.');return;}
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
   var pg=document.getElementById('page-'+page);
@@ -2811,6 +3008,11 @@ function ir(page, el){
   if(page==='descansos' || page==='descansos-dash' || page==='descansos-import'){
     if(typeof dmInit === 'function') dmInit();
   }
+  if(page==='rrhh-nomina' || page==='rrhh-reportes'){
+    if(typeof rrhhInit === 'function') rrhhInit();
+    if(page==='rrhh-nomina' && typeof cargarNominaRRHH === 'function') cargarNominaRRHH(1);
+    if(page==='rrhh-reportes' && typeof cargarCuadroRRHH === 'function') cargarCuadroRRHH();
+  }
   panelPaginasCargadas[page] = true;
 }
 
@@ -2834,7 +3036,8 @@ function toggleGrupo(header){
 function tipoDashboardLocal(){
   if (!SESION) return 'none';
   if (esUnitic()) return 'unitic';
-  if (puedeGestionDescansos() && !puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos()) return 'descansos';
+  if (puedeGestionDescansos() && !puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos() && !puedeGestionRRHH()) return 'descansos';
+  if (puedeGestionRRHH() && !puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos() && !puedeGestionDescansos()) return 'rrhh';
   if (puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos()) return 'psico';
   if (puedeGestionConvenios() && !puedeGestionCursos() && !puedeGestionPsicologia()) return 'convenios';
   if (puedeGestionCursos() && !puedeGestionConvenios() && !puedeGestionPsicologia()) return 'cursos';
@@ -2842,6 +3045,7 @@ function tipoDashboardLocal(){
   if (puedeGestionConvenios()) return 'convenios';
   if (puedeGestionCursos()) return 'cursos';
   if (puedeGestionDescansos()) return 'descansos';
+  if (puedeGestionRRHH()) return 'rrhh';
   return 'gestion';
 }
 

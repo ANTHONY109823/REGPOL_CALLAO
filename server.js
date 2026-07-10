@@ -14,6 +14,7 @@ const { Pool } = require('pg');
 const { Worker } = require('worker_threads');
 const { calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido, significadoEscalaMMPI, diagnosticoFinalMMPI, calcularDiagnosticoFila } = require('./pdf_gen');
 const descansosMedicos = require('./descansos_medicos');
+const recursosHumanos = require('./recursos_humanos');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -544,6 +545,7 @@ async function initDB() {
   `);
 
   await descansosMedicos.initTablasDescansos(pool);
+  await recursosHumanos.initTablasRRHH(pool);
 
   // Admins por defecto — la contraseña inicial se toma de variables de entorno.
   // Solo se insertan si el usuario no existe (ON CONFLICT DO NOTHING); las cuentas
@@ -561,6 +563,7 @@ async function initDB() {
     ['educacion',    sha256(seedPass('SEED_PASS_EDUCACION',  'Educacion2026!')),  'usuario', 'Oficina de Educación',   null, '["cms_cursos"]'],
     ['imagen',       sha256(seedPass('SEED_PASS_IMAGEN',     'Imagen2026!')),     'usuario', 'Oficina de Imagen',      null, '["cms_inicio","cms_resena","cms_labor","cms_novedades"]'],
     ['descansos',    sha256(seedPass('SEED_PASS_DESCANSOS',  'Descansos2026!')),  'usuario', 'Oficina Descansos Médicos', null, '["cms_descansos"]'],
+    ['rrhh',         sha256(seedPass('SEED_PASS_RRHH',       'RRHH2026!')),       'usuario', 'Recursos Humanos', null, '["recursos_humanos"]'],
   ];
   for (const [u,h,r,n,un,p] of adminsDefecto) {
     await pool.query(
@@ -648,23 +651,34 @@ async function initDB() {
 const DIVISIONES_CANON = [
   { nombre: 'DIVOPUS 1', orden: 1, unidades: [
     'CIA CALLAO', 'CIA LA PUNTA', 'CIA BELLAVISTA', 'CIA CIUDADELA CHALACA',
-    'CIA CIUDAD DEL PESCADOR', 'CIA RAMON CASTILLA', 'CIA LA LEGUA', 'CIA LA PERLA'
+    'CIA CIUDAD DEL PESCADOR', 'CIA RAMON CASTILLA', 'CIA LA LEGUA', 'CIA LA PERLA',
+    'OD CALLAO'
   ]},
   { nombre: 'DIVOPUS 2', orden: 2, unidades: [
     'CIA JUAN INGUNZA', 'CIA SARITA COLONIA', 'CIA BOCANEGRA',
-    'CIA MANUEL DULANTO', 'CIA PLAYA RIMAC', 'CIA CARMEN DE LA LEGUA'
+    'CIA MANUEL DULANTO', 'CIA PLAYA RIMAC', 'CIA CARMEN DE LA LEGUA',
+    'OD VIPOL'
   ]},
   { nombre: 'DIVOPUS 3', orden: 3, unidades: [
     'CIA VENTANILLA', 'CIA OQUENDO', 'CIA MI PERU',
-    'CIA PACHACUTEC', 'CIA VILLA LOS REYES', 'CIA MARQUEZ'
+    'CIA PACHACUTEC', 'CIA VILLA LOS REYES', 'CIA MARQUEZ',
+    'OD VENTANILLA'
   ]},
   { nombre: 'DIVUES', orden: 4, unidades: [
     'ESCVER CALLAO', 'ESCVER VENTANILLA', 'UNIEME CALLAO', 'UNIEME VENTANILLA',
     'UNIDIR CALLAO', 'UNIPAPIE', 'USEG CALLAO', 'UNISEINT CALLAO',
     'UNIPIAT CALLAO', 'USE CALLAO', 'USE VENTANILLA', 'UNIPIRV CALLAO',
-    'UTSEVI CALLAO', 'SECTSV VENTANILLA'
+    'UTSEVI CALLAO', 'SECTSV VENTANILLA', 'SECTSV CALLAO', 'UNISEEST', 'DIVUES JEFATURA'
   ]},
-  { nombre: 'UNIDADES ADM. RPC', orden: 5, unidades: ['UNIDADES ADM. RPC'] }
+  { nombre: 'DIVPOCOM', orden: 5, unidades: ['DIVPOCOM'] },
+  { nombre: 'DIVREINT', orden: 6, unidades: ['DIVREINT CALLAO'] },
+  { nombre: 'UNICOPE 105', orden: 7, unidades: ['UNICOPE 105'] },
+  { nombre: 'UNIDADES ADM. RPC', orden: 8, unidades: [
+    'UNIDADES ADM. RPC', 'REGPOL CALLAO', 'AYUDANTIA', 'ESTADO MAYOR', 'UNITIC',
+    'UNIPLEDU', 'UNIASJUR', 'UNITRDOC', 'OFIMA', 'OFAD', 'OFAD AREABA',
+    'OFAD AREBAP', 'OFAD ARELOG', 'OFAD AREREHUM', 'OFAD AREARMUN',
+    'OFICINA DE DISCIPLINA REGIONAL'
+  ]}
 ];
 
 async function obtenerDivisionesAgrupadas() {
@@ -685,7 +699,9 @@ async function obtenerDivisionesAgrupadas() {
 
 async function sincronizarDivisionesUnidades() {
   function tipoUnidadDivision(nombreDiv) {
-    if (nombreDiv === 'DIVUES') return 'especializada';
+    if (nombreDiv === 'DIVUES' || nombreDiv === 'DIVPOCOM' || nombreDiv === 'DIVREINT' || nombreDiv === 'UNICOPE 105') {
+      return 'especializada';
+    }
     if (nombreDiv === 'UNIDADES ADM. RPC') return 'administrativa';
     return 'comisaria';
   }
@@ -4516,6 +4532,9 @@ function iniciarDB() {
 
 // ── Módulo Descansos médicos (independiente) ─────────────────────────────────
 descansosMedicos.registrarRutas(app, pool, requireAuth);
+
+// ── Módulo Recursos Humanos (nómina interna) ─────────────────────────────────
+recursosHumanos.registrarRutas(app, pool, requireAuth);
 
 app.listen(PORT, '0.0.0.0', function() {
   console.log('\n=== REGPOL Callao — Puerto ' + PORT + ' ===');
