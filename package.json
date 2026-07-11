@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "utf8:fix": "node scripts/fix-corrupt-accents.js && node scripts/fix-utf8-latin1.js",
+    "utf8:check": "node scripts/ensure-utf8.js",
+    "test": "npm run utf8:check"
   },
   "engines": {
     "node": ">=18.0.0"

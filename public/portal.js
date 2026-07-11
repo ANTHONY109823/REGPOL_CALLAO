@@ -10,13 +10,20 @@ var REGPOL_SITE_KEY = 'regpolSiteData_v2';
 
 var PORTAL_MARCA = {
   titulo: 'REGI\u00d3N POLICIAL CALLAO',
-  subtitulo: 'UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES'
+  subtitulo: 'UNIDAD DE TECNOLOG\u00cdAS DE LA INFORMACI\u00d3N Y COMUNICACIONES'
 };
 
 var PORTAL_HERO = {
   titulo: 'REGI\u00d3N POLICIAL CALLAO',
   lema: 'AL SERVICIO DE LA CIUDADAN\u00cdA',
   eslogan: 'Compromiso, Honor y Servicio en la Provincia Constitucional'
+};
+
+var PORTAL_JEFATURA = {
+  titulo: 'ESTADO MAYOR - UNITIC CALLAO',
+  unidad: 'UNIDAD DE TECNOLOG\u00cdAS DE LA INFORMACI\u00d3N Y COMUNICACIONES',
+  complejo: 'COMPLEJO POLICIAL CAP. PNP ALIPIO PONCE V\u00c1SQUEZ',
+  direccion: 'JR. APUR\u00cdMAC 647 - CALLAO'
 };
 
 var REGPOL_NAV_FALLBACK = [
@@ -523,12 +530,16 @@ function initPortalNav(activeId, ocultos) {
   if (esPaginaInicio()) initPortalScrollNav();
 }
 
+function sanearTextoUtf8(s) {
+  return String(s == null ? '' : s).replace(/\uFFFD/g, '').trim();
+}
+
 function normalizarHeroTexto(heroT) {
   heroT = heroT || {};
-  var titulo = (heroT.titulo || PORTAL_HERO.titulo).trim();
-  var lema = (heroT.lema || '').trim();
-  var subtitulo = (heroT.subtitulo || '').trim();
-  var eslogan = (heroT.eslogan || heroT.parrafo || '').trim();
+  var titulo = sanearTextoUtf8(heroT.titulo || PORTAL_HERO.titulo) || PORTAL_HERO.titulo;
+  var lema = sanearTextoUtf8(heroT.lema || '');
+  var subtitulo = sanearTextoUtf8(heroT.subtitulo || '');
+  var eslogan = sanearTextoUtf8(heroT.eslogan || heroT.parrafo || '');
 
   if (!lema) {
     if (subtitulo === PORTAL_HERO.eslogan || subtitulo === 'Compromiso, Honor y Servicio en la Provincia Constitucional') {
@@ -1952,6 +1963,25 @@ function corregirTitulosUtf8Portal() {
     var h = document.querySelector('#' + id + ' .section-header h3');
     if (h) h.textContent = titulos[id];
   });
+
+  aplicarTextoEncabezadoMarca();
+
+  document.querySelectorAll('.portal-hero-titulo').forEach(function(el) {
+    el.textContent = PORTAL_HERO.titulo;
+  });
+  document.querySelectorAll('.portal-hero-lema').forEach(function(el) {
+    el.textContent = PORTAL_HERO.lema;
+  });
+
+  var jefDir = document.querySelector('.jefatura-direccion');
+  if (jefDir) {
+    var lineas = jefDir.querySelectorAll('.jefatura-linea');
+    if (lineas[0]) lineas[0].textContent = PORTAL_JEFATURA.titulo;
+    if (lineas[1]) lineas[1].textContent = PORTAL_JEFATURA.unidad;
+    if (lineas[2]) lineas[2].textContent = PORTAL_JEFATURA.complejo;
+    if (lineas[3]) lineas[3].textContent = PORTAL_JEFATURA.direccion;
+  }
+
   var jef = document.querySelector('.portal-jefatura-bar');
   if (jef) {
     jef.setAttribute('aria-label', 'Contacto y ubicaci\u00f3n institucional');
@@ -1962,6 +1992,13 @@ function corregirTitulosUtf8Portal() {
       el.setAttribute('title', 'Ubicaci\u00f3n en Google Maps');
     });
   }
+
+  var nav = document.querySelector('.nav-main');
+  if (nav) nav.setAttribute('aria-label', 'Men\u00fa principal');
+  var slider = document.querySelector('.presentation-slider');
+  if (slider) slider.setAttribute('aria-label', 'Presentaci\u00f3n institucional');
+  var fotos = document.getElementById('header-fotos-panel');
+  if (fotos) fotos.setAttribute('aria-label', 'Galer\u00eda institucional del encabezado');
 }
 
 function initPortalInicio() {
