@@ -24,7 +24,7 @@ var REGPOL_NAV_FALLBACK = [
   { id: 'novedades', href: 'index.html#novedades', label: 'NOVEDADES' },
   { id: 'convenios', href: 'index.html#convenios', label: 'CONVENIOS' },
   { id: 'cursos',    href: 'index.html#cursos',    label: 'CURSOS' },
-  { id: 'descansos', href: 'index.html#descansos', label: 'DESCANSOS MÉDICOS', icon: 'fa-notes-medical' },
+  { id: 'descansos', href: 'index.html#descansos', label: 'DESCANSOS M\u00c9DICOS', icon: 'fa-notes-medical' },
   { id: 'bienestar', href: 'index.html#bienestar', label: 'BIENESTAR',          icon: 'fa-heart' },
   { id: 'resena',    href: 'index.html#resena',    label: 'RESE\u00d1A HIST\u00d3RICA' },
   { id: 'labor',     href: 'index.html#labor',    label: 'NUESTRA LABOR' },
@@ -1937,7 +1937,35 @@ function renderSorteosResultados(list) {
   }).join('');
 }
 
+function corregirTitulosUtf8Portal() {
+  var titulos = {
+    resena: 'RESE\u00d1A HIST\u00d3RICA',
+    labor: 'NUESTRA LABOR',
+    descansos: 'DESCANSOS M\u00c9DICOS',
+    bienestar: 'BIENESTAR',
+    unidades: 'NUESTRAS UNIDADES',
+    novedades: 'NOVEDADES',
+    convenios: 'CONVENIOS',
+    cursos: 'CURSOS'
+  };
+  Object.keys(titulos).forEach(function(id) {
+    var h = document.querySelector('#' + id + ' .section-header h3');
+    if (h) h.textContent = titulos[id];
+  });
+  var jef = document.querySelector('.portal-jefatura-bar');
+  if (jef) {
+    jef.setAttribute('aria-label', 'Contacto y ubicaci\u00f3n institucional');
+    jef.querySelectorAll('.contacto-label').forEach(function(el) {
+      if (/Ubicaci/i.test(el.textContent || '')) el.textContent = 'Ubicaci\u00f3n';
+    });
+    jef.querySelectorAll('[title*="Ubicaci"], [title*="Ubicac"]').forEach(function(el) {
+      el.setAttribute('title', 'Ubicaci\u00f3n en Google Maps');
+    });
+  }
+}
+
 function initPortalInicio() {
+  corregirTitulosUtf8Portal();
   var navInicial = navDesdeHash() || 'inicio';
   window.addEventListener('pageshow', function(ev) {
     if (!ev.persisted) return;
