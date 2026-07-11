@@ -19,20 +19,6 @@
       window.__REGPOL_CONFIG_PROMISE = fetch(api + '/portal/configuracion?t=' + Date.now(), { cache: 'no-store' })
         .then(function(r) { return r.ok ? r.json() : null; })
         .catch(function() { return null; });
-      try {
-        var raw = localStorage.getItem('regpolSiteData_v2');
-        if (!raw) return;
-        var d = JSON.parse(raw);
-        var img = d.carrusel && d.carrusel[0] && d.carrusel[0].imagen;
-        if (!img) return;
-        if (String(img).indexOf('/portal/') === 0) img = api.replace(/\/$/, '') + img;
-        var l = document.createElement('link');
-        l.rel = 'preload';
-        l.as = 'image';
-        l.href = img;
-        if (String(img).indexOf('http') === 0) l.crossOrigin = 'anonymous';
-        document.head.appendChild(l);
-      } catch (e) {}
     })();
     </script>
 </head>
@@ -244,7 +230,7 @@
 </footer>
 
 <script src="portal-data.js?v=9"></script>
-<script src="portal.js?v=67"></script>
+<script src="portal.js?v=68"></script>
 <script>
     initPortalInicio();
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') cerrarNovedadModal(); });

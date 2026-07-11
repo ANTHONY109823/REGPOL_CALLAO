@@ -620,7 +620,9 @@ function resolverSlidesCarrusel(data) {
 
 function preloadImagenCarrusel(url) {
   var src = String(url || '').trim();
-  if (!src) return;
+  // Evitar <link rel=preload> sin href válido (aviso de consola)
+  if (!src || src === 'undefined' || src === 'null') return;
+  if (/^(javascript:|data:)/i.test(src)) return;
   var id = 'preload-carrusel-hero';
   var link = document.getElementById(id);
   if (!link) {
@@ -628,7 +630,10 @@ function preloadImagenCarrusel(url) {
     link.id = id;
     link.rel = 'preload';
     link.as = 'image';
+    // Sin crossOrigin: debe coincidir con <img> del carrusel (modo credentials por defecto)
+    link.href = src;
     document.head.appendChild(link);
+    return;
   }
   if (link.getAttribute('href') !== src) link.setAttribute('href', src);
 }
