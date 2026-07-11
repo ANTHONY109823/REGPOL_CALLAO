@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="responsive.css?v=1"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
-    body{background:#f0f4f0;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;min-height:100vh;}
+    body{background:#f0f4f0;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100vh;max-height:100vh;overflow:hidden;}
 
     
     .top-bar{background:linear-gradient(135deg,#002d24,#004d3d);color:#fff;
@@ -28,12 +28,12 @@
     .btn-logout:hover{background:rgba(255,255,255,.25);}
 
     
-    .layout{display:flex;flex:1;overflow:hidden;}
+    .layout{display:flex;flex:1;overflow:hidden;min-height:0;}
 
     
     .sidebar{width:220px;background:#fff;border-right:1px solid #e0e8e0;
       display:flex;flex-direction:column;flex-shrink:0;
-      box-shadow:2px 0 8px rgba(0,77,61,.06);overflow-y:auto;}
+      box-shadow:2px 0 8px rgba(0,77,61,.06);overflow-y:auto;min-height:0;}
 
     .sb-section{padding:10px 0 4px;}
     .sb-section-label{font-size:10px;font-weight:800;color:#bbb;letter-spacing:1px;
@@ -61,7 +61,7 @@
     .sb-group-body.hidden{display:none;}
 
     
-    .content{flex:1;overflow-y:auto;padding:20px;}
+    .content{flex:1;overflow-y:auto;padding:20px;min-height:0;}
     .page{display:none;} .page.on{display:block;}
 
     
@@ -346,7 +346,7 @@
         width:100%;max-height:46vh;overflow-y:auto;overflow-x:hidden;
         border-right:none;border-bottom:2px solid #c8a94a;flex-shrink:0;
       }
-      .content{padding:12px;}
+      .content{padding:12px;min-height:0;flex:1;}
       .top-bar{padding:8px 12px;height:auto;min-height:50px;flex-wrap:wrap;gap:8px;}
       .top-bar-left h1{font-size:11px;}
       .top-bar-left{flex-wrap:wrap;gap:8px;}
@@ -2983,6 +2983,18 @@ function iniciarPanel(s){
 
 var panelPaginasCargadas = {};
 
+function scrollPanelAlInicio(){
+  try {
+    window.scrollTo(0, 0);
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    var content = document.querySelector('.content');
+    if (content) content.scrollTop = 0;
+    var pg = document.querySelector('.page.on');
+    if (pg) pg.scrollTop = 0;
+  } catch (e) {}
+}
+
 function ir(page, el){
   if(page==='preguntas'&&!puedeVerPreguntas()){alert('Sin acceso. Las preguntas solo las gestiona Psicología/Bienestar o Super Admin.');return;}
   if(page==='evaluaciones'&&!puedeVerEvaluaciones()){alert('Sin acceso a evaluaciones.');return;}
@@ -3001,6 +3013,7 @@ function ir(page, el){
   document.querySelectorAll('.sb-item').forEach(function(i){i.classList.remove('on');});
   if(el) el.classList.add('on');
   else { var found=document.querySelector('[data-page="'+page+'"]'); if(found) found.classList.add('on'); }
+  scrollPanelAlInicio();
   var ya = panelPaginasCargadas[page];
   if(page==='evaluaciones'){
     if(!ya) cargarConfigEvaluacion();
@@ -3027,6 +3040,8 @@ function ir(page, el){
     if(page==='rrhh-reportes' && typeof cargarCuadroRRHH === 'function') cargarCuadroRRHH();
   }
   panelPaginasCargadas[page] = true;
+  setTimeout(scrollPanelAlInicio, 0);
+  setTimeout(scrollPanelAlInicio, 50);
 }
 
 function puedeEditarPortalCMS(){
@@ -3056,8 +3071,9 @@ function irCMS(tab, el){
   document.getElementById('page-cms').classList.add('on');
   document.querySelectorAll('.sb-item').forEach(function(i){i.classList.remove('on');});
   if(el) el.classList.add('on');
+  scrollPanelAlInicio();
   if(!CMS_INICIADO){CMS_INICIADO=true; initCMS();}
-  setTimeout(function(){cambiarTabCMS(tab);},150);
+  setTimeout(function(){cambiarTabCMS(tab); scrollPanelAlInicio();},150);
 }
 
 function toggleGrupo(header){
