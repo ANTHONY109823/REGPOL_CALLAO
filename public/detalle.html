@@ -1,11 +1,11 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <link rel="icon" href="favicon.png" type="image/png">
+    <link rel="icon" href="favicon.ico?v=2" type="image/x-icon">
+    <link rel="icon" href="favicon.png?v=2" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Detalle ‚Äî REGPOL Callao</title>
+  <title>Detalle ó REGPOL Callao</title>
   <link rel="stylesheet" href="style.css?v=39">
   <link rel="stylesheet" href="responsive.css?v=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -89,7 +89,7 @@
       <img src="img/regpol-callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90">
     </div>
     <div class="title-text">
-      <h1 class="portal-eslogan">REGI√ìN POLICIAL CALLAO</h1>
+      <h1 class="portal-eslogan">REGI”N POLICIAL CALLAO</h1>
       <p class="portal-subtitulo">UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES</p>
     </div>
   </div>
@@ -98,11 +98,11 @@
 <nav class="nav-main"><div class="container"><ul></ul></div></nav>
 
 <main class="container content-area">
-  <div id="cuerpo-detalle"><p class="loading-msg"><i class="fas fa-spinner fa-spin"></i> Cargando informaci√≥n...</p></div>
+  <div id="cuerpo-detalle"><p class="loading-msg"><i class="fas fa-spinner fa-spin"></i> Cargando informaciÛn...</p></div>
 </main>
 
 <footer class="portal-footer">
-  <p>&copy; 2026 Regi√≥n Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
+  <p>&copy; 2026 RegiÛn Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
 </footer>
 
 <script src="api-config.js?v=2"></script>
@@ -149,7 +149,7 @@ function renderDetalle(item){
     if(item.duracion) benefHtml += '<p>'+escHtmlD(item.duracion)+'</p>';
     if(item.observaciones) benefHtml += '<small>* '+escHtmlD(item.observaciones)+'</small>';
     terceraCardHtml = '<div class="card-detalle highlight-card"><div class="icon-circle gold"><i class="fas fa-money-bill-wave"></i></div>'
-      +'<h3>BENEFICIO ECON√ìMICO</h3>'+benefHtml+'</div>';
+      +'<h3>BENEFICIO ECON”MICO</h3>'+benefHtml+'</div>';
   } else if(esCurso && (item.fecha_inicio || item.duracion || item.observaciones)){
     var fechaHtml = '';
     if(item.fecha_inicio) fechaHtml += '<p class="price">'+escHtmlD(item.fecha_inicio)+'</p>';
@@ -164,30 +164,30 @@ function renderDetalle(item){
   if(item.inscripciones_abiertas){
     accionHtml = '<div class="registro-section">'
       +'<div class="registro-box">'
-      +'<h2>¬øDeseas postular a este '+(esCurso?'curso':'convenio')+'?</h2>'
-      +(ventanaTxt ? '<p>'+escHtmlD(ventanaTxt)+'</p>' : '<p>Complete el formulario de inscripci√≥n a continuaci√≥n.</p>')
+      +'<h2>øDeseas postular a este '+(esCurso?'curso':'convenio')+'?</h2>'
+      +(ventanaTxt ? '<p>'+escHtmlD(ventanaTxt)+'</p>' : '<p>Complete el formulario de inscripciÛn a continuaciÛn.</p>')
       +'<button type="button" id="btn-mostrar-inscripcion" class="btn-registro-grande" onclick="mostrarFormInscripcion()">'
-      +'<i class="fas fa-edit"></i> REGISTRAR MI INSCRIPCI√ìN</button>'
+      +'<i class="fas fa-edit"></i> REGISTRAR MI INSCRIPCI”N</button>'
       +'</div>'
       +'<div id="form-inscripcion-wrap" style="display:none;margin-top:16px;">'
       +renderFormInscripcion(item)
       +'</div></div>';
   } else if(item.formulario_url && item.formulario_url !== '#'){
     accionHtml = '<div class="registro-section"><div class="registro-box">'
-      +'<h2>¬øDeseas postular a este '+(esCurso?'curso':'convenio')+'?</h2>'
-      +(ventanaTxt ? '<p>'+escHtmlD(ventanaTxt)+'</p>' : '<p>Puedes registrar tu inscripci√≥n mediante el formulario externo.</p>')
+      +'<h2>øDeseas postular a este '+(esCurso?'curso':'convenio')+'?</h2>'
+      +(ventanaTxt ? '<p>'+escHtmlD(ventanaTxt)+'</p>' : '<p>Puedes registrar tu inscripciÛn mediante el formulario externo.</p>')
       +'<a href="'+escHtmlD(item.formulario_url)+'" target="_blank" class="btn-registro-grande">'
-      +'<i class="fas fa-edit"></i> REGISTRAR MI INSCRIPCI√ìN</a>'
+      +'<i class="fas fa-edit"></i> REGISTRAR MI INSCRIPCI”N</a>'
       +'</div></div>';
   } else {
     accionHtml = '<div class="registro-section"><div class="registro-box">'
-      +'<h2>¬øDeseas postular a este '+(esCurso?'curso':'convenio')+'?</h2>'
+      +'<h2>øDeseas postular a este '+(esCurso?'curso':'convenio')+'?</h2>'
       +(ventanaTxt ? '<p>'+escHtmlD(ventanaTxt)+'</p>' : '')
-      +'<div class="inscripciones-cerradas" style="margin-top:12px;"><i class="fas fa-lock"></i> Las inscripciones no est√°n habilitadas en este momento.</div>'
+      +'<div class="inscripciones-cerradas" style="margin-top:12px;"><i class="fas fa-lock"></i> Las inscripciones no est·n habilitadas en este momento.</div>'
       +'</div></div>';
   }
 
-  document.title = escHtmlD(item.titulo) + ' ‚Äî REGPOL Callao';
+  document.title = escHtmlD(item.titulo) + ' ó REGPOL Callao';
   document.getElementById('cuerpo-detalle').innerHTML =
     '<div class="page-intro">'
     +'<h2>'+escHtmlD(item.titulo)+'</h2>'
@@ -221,7 +221,7 @@ function mostrarFormInscripcion(){
 function initCamposInscripcion(){
   var selArea = document.getElementById('fi-area');
   if(selArea && typeof regpolPoblarSelectArea === 'function'){
-    regpolPoblarSelectArea(selArea, '‚Äî Seleccionar √°rea ‚Äî');
+    regpolPoblarSelectArea(selArea, 'ó Seleccionar ·rea ó');
   }
   toggleAreaOtroInscripcion();
   cargarDivisionesPublico();
@@ -240,10 +240,10 @@ var GRADOS_PNP = [
   'SUBOFICIAL DE 1RA PNP','SUBOFICIAL DE 2DA PNP','SUBOFICIAL DE 3RA PNP'
 ];
 
-var CARGOS_OPCIONES = ['ADMINISTRATIVO', 'PATRULLAJE', 'INVESTIGACI√ìN', 'JEFE DE UNIDAD'];
+var CARGOS_OPCIONES = ['ADMINISTRATIVO', 'PATRULLAJE', 'INVESTIGACI”N', 'JEFE DE UNIDAD'];
 
 function optsCargo(){
-  return '<option value="">‚Äî Seleccionar cargo ‚Äî</option>'
+  return '<option value="">ó Seleccionar cargo ó</option>'
     + CARGOS_OPCIONES.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
 }
 
@@ -260,7 +260,7 @@ function obtenerAreaInscripcion() {
 }
 
 function optsGrado(){
-  return '<option value="">‚Äî Seleccionar grado ‚Äî</option>'
+  return '<option value="">ó Seleccionar grado ó</option>'
     + GRADOS_PNP.map(function(g){return '<option value="'+g+'">'+g+'</option>';}).join('');
 }
 
@@ -268,7 +268,7 @@ function renderFormInscripcion(item){
   var esConvenio = item.tipo === 'convenio';
   var esCurso    = item.tipo === 'curso';
   return '<form class="form-inscripcion" id="form-inscripcion" onsubmit="enviarInscripcion(event)">'
-    +'<h3><i class="fas fa-edit"></i> Formulario de Inscripci√≥n ‚Äî '+(esConvenio?'CONVENIO':'CURSO')+'</h3>'
+    +'<h3><i class="fas fa-edit"></i> Formulario de InscripciÛn ó '+(esConvenio?'CONVENIO':'CURSO')+'</h3>'
     +'<div id="fi-alerta" class="fi-alerta"></div>'
     +'<div class="fi-grid">'
 
@@ -280,46 +280,46 @@ function renderFormInscripcion(item){
 
     
     +'<div class="fi-group"><label>CIP *</label>'
-    +'<input type="text" id="fi-cip" maxlength="20" placeholder="N√∫mero de CIP" required/></div>'
+    +'<input type="text" id="fi-cip" maxlength="20" placeholder="N˙mero de CIP" required/></div>'
     +'<div class="fi-group"><label>DNI *</label>'
-    +'<input type="text" id="fi-dni" maxlength="12" placeholder="N√∫mero de DNI" required/></div>'
+    +'<input type="text" id="fi-dni" maxlength="12" placeholder="N˙mero de DNI" required/></div>'
 
     
     +'<div class="fi-group"><label>Unidad / Dependencia *</label>'
-    +'<select id="fi-unidad" required><option value="">‚Äî Seleccionar ‚Äî</option></select></div>'
+    +'<select id="fi-unidad" required><option value="">ó Seleccionar ó</option></select></div>'
 
     
     +'<div class="fi-group"><label>Cargo *</label>'
     +'<select id="fi-cargo" required>'+optsCargo()+'</select></div>'
-    +'<div class="fi-group"><label>√Årea *</label>'
+    +'<div class="fi-group"><label>¡rea *</label>'
     +'<select id="fi-area" required onchange="toggleAreaOtroInscripcion()">'
-    +'<option value="">‚Äî Seleccionar √°rea ‚Äî</option></select>'
+    +'<option value="">ó Seleccionar ·rea ó</option></select>'
     +'<div id="fi-area-otro-box" style="display:none;margin-top:8px;">'
-    +'<input type="text" id="fi-area-otro" maxlength="120" placeholder="Especifique el √°rea..."/>'
+    +'<input type="text" id="fi-area-otro" maxlength="120" placeholder="Especifique el ·rea..."/>'
     +'</div></div>'
 
     +(esConvenio
-      ? '<div class="fi-group"><label>Arma (Condici√≥n laboral) *</label>'
+      ? '<div class="fi-group"><label>Arma (CondiciÛn laboral) *</label>'
         +'<select id="fi-arma" required>'
-        +'<option value="">‚Äî Seleccionar ‚Äî</option>'
+        +'<option value="">ó Seleccionar ó</option>'
         +'<option value="DEL ESTADO">DEL ESTADO</option>'
         +'<option value="PARTICULAR">PARTICULAR</option>'
         +'</select></div>'
-        +'<div class="fi-group"><label>Situaci√≥n para el servicio *</label>'
+        +'<div class="fi-group"><label>SituaciÛn para el servicio *</label>'
         +'<select id="fi-disponibilidad" required onchange="onCambioDisponibilidad(this.value)">'
-        +'<option value="">‚Äî Seleccionar ‚Äî</option>'
-        +'<option value="VACACIONES">Vacaciones ‚Äî vacante autom√°tica (sin sorteo)</option>'
-        +'<option value="FRANCO">D√≠a de franco ‚Äî participa en sorteo</option>'
+        +'<option value="">ó Seleccionar ó</option>'
+        +'<option value="VACACIONES">Vacaciones ó vacante autom·tica (sin sorteo)</option>'
+        +'<option value="FRANCO">DÌa de franco ó participa en sorteo</option>'
         +'</select>'
         +'<small class="fi-hint" id="disp-aviso" style="display:none;"></small></div>'
-        +'<div class="fi-group"><label>Tel√©fono / Celular *</label>'
+        +'<div class="fi-group"><label>TelÈfono / Celular *</label>'
         +'<input type="tel" id="fi-telefono" maxlength="30" placeholder="Ej: 987654321" required/></div>'
         +'<div class="fi-group" id="fi-dia-franco-box" style="display:none;">'
-        +'<label>D√≠a de franco *</label>'
+        +'<label>DÌa de franco *</label>'
         +'<select id="fi-dia-franco">'
-        +'<option value="">‚Äî Seleccionar ‚Äî</option>'
-        +'<option value="PAR">D√çA PAR</option>'
-        +'<option value="IMPAR">D√çA IMPAR</option>'
+        +'<option value="">ó Seleccionar ó</option>'
+        +'<option value="PAR">DÕA PAR</option>'
+        +'<option value="IMPAR">DÕA IMPAR</option>'
         +'</select></div>'
       : '')
 
@@ -328,9 +328,9 @@ function renderFormInscripcion(item){
       ? '<div class="fi-group"><label>Fecha de Egreso de Escuela *</label>'
         +'<input type="date" id="fi-fecha-egreso" required onchange="calcularTiempoServicio(this.value)"/></div>'
         +'<div class="fi-group"><label>Tiempo de Servicio (calculado)</label>'
-        +'<input type="text" id="fi-tiempo-servicio" readonly placeholder="Se calcular√° autom√°ticamente" '
+        +'<input type="text" id="fi-tiempo-servicio" readonly placeholder="Se calcular· autom·ticamente" '
         +'style="background:#f0f7f0;color:#004d3d;font-weight:700;"/></div>'
-        +'<div class="fi-group"><label>Tel√©fono / Celular</label>'
+        +'<div class="fi-group"><label>TelÈfono / Celular</label>'
         +'<input type="tel" id="fi-telefono" maxlength="30" placeholder="Ej: 987654321"/></div>'
       : '')
 
@@ -338,10 +338,10 @@ function renderFormInscripcion(item){
     +'<div class="pdf-upload-box">'
     +'<div class="pdf-titulo"><i class="fas fa-file-pdf"></i> EXPEDIENTE DE REQUISITOS (PDF)</div>'
     +'<div class="pdf-aviso">'
-    +'Escanee y adjunte <strong>todos sus documentos en un √∫nico archivo PDF</strong> correctamente ordenados.<br/>'
-    +'‚ö† <strong>Debe estar debidamente firmado, sin enmendaduras y con toda la documentaci√≥n completa.</strong><br/>'
-    +'El expediente incompleto o con errores ser√° anulado autom√°ticamente.<br/>'
-    +'<span style="color:#004d3d;font-weight:700;">Tama√±o m√°ximo: 5 MB.</span>'
+    +'Escanee y adjunte <strong>todos sus documentos en un ˙nico archivo PDF</strong> correctamente ordenados.<br/>'
+    +'? <strong>Debe estar debidamente firmado, sin enmendaduras y con toda la documentaciÛn completa.</strong><br/>'
+    +'El expediente incompleto o con errores ser· anulado autom·ticamente.<br/>'
+    +'<span style="color:#004d3d;font-weight:700;">TamaÒo m·ximo: 5 MB.</span>'
     +'</div>'
     +renderBannerPlantilla(item)
     +'<label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:4px;">Seleccione su PDF *</label>'
@@ -349,14 +349,14 @@ function renderFormInscripcion(item){
     +'<div id="fi-pdf-preview" class="pdf-preview-bar" style="display:none;">'
     +'<i class="fas fa-file-pdf"></i><span id="fi-pdf-nombre"></span>'
     +'<button type="button" onclick="quitarPdfInscripcion()" '
-    +'style="background:#c0392b;color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;margin-left:auto;">‚úï Quitar</button>'
+    +'style="background:#c0392b;color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;margin-left:auto;">? Quitar</button>'
     +'</div>'
     +'<input type="hidden" id="fi-pdf-data"/>'
     +'</div>'
 
     +'</div>'
     +'<div style="margin-top:18px;text-align:center;">'
-    +'<button type="submit" class="btn-registro-grande"><i class="fas fa-paper-plane"></i> ENVIAR INSCRIPCI√ìN</button>'
+    +'<button type="submit" class="btn-registro-grande"><i class="fas fa-paper-plane"></i> ENVIAR INSCRIPCI”N</button>'
     +'</div>'
     +'</form>';
 }
@@ -366,10 +366,10 @@ function onCambioDisponibilidad(val){
   if(aviso){
     if(val === 'VACACIONES'){
       aviso.style.display = 'block';
-      aviso.textContent = 'Al aprobarse, ocupa vacante autom√°ticamente sin sorteo en vivo.';
+      aviso.textContent = 'Al aprobarse, ocupa vacante autom·ticamente sin sorteo en vivo.';
     } else if(val === 'FRANCO'){
       aviso.style.display = 'block';
-      aviso.textContent = 'Participar√° en el sorteo p√∫blico si su expediente es aprobado.';
+      aviso.textContent = 'Participar· en el sorteo p˙blico si su expediente es aprobado.';
     } else {
       aviso.style.display = 'none';
       aviso.textContent = '';
@@ -398,8 +398,8 @@ function calcularTiempoServicio(val){
   var anios = hoy.getFullYear() - egreso.getFullYear();
   var mes   = hoy.getMonth() - egreso.getMonth();
   if(mes < 0){ anios--; mes += 12; }
-  el.value = anios+' a√±os '+mes+' meses de servicio';
-  document.getElementById('fi-tiempo-servicio').setAttribute('data-val', anios+' a√±os '+mes+' meses');
+  el.value = anios+' aÒos '+mes+' meses de servicio';
+  document.getElementById('fi-tiempo-servicio').setAttribute('data-val', anios+' aÒos '+mes+' meses');
 }
 
 function renderBannerPlantilla(item){
@@ -411,8 +411,8 @@ function renderBannerPlantilla(item){
   return '<div class="plantilla-banner">'
     +'<i class="fas fa-file-pdf"></i>'
     +'<div class="pb-texto">'
-    +'<strong>MODELO OFICIAL DE INSCRIPCI√ìN</strong>'
-    +'<span>Descargue el formulario modelo, compl√©telo (incluya ¬´'+tituloConv+'¬ª), f√≠rmelo y adj√∫ntelo con todos sus documentos en un solo PDF.</span>'
+    +'<strong>MODELO OFICIAL DE INSCRIPCI”N</strong>'
+    +'<span>Descargue el formulario modelo, complÈtelo (incluya ´'+tituloConv+'ª), fÌrmelo y adj˙ntelo con todos sus documentos en un solo PDF.</span>'
     +'</div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:8px;flex-shrink:0;">'
     +'<a href="plantillas/modelo-inscripcion-regpol.pdf" download="MODELO-INSCRIPCION-REGPOL.pdf" class="btn-desc-plantilla">'
@@ -445,7 +445,7 @@ function cargarPdfInscripcion(input){
   var file = input.files&&input.files[0];
   if(!file) return;
   if(file.size > 5*1024*1024){
-    alert('El PDF no debe superar 5 MB. Reduzca el tama√±o del archivo antes de adjuntarlo.');
+    alert('El PDF no debe superar 5 MB. Reduzca el tamaÒo del archivo antes de adjuntarlo.');
     input.value=''; return;
   }
   var reader = new FileReader();
@@ -515,14 +515,14 @@ function enviarInscripcion(e){
   if(!grado||!cip||!dni||!nombres||!unidad||!cargo||!area){
     var selArea = document.getElementById('fi-area');
     if (selArea && selArea.value === 'OTRO' && !area) {
-      alerta.textContent='Seleccion√≥ OTRO: indique el √°rea en el cuadro de texto.';
+      alerta.textContent='SeleccionÛ OTRO: indique el ·rea en el cuadro de texto.';
     } else {
-      alerta.textContent='Complete los campos obligatorios: grado, CIP, DNI, nombres, unidad, cargo y √°rea.';
+      alerta.textContent='Complete los campos obligatorios: grado, CIP, DNI, nombres, unidad, cargo y ·rea.';
     }
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
   if(ITEM_TIPO==='convenio' && !tel){
-    alerta.textContent='Ingrese su tel√©fono o celular de contacto.';
+    alerta.textContent='Ingrese su telÈfono o celular de contacto.';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
   if(ITEM_TIPO==='convenio' && !disponibilidad){
@@ -530,7 +530,7 @@ function enviarInscripcion(e){
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
   if(ITEM_TIPO==='convenio' && disponibilidad==='FRANCO' && !dia_franco){
-    alerta.textContent='Seleccione su d√≠a de franco (Par o Impar).';
+    alerta.textContent='Seleccione su dÌa de franco (Par o Impar).';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
   if(ITEM_TIPO==='curso' && !fecha_egreso){
@@ -556,7 +556,7 @@ function enviarInscripcion(e){
     })
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok){
-      alerta.innerHTML='‚úì Inscripci√≥n registrada. El √°rea correspondiente revisar√° su expediente. '
+      alerta.innerHTML='? InscripciÛn registrada. El ·rea correspondiente revisar· su expediente. '
         +'<a href="consulta.html?cip='+encodeURIComponent(cip)+'" style="color:#004d3d;font-weight:700;">Consultar estado con su CIP</a>.';
       alerta.className='fi-alerta ok'; alerta.style.display='block';
       document.getElementById('form-inscripcion').reset();
@@ -569,14 +569,14 @@ function enviarInscripcion(e){
       onCambioDisponibilidad('');
       toggleAreaOtroInscripcion();
     } else {
-      alerta.textContent=d.error||'Error al procesar la inscripci√≥n.';
+      alerta.textContent=d.error||'Error al procesar la inscripciÛn.';
       alerta.className='fi-alerta error'; alerta.style.display='block';
     }
   }).catch(function(){
-    alerta.textContent='Error de conexi√≥n. Intente nuevamente.';
+    alerta.textContent='Error de conexiÛn. Intente nuevamente.';
     alerta.className='fi-alerta error'; alerta.style.display='block';
   }).finally(function(){
-    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane"></i> ENVIAR INSCRIPCI√ìN';}
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane"></i> ENVIAR INSCRIPCI”N';}
   });
 }
 
@@ -584,7 +584,7 @@ function cargarDetalle(){
   ITEM_ID = getParam('id');
   ITEM_TIPO = getParam('tipo') || 'curso';
   if(!ITEM_ID){
-    document.getElementById('cuerpo-detalle').innerHTML='<p class="loading-msg">No se especific√≥ el item. <a href="cursos.html">Volver a cursos</a></p>';
+    document.getElementById('cuerpo-detalle').innerHTML='<p class="loading-msg">No se especificÛ el item. <a href="cursos.html">Volver a cursos</a></p>';
     return;
   }
   fetch(API_PUBLIC + '/portal/items/'+ITEM_ID)
@@ -597,7 +597,7 @@ function cargarDetalle(){
       renderDetalle(d.item);
     })
     .catch(function(){
-      document.getElementById('cuerpo-detalle').innerHTML='<p class="loading-msg">Error de conexi√≥n.</p>';
+      document.getElementById('cuerpo-detalle').innerHTML='<p class="loading-msg">Error de conexiÛn.</p>';
     });
 }
 

@@ -1,9 +1,9 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <link rel="icon" href="favicon.png" type="image/png">
+    <link rel="icon" href="favicon.ico?v=2" type="image/x-icon">
+    <link rel="icon" href="favicon.png?v=2" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bienestar - REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
@@ -29,7 +29,7 @@
       <img src="img/regpol-callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90" />
     </div>
     <div class="title-text">
-      <h1 class="portal-eslogan">REGI√ìN POLICIAL CALLAO</h1>
+      <h1 class="portal-eslogan">REGI”N POLICIAL CALLAO</h1>
       <p class="portal-subtitulo">UNIDAD DE TECNOLOGIAS DE LA INFORMACION Y COMUNICACIONES</p>
     </div>
   </div>
@@ -51,11 +51,11 @@
         <i class="fas fa-bookmark"></i>
         <div>
           <strong>Tienes un progreso guardado</strong>
-          <span id="banner-progreso-info">P√°gina ‚Äî ‚Äî preguntas respondidas</span>
+          <span id="banner-progreso-info">P·gina ó ó preguntas respondidas</span>
         </div>
         <div class="banner-prog-btns">
           <button class="btn-prog-continuar" onclick="restaurarProgreso()">
-            <i class="fas fa-play"></i> Continuar donde qued√≥
+            <i class="fas fa-play"></i> Continuar donde quedÛ
           </button>
           <button class="btn-prog-nuevo" onclick="descartarProgreso()">
             <i class="fas fa-trash-alt"></i> Empezar de nuevo
@@ -67,7 +67,7 @@
         <div class="continuar-cip-compact">
           <div class="continuar-cip-compact-titulo">
             <i class="fas fa-play-circle"></i>
-            <span>¬øYa comenz√≥? Ingrese su <strong>CIP</strong> y contin√∫e</span>
+            <span>øYa comenzÛ? Ingrese su <strong>CIP</strong> y contin˙e</span>
           </div>
           <div class="continuar-cip-fila">
             <input type="text" id="f-cip-continuar" placeholder="CIP" maxlength="20" autocomplete="off"
@@ -83,17 +83,17 @@
     <div id="card-registro-formulario">
     <div class="card-header-eval">
       <i class="fas fa-id-card"></i>
-      <h2>Paso 1 -- Registro e Identificaci√≥n del Efectivo Policial</h2>
+      <h2>Paso 1 -- Registro e IdentificaciÛn del Efectivo Policial</h2>
     </div>
     <div class="card-body-eval">
-      <p class="registro-intro">Complete sus datos personales. Luego podr√° acceder al cuestionario. <strong>Puede guardar su progreso y continuar en otra sesi√≥n.</strong></p>
+      <p class="registro-intro">Complete sus datos personales. Luego podr· acceder al cuestionario. <strong>Puede guardar su progreso y continuar en otra sesiÛn.</strong></p>
       <div class="form-grid form-grid-registro">
         <div class="campo campo-full">
           <label for="f-unidad">Dependencia actual <span class="req">*</span></label>
           <select id="f-unidad" class="select-eval">
             <option value="">-- Seleccionar dependencia --</option>
           </select>
-          <span class="msg-error">Seleccione su comisar√≠a.</span>
+          <span class="msg-error">Seleccione su comisarÌa.</span>
         </div>
         <div class="campo campo-full">
           <label for="f-grado">Grado <span class="req">*</span></label>
@@ -127,14 +127,14 @@
           <span class="msg-error">Ingrese sus nombres.</span>
         </div>
         <div class="campo">
-          <label for="f-cip">CIP (8 d√≠gitos) <span class="req">*</span></label>
+          <label for="f-cip">CIP (8 dÌgitos) <span class="req">*</span></label>
           <input type="text" id="f-cip" placeholder="12345678" maxlength="8" inputmode="numeric" />
-          <span class="msg-error">El CIP debe tener exactamente 8 d√≠gitos.</span>
+          <span class="msg-error">El CIP debe tener exactamente 8 dÌgitos.</span>
         </div>
         <div class="campo">
-          <label for="f-dni">DNI (8 d√≠gitos) <span class="req">*</span></label>
+          <label for="f-dni">DNI (8 dÌgitos) <span class="req">*</span></label>
           <input type="text" id="f-dni" placeholder="12345678" maxlength="8" inputmode="numeric" />
-          <span class="msg-error">El DNI debe tener exactamente 8 d√≠gitos.</span>
+          <span class="msg-error">El DNI debe tener exactamente 8 dÌgitos.</span>
         </div>
         <div class="campo">
           <label for="f-nacimiento">Fecha de Nacimiento <span class="req">*</span></label>
@@ -156,21 +156,21 @@
             <option value="">-- Seleccionar cargo --</option>
             <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
             <option value="PATRULLAJE">PATRULLAJE</option>
-            <option value="INVESTIGACION">INVESTIGACI√ìN</option>
+            <option value="INVESTIGACION">INVESTIGACI”N</option>
             <option value="JEFE DE UNIDAD">JEFE DE UNIDAD</option>
           </select>
           <span class="msg-error">Seleccione su cargo.</span>
         </div>
         <div class="campo">
-          <label for="f-area">√Årea <span class="req">*</span></label>
+          <label for="f-area">¡rea <span class="req">*</span></label>
           <select id="f-area" class="select-eval" onchange="toggleAreaOtroEval()">
-            <option value="">-- Seleccionar √°rea --</option>
+            <option value="">-- Seleccionar ·rea --</option>
           </select>
           <div id="f-area-otro-box" style="display:none;margin-top:8px;">
-            <input type="text" id="f-area-otro" class="select-eval" maxlength="120" placeholder="Especifique el √°rea..." style="width:100%;"/>
-            <span class="msg-error">Indique el √°rea.</span>
+            <input type="text" id="f-area-otro" class="select-eval" maxlength="120" placeholder="Especifique el ·rea..." style="width:100%;"/>
+            <span class="msg-error">Indique el ·rea.</span>
           </div>
-          <span class="msg-error">Seleccione su √°rea.</span>
+          <span class="msg-error">Seleccione su ·rea.</span>
         </div>
         <div class="campo campo-arma">
           <span class="campo-arma-titulo" id="label-arma">Arma</span>
@@ -188,7 +188,7 @@
         <div class="campo campo-full registro-foto-accion">
           <div class="registro-foto-fila">
             <div class="registro-foto-col campo-foto">
-              <label for="f-foto">Fotograf√≠a del efectivo <span class="req">*</span></label>
+              <label for="f-foto">FotografÌa del efectivo <span class="req">*</span></label>
               <div class="foto-carga-wrap">
                 <div class="foto-cajita" id="foto-cajita">
                   <div id="foto-preview" class="foto-preview">
@@ -196,17 +196,17 @@
                       <i class="fas fa-user" aria-hidden="true"></i>
                       <span>Sin foto</span>
                     </div>
-                    <img id="foto-preview-img" alt="Vista previa de la fotograf√≠a" />
+                    <img id="foto-preview-img" alt="Vista previa de la fotografÌa" />
                     <button type="button" class="btn-quitar-foto" onclick="quitarFoto()" title="Quitar foto" style="display:none;">
                       <i class="fas fa-times"></i>
                     </button>
                   </div>
                   <div class="foto-cajita-botones">
                     <button type="button" class="foto-btn-mini" id="btn-foto-camara" title="Tomar foto ahora">
-                      <i class="fas fa-camera"></i><span class="foto-btn-txt">C√°mara</span>
+                      <i class="fas fa-camera"></i><span class="foto-btn-txt">C·mara</span>
                     </button>
-                    <button type="button" class="foto-btn-mini" id="btn-foto-galeria" title="Elegir de galer√≠a">
-                      <i class="fas fa-images"></i><span class="foto-btn-txt">Galer√≠a</span>
+                    <button type="button" class="foto-btn-mini" id="btn-foto-galeria" title="Elegir de galerÌa">
+                      <i class="fas fa-images"></i><span class="foto-btn-txt">GalerÌa</span>
                     </button>
                   </div>
                 </div>
@@ -214,7 +214,7 @@
                 <input type="file" id="f-foto-cam" accept="image/*" capture="user" />
                 <span id="foto-nombre" class="foto-nombre-archivo">Sin foto</span>
               </div>
-              <span class="msg-error" id="msg-foto">Suba una foto (JPG, PNG o WEBP, m√°x. 2 MB).</span>
+              <span class="msg-error" id="msg-foto">Suba una foto (JPG, PNG o WEBP, m·x. 2 MB).</span>
             </div>
             <div class="registro-acciones registro-acciones-inline">
               <button type="button" class="btn-eval btn-verde btn-registro-continuar" onclick="continuarAlCuestionario()">
@@ -233,7 +233,7 @@
   <div class="card-eval seccion-bloqueada" id="card-cuestionario">
     <div class="card-header-eval">
       <i class="fas fa-tasks"></i>
-      <h2>Paso 2 ‚Äî PROGRAMA DE BIENESTAR</h2>
+      <h2>Paso 2 ó PROGRAMA DE BIENESTAR</h2>
     </div>
     <div class="card-body-eval">
       <div class="progreso-wrap">
@@ -261,8 +261,8 @@
 <div id="overlay-envio" role="status">
   <div class="spinner" id="spinner-overlay"></div>
   <i class="fas fa-check-circle check-ok" id="check-ok-icon"></i>
-  <p id="texto-overlay">Enviando su evaluaci√≥n...</p>
-  <small id="subtexto-overlay">Por favor no cierre ni recargue esta p√°gina.</small>
+  <p id="texto-overlay">Enviando su evaluaciÛn...</p>
+  <small id="subtexto-overlay">Por favor no cierre ni recargue esta p·gina.</small>
 </div>
 
 <div id="modal-aviso-unidades" class="modal-aviso-unidades" role="dialog" aria-modal="true" aria-labelledby="aviso-unidades-titulo" hidden>
@@ -275,7 +275,7 @@
     <ul id="aviso-unidades-lista" class="aviso-unidades-lista"></ul>
     <div class="aviso-unidades-espera">
       <i class="fas fa-info-circle" aria-hidden="true"></i>
-      <p>Si su unidad a√∫n no est√° activada, espere: el √Årea de Bienestar lo habilitar√° muy pronto.</p>
+      <p>Si su unidad a˙n no est· activada, espere: el ¡rea de Bienestar lo habilitar· muy pronto.</p>
     </div>
     <button type="button" class="btn-eval btn-verde modal-aviso-unidades-btn" id="btn-aceptar-aviso-unidades">
       <i class="fas fa-check"></i> Aceptar y continuar
@@ -287,30 +287,30 @@
   <div class="modal-aviso-unidades-panel">
     <div class="modal-aviso-unidades-header">
       <i class="fas fa-paper-plane" aria-hidden="true"></i>
-      <h2 id="confirmar-envio-titulo">Confirmar env√≠o del cuestionario</h2>
+      <h2 id="confirmar-envio-titulo">Confirmar envÌo del cuestionario</h2>
     </div>
 
     
     <div id="confirmar-envio-vista">
-      <p class="modal-aviso-unidades-lead">Revise sus datos antes de enviar. Una vez enviado, su cuestionario se remite a la Oficina de Psicolog√≠a.</p>
+      <p class="modal-aviso-unidades-lead">Revise sus datos antes de enviar. Una vez enviado, su cuestionario se remite a la Oficina de PsicologÌa.</p>
       <ul class="confirmar-envio-datos">
-        <li><i class="fas fa-user" aria-hidden="true"></i><span><strong>Efectivo:</strong> <span id="confirmar-envio-nombre">‚Äî</span></span></li>
-        <li><i class="fas fa-id-card" aria-hidden="true"></i><span><strong>DNI:</strong> <span id="confirmar-envio-dni">‚Äî</span></span></li>
-        <li><i class="fas fa-building" aria-hidden="true"></i><span><strong>Dependencia:</strong> <span id="confirmar-envio-unidad">‚Äî</span></span></li>
+        <li><i class="fas fa-user" aria-hidden="true"></i><span><strong>Efectivo:</strong> <span id="confirmar-envio-nombre">ó</span></span></li>
+        <li><i class="fas fa-id-card" aria-hidden="true"></i><span><strong>DNI:</strong> <span id="confirmar-envio-dni">ó</span></span></li>
+        <li><i class="fas fa-building" aria-hidden="true"></i><span><strong>Dependencia:</strong> <span id="confirmar-envio-unidad">ó</span></span></li>
       </ul>
       <div class="modal-confirmar-envio-acciones">
         <button type="button" class="btn-eval btn-borde" id="btn-cancelar-envio">
           <i class="fas fa-pen"></i> Revisar
         </button>
         <button type="button" class="btn-eval btn-verde" id="btn-confirmar-envio">
-          <i class="fas fa-paper-plane"></i> S√≠, enviar
+          <i class="fas fa-paper-plane"></i> SÌ, enviar
         </button>
       </div>
     </div>
 
     
     <div id="confirmar-envio-edicion" hidden>
-      <p class="modal-aviso-unidades-lead">Corrija sus datos si se equivoc√≥. El resto de su registro no cambia.</p>
+      <p class="modal-aviso-unidades-lead">Corrija sus datos si se equivocÛ. El resto de su registro no cambia.</p>
       <div class="confirmar-envio-form">
         <div class="campo-edit">
           <label for="edit-apellidos">Apellidos</label>
@@ -321,7 +321,7 @@
           <input type="text" id="edit-nombres" placeholder="Ej. JUAN CARLOS" autocomplete="off" />
         </div>
         <div class="campo-edit">
-          <label for="edit-dni">DNI (8 d√≠gitos)</label>
+          <label for="edit-dni">DNI (8 dÌgitos)</label>
           <input type="text" id="edit-dni" placeholder="12345678" maxlength="8" inputmode="numeric" autocomplete="off" />
         </div>
         <div class="campo-edit">
@@ -346,12 +346,12 @@
   <div class="modal-aviso-unidades-panel">
     <div class="modal-aviso-unidades-header">
       <i class="fas fa-circle-check" aria-hidden="true"></i>
-      <h2 id="ya-completada-titulo">¬°Su prueba fue enviada con √©xito!</h2>
+      <h2 id="ya-completada-titulo">°Su prueba fue enviada con Èxito!</h2>
     </div>
     <p class="modal-aviso-unidades-lead" id="ya-completada-nombre"></p>
     <div class="aviso-unidades-espera modal-completada-nota">
       <i class="fas fa-heart" aria-hidden="true"></i>
-      <p>Su cuestionario ya fue registrado y remitido a la Oficina de Psicolog√≠a. <strong>Agradecemos su participaci√≥n.</strong> No es necesario volver a completarlo.</p>
+      <p>Su cuestionario ya fue registrado y remitido a la Oficina de PsicologÌa. <strong>Agradecemos su participaciÛn.</strong> No es necesario volver a completarlo.</p>
     </div>
     <button type="button" class="btn-eval btn-verde modal-aviso-unidades-btn" id="btn-cerrar-ya-completada">
       <i class="fas fa-check"></i> Entendido
@@ -362,7 +362,7 @@
 <div id="modal-camara-foto" class="modal-cam-foto" role="dialog" aria-modal="true" aria-labelledby="modal-cam-titulo" hidden>
   <div class="modal-cam-foto-inner">
     <div class="modal-cam-foto-header">
-      <h3 id="modal-cam-titulo">Tomar fotograf√≠a</h3>
+      <h3 id="modal-cam-titulo">Tomar fotografÌa</h3>
       <button type="button" class="modal-cam-cerrar" id="btn-cerrar-camara" aria-label="Cerrar">&times;</button>
     </div>
     <div class="modal-cam-video-wrap">
@@ -392,7 +392,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof regpolPoblarSelectArea === 'function') {
-    regpolPoblarSelectArea(document.getElementById('f-area'), '-- Seleccionar √°rea --');
+    regpolPoblarSelectArea(document.getElementById('f-area'), '-- Seleccionar ·rea --');
   }
 });
 </script>
