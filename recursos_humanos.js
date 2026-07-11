@@ -737,6 +737,7 @@ function registrarRutas(app, pool, requireAuth) {
             cip: row.cip,
             grado: row.grado,
             apellidos_nombres: row.apellidos_nombres,
+            cargo: row.cargo,
             situacion: row.situacion,
             categoria: row.categoria,
             dni: row.dni
@@ -757,7 +758,7 @@ function registrarRutas(app, pool, requireAuth) {
       }
 
       const r = await pool.query(
-        `SELECT id, cip, dni, apellidos_nombres, grado, unidad_nombre, division_nombre,
+        `SELECT id, cip, dni, apellidos_nombres, grado, cargo, unidad_nombre, division_nombre,
                 situacion, categoria, actualizado_en
          FROM personal_rrhh WHERE ${sql}
          ORDER BY ${ordenJerarquiaGradoSQL('')}, division_nombre, unidad_nombre

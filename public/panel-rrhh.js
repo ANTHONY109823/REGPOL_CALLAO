@@ -175,7 +175,7 @@
               '<i class="fas fa-chevron-down"></i> ' + esc(u.unidad) +
               ' <span class="rrhh-acc-n">' + u.total + '</span></div>' +
               '<div class="rrhh-acc-uni-b"><table class="t"><thead><tr>' +
-              '<th class="col-num">N°</th><th>CIP</th><th>Grado</th><th>Apellidos y nombres</th><th>Situación</th><th class="col-acciones">Acciones</th>' +
+              '<th class="col-num">N°</th><th>CIP</th><th>Grado</th><th>Apellidos y nombres</th><th>Cargo</th><th>Situación</th><th class="col-acciones">Acciones</th>' +
               '</tr></thead><tbody>';
             (u.personal || []).forEach(function(row, idx) {
               html += filaBasicaHTML(row, idx + 1);
@@ -193,7 +193,7 @@
 
     if (wrapLista) wrapLista.style.display = '';
     if (wrapAcc) wrapAcc.style.display = 'none';
-    if (body) body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px;">Cargando...</td></tr>';
+    if (body) body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#888;padding:20px;">Cargando...</td></tr>';
     try {
       var p2 = qsFiltros();
       p2.set('pagina', String(RRHH_PAGINA));
@@ -201,7 +201,7 @@
       var r2 = await fetch(API() + '/admin/rrhh/personal?' + p2.toString(), { headers: hdr() });
       var d2 = await r2.json();
       if (!d2.ok) {
-        body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#c0392b;">' + esc(d2.error || 'Error') + '</td></tr>';
+        body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#c0392b;">' + esc(d2.error || 'Error') + '</td></tr>';
         return;
       }
       if (info) {
@@ -209,7 +209,7 @@
           ' · Mostrando ' + (d2.personal || []).length + ' · Orden: grado (General → abajo)';
       }
       if (!(d2.personal || []).length) {
-        body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:20px;">Sin resultados.</td></tr>';
+        body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#888;padding:20px;">Sin resultados.</td></tr>';
         return;
       }
       var baseNum = ((d2.pagina || 1) - 1) * (d2.por_pagina || 100);
@@ -220,13 +220,14 @@
           '<td>' + esc(row.grado) + '</td>' +
           '<td>' + esc(row.apellidos_nombres) + '</td>' +
           '<td>' + esc(row.unidad_nombre) + '</td>' +
+          '<td>' + esc(row.cargo) + '</td>' +
           '<td>' + esc(row.situacion) + '</td>' +
           '<td>' + esc(row.categoria) + '</td>' +
           '<td class="col-acciones">' + botonesAccion(row.cip) + '</td></tr>';
       }).join('');
       renderPaginacion(d2.total, d2.pagina, d2.por_pagina);
     } catch (e) {
-      body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#c0392b;">Error de red</td></tr>';
+      body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#c0392b;">Error de red</td></tr>';
     }
   }
 
@@ -236,6 +237,7 @@
       '<td>' + esc(row.cip) + '</td>' +
       '<td>' + esc(row.grado) + '</td>' +
       '<td>' + esc(row.apellidos_nombres) + '</td>' +
+      '<td>' + esc(row.cargo) + '</td>' +
       '<td>' + esc(row.situacion) + '</td>' +
       '<td class="col-acciones">' + botonesAccion(row.cip) + '</td></tr>';
   }
