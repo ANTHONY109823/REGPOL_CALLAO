@@ -1646,6 +1646,16 @@ function initPortalPagina(config) {
   });
 }
 
+function esComisariaPublica(u) {
+  if (!u) return false;
+  var tipo = String(u.tipo || '').trim().toLowerCase();
+  if (tipo && tipo !== 'comisaria') return false;
+  var n = String(u.nombre || '').trim().toUpperCase();
+  if (!n) return false;
+  if (/^OD\b/.test(n) || n.indexOf(' OD ') !== -1) return false;
+  return true;
+}
+
 function renderUnidadesPublico(data) {
   var cont = document.getElementById('contenedor-unidades');
   var msg  = document.getElementById('msg-cargando-unidades') || document.getElementById('msg-cargando');
@@ -1658,6 +1668,8 @@ function renderUnidadesPublico(data) {
   var html = '';
   data.divisiones.forEach(function(div) {
     if (!div.unidades || !div.unidades.length) return;
+    var comisarias = div.unidades.filter(esComisariaPublica);
+    if (!comisarias.length) return;
     html += '<div class="unidades-seccion">'
       + '<h3 class="unidades-seccion-titulo"><i class="fas fa-shield-alt"></i> ' + escHtml(div.nombre) + '</h3>'
       + '<div class="tabla-unidades-wrap"><table class="tabla-unidades">'
@@ -1670,12 +1682,12 @@ function renderUnidadesPublico(data) {
       + '</colgroup>'
       + '<thead><tr>'
       + '<th style="text-align:center;">#</th>'
-      + '<th>Comisaria / Unidad</th>'
+      + '<th>Comisaría</th>'
       + '<th>Dirección</th>'
       + '<th style="text-align:center;">Teléfono</th>'
       + '<th style="text-align:center;">Mapa</th>'
       + '</tr></thead><tbody>';
-    div.unidades.forEach(function(u, i) {
+    comisarias.forEach(function(u, i) {
       var mapsUrl = u.direccion
         ? 'https://www.google.com/maps/search/' + encodeURIComponent(u.direccion + ', Callao, Peru')
         : '';
@@ -1687,7 +1699,7 @@ function renderUnidadesPublico(data) {
         : '<span class="sin-dato">-</span>';
       html += '<tr>'
         + '<td class="td-num" data-label="N°">' + (i + 1) + '</td>'
-        + '<td class="td-nombre" data-label="Unidad">' + escHtml(u.nombre) + '</td>'
+        + '<td class="td-nombre" data-label="Comisaría">' + escHtml(u.nombre) + '</td>'
         + '<td class="td-dir" data-label="Dirección">' + (u.direccion ? escHtml(u.direccion) : '<span class="sin-dato">No disponible</span>') + '</td>'
         + '<td class="td-tel" data-label="Teléfono" style="text-align:center;">' + tel + '</td>'
         + '<td class="td-mapa" data-label="Mapa" style="text-align:center;">' + mapsBtn + '</td>'
@@ -1695,7 +1707,7 @@ function renderUnidadesPublico(data) {
     });
     html += '</tbody></table></div></div>';
   });
-  cont.innerHTML = html;
+  cont.innerHTML = html || '<p class="texto-vacio">No hay comisarías para mostrar.</p>';
 }
 
 function initUnidadesPagina() {

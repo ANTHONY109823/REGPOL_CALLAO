@@ -2,10 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-    <link rel="icon" href="favicon.ico?v=2" type="image/x-icon">
-    <link rel="icon" href="favicon.png?v=2" type="image/png">
+    <link rel="icon" href="favicon.ico?v=3" type="image/x-icon">
+    <link rel="icon" href="favicon.png?v=3" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Descansos médicos — REGPOL Callao</title>
+  <title>Descansos mÃ©dicos Â— REGPOL Callao</title>
   <link rel="stylesheet" href="style.css?v=40">
   <link rel="stylesheet" href="responsive.css?v=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -50,8 +50,8 @@
       <img src="img/regpol-callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90">
     </div>
     <div class="title-text">
-      <h1 class="portal-eslogan">REGIÓN POLICIAL CALLAO</h1>
-      <p class="portal-subtitulo">DESCANSOS MÉDICOS</p>
+      <h1 class="portal-eslogan">REGIÃ“N POLICIAL CALLAO</h1>
+      <p class="portal-subtitulo">DESCANSOS MÃ‰DICOS</p>
     </div>
   </div>
 </header>
@@ -66,8 +66,8 @@
 
   <div id="panel-reg" class="panel on">
     <div class="dm-card">
-      <h2><i class="fas fa-notes-medical"></i> Registro de descanso médico</h2>
-      <p class="sub">Complete todos los campos. El PDF y el N.º de código de barras son obligatorios.</p>
+      <h2><i class="fas fa-notes-medical"></i> Registro de descanso mÃ©dico</h2>
+      <p class="sub">Complete todos los campos. El PDF y el N.Âº de cÃ³digo de barras son obligatorios.</p>
       <div id="reg-alerta" class="fi-alerta"></div>
       <form id="form-dm" onsubmit="enviarDM(event)">
         <div class="fi-grid">
@@ -78,21 +78,21 @@
           <div class="fi-group fi-full"><label>Nombres *</label><input id="dm-nombres" required maxlength="150"></div>
           <div class="fi-group fi-full"><label>Unidad *</label><select id="dm-unidad" required></select></div>
           <div class="fi-group"><label>Fecha inicio DM *</label><input type="date" id="dm-inicio" required></div>
-          <div class="fi-group"><label>Días del DM *</label><input type="number" id="dm-dias" min="1" required></div>
-          <div class="fi-group"><label>Fecha término</label><input type="date" id="dm-termino"></div>
-          <div class="fi-group"><label>Código CIE</label><input id="dm-cie" maxlength="40"></div>
-          <div class="fi-group fi-full"><label>Diagnóstico</label><textarea id="dm-dx" rows="2"></textarea></div>
+          <div class="fi-group"><label>DÃ­as del DM *</label><input type="number" id="dm-dias" min="1" required></div>
+          <div class="fi-group"><label>Fecha tÃ©rmino</label><input type="date" id="dm-termino"></div>
+          <div class="fi-group"><label>CÃ³digo CIE</label><input id="dm-cie" maxlength="40"></div>
+          <div class="fi-group fi-full"><label>DiagnÃ³stico</label><textarea id="dm-dx" rows="2"></textarea></div>
           <div class="fi-group"><label>Tipo de documento *</label><select id="dm-tipo" required></select></div>
-          <div class="fi-group"><label>N.º código de barras *</label><input id="dm-barcode" required maxlength="80" placeholder="Obligatorio"></div>
-          <div class="fi-group"><label>Grado del médico *</label><select id="dm-grado-med" required></select></div>
-          <div class="fi-group"><label>Apellidos y nombres del médico *</label><input id="dm-nom-med" required maxlength="200"></div>
-          <div class="fi-group"><label>N.º de CIP del médico *</label><input id="dm-cip-med" required inputmode="numeric" maxlength="20"></div>
-          <div class="fi-group"><label>N.º de DNI del médico *</label><input id="dm-dni-med" required inputmode="numeric" maxlength="20"></div>
-          <div class="fi-group"><label>N.º de CMP/COP *</label><input id="dm-cmp-med" required maxlength="40" placeholder="CMP o COP"></div>
+          <div class="fi-group"><label>N.Âº cÃ³digo de barras *</label><input id="dm-barcode" required maxlength="80" placeholder="Obligatorio"></div>
+          <div class="fi-group"><label>Grado del mÃ©dico *</label><select id="dm-grado-med" required></select></div>
+          <div class="fi-group"><label>Apellidos y nombres del mÃ©dico *</label><input id="dm-nom-med" required maxlength="200"></div>
+          <div class="fi-group"><label>N.Âº de CIP del mÃ©dico *</label><input id="dm-cip-med" required inputmode="numeric" maxlength="20"></div>
+          <div class="fi-group"><label>N.Âº de DNI del mÃ©dico *</label><input id="dm-dni-med" required inputmode="numeric" maxlength="20"></div>
+          <div class="fi-group"><label>N.Âº de CMP/COP *</label><input id="dm-cmp-med" required maxlength="40" placeholder="CMP o COP"></div>
           <div class="fi-group"><label>Centro asistencial *</label><input id="dm-centro" required maxlength="200"></div>
           <div class="fi-group fi-full">
             <div class="pdf-box">
-              <label>PDF del descanso médico * (máx. 5 MB)</label>
+              <label>PDF del descanso mÃ©dico * (mÃ¡x. 5 MB)</label>
               <input type="file" id="dm-pdf" accept="application/pdf,.pdf" required>
               <p id="dm-pdf-name" style="font-size:12px;color:#666;margin:8px 0 0;"></p>
             </div>
@@ -108,12 +108,12 @@
   <div id="panel-con" class="panel">
     <div class="dm-card">
       <h2><i class="fas fa-search"></i> Consulta de ingreso</h2>
-      <p class="sub">Ingrese CIP y N.º de código de barras. Solo se confirma el ingreso (nombres + CIP).</p>
+      <p class="sub">Ingrese CIP y N.Âº de cÃ³digo de barras. Solo se confirma el ingreso (nombres + CIP).</p>
       <div id="con-alerta" class="fi-alerta"></div>
       <form onsubmit="consultarDM(event)">
         <div class="fi-grid">
           <div class="fi-group"><label>CIP *</label><input id="con-cip" required inputmode="numeric" maxlength="20"></div>
-          <div class="fi-group"><label>N.º código de barras *</label><input id="con-barcode" required maxlength="80"></div>
+          <div class="fi-group"><label>N.Âº cÃ³digo de barras *</label><input id="con-barcode" required maxlength="80"></div>
         </div>
         <div style="margin-top:16px;">
           <button type="submit" class="btn-dm"><i class="fas fa-search"></i> Consultar</button>
@@ -142,7 +142,7 @@ function mostrarPanel(which) {
 }
 
 function opts(arr, placeholder) {
-  return '<option value="">' + (placeholder || '— Seleccionar —') + '</option>'
+  return '<option value="">' + (placeholder || 'Â— Seleccionar Â—') + '</option>'
     + (arr || []).map(function(x){ return '<option value="'+x+'">'+x+'</option>'; }).join('');
 }
 
@@ -171,10 +171,10 @@ async function init() {
 
   var cfg = await fetch(API + '/config').then(function(r){return r.json();}).catch(function(){return {};});
   var sel = document.getElementById('dm-unidad');
-  sel.innerHTML = '<option value="">— Seleccionar unidad —</option>';
+  sel.innerHTML = '<option value="">Â— Seleccionar unidad Â—</option>';
   (cfg.divisiones || []).forEach(function(d) {
     var og = document.createElement('optgroup');
-    og.label = d.nombre || 'Sin división';
+    og.label = d.nombre || 'Sin divisiÃ³n';
     (d.unidades || []).forEach(function(u) {
       var nom = typeof u === 'string' ? u : (u.nombre || '');
       if (!nom) return;
@@ -186,7 +186,7 @@ async function init() {
     if (og.children.length) sel.appendChild(og);
   });
   if (!sel.options.length || sel.options.length === 1) {
-    alerta('reg-alerta', false, 'No se pudieron cargar las unidades. Recargue la página.');
+    alerta('reg-alerta', false, 'No se pudieron cargar las unidades. Recargue la pÃ¡gina.');
   }
 
   document.getElementById('dm-cip').addEventListener('input', function(e){ e.target.value = e.target.value.replace(/\D/g,''); });
@@ -214,7 +214,7 @@ async function init() {
       return;
     }
     if (f.size > 5 * 1024 * 1024) {
-      alerta('reg-alerta', false, 'PDF máximo 5 MB');
+      alerta('reg-alerta', false, 'PDF mÃ¡ximo 5 MB');
       e.target.value = '';
       return;
     }
@@ -266,12 +266,12 @@ async function enviarDM(ev) {
     });
     var d = await r.json();
     if (!d.ok) { alerta('reg-alerta', false, d.error || 'Error al registrar'); btn.disabled = false; return; }
-    alerta('reg-alerta', true, 'Registrado correctamente. CIP ' + d.cip + (d.nombres ? ' — ' + d.nombres : ''));
+    alerta('reg-alerta', true, 'Registrado correctamente. CIP ' + d.cip + (d.nombres ? ' Â— ' + d.nombres : ''));
     document.getElementById('form-dm').reset();
     PDF_DATA = ''; PDF_NOMBRE = '';
     document.getElementById('dm-pdf-name').textContent = '';
   } catch (e) {
-    alerta('reg-alerta', false, 'Error de conexión');
+    alerta('reg-alerta', false, 'Error de conexiÃ³n');
   }
   btn.disabled = false;
 }
@@ -294,7 +294,7 @@ async function consultarDM(ev) {
     document.getElementById('con-resultado').innerHTML =
       '<div class="consulta-ok"><strong>' + (d.nombres || '') + '</strong><br>CIP: ' + (d.cip || '') + '</div>';
   } catch (e) {
-    alerta('con-alerta', false, 'Error de conexión');
+    alerta('con-alerta', false, 'Error de conexiÃ³n');
   }
 }
 

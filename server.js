@@ -3126,7 +3126,7 @@ app.get('/unidades-publico', async (req, res) => {
     }
     const divs  = await pool.query('SELECT id,nombre,orden FROM divisiones ORDER BY orden,nombre');
     const upols = await pool.query(
-      "SELECT id,nombre,division_id,tipo,orden,direccion,telefono FROM unidades_pol WHERE tipo='comisaria' ORDER BY division_id,orden,nombre"
+      "SELECT id,nombre,division_id,tipo,orden,direccion,telefono FROM unidades_pol WHERE tipo='comisaria' AND UPPER(TRIM(nombre)) NOT LIKE 'OD %' AND UPPER(TRIM(nombre)) <> 'OD' ORDER BY division_id,orden,nombre"
     );
     const result = divs.rows
       .filter(d => upols.rows.some(u => u.division_id === d.id))

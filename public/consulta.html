@@ -2,10 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-    <link rel="icon" href="favicon.ico?v=2" type="image/x-icon">
-    <link rel="icon" href="favicon.png?v=2" type="image/png">
+    <link rel="icon" href="favicon.ico?v=3" type="image/x-icon">
+    <link rel="icon" href="favicon.png?v=3" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Consulta de inscripciÛn ó REGPOL Callao</title>
+  <title>Consulta de inscripci√≥n ¬ó REGPOL Callao</title>
   <link rel="stylesheet" href="style.css?v=39">
   <link rel="stylesheet" href="responsive.css?v=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -62,8 +62,8 @@
       <img src="img/regpol-callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90">
     </div>
     <div class="title-text">
-      <h1 class="portal-eslogan">REGI”N POLICIAL CALLAO</h1>
-      <p class="portal-subtitulo">UNIDAD DE TECNOLOGÕAS DE LA INFORMACI”N Y COMUNICACIONES</p>
+      <h1 class="portal-eslogan">REGI√ìN POLICIAL CALLAO</h1>
+      <p class="portal-subtitulo">UNIDAD DE TECNOLOG√çAS DE LA INFORMACI√ìN Y COMUNICACIONES</p>
     </div>
   </div>
 </header>
@@ -72,8 +72,8 @@
 
 <main class="container content-area">
   <div class="consulta-hero">
-    <h2><i class="fas fa-search"></i> Consulta de inscripciÛn</h2>
-    <p>Ingrese su CIP para verificar el estado de su expediente, el ·rea que lo gestiona y ósi ocupÛ vacanteó descargar la constancia para presentar en la oficina correspondiente.</p>
+    <h2><i class="fas fa-search"></i> Consulta de inscripci√≥n</h2>
+    <p>Ingrese su CIP para verificar el estado de su expediente, el √°rea que lo gestiona y ¬ósi ocup√≥ vacante¬ó descargar la constancia para presentar en la oficina correspondiente.</p>
   </div>
 
   <div class="consulta-form">
@@ -95,7 +95,7 @@
 </main>
 
 <footer class="portal-footer">
-  <p>&copy; 2026 RegiÛn Policial Callao - UNITIC | Todos los derechos reservados</p>
+  <p>&copy; 2026 Regi√≥n Policial Callao - UNITIC | Todos los derechos reservados</p>
 </footer>
 
 <script src="api-config.js?v=2"></script>
@@ -135,20 +135,20 @@ function renderResultados(lista) {
       + '<h3>' + escC(ins.convocatoria) + '</h3>'
       + '<span class="' + chipCls + '">' + escC(ins.estado_legible) + '</span>'
       + '<div class="consulta-meta">'
-      + '<div><span>¡rea gestora</span>' + escC(ins.oficina_gestora) + '</div>'
-      + '<div><span>UbicaciÛn del tr·mite</span>' + escC(ins.ubicacion_tramite) + '</div>'
-      + '<div><span>Fecha de inscripciÛn</span>' + escC(ins.fecha || 'ó') + '</div>'
+      + '<div><span>√Årea gestora</span>' + escC(ins.oficina_gestora) + '</div>'
+      + '<div><span>Ubicaci√≥n del tr√°mite</span>' + escC(ins.ubicacion_tramite) + '</div>'
+      + '<div><span>Fecha de inscripci√≥n</span>' + escC(ins.fecha || '¬ó') + '</div>'
       + '<div><span>Postulante</span>' + escC(ins.nombres) + '</div>'
       + '</div>';
     if (ins.observacion && ins.estado === 'rechazado') {
-      html += '<div class="obs-box"><strong>ObservaciÛn:</strong> ' + escC(ins.observacion) + '</div>';
+      html += '<div class="obs-box"><strong>Observaci√≥n:</strong> ' + escC(ins.observacion) + '</div>';
     }
     if (esGan) {
       html += '<div class="constancia-box">'
         + '<p><strong><i class="fas fa-check-circle" style="color:#1a7a3a;"></i> Usted ocupa vacante en esta convocatoria.</strong> '
-        + 'Descargue o visualice la constancia con lugar de presentaciÛn, horario y responsabilidades. PresÈntela en la oficina indicada.</p>'
+        + 'Descargue o visualice la constancia con lugar de presentaci√≥n, horario y responsabilidades. Pres√©ntela en la oficina indicada.</p>'
         + '<div class="consulta-meta">'
-        + (ins.lugar ? '<div><span>Lugar de formaciÛn diaria</span>' + escC(ins.lugar) + '</div>' : '')
+        + (ins.lugar ? '<div><span>Lugar de formaci√≥n diaria</span>' + escC(ins.lugar) + '</div>' : '')
         + (ins.horario ? '<div><span>Horario de servicio</span>' + escC(ins.horario) + '</div>' : '')
         + (ins.uniforme ? '<div><span>Uniforme</span>' + escC(ins.uniforme) + '</div>' : '')
         + (ins.contactos_responsables ? '<div><span>Contactos responsables</span>' + escC(ins.contactos_responsables) + '</div>' : '')
@@ -169,7 +169,7 @@ function consultarCip(e) {
   if (e) e.preventDefault();
   var cip = (document.getElementById('input-cip').value || '').trim().replace(/\s/g, '');
   if (!/^\d{6,12}$/.test(cip)) {
-    mostrarAlerta('Ingrese un CIP v·lido (solo n˙meros, 6 a 12 dÌgitos).', 'error');
+    mostrarAlerta('Ingrese un CIP v√°lido (solo n√∫meros, 6 a 12 d√≠gitos).', 'error');
     return;
   }
   CIP_CONSULTA = cip;
@@ -190,7 +190,7 @@ function consultarCip(e) {
       if (d.total === 0) {
         mostrarAlerta('No hay inscripciones registradas con el CIP ' + cip + '.', 'info');
       } else {
-        mostrarAlerta('Se encontraron ' + d.total + ' inscripciÛn(es) para el CIP ' + cip + '.', 'info');
+        mostrarAlerta('Se encontraron ' + d.total + ' inscripci√≥n(es) para el CIP ' + cip + '.', 'info');
       }
       renderResultados(d.inscripciones || []);
       if (history.replaceState) {
@@ -198,7 +198,7 @@ function consultarCip(e) {
       }
     })
     .catch(function() {
-      mostrarAlerta('Error de conexiÛn. Verifique su internet e intente nuevamente.', 'error');
+      mostrarAlerta('Error de conexi√≥n. Verifique su internet e intente nuevamente.', 'error');
       document.getElementById('consulta-resultados').innerHTML = '';
     })
     .finally(function() {
@@ -218,7 +218,7 @@ function verConstancia(id) {
       }
       abrirModalPdfPortal(d.pdf, d.titulo || 'Constancia de vacante');
     })
-    .catch(function() { alert('Error de conexiÛn.'); });
+    .catch(function() { alert('Error de conexi√≥n.'); });
 }
 
 function descargarConstancia(id) {
@@ -232,7 +232,7 @@ function descargarConstancia(id) {
       }
       descargarDataUrlPdf(d.pdf, d.nombre || 'constancia.pdf');
     })
-    .catch(function() { alert('Error de conexiÛn.'); });
+    .catch(function() { alert('Error de conexi√≥n.'); });
 }
 
 initPortalPagina({ activeNav: 'convenios', showPageHero: false });
