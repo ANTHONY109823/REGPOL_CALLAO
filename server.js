@@ -1032,6 +1032,7 @@ const MIME_TYPES = {
 
 const staticCache = new Map();
 const pendingStaticReads = new Map();
+const STATIC_CACHE_ENABLED = !!(process.env.RAILWAY_ENVIRONMENT || process.env.FORCE_STATIC_CACHE);
 const STATIC_WARM_FILES = [
   'index.html', 'style.css', 'portal.js', 'portal-data.js', 'site-data.json', 'api-config.js',
   'cursos.html', 'convenios.html', 'unidades.html', 'unidades-data.json',
@@ -1068,6 +1069,7 @@ function leerEstaticoAsync(rel, cb) {
 }
 
 function precalentarEstaticos() {
+  if (!STATIC_CACHE_ENABLED) return;
   STATIC_WARM_FILES.forEach(function(rel) {
     leerEstaticoAsync(rel, function() {});
   });
@@ -1083,6 +1085,7 @@ function enviarEstatico(res, entry, method) {
 }
 
 function staticBufferado(req, res, next) {
+  if (!STATIC_CACHE_ENABLED) return next();
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   var urlPath = (req.path || '/').split('?')[0];
   if (urlPath === '/') urlPath = '/index.html';
@@ -1114,6 +1117,14 @@ app.use(staticBufferado);
 app.use(express.static(PUBLIC_DIR, {
   maxAge: 0, etag: false, fallthrough: true,
   setHeaders: function(res, filePath) {
+    if (/\.html$/i.test(filePath)) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+    if (/\.css$/i.test(filePath)) {
+      res.setHeader('Content-Type', 'text/css; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
     if (/\.(js|json)$/.test(filePath)) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

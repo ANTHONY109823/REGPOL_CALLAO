@@ -92,18 +92,44 @@ function htmlTarjetaPortalItem(item) {
     '</div></a>';
 }
 
+function activarMarqueeCarrusel(container, opts) {
+  if (!container) return;
+  opts = opts || {};
+  var minItems = opts.minItems != null ? opts.minItems : 1;
+  var secsPer = opts.secsPerItem != null ? opts.secsPerItem : 7;
+  var minSecs = opts.minSecs != null ? opts.minSecs : 28;
+  var children = Array.prototype.slice.call(container.children).filter(function(n) {
+    return n.nodeType === 1 && !n.classList.contains('texto-vacio');
+  });
+  if (children.length < minItems) return;
+  if (container.classList.contains('regpol-marquee') && container.querySelector('.regpol-marquee-track')) return;
+  container.classList.add('regpol-marquee');
+  var track = document.createElement('div');
+  track.className = 'regpol-marquee-track';
+  children.forEach(function(n) { track.appendChild(n); });
+  children.forEach(function(n) { track.appendChild(n.cloneNode(true)); });
+  container.innerHTML = '';
+  container.appendChild(track);
+  var secs = Math.max(minSecs, children.length * secsPer);
+  track.style.animationDuration = secs + 's';
+}
+
 function appendPortalItems(tipo, containerId) {
   var el = document.getElementById(containerId);
   if (!el) return Promise.resolve();
   var base = apiBasePortal();
   if (base === null || base === undefined) base = '';
   var cacheKey = 'portal_items_v2_' + tipo;
+  function pintar(items) {
+    el.innerHTML = items.map(htmlTarjetaPortalItem).join('');
+    activarMarqueeCarrusel(el, { secsPerItem: 8, minSecs: 30 });
+  }
   try {
     var raw = sessionStorage.getItem(cacheKey);
     if (raw) {
       var c = JSON.parse(raw);
       if (c.exp > Date.now() && c.items && c.items.length) {
-        el.innerHTML = c.items.map(htmlTarjetaPortalItem).join('');
+        pintar(c.items);
         return Promise.resolve();
       }
     }
@@ -119,7 +145,7 @@ function appendPortalItems(tipo, containerId) {
       try {
         sessionStorage.setItem(cacheKey, JSON.stringify({ items: d.items, exp: Date.now() + 180000 }));
       } catch (e) {}
-      el.innerHTML = d.items.map(htmlTarjetaPortalItem).join('');
+      pintar(d.items);
     })
     .catch(function() {
       el.innerHTML = '<p class="texto-vacio">No hay ' + tipo + 's publicados actualmente.</p>';
@@ -531,9 +557,15 @@ function aplicarTextoEncabezadoMarca() {
 
 function aplicarEncabezadoMarca(data) {
   aplicarTextoEncabezadoMarca();
-  if (!data) return;
-  var fotos = sanitizarFotosEncabezado(data.fotosEncabezado, false);
-  if (fotos.length) renderFotosEncabezado(data);
+  if (!data) {
+    var panelVacio = document.getElementById('header-fotos-panel');
+    if (panelVacio) {
+      panelVacio.innerHTML = '';
+      panelVacio.style.display = 'none';
+    }
+    return;
+  }
+  renderFotosEncabezado(data);
 }
 
 function asegurarPanelFotosEncabezado() {
@@ -1003,6 +1035,7 @@ function urlPublicaResenaImagen(path) {
 }
 
 var _resenaCarruselTimer = null;
+var _laborCarruselTimer = null;
 var _resenaSlideBlobUrls = [];
 
 function revocarResenaSlideBlobs() {
@@ -1047,6 +1080,34 @@ function construirSlidesResena(sec) {
   return slides.concat(parrafos);
 }
 
+function construirSlidesLabor(sec) {
+  var slides = [];
+  var intro = String(sec.intro || '').trim();
+  var introImg = String(sec.imagenBanner || '').trim();
+  if (intro || introImg) {
+    slides.push({
+      titulo: String(sec.titulo || 'Nuestra Labor').trim() || 'Nuestra Labor',
+      texto: intro,
+      imagen: introImg,
+      icono: 'fa-briefcase'
+    });
+  }
+  (sec.pilares || []).forEach(function(p) {
+    if (!p) return;
+    var titulo = String(p.titulo || '').trim();
+    var texto = String(p.texto || '').trim();
+    var imagen = String(p.imagen || '').trim();
+    if (!titulo && !texto && !imagen) return;
+    slides.push({
+      titulo: titulo,
+      texto: texto,
+      imagen: imagen,
+      icono: String(p.icono || 'fa-star').trim() || 'fa-star'
+    });
+  });
+  return slides;
+}
+
 function htmlTextoResenaSlide(texto) {
   var t = String(texto || '').trim();
   if (!t) return '';
@@ -1071,14 +1132,19 @@ function htmlTextoResenaSlide(texto) {
 function htmlResenaCarruselSlide(p, i, isActive) {
   var num = String(i + 1).padStart(2, '0');
   var imgSrc = p.imagen ? urlImagenResenaSlideParaDom(p.imagen) : '';
-  var mediaHtml = imgSrc
-    ? '<div class="resena-slide-media"><img src="' + escHtml(imgSrc) + '" alt="' + escHtml(p.titulo || ('Bloque ' + num)) + '" loading="lazy" decoding="async"/></div>'
-    : '';
+  var icono = String(p.icono || '').trim();
+  var mediaHtml = '';
+  if (imgSrc) {
+    mediaHtml = '<div class="resena-slide-media"><img src="' + escHtml(imgSrc) + '" alt="' + escHtml(p.titulo || ('Bloque ' + num)) + '" loading="lazy" decoding="async"/></div>';
+  } else if (icono) {
+    mediaHtml = '<div class="resena-slide-media resena-slide-media--icono" aria-hidden="true"><i class="fas ' + escHtml(icono) + '"></i></div>';
+  }
   var tituloHtml = p.titulo
     ? '<h3 class="resena-slide-titulo">' + escHtml(p.titulo) + '</h3>'
     : '';
+  var conMedia = !!(imgSrc || icono);
   return '<article class="resena-carrusel-slide institucional-bloque' + (isActive ? ' active' : '') + '" data-idx="' + i + '" aria-hidden="' + (isActive ? 'false' : 'true') + '">'
-    + '<div class="resena-slide-inner' + (imgSrc ? ' resena-slide-inner--con-img' : '') + '">'
+    + '<div class="resena-slide-inner' + (conMedia ? ' resena-slide-inner--con-img' : '') + '">'
     + mediaHtml
     + '<div class="resena-slide-body">'
     + '<span class="institucional-num" aria-hidden="true">' + num + '</span>'
@@ -1094,9 +1160,15 @@ function detenerResenaCarrusel() {
   }
 }
 
-function initResenaHistoricaCarrusel() {
-  detenerResenaCarrusel();
-  var root = document.getElementById('resena-carrusel');
+function detenerLaborCarrusel() {
+  if (_laborCarruselTimer) {
+    clearInterval(_laborCarruselTimer);
+    _laborCarruselTimer = null;
+  }
+}
+
+function initInstitucionalCarrusel(rootId, timerRef) {
+  var root = document.getElementById(rootId);
   if (!root) return;
   var track = root.querySelector('.resena-carrusel-track');
   var slides = root.querySelectorAll('.resena-carrusel-slide');
@@ -1105,6 +1177,10 @@ function initResenaHistoricaCarrusel() {
   if (!track || !slides.length) return;
 
   var current = 0;
+
+  function clearTimer() {
+    if (timerRef.clear) timerRef.clear();
+  }
 
   function irA(idx) {
     if (!slides.length) return;
@@ -1129,6 +1205,11 @@ function initResenaHistoricaCarrusel() {
     return;
   }
 
+  function reiniciarAuto() {
+    clearTimer();
+    timerRef.set(setInterval(function() { irA(current + 1); }, 7000));
+  }
+
   if (btnPrev) {
     btnPrev.style.display = '';
     btnPrev.onclick = function() { irA(current - 1); reiniciarAuto(); };
@@ -1144,15 +1225,26 @@ function initResenaHistoricaCarrusel() {
     };
   });
 
-  function reiniciarAuto() {
-    detenerResenaCarrusel();
-    _resenaCarruselTimer = setInterval(function() { irA(current + 1); }, 7000);
-  }
-
-  root.onmouseenter = detenerResenaCarrusel;
+  root.onmouseenter = clearTimer;
   root.onmouseleave = reiniciarAuto;
   irA(0);
   reiniciarAuto();
+}
+
+function initResenaHistoricaCarrusel() {
+  detenerResenaCarrusel();
+  initInstitucionalCarrusel('resena-carrusel', {
+    set: function(t) { _resenaCarruselTimer = t; },
+    clear: detenerResenaCarrusel
+  });
+}
+
+function initLaborCarrusel() {
+  detenerLaborCarrusel();
+  initInstitucionalCarrusel('labor-carrusel', {
+    set: function(t) { _laborCarruselTimer = t; },
+    clear: detenerLaborCarrusel
+  });
 }
 
 function renderResenaHistorica(data, containerId) {
@@ -1191,25 +1283,31 @@ function renderNuestraLabor(data, containerId) {
   var el = document.getElementById(containerId);
   var sec = data.nuestraLabor;
   if (!el || !sec) return;
-  var html = '<article class="institucional-page institucional-labor">';
-  html += htmlPaginaHeroBanner({
-    tipo: 'labor',
-    titulo: sec.titulo || 'Nuestra Labor',
-    imagen: sec.imagenBanner,
-    soloImagen: true
-  });
-  html += '<div class="institucional-cabecera">';
-  html += '<p class="institucional-lead">' + escHtml(sec.intro) + '</p>';
-  html += '</div>';
-  html += '<div class="pilares-grid-v2">';
-  (sec.pilares || []).forEach(function(p) {
-    html += '<div class="card-pilar-v2">' +
-      '<div class="card-pilar-v2-icono"><i class="fas ' + escHtml(p.icono || 'fa-star') + '"></i></div>' +
-      '<h4>' + escHtml(p.titulo) + '</h4>' +
-      '<p>' + escHtml(p.texto) + '</p></div>';
-  });
-  html += '</div></article>';
+  detenerLaborCarrusel();
+  var slides = construirSlidesLabor(sec);
+  var html = '<article class="institucional-page institucional-labor institucional-labor--carrusel">';
+
+  if (slides.length) {
+    html += '<div class="resena-carrusel resena-carrusel--completo" id="labor-carrusel" aria-label="Nuestra labor">';
+    html += '<button type="button" class="resena-carrusel-btn prev" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>';
+    html += '<div class="resena-carrusel-viewport"><div class="resena-carrusel-track">';
+    slides.forEach(function(p, i) {
+      html += htmlResenaCarruselSlide(p, i, i === 0);
+    });
+    html += '</div></div>';
+    html += '<button type="button" class="resena-carrusel-btn next" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>';
+    html += '<div class="resena-carrusel-dots" role="tablist">';
+    slides.forEach(function(p, i) {
+      html += '<button type="button" class="resena-carrusel-dot' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '" role="tab" aria-label="Diapositiva ' + (i + 1) + '" aria-selected="' + (i === 0 ? 'true' : 'false') + '"></button>';
+    });
+    html += '</div></div>';
+  } else {
+    html += '<p class="texto-vacio">Contenido de nuestra labor en preparación.</p>';
+  }
+
+  html += '</article>';
   el.innerHTML = html;
+  if (slides.length) initLaborCarrusel();
 }
 
 function bienestarPolicialDefault() {
@@ -1438,7 +1536,7 @@ function renderNovedades(data, containerId, limite) {
         + '</div></article>';
     }).join('') + '</div>';
   } else {
-    el.innerHTML = '<div class="novedades-grid">' + items.map(function(n, idx) {
+    el.innerHTML = '<div class="novedades-grid regpol-marquee">' + items.map(function(n, idx) {
       var src = imagenNovedad(n);
       var imgHtml = src
         ? '<img class="nov-card-img-photo" src="' + escHtml(src) + '" alt="' + escHtml(n.titulo) + '" loading="lazy" decoding="async"/>'
@@ -1456,6 +1554,8 @@ function renderNovedades(data, containerId, limite) {
         + '<span class="nov-card-link"><i class="fas fa-arrow-right"></i> Leer mas</span>'
         + '</div></article>';
     }).join('') + '</div>';
+    var grid = el.querySelector('.novedades-grid');
+    if (grid) activarMarqueeCarrusel(grid, { secsPerItem: 7, minSecs: 32 });
   }
 }
 
@@ -1656,6 +1756,64 @@ function esComisariaPublica(u) {
   return true;
 }
 
+function htmlHojaUnidadDivision(div) {
+  if (!div.unidades || !div.unidades.length) return '';
+  var comisarias = div.unidades.filter(esComisariaPublica);
+  if (!comisarias.length) return '';
+  var rows = comisarias.map(function(u, i) {
+    var mapsUrl = u.direccion
+      ? 'https://www.google.com/maps/search/' + encodeURIComponent(u.direccion + ', Callao, Peru')
+      : '';
+    var mapsBtn = mapsUrl
+      ? '<a href="' + mapsUrl + '" target="_blank" rel="noopener noreferrer" class="btn-mapa" title="Ver en Google Maps"><i class="fas fa-map-marker-alt"></i> Ver mapa</a>'
+      : '<span class="sin-dato">-</span>';
+    var tel = u.telefono
+      ? '<a href="tel:' + escHtml(u.telefono) + '" class="tel-link">' + escHtml(u.telefono) + '</a>'
+      : '<span class="sin-dato">-</span>';
+    return '<tr>'
+      + '<td class="td-num" data-label="N°">' + (i + 1) + '</td>'
+      + '<td class="td-nombre" data-label="Comisaría">' + escHtml(u.nombre) + '</td>'
+      + '<td class="td-dir" data-label="Dirección">' + (u.direccion ? escHtml(u.direccion) : '<span class="sin-dato">No disponible</span>') + '</td>'
+      + '<td class="td-tel" data-label="Teléfono" style="text-align:center;">' + tel + '</td>'
+      + '<td class="td-mapa" data-label="Mapa" style="text-align:center;">' + mapsBtn + '</td>'
+      + '</tr>';
+  }).join('');
+  return '<div class="uni-sheet">'
+    + '<h3 class="uni-sheet-titulo"><i class="fas fa-shield-alt"></i> ' + escHtml(div.nombre) + '</h3>'
+    + '<div class="tabla-unidades-wrap"><table class="tabla-unidades">'
+    + '<colgroup>'
+    + '<col style="width:38px"/>'
+    + '<col style="width:22%"/>'
+    + '<col style="width:auto"/>'
+    + '<col style="width:130px"/>'
+    + '<col style="width:110px"/>'
+    + '</colgroup>'
+    + '<thead><tr>'
+    + '<th style="text-align:center;">#</th>'
+    + '<th>Comisaría</th>'
+    + '<th>Dirección</th>'
+    + '<th style="text-align:center;">Teléfono</th>'
+    + '<th style="text-align:center;">Mapa</th>'
+    + '</tr></thead><tbody>'
+    + rows
+    + '</tbody></table></div></div>';
+}
+
+function ordenarDivisionesCarousel(divisiones) {
+  var list = (divisiones || []).slice();
+  list.sort(function(a, b) {
+    var na = String((a && a.nombre) || '');
+    var nb = String((b && b.nombre) || '');
+    var ra = na.match(/DIVOPUS\s*(\d+)/i);
+    var rb = nb.match(/DIVOPUS\s*(\d+)/i);
+    var ia = ra ? parseInt(ra[1], 10) : 999;
+    var ib = rb ? parseInt(rb[1], 10) : 999;
+    if (ia !== ib) return ia - ib;
+    return na.localeCompare(nb, 'es');
+  });
+  return list;
+}
+
 function renderUnidadesPublico(data) {
   var cont = document.getElementById('contenedor-unidades');
   var msg  = document.getElementById('msg-cargando-unidades') || document.getElementById('msg-cargando');
@@ -1665,49 +1823,17 @@ function renderUnidadesPublico(data) {
     return;
   }
   if (msg) msg.style.display = 'none';
-  var html = '';
-  data.divisiones.forEach(function(div) {
-    if (!div.unidades || !div.unidades.length) return;
-    var comisarias = div.unidades.filter(esComisariaPublica);
-    if (!comisarias.length) return;
-    html += '<div class="unidades-seccion">'
-      + '<h3 class="unidades-seccion-titulo"><i class="fas fa-shield-alt"></i> ' + escHtml(div.nombre) + '</h3>'
-      + '<div class="tabla-unidades-wrap"><table class="tabla-unidades">'
-      + '<colgroup>'
-      + '<col style="width:38px"/>'
-      + '<col style="width:22%"/>'
-      + '<col style="width:auto"/>'
-      + '<col style="width:130px"/>'
-      + '<col style="width:110px"/>'
-      + '</colgroup>'
-      + '<thead><tr>'
-      + '<th style="text-align:center;">#</th>'
-      + '<th>Comisaría</th>'
-      + '<th>Dirección</th>'
-      + '<th style="text-align:center;">Teléfono</th>'
-      + '<th style="text-align:center;">Mapa</th>'
-      + '</tr></thead><tbody>';
-    comisarias.forEach(function(u, i) {
-      var mapsUrl = u.direccion
-        ? 'https://www.google.com/maps/search/' + encodeURIComponent(u.direccion + ', Callao, Peru')
-        : '';
-      var mapsBtn = mapsUrl
-        ? '<a href="' + mapsUrl + '" target="_blank" rel="noopener noreferrer" class="btn-mapa" title="Ver en Google Maps"><i class="fas fa-map-marker-alt"></i> Ver mapa</a>'
-        : '<span class="sin-dato">-</span>';
-      var tel = u.telefono
-        ? '<a href="tel:' + escHtml(u.telefono) + '" class="tel-link">' + escHtml(u.telefono) + '</a>'
-        : '<span class="sin-dato">-</span>';
-      html += '<tr>'
-        + '<td class="td-num" data-label="N°">' + (i + 1) + '</td>'
-        + '<td class="td-nombre" data-label="Comisaría">' + escHtml(u.nombre) + '</td>'
-        + '<td class="td-dir" data-label="Dirección">' + (u.direccion ? escHtml(u.direccion) : '<span class="sin-dato">No disponible</span>') + '</td>'
-        + '<td class="td-tel" data-label="Teléfono" style="text-align:center;">' + tel + '</td>'
-        + '<td class="td-mapa" data-label="Mapa" style="text-align:center;">' + mapsBtn + '</td>'
-        + '</tr>';
-    });
-    html += '</tbody></table></div></div>';
-  });
-  cont.innerHTML = html || '<p class="texto-vacio">No hay comisarías para mostrar.</p>';
+  var hojas = ordenarDivisionesCarousel(data.divisiones)
+    .map(htmlHojaUnidadDivision)
+    .filter(Boolean);
+  if (!hojas.length) {
+    cont.innerHTML = '<p class="texto-vacio">No hay comisarías para mostrar.</p>';
+    return;
+  }
+  var set = hojas.join('');
+  cont.innerHTML = '<div class="uni-marquee"><div class="uni-marquee-track" style="animation-duration:' + Math.max(48, hojas.length * 18) + 's">'
+    + set + set
+    + '</div></div>';
 }
 
 function initUnidadesPagina() {
