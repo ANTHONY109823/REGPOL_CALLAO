@@ -50,6 +50,7 @@ function initCMS() {
     cmsDataActual = data || {};
     if (!cmsDataActual.carrusel)  cmsDataActual.carrusel  = [];
     if (!cmsDataActual.fotosEncabezado) cmsDataActual.fotosEncabezado = [];
+    if (!cmsDataActual.topbarLinks) cmsDataActual.topbarLinks = { sigcp: '', correo: '' };
     if (!cmsDataActual.novedades) cmsDataActual.novedades = [];
     if (typeof ordenarNovedadesPorFecha === 'function') {
       cmsDataActual.novedades = ordenarNovedadesPorFecha(cmsDataActual.novedades);
@@ -78,6 +79,7 @@ function initCMS() {
     if (!cmsDataActual.descansosPortal) cmsDataActual.descansosPortal = descansosPortalDefault();
     poblarFormulariosCMS();
     renderListasCMS();
+    actualizarMetaPublicacionCMS();
   };
   if (base) {
     var urlCms = base + '/portal/configuracion?t=' + Date.now();
@@ -120,12 +122,22 @@ function fechaActualizacionHoy() {
 }
 
 function cambiarTabCMS(tab) {
+  if (typeof puedeEditarCmsTab === 'function' && !puedeEditarCmsTab(tab)) {
+    tab = (typeof primerTabCmsPermitido === 'function') ? primerTabCmsPermitido() : tab;
+  }
   document.querySelectorAll('.cms-tab').forEach(function(btn) {
     btn.classList.toggle('activo', btn.getAttribute('data-cms-tab') === tab);
   });
   document.querySelectorAll('.cms-panel').forEach(function(panel) {
     panel.classList.toggle('activo', panel.id === 'cms-panel-' + tab);
   });
+  document.querySelectorAll('.sb-item[data-cms-tab]').forEach(function(item) {
+    item.classList.toggle('on', item.getAttribute('data-cms-tab') === tab);
+  });
+  if (tab === 'convenios' || tab === 'cursos') {
+    renderGestionConvocatoriasCMS(tab === 'convenios' ? 'cms-lista-convenios' : 'cms-lista-cursos', tab === 'convenios' ? 'convenio' : 'curso');
+  }
+  actualizarMetaPublicacionCMS();
 }
 
 function renderListasCMS() {
@@ -142,16 +154,73 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
   if (!el) return;
   var esConv = tipo === 'convenio';
   var titulo = esConv ? 'Convenios' : 'Cursos';
-  var menuFn = esConv ? "irGestionItems('convenio', document.querySelector('[data-page=items-convenio]'))" : "irGestionItems('curso', document.querySelector('[data-page=items-curso]'))";
-  el.innerHTML = '<div style="background:#f0f7f4;border:2px dashed #004d3d;border-radius:10px;padding:18px 20px;">'
-    + '<div style="font-size:14px;font-weight:800;color:#004d3d;margin-bottom:8px;"><i class="fas fa-clipboard-list"></i> '
-    + titulo + ' — páginas de detalle unificadas</div>'
+  var hash = esConv ? '#convenios' : '#cursos';
+  var esSuper = typeof esUnitic === 'function' && esUnitic();
+  var puedePdf = typeof puedePublicarResultadosPdf === 'function' && puedePublicarResultadosPdf(tipo);
+  var puedeInsc = esConv
+    ? (typeof puedeOperarInscritosConvenio === 'function' && puedeOperarInscritosConvenio())
+    : (typeof puedeGestionCursos === 'function' && puedeGestionCursos());
+
+  el.innerHTML = '<div style="margin-bottom:14px;">'
+    + '<div style="font-size:14px;font-weight:800;color:#004d3d;margin-bottom:6px;"><i class="fas fa-clipboard-list"></i> '
+    + titulo + ' en el portal</div>'
     + '<p style="font-size:12.5px;color:#555;line-height:1.55;margin:0 0 12px;">'
-    + 'Las tarjetas del portal y sus páginas de detalle se administran desde <strong>Gestión → '
-    + (esConv ? 'Convenios' : 'Educación') + '</strong> (solo Super Admin). '
-    + 'Los PDF de «Relación de seleccionados» se publican en <strong>Relación de seleccionados (PDF)</strong>.</p>'
-    + '<button type="button" class="btn btn-v" onclick="' + menuFn + '"><i class="fas fa-edit"></i> Ir a gestión de ' + titulo.toLowerCase() + '</button>'
+    + 'Las tarjetas del home salen de las convocatorias publicadas. Estado y vacantes se sincronizan al guardar cada convocatoria.</p>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'
+    + '<a class="btn btn-v" href="index.html' + hash + '" target="_blank" rel="noopener" style="text-decoration:none;"><i class="fas fa-external-link-alt"></i> Ver en web</a>'
+    + (esSuper ? '<button type="button" class="btn btn-v" onclick="irGestionItems(\'' + tipo + '\', document.querySelector(\'[data-page=items-' + tipo + ']\'))"><i class="fas fa-edit"></i> Gestionar convocatorias</button>' : '')
+    + (puedePdf ? '<button type="button" class="btn" style="background:#c0392b;color:#fff;" onclick="irPublicarResultados(\'' + tipo + '\', null)"><i class="fas fa-file-pdf"></i> Relación PDF</button>' : '')
+    + (puedeInsc && esConv ? '<button type="button" class="btn" style="background:#004d3d;color:#fff;" onclick="ir(\'consulta-cip\', document.querySelector(\'[data-page=consulta-cip]\'))"><i class="fas fa-search"></i> Consulta CIP</button>' : '')
+    + '</div>'
+    + '<div id="cms-live-' + tipo + '" style="border:1.5px solid #e0e8e0;border-radius:10px;overflow:hidden;">'
+    + '<p style="color:#888;font-size:12px;padding:14px;margin:0;">Cargando convocatorias...</p></div>'
     + '</div>';
+
+  var box = document.getElementById('cms-live-' + tipo);
+  var base = apiBaseCMS() || '';
+  fetch(base + '/portal/items?tipo=' + encodeURIComponent(tipo))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!box) return;
+      var items = (d && d.ok && d.items) ? d.items : [];
+      if (!items.length) {
+        box.innerHTML = '<p style="color:#888;font-size:12px;padding:14px;margin:0;">No hay ' + titulo.toLowerCase() + ' publicados en la web.</p>';
+        return;
+      }
+      box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12.5px;">'
+        + '<thead><tr style="background:#f0f7f4;color:#004d3d;text-align:left;">'
+        + '<th style="padding:8px 10px;">Título</th><th style="padding:8px 10px;">Estado</th><th style="padding:8px 10px;">Vacantes</th><th style="padding:8px 10px;">Web</th></tr></thead><tbody>'
+        + items.map(function(it) {
+          var est = escHtml(it.estado || '—');
+          var color = it.estado === 'DISPONIBLE' ? '#1a7a3a' : (it.estado === 'CERRADO' ? '#c0392b' : '#856404');
+          return '<tr style="border-top:1px solid #edf2ef;">'
+            + '<td style="padding:8px 10px;font-weight:600;color:#004d3d;">' + escHtml(it.titulo || '') + '</td>'
+            + '<td style="padding:8px 10px;font-weight:700;color:' + color + ';">' + est + '</td>'
+            + '<td style="padding:8px 10px;">' + escHtml(String(it.vacantes != null ? it.vacantes : '—')) + '</td>'
+            + '<td style="padding:8px 10px;"><a href="detalle.html?id=' + encodeURIComponent(it.id) + '&tipo=' + tipo + '" target="_blank" rel="noopener">Abrir</a></td>'
+            + '</tr>';
+        }).join('')
+        + '</tbody></table>';
+    })
+    .catch(function() {
+      if (box) box.innerHTML = '<p style="color:#c0392b;font-size:12px;padding:14px;margin:0;">No se pudo cargar el listado. Revise la conexión al servidor.</p>';
+    });
+}
+
+function actualizarMetaPublicacionCMS() {
+  var meta = document.getElementById('cms-publicado-meta');
+  if (!meta) return;
+  var cuando = (cmsDataActual && cmsDataActual.cmsPublicadoEn) ? cmsDataActual.cmsPublicadoEn : '';
+  if (!cuando) {
+    meta.textContent = '';
+    return;
+  }
+  try {
+    var d = new Date(cuando);
+    meta.textContent = 'Última publicación: ' + d.toLocaleString('es-PE');
+  } catch (e) {
+    meta.textContent = '';
+  }
 }
 
 function poblarFormulariosCMS() {
@@ -293,6 +362,9 @@ function renderEditorCarrusel() {
   if (!el) return;
   var slides = cmsDataActual.carrusel || [];
   var heroT  = cmsDataActual.heroTexto || {};
+  var topbar = cmsDataActual.topbarLinks || {};
+  var sigcpDefault = 'https://sigcp.policia.gob.pe/';
+  var correoDefault = 'https://correo.policia.gob.pe/owa/auth/logon.aspx?replaceCurrent=1&url=https%3a%2f%2fcorreo.policia.gob.pe%2fowa';
 
   var html = '<div class="cms-section-head" style="margin-bottom:14px;">'
     + '<strong style="color:#004d3d;font-size:13px;"><i class="fas fa-images"></i> Diapositivas del carrusel</strong>'
@@ -330,7 +402,24 @@ function renderEditorCarrusel() {
     + '<textarea id="cms-hero-parrafo" class="cms-textarea" rows="2">' + safeTextareaContent(heroT.parrafo) + '</textarea></div>'
     + '<button class="btn btn-v" onclick="guardarHeroTexto()"><i class="fas fa-save"></i> Guardar textos del hero</button>';
 
+  html += '<hr style="margin:20px 0;border:none;border-top:1.5px solid #e0e8e0;"/>'
+    + '<strong style="color:#004d3d;font-size:13px;display:block;margin-bottom:8px;"><i class="fas fa-link"></i> Botones superiores (SIGCP / Correo)</strong>'
+    + '<p style="font-size:11px;color:#666;margin:0 0 10px;">Enlaces de la barra verde superior del portal. Déjelos vacíos para usar los oficiales por defecto.</p>'
+    + '<div class="cms-modal-campo"><label class="cms-label">URL SIGCP</label>'
+    + '<input type="url" id="cms-topbar-sigcp" class="cms-input" placeholder="' + escHtml(sigcpDefault) + '" value="' + escHtml(topbar.sigcp || '') + '"/></div>'
+    + '<div class="cms-modal-campo"><label class="cms-label">URL Correo institucional</label>'
+    + '<input type="url" id="cms-topbar-correo" class="cms-input" placeholder="https://correo.policia.gob.pe/..." value="' + escHtml(topbar.correo || '') + '"/></div>'
+    + '<button class="btn btn-v" onclick="guardarTopbarLinksCMS()"><i class="fas fa-save"></i> Guardar y publicar enlaces</button>';
+
   el.innerHTML = html;
+}
+
+function guardarTopbarLinksCMS() {
+  cmsDataActual.topbarLinks = {
+    sigcp: (document.getElementById('cms-topbar-sigcp') && document.getElementById('cms-topbar-sigcp').value.trim()) || '',
+    correo: (document.getElementById('cms-topbar-correo') && document.getElementById('cms-topbar-correo').value.trim()) || ''
+  };
+  guardarSitioWeb();
 }
 
 function agregarSlideCMS() { abrirModalSlide(null); }
@@ -873,7 +962,9 @@ function renderPilaresCMS() {
   el.innerHTML = pilares.map(function(p, idx) {
     return '<div class="cms-pilar-item">'
       + '<div class="cms-pilar-preview"><i class="fas ' + escHtml(p.icono || 'fa-star') + '"></i></div>'
-      + '<div class="cms-pilar-info"><strong>' + escHtml(p.titulo) + '</strong><span>' + escHtml(p.texto) + '</span></div>'
+      + '<div class="cms-pilar-info"><strong>' + escHtml(p.titulo) + '</strong><span>' + escHtml(p.texto) + '</span>'
+      + (p.imagen ? '<span style="display:block;margin-top:2px;color:#1a7a3a;font-size:10px;"><i class="fas fa-image"></i> Con imagen</span>' : '')
+      + '</div>'
       + '<div class="cms-item-acciones">'
       + '<button type="button" class="btn-mini" onclick="editarPilarCMS(' + idx + ')"><i class="fas fa-edit"></i></button>'
       + '<button type="button" class="btn-mini btn-mini-danger" onclick="eliminarPilarCMS(' + idx + ')"><i class="fas fa-trash"></i></button>'
@@ -892,15 +983,33 @@ function eliminarPilarCMS(idx) {
 
 function abrirModalPilar(idx) {
   var esNuevo = idx === null;
-  var item = esNuevo ? { titulo: '', texto: '', icono: 'fa-shield-alt' }
+  var item = esNuevo ? { titulo: '', texto: '', icono: 'fa-shield-alt', imagen: '' }
     : ((cmsDataActual.nuestraLabor || {}).pilares || [])[idx] || {};
+  var imgVal = String(item.imagen || '').trim();
+  var imgPreview = imgVal
+    ? '<img id="cms-pilar-preview" src="' + escHtml(imgVal) + '" style="max-width:100%;max-height:120px;border-radius:6px;margin-top:6px;display:block;" alt=""/>'
+    : '<img id="cms-pilar-preview" src="" style="max-width:100%;max-height:120px;border-radius:6px;margin-top:6px;display:none;" alt=""/>';
   var body = cmsCampo('Título del pilar', 'm-titulo', item.titulo)
     + cmsCampo('Descripción', 'm-texto', item.texto, 'textarea')
-    + cmsCampo('Icono', 'm-icono', item.icono, 'select', CMS_ICONOS);
+    + cmsCampo('Icono (si no hay imagen)', 'm-icono', item.icono, 'select', CMS_ICONOS)
+    + '<div class="cms-modal-campo"><label class="cms-label">Imagen opcional del slide (JPG/PNG)</label>'
+    + '<input type="file" id="cms-pilar-file" accept="image/jpeg,image/png,image/webp" style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;" onchange="previewPilarImgCMS(this)"/>'
+    + imgPreview
+    + '<input type="hidden" id="m-imagen" value="' + escHtml(imgVal) + '"/>'
+    + '<input type="text" id="m-imagen-url" class="cms-input" style="margin-top:6px;" placeholder="O URL de imagen" value="' + escHtml(imgVal.indexOf('http') === 0 ? imgVal : '') + '" onchange="var h=document.getElementById(\'m-imagen\');var p=document.getElementById(\'cms-pilar-preview\');if(h)h.value=this.value.trim();if(p&&this.value.trim()){p.src=this.value.trim();p.style.display=\'block\';}"/>'
+    + '<p style="font-size:11px;color:#888;margin:6px 0 0;">En la web: imagen o ícono a la izquierda del texto del carrusel.</p></div>';
   abrirCmsModal(esNuevo ? 'Nuevo pilar' : 'Editar pilar', body, function() {
     var titulo = leerModal('m-titulo');
     if (!titulo) { alert('El título es obligatorio.'); return false; }
-    var nuevo = { titulo: titulo, texto: leerModal('m-texto'), icono: leerModal('m-icono') || 'fa-shield-alt' };
+    var imagen = (document.getElementById('m-imagen') && document.getElementById('m-imagen').value.trim())
+      || (document.getElementById('m-imagen-url') && document.getElementById('m-imagen-url').value.trim())
+      || '';
+    var nuevo = {
+      titulo: titulo,
+      texto: leerModal('m-texto'),
+      icono: leerModal('m-icono') || 'fa-shield-alt',
+      imagen: imagen
+    };
     cmsDataActual.nuestraLabor = cmsDataActual.nuestraLabor || { pilares: [] };
     cmsDataActual.nuestraLabor.pilares = cmsDataActual.nuestraLabor.pilares || [];
     if (esNuevo) cmsDataActual.nuestraLabor.pilares.push(nuevo);
@@ -909,6 +1018,25 @@ function abrirModalPilar(idx) {
     publicarCmsTrasEdicion('Pilar guardado en borrador. Pulse "Publicar cambios".');
     return true;
   });
+}
+
+function previewPilarImgCMS(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    alert('La imagen no debe superar 2 MB.');
+    input.value = '';
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var data = e.target.result;
+    var hidden = document.getElementById('m-imagen');
+    var preview = document.getElementById('cms-pilar-preview');
+    if (hidden) hidden.value = data;
+    if (preview) { preview.src = data; preview.style.display = 'block'; }
+  };
+  reader.readAsDataURL(file);
 }
 
 function agregarNovedadCMS()  { abrirModalNovedad(null); }
@@ -1070,6 +1198,12 @@ function recolectarDatosCMS() {
   data.nuestraLabor.intro  = getVal('cms-labor-intro');
   data.nuestraLabor.imagenBanner = leerBannerImg('labor');
   if (!data.nuestraLabor.pilares) data.nuestraLabor.pilares = (cmsDataActual.nuestraLabor || {}).pilares || [];
+  var topbarSigcpEl = document.getElementById('cms-topbar-sigcp');
+  var topbarCorreoEl = document.getElementById('cms-topbar-correo');
+  data.topbarLinks = {
+    sigcp: topbarSigcpEl ? topbarSigcpEl.value.trim() : ((cmsDataActual.topbarLinks || {}).sigcp || ''),
+    correo: topbarCorreoEl ? topbarCorreoEl.value.trim() : ((cmsDataActual.topbarLinks || {}).correo || '')
+  };
   data.bienestarPolicial = {
     tituloSeccion: getVal('cms-bienestar-titulo-seccion') || 'BIENESTAR POLICIAL',
     titulo: getVal('cms-bienestar-titulo'),
@@ -1201,7 +1335,8 @@ function publicarCmsDataAlServidor(onComplete) {
         var ok = !!(res.data && res.data.ok);
         if (ok) {
           if (typeof limpiarCachePortal === 'function') limpiarCachePortal();
-          mostrarAlertaCMS('¡Publicado en el servidor! Los visitantes verán los cambios al recargar (Ctrl+F5).', 'ok');
+          actualizarMetaPublicacionCMS();
+          mostrarAlertaCMS('¡Publicado! Los visitantes verán los cambios al recargar (Ctrl+F5). Use el botón «Ver portal» para comprobar.', 'ok');
         } else {
           mostrarAlertaCMS('No se publicó: ' + mensajeErrorSesionCms(res.status, res.data), 'error');
         }

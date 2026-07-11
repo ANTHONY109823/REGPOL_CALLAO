@@ -353,6 +353,7 @@ function obtenerSiteDataSync() {
 function aplicarPortalConfig(config, data) {
   if (!data) return;
   aplicarEncabezadoMarca(data);
+  aplicarTopbarLinks(data);
   if (config.renderResena) renderResenaHistorica(data, config.renderResena);
   if (config.renderLabor) renderNuestraLabor(data, config.renderLabor);
   if (config.renderBienestar) renderBienestarPolicial(data, config.renderBienestar);
@@ -566,6 +567,23 @@ function aplicarEncabezadoMarca(data) {
     return;
   }
   renderFotosEncabezado(data);
+}
+
+function aplicarTopbarLinks(data) {
+  var links = (data && data.topbarLinks) ? data.topbarLinks : {};
+  var sigcp = String(links.sigcp || '').trim();
+  var correo = String(links.correo || '').trim();
+  var defSigcp = 'https://sigcp.policia.gob.pe/';
+  var defCorreo = 'https://correo.policia.gob.pe/owa/auth/logon.aspx?replaceCurrent=1&url=https%3a%2f%2fcorreo.policia.gob.pe%2fowa';
+  document.querySelectorAll('.topbar-btn').forEach(function(a) {
+    var title = (a.getAttribute('title') || '') + ' ' + (a.textContent || '');
+    var t = title.toLowerCase();
+    if (t.indexOf('sigcp') !== -1 || t.indexOf('intranet') !== -1) {
+      a.href = sigcp || defSigcp;
+    } else if (t.indexOf('correo') !== -1) {
+      a.href = correo || defCorreo;
+    }
+  });
 }
 
 function asegurarPanelFotosEncabezado() {

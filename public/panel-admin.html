@@ -389,6 +389,7 @@
     var tienePsico = esU || rol === 'bienestar' || tieneEval || tieneDesc;
     var tieneGestion = esU || tienePsico || tieneCursos || tieneConvenios || tieneDescansos || tieneRRHH;
 
+    var tienePortalCms = esU || tieneConvenios || tieneCursos || tieneDescansos;
     var st = document.getElementById('panel-perm-style');
     if (!st) {
       st = document.createElement('style');
@@ -398,8 +399,13 @@
     st.textContent = [
       '[data-rol-unitic]{display:none!important}',
       '[data-perm-evaluaciones],[data-perm-descargas],[data-perm-preguntas]{display:none!important}',
-      '#sb-grp-psico,#sb-grp-convenios,#sb-grp-cursos,#sb-grp-descansos,#sb-sec-gestion,#sb-sec-rrhh{display:none!important}',
-      esU ? '[data-rol-unitic],#sb-sec-portal{display:block!important}' : '',
+      '#sb-grp-psico,#sb-grp-convenios,#sb-grp-cursos,#sb-grp-descansos,#sb-sec-gestion,#sb-sec-rrhh,#sb-sec-portal{display:none!important}',
+      esU ? '[data-rol-unitic]{display:block!important}' : '',
+      tienePortalCms ? '#sb-sec-portal{display:block!important}' : '',
+      !esU ? '[data-cms-only-unitic]{display:none!important}' : '',
+      !esU && !tieneConvenios ? '[data-cms-tab="convenios"]{display:none!important}' : '',
+      !esU && !tieneCursos ? '[data-cms-tab="cursos"]{display:none!important}' : '',
+      !esU && !tieneDescansos ? '[data-cms-tab="descansos"]{display:none!important}' : '',
       tieneEval ? '[data-perm-evaluaciones],[data-perm-preguntas]{display:flex!important}' : '',
       tieneDesc ? '[data-perm-descargas]{display:flex!important}' : '',
       tienePsico ? '#sb-grp-psico{display:block!important}' : '',
@@ -408,7 +414,7 @@
       tieneDescansos ? '#sb-grp-descansos{display:block!important}' : '',
       (esU || tieneRRHH) ? '#sb-sec-rrhh{display:block!important}' : '',
       tieneGestion ? '#sb-sec-gestion{display:block!important}' : ''
-    ].join('\n');
+    ].filter(Boolean).join('');
 
     var badge = document.querySelector('.super-badge');
     if (badge) {
@@ -558,20 +564,20 @@
     </div>
 
     
-    <div class="sb-section" id="sb-sec-portal" data-rol-unitic>
+    <div class="sb-section" id="sb-sec-portal">
       <div class="sb-section-label">Portal Web</div>
-      <div class="sb-item" data-page="menu-publicacion" onclick="ir('menu-publicacion',this)" style="background:rgba(200,169,74,.12);border-left:3px solid #c8a94a;">
+      <div class="sb-item" data-page="menu-publicacion" data-cms-only-unitic onclick="ir('menu-publicacion',this)" style="background:rgba(200,169,74,.12);border-left:3px solid #c8a94a;">
         <i class="fas fa-toggle-on" style="color:#c8a94a;"></i> MENÚ PUBLICADO EN WEB
       </div>
-      <div class="sb-item" onclick="irCMS('carrusel',this)"><i class="fas fa-home"></i> INICIO / CARRUSEL</div>
-      <div class="sb-item" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> NOVEDADES</div>
-      <div class="sb-item" onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> CONVENIOS (WEB)</div>
-      <div class="sb-item" onclick="irCMS('cursos',this)"><i class="fas fa-graduation-cap"></i> CURSOS (WEB)</div>
-      <div class="sb-item" onclick="irCMS('descansos',this)"><i class="fas fa-notes-medical"></i> DESCANSOS (WEB)</div>
-      <div class="sb-item" onclick="irCMS('bienestar',this)"><i class="fas fa-heart"></i> BIENESTAR (WEB)</div>
-      <div class="sb-item" onclick="irCMS('resena',this)"><i class="fas fa-landmark"></i> RESEÑA HISTÓRICA</div>
-      <div class="sb-item" onclick="irCMS('labor',this)"><i class="fas fa-tasks"></i> NUESTRA LABOR</div>
-      <div class="sb-item" onclick="irCMS('menu',this)"><i class="fas fa-bars"></i> MENÚ DEL SITIO</div>
+      <div class="sb-item" data-cms-only-unitic data-cms-tab="carrusel" onclick="irCMS('carrusel',this)"><i class="fas fa-home"></i> INICIO / CARRUSEL</div>
+      <div class="sb-item" data-cms-only-unitic data-cms-tab="novedades" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> NOVEDADES</div>
+      <div class="sb-item" data-cms-tab="convenios" onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> CONVENIOS (WEB)</div>
+      <div class="sb-item" data-cms-tab="cursos" onclick="irCMS('cursos',this)"><i class="fas fa-graduation-cap"></i> CURSOS (WEB)</div>
+      <div class="sb-item" data-cms-tab="descansos" onclick="irCMS('descansos',this)"><i class="fas fa-notes-medical"></i> DESCANSOS (WEB)</div>
+      <div class="sb-item" data-cms-only-unitic data-cms-tab="bienestar" onclick="irCMS('bienestar',this)"><i class="fas fa-heart"></i> BIENESTAR (WEB)</div>
+      <div class="sb-item" data-cms-only-unitic data-cms-tab="resena" onclick="irCMS('resena',this)"><i class="fas fa-landmark"></i> RESEÑA HISTÓRICA</div>
+      <div class="sb-item" data-cms-only-unitic data-cms-tab="labor" onclick="irCMS('labor',this)"><i class="fas fa-tasks"></i> NUESTRA LABOR</div>
+      <div class="sb-item" data-cms-only-unitic data-cms-tab="menu" onclick="irCMS('menu',this)"><i class="fas fa-bars"></i> MENÚ DEL SITIO</div>
     </div>
 
   </nav>
@@ -828,7 +834,7 @@
     <div id="page-cms" class="page">
       <div class="card">
         <h3><i class="fas fa-globe"></i> Portal Web — contenido público</h3>
-        <p style="font-size:12px;color:#666;margin:-8px 0 14px;">Solo Super Admin. Aquí se editan textos, imágenes y tarjetas visibles en la página institucional.</p>
+        <p style="font-size:12px;color:#666;margin:-8px 0 14px;">Edite y publique lo que se ve en la web. Super Admin: todo el portal. Admins: su módulo (Convenios / Cursos / Descansos). Pulse <strong>Publicar cambios</strong> para sincronizar con el sitio.</p>
 
         
         <div id="alerta-cms" class="alerta" style="display:none;"></div>
@@ -836,6 +842,8 @@
         
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
           <button class="btn btn-v" onclick="guardarSitioWeb()"><i class="fas fa-upload"></i> Publicar cambios</button>
+          <a id="cms-ver-web" href="index.html" target="_blank" rel="noopener" class="btn" style="background:#004d3d;color:#fff;text-decoration:none;"><i class="fas fa-external-link-alt"></i> Ver portal</a>
+          <span id="cms-publicado-meta" style="font-size:11px;color:#888;"></span>
           <input type="hidden" id="cms-actualizacion"/>
         </div>
 
@@ -941,6 +949,7 @@
 
         
         <div id="cms-panel-resena" class="cms-panel">
+          <p style="font-size:12px;color:#666;margin:0 0 12px;line-height:1.5;">En la web se muestra como <strong>carrusel</strong>: primero la introducción (con su imagen), luego cada párrafo en orden. Guarde y publique para sincronizar.</p>
           <div style="background:#f0f7f4;border:1.5px dashed #004d3d;border-radius:8px;padding:12px;margin-bottom:14px;">
             <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Fotografía de la introducción (diapositiva 1 del carrusel)</strong>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -974,6 +983,7 @@
 
         
         <div id="cms-panel-labor" class="cms-panel">
+          <p style="font-size:12px;color:#666;margin:0 0 12px;line-height:1.5;">En la web se muestra como <strong>carrusel</strong> (igual que Reseña): intro + cada pilar. Puede añadir ícono o imagen por pilar. El orden de la lista es el orden del carrusel.</p>
           <div style="background:#f0f7f4;border:1.5px dashed #004d3d;border-radius:8px;padding:12px;margin-bottom:14px;">
             <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Imagen del banner superior</strong>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -1771,7 +1781,7 @@
 <script src="portal-data.js?v=9"></script>
 <script src="portal.js?v=70"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=26"></script>
+<script src="panel-cms.js?v=27"></script>
 <script src="panel-descansos.js?v=4"></script>
 <script src="panel-rrhh.js?v=3"></script>
 <script>
@@ -3019,8 +3029,29 @@ function ir(page, el){
   panelPaginasCargadas[page] = true;
 }
 
+function puedeEditarPortalCMS(){
+  return esUnitic() || tienePermiso('cms_convenios') || tienePermiso('cms_cursos') || tienePermiso('cms_descansos');
+}
+function puedeEditarCmsTab(tab){
+  if (esUnitic()) return true;
+  if (tab === 'convenios') return tienePermiso('cms_convenios');
+  if (tab === 'cursos') return tienePermiso('cms_cursos');
+  if (tab === 'descansos') return tienePermiso('cms_descansos');
+  return false;
+}
+function primerTabCmsPermitido(){
+  if (esUnitic()) return 'carrusel';
+  if (tienePermiso('cms_convenios')) return 'convenios';
+  if (tienePermiso('cms_cursos')) return 'cursos';
+  if (tienePermiso('cms_descansos')) return 'descansos';
+  return 'carrusel';
+}
 function irCMS(tab, el){
-  if(!esUnitic()){alert('Solo el Super Admin puede editar el portal web.');return;}
+  if(!puedeEditarPortalCMS()){alert('Sin permiso para editar el portal web.');return;}
+  if(!puedeEditarCmsTab(tab)){
+    tab = primerTabCmsPermitido();
+    if(!puedeEditarCmsTab(tab)){alert('Sin permiso para esta sección del portal.');return;}
+  }
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
   document.getElementById('page-cms').classList.add('on');
   document.querySelectorAll('.sb-item').forEach(function(i){i.classList.remove('on');});
