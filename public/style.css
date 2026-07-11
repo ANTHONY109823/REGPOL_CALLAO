@@ -54,11 +54,11 @@ img {
     flex-shrink: 0;
 }
 
-/* Este bloque: INGRESAR a la izquierda, redes a la derecha */
+/* Redes a la derecha (botón INGRESAR oculto en portal público) */
 .portal-flex {
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     gap: 24px;
 }
