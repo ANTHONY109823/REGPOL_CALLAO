@@ -1,8 +1,4 @@
-/* ================================================================
-   evaluacion.js — PROGRAMA DE BIENESTAR REGPOL Callao
-   Ing. Anthony Ccayo — UNITIC — 2026
-   Preguntas se cargan desde la API (PostgreSQL)
-================================================================ */
+
 
 var LOCAL_API = (function() {
   if (typeof regpolApiBase === 'function') return regpolApiBase();
@@ -12,10 +8,10 @@ var LOCAL_API = (function() {
   return window.REGPOL_API_PRODUCTION || 'https://regpolcallao-production.up.railway.app';
 })();
 
-var PREGUNTAS       = [];   // se llena desde /preguntas
+var PREGUNTAS       = [];   
 var TOTAL_PREGUNTAS = 0;
 var TOTAL_BLOQUES   = 0;
-var PREG_POR_BLOQUE = 50;   // 566 / 50 = ~12 bloques
+var PREG_POR_BLOQUE = 50;   
 
 var ESTADO = {
   bloqueActual:    1,
@@ -103,9 +99,6 @@ function restaurarAreaEvaluacion(valor) {
   toggleAreaOtroEval();
 }
 
-/* ================================================================
-   INICIO — cargar preguntas desde API
-================================================================ */
 document.addEventListener('DOMContentLoaded', function() {
   try { sessionStorage.removeItem('regpol_aviso_unidades_ok'); } catch (e) {}
   cargarConfigUnidad();
@@ -446,9 +439,6 @@ function restaurarUnidadDesdeProgreso(data) {
   }
 }
 
-/* ================================================================
-   FECHA Y EDAD
-================================================================ */
 function formatearFechaNacimiento(e) {
   var el = e.target;
   var digits = el.value.replace(/\D/g,'').slice(0,8);
@@ -711,9 +701,6 @@ function fechaNacParaEnvio() {
   return nac.getFullYear()+'-'+String(nac.getMonth()+1).padStart(2,'0')+'-'+String(nac.getDate()).padStart(2,'0');
 }
 
-/* ================================================================
-   REGISTRO Y CUESTIONARIO
-================================================================ */
 function contarRespuestasEnData(data) {
   if (!data) return 0;
   var r = data.respuestas;
@@ -1058,9 +1045,6 @@ function continuarAlCuestionario() {
     });
 }
 
-/* ================================================================
-   BLOQUES — renderizado por bloques de 50 preguntas
-================================================================ */
 function actualizarInfoBloque() {
   var el = document.getElementById('texto-pagina');
   if (el) el.textContent = 'Bloque '+ESTADO.bloqueActual+' de '+TOTAL_BLOQUES;
@@ -1126,9 +1110,6 @@ function guardarRespuesta(id, val) {
   autoGuardarProgreso();
 }
 
-/* ================================================================
-   CONTROLES DE NAVEGACIÓN ENTRE BLOQUES
-================================================================ */
 function actualizarControles() {
   var b=ESTADO.bloqueActual, esUlt=(b===TOTAL_BLOQUES);
   var btnA=document.getElementById('btn-atras');
@@ -1138,7 +1119,7 @@ function actualizarControles() {
   if(btnA) btnA.disabled=(b===1);
   if(btnS) btnS.style.display=esUlt?'none':'inline-flex';
   if(btnF) btnF.style.display=esUlt?'inline-flex':'none';
-  if(btnG) btnG.style.display='inline-flex'; // siempre visible
+  if(btnG) btnG.style.display='inline-flex'; 
   var ip=document.getElementById('info-pagina');
   if(ip) ip.textContent='Bloque '+b+' de '+TOTAL_BLOQUES;
 }
@@ -1149,7 +1130,7 @@ function cambiarBloque(delta) {
   if (nuevo<1||nuevo>TOTAL_BLOQUES) return;
 
   if (delta>0) {
-    // Validar que el bloque actual esté completo
+    
     var inicio=(ESTADO.bloqueActual-1)*ESTADO.pregsPorBloque;
     var fin=Math.min(inicio+ESTADO.pregsPorBloque, TOTAL_PREGUNTAS);
     var sinResp=[];
@@ -1168,9 +1149,6 @@ function cambiarBloque(delta) {
   renderizarBloque(nuevo);
 }
 
-/* ================================================================
-   GUARDADO POR BLOQUES EN SERVIDOR
-================================================================ */
 function guardarBloqueEnServidor(callback) {
   var payload = construirPayloadProgreso();
 
@@ -1192,7 +1170,6 @@ function guardarBloqueEnServidor(callback) {
     });
 }
 
-// Botón "Guardar y salir" — guarda y vuelve al panel de registro (misma página)
 function volverAlPanelRegistro() {
   ESTADO.registroCompleto = false;
   var cuest = document.getElementById('card-cuestionario');
@@ -1200,7 +1177,7 @@ function volverAlPanelRegistro() {
   var zona = document.getElementById('zona-preguntas');
   if (zona) zona.innerHTML = '';
 
-  // Mostrar solo barra CIP (formulario oculto)
+  
   var reg = document.getElementById('card-registro');
   if (reg) reg.style.display = '';
   var form = document.getElementById('card-registro-formulario');
@@ -1284,7 +1261,6 @@ function continuarConCIP() {
   });
 }
 
-// Auto-guardar cada respuesta (con espera para no saturar el servidor)
 var _saveTimer = null;
 var _guardandoProgreso = false;
 function autoGuardarProgreso() {
@@ -1308,9 +1284,6 @@ function autoGuardarProgreso() {
   }, 1800);
 }
 
-/* ================================================================
-   VERIFICAR Y RESTAURAR PROGRESO POR CIP
-================================================================ */
 function verificarProgresoGuardado(cip, callback) {
   if (!cip) { if(callback) callback(null); return; }
 
@@ -1331,7 +1304,7 @@ function verificarProgresoGuardado(cip, callback) {
           var d = normalizarDataProgreso(JSON.parse(local));
           if (callback) callback(d);
           return;
-        } catch (e) { /* ignorar */ }
+        } catch (e) {  }
       }
       if (callback) callback(null);
     });
@@ -1388,11 +1361,6 @@ function descartarProgreso() {
   activarCuestionario(true);
 }
 
-/* ================================================================
-   ENVÍO FINAL
-================================================================ */
-// Muestra la alerta global y la desplaza a la vista (el usuario suele estar
-// al final de la página, en el bloque 12, y no ve la alerta que aparece arriba).
 function mostrarAlertaVisible(msg, tipo) {
   mostrarAlerta(msg, tipo || 'error');
   var el = document.getElementById('alerta-global');
@@ -1401,7 +1369,6 @@ function mostrarAlertaVisible(msg, tipo) {
   }
 }
 
-// Bloque (1-based) que contiene la pregunta en la posición idx del arreglo PREGUNTAS.
 function bloqueDePregunta(idx) {
   return Math.floor(idx / ESTADO.pregsPorBloque) + 1;
 }
@@ -1419,7 +1386,7 @@ function validarYEnviar() {
     return;
   }
 
-  // 1) Preguntas sin responder: llevar al usuario a la primera pendiente y avisar de forma visible.
+  
   var idxPendiente = primeraPreguntaSinResponder();
   if (idxPendiente !== -1) {
     var sinRes = PREGUNTAS.filter(function(p){ return !ESTADO.respuestas[p.id]; });
@@ -1434,11 +1401,11 @@ function validarYEnviar() {
     return;
   }
 
-  // 2) Los datos de identificación ya se validaron UNA sola vez al iniciar la prueba
-  //    (continuarAlCuestionario) o se cargaron del servidor al retomar con el CIP.
-  //    No se vuelven a validar ni a pedir aquí para no interrumpir a quien ya llenó
-  //    todo. Como red de seguridad mínima solo se exige nombres + CIP (que el servidor
-  //    necesita); si por algún motivo faltaran, se avisa sin borrar respuestas ni foto.
+  
+  
+  
+  
+  
   var nombres = obtenerNombresCompletos();
   var cipActual = (document.getElementById('f-cip') || {}).value || '';
   if (!nombres || !cipActual.trim()) {
@@ -1456,8 +1423,6 @@ function validarYEnviar() {
   abrirModalConfirmarEnvio(nombres, dni, comis);
 }
 
-// Refleja en la vista de lectura los datos actuales del formulario (para que,
-// tras editar, el resumen muestre lo corregido antes de enviar).
 function renderVistaConfirmarEnvio() {
   var elNom = document.getElementById('confirmar-envio-nombre');
   var elDni = document.getElementById('confirmar-envio-dni');
@@ -1492,8 +1457,6 @@ function cerrarModalConfirmarEnvio() {
   document.body.classList.remove('eval-aviso-unidades-abierto');
 }
 
-// "Revisar" — permite corregir solo apellidos, nombres, DNI y dependencia.
-// El resto del registro (grado, sexo, cargo, área, foto, etc.) queda intacto.
 function mostrarVistaEdicionEnvio() {
   var vista = document.getElementById('confirmar-envio-vista');
   var edicion = document.getElementById('confirmar-envio-edicion');
@@ -1507,7 +1470,7 @@ function mostrarVistaEdicionEnvio() {
   if (nomEl) { nomEl.value = (document.getElementById('f-nombres') || {}).value || ''; nomEl.classList.remove('invalido'); }
   if (dniEl) { dniEl.value = (document.getElementById('f-dni') || {}).value || ''; dniEl.classList.remove('invalido'); }
 
-  // Clona las mismas dependencias disponibles del registro y selecciona la actual.
+  
   if (uniEl) {
     var fUnidad = document.getElementById('f-unidad');
     uniEl.innerHTML = fUnidad ? fUnidad.innerHTML : '';
@@ -1544,8 +1507,8 @@ function guardarEdicionEnvio() {
 
   if (err) { if (msg) msg.textContent = err; return; }
 
-  // Escribe los cambios en el formulario base: el envío (construirPayloadGuardar)
-  // toma estos valores, de modo que la prueba queda guardada en la dependencia elegida.
+  
+  
   var fAp = document.getElementById('f-apellidos');
   var fNom = document.getElementById('f-nombres');
   var fDni = document.getElementById('f-dni');
@@ -1651,9 +1614,6 @@ function limpiarFormulario() {
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-/* ================================================================
-   UI HELPERS
-================================================================ */
 function mostrarAlerta(msg, tipo) {
   var el=document.getElementById('alerta-global');
   document.getElementById('texto-alerta-global').textContent=msg;

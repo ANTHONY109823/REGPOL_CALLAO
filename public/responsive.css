@@ -1,4 +1,4 @@
-/* responsive.css — REGPOL Callao — ajustes móvil / tablet */
+
 
 html {
   -webkit-text-size-adjust: 100%;
@@ -10,7 +10,6 @@ body {
   max-width: 100%;
 }
 
-/* ── Contenedor y tipografía ─────────────────────────────────── */
 @media (max-width: 768px) {
   .container {
     padding-left: 14px;
@@ -72,7 +71,6 @@ body {
   }
 }
 
-/* ── Tabla de unidades → tarjetas en móvil ─────────────────── */
 @media (max-width: 640px) {
   .unidades-seccion-titulo {
     font-size: 12px;
@@ -160,7 +158,6 @@ body {
   }
 }
 
-/* Tablet: scroll horizontal si la tabla no cabe */
 @media (min-width: 641px) and (max-width: 900px) {
   .tabla-unidades-wrap {
     overflow-x: auto;
@@ -172,14 +169,12 @@ body {
   }
 }
 
-/* ── Utilidad tablas con scroll ──────────────────────────────── */
 .tabla-scroll-x {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   max-width: 100%;
 }
 
-/* ── Modal novedades ─────────────────────────────────────────── */
 @media (max-width: 560px) {
   #modal-nov-inner {
     padding: 16px 18px 22px;

@@ -1,4 +1,4 @@
-/* api-config.js — URL del backend (única fuente de verdad) */
+
 (function() {
   var PRODUCCION = 'https://regpolcallao-production.up.railway.app';
   var h = location.hostname;

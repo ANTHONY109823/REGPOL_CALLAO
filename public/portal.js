@@ -1,4 +1,4 @@
-/* portal.js \u2014 Datos y renderizado compartido del portal REGPOL Callao */
+
 (function() {
   if (window.REGPOL_API_BASE) return;
   var h = location.hostname;
@@ -620,7 +620,6 @@ function resolverSlidesCarrusel(data) {
 
 function preloadImagenCarrusel(url) {
   var src = String(url || '').trim();
-  // Evitar <link rel=preload> sin href válido (aviso de consola)
   if (!src || src === 'undefined' || src === 'null') return;
   if (/^(javascript:|data:)/i.test(src)) return;
   var id = 'preload-carrusel-hero';
@@ -630,7 +629,6 @@ function preloadImagenCarrusel(url) {
     link.id = id;
     link.rel = 'preload';
     link.as = 'image';
-    // Sin crossOrigin: debe coincidir con <img> del carrusel (modo credentials por defecto)
     link.href = src;
     document.head.appendChild(link);
     return;
@@ -926,7 +924,6 @@ function cerrarModalPdfPortal() {
   if (frame) frame.src = 'about:blank';
   document.body.style.overflow = '';
 }
-
 
 function htmlPaginaHeroBanner(opts) {
   opts = opts || {};

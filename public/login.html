@@ -78,7 +78,6 @@
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 
-// Permisos que dan acceso a panel-admin
 var PERMS_PANEL_ADMIN = [
   'cms_cursos', 'cms_convenios', 'cms_descansos', 'cms_inicio', 'cms_resena', 'cms_labor', 'cms_novedades',
   'evaluaciones', 'descargas', 'recursos_humanos'
@@ -105,11 +104,10 @@ function redirigirSesion(s){
 
 document.addEventListener('keydown', function(e){ if(e.key==='Enter') ingresar(); });
 
-// Si ya tiene sesión guardada, redirigir directamente
 window.addEventListener('DOMContentLoaded', function(){
   var saved = JSON.parse(localStorage.getItem('regpol_session') || 'null');
   if (saved && saved.token && saved.rol) {
-    // Verificar que el token sigue siendo válido
+    
     fetch(API+'/stats', { headers: {'x-admin-token': saved.token} })
       .then(function(r){ return r.json(); })
       .then(function(d){
@@ -145,7 +143,7 @@ function ingresar() {
       btn.innerHTML   = '<i class="fas fa-sign-in-alt"></i> Ingresar';
       return;
     }
-    // Guardar sesión
+    
     localStorage.setItem('regpol_session', JSON.stringify({
       token:    d.token,
       rol:      d.rol,
@@ -153,7 +151,7 @@ function ingresar() {
       unidad:   d.unidad || '',
       permisos: d.permisos || []
     }));
-    // Compatibilidad con paneles individuales
+    
     if (d.rol === 'unitic')    localStorage.setItem('uniticToken',   d.token);
     if (d.rol === 'bienestar') localStorage.setItem('bienToken',     d.token);
 

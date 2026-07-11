@@ -1,8 +1,4 @@
-/* ================================================================
-   evaluacion.css - Modulo Evaluacion Institucional REGPOL Callao
-   Ing. Anthony Ccayo - UNITIC - 2026
-   Variables identicas al style.css principal del portal
-================================================================ */
+
 :root {
   --verde-pnp:   #004d3d;
   --verde-dark:  #002d24;
@@ -19,7 +15,6 @@
   --sombra:      0 4px 18px rgba(0,77,61,.10);
 }
 
-/* Solo estilos del módulo — NO resetear el header/nav del portal */
 .body-bienestar .contenedor {
   max-width: 960px;
   margin: 0 auto;
@@ -56,7 +51,6 @@
   font-weight: 900;
 }
 
-/* MODAL AVISO UNIDADES ACTIVAS */
 .modal-aviso-unidades {
   position: fixed;
   inset: 0;
@@ -176,7 +170,6 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
   font-size: 14px !important;
 }
 
-/* Modal confirmar envío — reemplaza el confirm() nativo */
 .confirmar-envio-datos {
   list-style: none;
   margin: 0 0 18px;
@@ -263,7 +256,6 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
   .modal-confirmar-envio-acciones { flex-direction: column-reverse; }
 }
 
-/* Variante verde de éxito — prueba ya enviada */
 .modal-completada-ok .modal-aviso-unidades-panel { border-top-color: var(--exito); }
 .modal-completada-ok .modal-aviso-unidades-header i { color: var(--exito); font-size: 30px; }
 .modal-completada-nota {
@@ -273,7 +265,6 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .modal-completada-nota i { color: var(--exito); }
 .modal-completada-nota p { color: #17492f; }
 
-/* CARDS */
 .card-eval { background: var(--blanco); border-radius: 12px; border-top: 5px solid var(--verde-pnp); box-shadow: var(--sombra); margin-bottom: 24px; overflow: hidden; }
 .card-header-eval { background: var(--verde-pnp); padding: 14px 22px; display: flex; align-items: center; gap: 12px; }
 .card-header-eval i { color: var(--naranja-pnp); font-size: 18px; }
@@ -367,7 +358,6 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
   color: #888;
 }
 
-/* FORMULARIO */
 .form-grid { display: grid; gap: 18px 16px; }
 .form-grid-registro {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -608,7 +598,6 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 }
 .foto-nombre-archivo.ok { color: var(--exito); font-weight: 600; }
 
-/* Modal cámara — registro de fotografía */
 .modal-cam-foto {
   position: fixed;
   inset: 0;
@@ -678,7 +667,6 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 }
 .btn-cam-cancelar:hover { background: #d8e0dc; }
 
-/* PROGRESO */
 .progreso-wrap { margin: 22px 0 10px; }
 .progreso-info { display: flex; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 4px; }
 .pag-label { font-size: 13px; font-weight: 700; color: var(--verde-pnp); }
@@ -686,7 +674,6 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .barra-ext { background: #e0ede9; border-radius: 20px; height: 9px; overflow: hidden; }
 .barra-int { height: 100%; background: linear-gradient(90deg, var(--verde-pnp) 0%, #00875f 100%); border-radius: 20px; transition: width .35s ease; }
 
-/* TABLA */
 .tabla-preguntas { width: 100%; border-collapse: collapse; margin-top: 14px; }
 .tabla-preguntas thead th { background: var(--fondo-suave); padding: 10px 14px; font-size: 11px; font-weight: 700; color: var(--texto-muted); text-transform: uppercase; letter-spacing: .7px; border-bottom: 2px solid var(--borde); text-align: left; }
 .tabla-preguntas thead th.col-n { width: 52px; text-align: center; }
@@ -700,14 +687,12 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .td-texto { font-size: 13.5px; line-height: 1.55; }
 .td-resp { text-align: center; }
 
-/* RADIO BUTTONS */
 .opciones-si-no { display: flex; gap: 10px; justify-content: center; }
 .opciones-si-no label { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700; padding: 6px 13px; border: 1.5px solid var(--borde); border-radius: 6px; cursor: pointer; transition: all .15s; user-select: none; white-space: nowrap; }
 .opciones-si-no label.lbl-si:has(input:checked) { border-color: var(--verde-pnp); background: rgba(0,77,61,.08); color: var(--verde-pnp); }
 .opciones-si-no label.lbl-no:has(input:checked) { border-color: var(--error); background: rgba(192,57,43,.07); color: var(--error); }
 .opciones-si-no input[type="radio"] { accent-color: var(--verde-pnp); width: 14px; height: 14px; }
 
-/* PAGINACION */
 .paginacion { display: flex; align-items: center; justify-content: space-between; margin-top: 22px; flex-wrap: wrap; gap: 10px; }
 .info-pagina { font-size: 13px; color: var(--texto-muted); text-align: center; flex: 1; min-width: 120px; }
 .btn-eval { display: inline-flex; align-items: center; gap: 7px; padding: 11px 24px; border-radius: 7px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; font-family: inherit; transition: all .2s; text-decoration: none; }
@@ -721,13 +706,11 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .btn-finalizar { background: var(--naranja-pnp); color: var(--blanco); display: none; }
 .btn-finalizar:hover { background: var(--naranja-dk); transform: translateY(-1px); }
 
-/* ALERTAS */
 .alerta { display: none; align-items: flex-start; gap: 8px; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; margin-bottom: 10px; border: 1.5px solid; line-height: 1.35; }
 .alerta.visible { display: flex; }
 .alerta-error { background: rgba(192,57,43,.07); border-color: rgba(192,57,43,.3); color: var(--error); }
 .alerta-exito { background: rgba(10,124,74,.08); border-color: rgba(10,124,74,.35); color: var(--exito); }
 
-/* OVERLAY ENVIO */
 #overlay-envio { display: none; position: fixed; inset: 0; background: rgba(0,45,36,.88); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; gap: 22px; text-align: center; padding: 24px; }
 #overlay-envio.visible { display: flex; }
 .spinner { width: 52px; height: 52px; border: 5px solid rgba(255,255,255,.2); border-top-color: var(--naranja-pnp); border-radius: 50%; animation: girar 1s linear infinite; }
@@ -736,7 +719,6 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 #overlay-envio small { color: rgba(255,255,255,.6); font-size: 12px; }
 .check-ok { font-size: 60px; color: var(--naranja-pnp); display: none; }
 
-/* PANEL ADMIN — estilos usados en panel-admin.html (segunda pestaña) */
 .nav-panel-unitic a {
   border: 1px dashed rgba(255, 255, 255, .45);
   border-radius: 4px;
@@ -762,7 +744,6 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .aviso-peligro { background: rgba(192,57,43,.06); border: 1px solid rgba(192,57,43,.2); border-radius: 8px; padding: 13px 16px; font-size: 12.5px; color: #7a1a1a; margin-top: 16px; line-height: 1.5; }
 .aviso-peligro strong { color: var(--error); }
 
-/* PANEL RESPUESTAS + DESCARGA */
 .panel-respuestas { background: linear-gradient(135deg, #002d24 0%, #004d3d 100%); border-radius: 12px; padding: 20px 22px; margin-bottom: 22px; }
 .panel-resp-titulo { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 15px; font-weight: 700; letter-spacing: .3px; margin-bottom: 16px; }
 .panel-resp-titulo i { color: var(--naranja-pnp); font-size: 18px; }
@@ -777,7 +758,7 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .resp-stat { display: flex; align-items: flex-start; gap: 9px; color: rgba(255,255,255,.88); font-size: 12.5px; line-height: 1.55; }
 .resp-stat i { color: var(--naranja-pnp); margin-top: 2px; flex-shrink: 0; }
 .resp-stat strong { color: #fff; }
-/* Selector comisaria */
+
 .descarga-filtro { background: rgba(255,255,255,.08); border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; }
 .descarga-campo label { display: block; color: rgba(255,255,255,.7); font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 7px; }
 .descarga-campo label i { color: var(--naranja-pnp); margin-right: 5px; }
@@ -791,7 +772,6 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .msg-descarga-ok    { background: rgba(15,157,88,.2);  color: #7dffb5; border: 1px solid rgba(15,157,88,.3); }
 .msg-descarga-error { background: rgba(192,57,43,.2);  color: #ffaaaa; border: 1px solid rgba(192,57,43,.3); }
 
-/* GOOGLE SIGN-IN BANNER */
 .google-signin-banner { background:#fff; border:1.5px solid #e8f0fe; border-radius:12px; padding:14px 18px; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; box-shadow:0 2px 10px rgba(26,115,232,.08); }
 .google-signin-banner.gsb-logueado { border-color:#c8e6c9; background:#f1f8f1; }
 .gsb-info { display:flex; align-items:center; gap:12px; flex:1; }
@@ -808,7 +788,6 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .btn-gsb-logout { background:none; border:none; color:#c0392b; cursor:pointer; font-size:14px; padding:4px 6px; border-radius:6px; }
 .btn-gsb-logout:hover { background:#fdecea; }
 
-/* Barra superior fija — dentro del registro (CIP + progreso) */
 #card-registro {
   overflow: visible;
 }
@@ -839,7 +818,6 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
   border-top: none;
 }
 
-/* CONTINUAR CON CIP — barra compacta */
 .card-continuar-cip {
   margin-bottom: 12px;
   border: 1.5px solid #c8e6c9;
@@ -921,11 +899,9 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .btn-prog-nuevo { background:none; border:1.5px solid #c0392b; color:#c0392b; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:7px; }
 .btn-prog-nuevo:hover { background:#fdecea; }
 
-/* FOOTER */
 .footer-simple { background: var(--verde-dark); color: #a1cfc5; text-align: center; padding: 22px 20px; font-size: 12px; margin-top: 40px; border-top: 3px solid var(--naranja-pnp); }
 .footer-simple a { color: var(--naranja-pnp); text-decoration: none; }
 
-/* RESPONSIVE — solo contenido del módulo */
 @media (max-width: 600px) {
   .registro-foto-fila {
     flex-direction: column;

@@ -1,4 +1,4 @@
-/* panel-cms.js — Administración de contenido del portal REGPOL Callao */
+
 var cmsDataActual = null;
 var cmsModalGuardarFn = null;
 
@@ -44,9 +44,6 @@ function descansosPortalDefault() {
   };
 }
 
-// ═══════════════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════════════
 function initCMS() {
   var base = apiBaseCMS();
   var iniciar = function(data) {
@@ -131,9 +128,6 @@ function cambiarTabCMS(tab) {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════
-// RENDERIZADO GENERAL
-// ═══════════════════════════════════════════════════════════════
 function renderListasCMS() {
   renderGestionConvocatoriasCMS('cms-lista-convenios', 'convenio');
   renderGestionConvocatoriasCMS('cms-lista-cursos', 'curso');
@@ -218,9 +212,6 @@ function safeTextareaContent(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
 }
 
-// ═══════════════════════════════════════════════════════════════
-// FOTOS ENCABEZADO — carrusel animado (múltiples imágenes)
-// ═══════════════════════════════════════════════════════════════
 function renderEditorFotosEncabezado() {
   var el = document.getElementById('editor-fotos-encabezado');
   if (!el) return;
@@ -297,9 +288,6 @@ function guardarFotosEncabezado() {
   guardarSitioWeb();
 }
 
-// ═══════════════════════════════════════════════════════════════
-// CARRUSEL (INICIO)
-// ═══════════════════════════════════════════════════════════════
 function renderEditorCarrusel() {
   var el = document.getElementById('editor-carrusel');
   if (!el) return;
@@ -416,9 +404,6 @@ function guardarHeroTexto() {
   guardarSitioWeb();
 }
 
-// ═══════════════════════════════════════════════════════════════
-// MENÚ (VISIBILIDAD EN LA WEB PÚBLICA)
-// ═══════════════════════════════════════════════════════════════
 function listaNavPortalCMS() {
   if (typeof obtenerPortalNav === 'function') {
     return (window.REGPOL_NAV && window.REGPOL_NAV.length) ? window.REGPOL_NAV : [];
@@ -569,9 +554,6 @@ function guardarConfigMenu() {
   guardarMenuPublicacionWeb();
 }
 
-// ═══════════════════════════════════════════════════════════════
-// NOVEDADES
-// ═══════════════════════════════════════════════════════════════
 function renderListaNovedades(containerId, items) {
   var el = document.getElementById(containerId);
   if (!el) return;
@@ -669,9 +651,6 @@ function quitarFotoNovedad() {
   if (file)    file.value = '';
 }
 
-// ═══════════════════════════════════════════════════════════════
-// RESEÑA HISTÓRICA
-// ═══════════════════════════════════════════════════════════════
 function syncImagenParrafoResenaCms(seccion, val) {
   cmsDataActual.resenaHistorica = cmsDataActual.resenaHistorica || {};
   if (seccion === 'resena') {
@@ -883,9 +862,6 @@ function eliminarParrafoResena(idx) {
   renderParrafosResenaCMS();
 }
 
-// ═══════════════════════════════════════════════════════════════
-// NUESTRA LABOR
-// ═══════════════════════════════════════════════════════════════
 function renderPilaresCMS() {
   var el = document.getElementById('cms-lista-pilares');
   if (!el) return;
@@ -944,9 +920,6 @@ function eliminarNovedadCMS(idx) {
 }
 function editarNovedadCMS(idx)     { abrirModalNovedad(idx); }
 
-// ═══════════════════════════════════════════════════════════════
-// VIDEO TUTORIAL BIENESTAR
-// ═══════════════════════════════════════════════════════════════
 var BIENESTAR_VIDEO_MAX_MB = 60;
 
 function actualizarEstadoVideoBienestarCMS() {
@@ -1067,9 +1040,6 @@ function quitarVideoBienestarCMS() {
     });
 }
 
-// ═══════════════════════════════════════════════════════════════
-// GUARDAR / EXPORTAR / IMPORTAR
-// ═══════════════════════════════════════════════════════════════
 function recolectarDatosCMS() {
   var data = cloneSiteData(cmsDataActual || {});
   if (data.novedades && typeof ordenarNovedadesPorFecha === 'function') {
@@ -1283,9 +1253,6 @@ function restaurarSiteDefault() {
     });
 }
 
-// ═══════════════════════════════════════════════════════════════
-// MODAL CMS — helpers
-// ═══════════════════════════════════════════════════════════════
 function mostrarAlertaCMS(texto, tipo) {
   ['alerta-cms', 'alerta-menu-publicacion'].forEach(function(id) {
     var el = document.getElementById(id);
@@ -1363,9 +1330,6 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') cerrarCmsModal();
 });
 
-// ═══════════════════════════════════════════════════════════════
-// BANNERS HERO — helpers compartidos (resena / labor / novedades)
-// ═══════════════════════════════════════════════════════════════
 function inicializarBannerImg(seccion, valor) {
   var hidden  = document.getElementById('cms-' + seccion + '-img-data');
   var preview = document.getElementById('cms-' + seccion + '-img-preview');

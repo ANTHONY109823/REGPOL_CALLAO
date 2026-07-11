@@ -1,4 +1,4 @@
-/* panel-admin.css — Autocontenido para GitHub Pages */
+
 :root {
   --verde-pnp:   #004d3d;
   --verde-dark:  #002d24;
@@ -24,7 +24,7 @@ body.panel-admin-page {
   line-height: 1.6;
 }
 
-/* Visibilidad login / panel */
+
 body.panel-admin-page:not(.autenticado) #login-admin { display: flex !important; }
 body.panel-admin-page:not(.autenticado) #admin-contenido { display: none !important; }
 body.panel-admin-page.autenticado #login-admin { display: none !important; }
@@ -39,7 +39,7 @@ body.panel-admin-page.autenticado #admin-contenido { display: flex !important; }
   padding: 20px;
 }
 
-/* ── LAYOUT SIDEBAR + MAIN ── */
+
 .admin-layout {
   min-height: 100vh;
   width: 100%;
@@ -166,7 +166,7 @@ body.panel-admin-page.autenticado #admin-contenido { display: flex !important; }
 .vista-header h2 i { color: var(--naranja-pnp); }
 .vista-header p { color: var(--texto-muted); font-size: 13.5px; }
 
-/* KPI Dashboard */
+
 .kpi-grid-admin {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -304,7 +304,7 @@ body.panel-admin-page.autenticado #admin-contenido { display: flex !important; }
 .cms-import-label { cursor: pointer; margin: 0; }
 .cms-vacio { color: #888; font-size: 13px; padding: 12px 0; }
 
-/* --- Editor visual Reseña / Labor --- */
+
 .cms-editor-wrap { padding-top: 8px; }
 
 .cms-editor-card {
@@ -482,7 +482,7 @@ body.panel-admin-page.autenticado #admin-contenido { display: flex !important; }
   z-index: 5;
 }
 
-/* --- Modal CMS --- */
+
 .cms-modal {
   position: fixed;
   inset: 0;
@@ -817,7 +817,7 @@ body.panel-admin-page.autenticado #admin-contenido { display: flex !important; }
   .dash-acciones-grid { grid-template-columns: 1fr 1fr; }
 }
 
-/* ── Tabla de evaluaciones ─────────────────────────── */
+
 #tabla-datos-body tr { border-bottom: 1px solid #2a3a2a; }
 #tabla-datos-body tr:hover { background: rgba(39,174,96,.10); }
 #tabla-datos-body td { padding: 9px 12px; color: #ddd; vertical-align: middle; }

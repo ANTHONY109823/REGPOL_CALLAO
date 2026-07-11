@@ -13,7 +13,7 @@
 
 <div class="header-social-portal">
   <div class="container portal-flex">
-            <div class="social-buttons-group">
+    <div class="social-buttons-group">
       <a href="https://www.facebook.com/region.policial.callao.2025" target="_blank" class="btn-pnp-social fb"><i class="fab fa-facebook"></i> Facebook</a>
       <a href="https://www.tiktok.com/@regionpolicialcallao" target="_blank" class="btn-pnp-social tk"><i class="fab fa-tiktok"></i> TikTok</a>
       <a href="https://wa.me/51980122452" target="_blank" class="btn-pnp-social wa"><i class="fab fa-whatsapp"></i> WhatsApp</a>
@@ -35,7 +35,6 @@
 
 <nav class="nav-main"><div class="container"><ul></ul></div></nav>
 
-<!-- CONTENIDO PRINCIPAL -->
 <main class="contenedor">
 
   <div class="alerta alerta-error" id="alerta-global" role="alert">
@@ -43,7 +42,7 @@
     <span id="texto-alerta-global">Complete todos los campos obligatorios.</span>
   </div>
 
-  <!-- PASO 1: DATOS DEL EFECTIVO -->
+  
   <div class="card-eval" id="card-registro">
     <div id="zona-barra-registro" class="zona-barra-registro">
       <div id="banner-progreso" class="banner-progreso" style="display:none;">
@@ -228,7 +227,7 @@
     </div>
   </div>
 
-  <!-- PASO 2: CUESTIONARIO (oculto hasta completar registro) -->
+  
   <div class="card-eval seccion-bloqueada" id="card-cuestionario">
     <div class="card-header-eval">
       <i class="fas fa-tasks"></i>
@@ -257,7 +256,6 @@
 
 </main>
 
-<!-- OVERLAY ENVIO -->
 <div id="overlay-envio" role="status">
   <div class="spinner" id="spinner-overlay"></div>
   <i class="fas fa-check-circle check-ok" id="check-ok-icon"></i>
@@ -265,7 +263,6 @@
   <small id="subtexto-overlay">Por favor no cierre ni recargue esta página.</small>
 </div>
 
-<!-- AVISO UNIDADES ACTIVAS — antes del registro -->
 <div id="modal-aviso-unidades" class="modal-aviso-unidades" role="dialog" aria-modal="true" aria-labelledby="aviso-unidades-titulo" hidden>
   <div class="modal-aviso-unidades-panel">
     <div class="modal-aviso-unidades-header">
@@ -284,7 +281,6 @@
   </div>
 </div>
 
-<!-- MODAL CONFIRMAR ENVÍO — reemplaza el confirm() nativo -->
 <div id="modal-confirmar-envio" class="modal-aviso-unidades modal-confirmar-envio" role="dialog" aria-modal="true" aria-labelledby="confirmar-envio-titulo" hidden>
   <div class="modal-aviso-unidades-panel">
     <div class="modal-aviso-unidades-header">
@@ -292,7 +288,7 @@
       <h2 id="confirmar-envio-titulo">Confirmar envío del cuestionario</h2>
     </div>
 
-    <!-- VISTA LECTURA -->
+    
     <div id="confirmar-envio-vista">
       <p class="modal-aviso-unidades-lead">Revise sus datos antes de enviar. Una vez enviado, su cuestionario se remite a la Oficina de Psicología.</p>
       <ul class="confirmar-envio-datos">
@@ -310,7 +306,7 @@
       </div>
     </div>
 
-    <!-- VISTA EDICIÓN — solo apellidos, nombres, DNI y dependencia -->
+    
     <div id="confirmar-envio-edicion" hidden>
       <p class="modal-aviso-unidades-lead">Corrija sus datos si se equivocó. El resto de su registro no cambia.</p>
       <div class="confirmar-envio-form">
@@ -344,7 +340,6 @@
   </div>
 </div>
 
-<!-- MODAL PRUEBA YA ENVIADA — CIP/nombres con evaluación completada -->
 <div id="modal-ya-completada" class="modal-aviso-unidades modal-completada-ok" role="dialog" aria-modal="true" aria-labelledby="ya-completada-titulo" hidden>
   <div class="modal-aviso-unidades-panel">
     <div class="modal-aviso-unidades-header">
@@ -362,7 +357,6 @@
   </div>
 </div>
 
-<!-- MODAL CÁMARA — captura de fotografía en registro -->
 <div id="modal-camara-foto" class="modal-cam-foto" role="dialog" aria-modal="true" aria-labelledby="modal-cam-titulo" hidden>
   <div class="modal-cam-foto-inner">
     <div class="modal-cam-foto-header">
@@ -380,7 +374,6 @@
   </div>
 </div>
 
-<!-- FOOTER -->
 <footer class="footer-simple">
   <p>&copy; 2026 -- REGPOL Callao &nbsp;|&nbsp; <strong>UNITIC CALLAO</strong> &nbsp;|&nbsp; <a href="index.html">Volver al Portal</a></p>
 </footer>

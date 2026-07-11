@@ -1,4 +1,4 @@
-/* Áreas de labor — lista única para evaluación MMPI-2 e inscripciones (convenios/cursos) */
+
 (function (global) {
   var AREAS = [
     'JEFE DE UNIDAD', 'OFICIAL DE PERMANENCIA', 'FAMILIA', 'DELITOS', 'TRANSITO', 'OPC',

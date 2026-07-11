@@ -19,23 +19,23 @@
     .logout-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);
       color:#fff;padding:5px 13px;border-radius:5px;cursor:pointer;font-size:12px;}
     .user-info{font-size:12px;opacity:.8;margin-right:10px;}
-    /* Tabs */
+    
     .tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:0;}
     .tab-btn{padding:9px 18px;border:none;background:#e8f0e8;border-radius:6px 6px 0 0;
       cursor:pointer;font-size:13px;font-weight:600;color:#555;transition:all .2s;}
     .tab-btn:hover{background:#d0e8d0;}
     .tab-btn.on{background:#004d3d;color:#fff;}
     .tab{display:none;} .tab.on{display:block;}
-    /* Cards */
+    
     .card{background:#fff;border-radius:0 10px 10px 10px;box-shadow:0 2px 12px rgba(0,77,61,.08);
       padding:22px;margin-bottom:18px;}
     .card h3{color:#004d3d;margin:0 0 14px;font-size:14px;border-bottom:2px solid #c8a94a;padding-bottom:7px;}
-    /* Stats */
+    
     .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;}
     .stat{background:#f0f7f0;border-radius:8px;padding:14px;text-align:center;border:1.5px solid #c8e6c9;}
     .stat .n{font-size:26px;font-weight:800;color:#004d3d;}
     .stat .l{font-size:11px;color:#555;margin-top:3px;}
-    /* Tabla */
+    
     .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
     .filtros input,.filtros select{padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;}
     table.t{width:100%;border-collapse:collapse;font-size:12px;}
@@ -47,17 +47,17 @@
     .pag-btn{padding:4px 10px;margin:2px;border:1.5px solid #004d3d;background:#fff;
       color:#004d3d;border-radius:4px;cursor:pointer;font-size:11px;}
     .pag-btn.on{background:#004d3d;color:#fff;}
-    /* Botones */
+    
     .btn{padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12.5px;
       font-weight:600;display:inline-flex;align-items:center;gap:5px;}
     .btn-v{background:#004d3d;color:#fff;} .btn-v:hover{background:#006b55;}
     .btn-r{background:#c0392b;color:#fff;} .btn-r:hover{background:#a93226;}
     .btn-a{background:#2980b9;color:#fff;} .btn-a:hover{background:#2471a3;}
-    /* CMS embebido */
+    
     .cms-tab-btn{padding:7px 14px;border:none;background:#e8f0e8;border-radius:5px 5px 0 0;
       cursor:pointer;font-size:12px;font-weight:600;color:#555;margin-right:3px;}
     .cms-tab-btn.activo{background:#004d3d;color:#fff;}
-    /* Sin acceso */
+    
     .sin-acceso{text-align:center;padding:60px 20px;color:#bbb;}
     @media (max-width: 768px) {
       .hdr { padding: 10px 14px; flex-wrap: wrap; gap: 8px; }
@@ -82,7 +82,7 @@
     .dtab:hover{background:#c8e6c9;} .dtab.on{background:#004d3d;color:#fff;}
     .btn-r{background:#c0392b;color:#fff;} .btn-r:hover{background:#a93226;}
     .btn-a{background:#2980b9;color:#fff;} .btn-a:hover{background:#2471a3;}
-    /* Bienvenida */
+    
     .bienvenida{background:linear-gradient(135deg,#004d3d,#006b55);color:#fff;border-radius:10px;
       padding:24px;margin-bottom:18px;display:flex;align-items:center;gap:20px;}
     .bienvenida i{font-size:40px;opacity:.7;}
@@ -134,7 +134,6 @@ var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGP
 var SESSION = null;
 var TOKEN   = '';
 
-// ── Secciones disponibles ──────────────────────────────────────────────────────
 var SECCIONES = [
   { id:'evaluaciones',   icono:'fa-clipboard-list', label:'Evaluaciones',       tipo:'evaluaciones' },
   { id:'descargas',      icono:'fa-download',        label:'Descargas',          tipo:'descargas'    },
@@ -146,7 +145,6 @@ var SECCIONES = [
   { id:'cms_labor',      icono:'fa-tasks',           label:'Nuestra Labor',      tipo:'cms', cmsTab:'labor'      },
 ];
 
-// ── Verificar sesión ───────────────────────────────────────────────────────────
 function normalizarPermisos(p) {
   if (Array.isArray(p)) return p;
   if (typeof p === 'string') {
@@ -236,12 +234,11 @@ function seccionesParaUsuario(permisos) {
   return list;
 }
 
-// ── Construir panel dinámico ───────────────────────────────────────────────────
 function construirPanel(permisos) {
   var body     = document.getElementById('panel-body');
   var activas  = seccionesParaUsuario(permisos);
 
-  // Bienvenida
+  
   var chips = activas.map(function(s){
     return '<span class="perm-chip"><i class="fas '+s.icono+'"></i> '+s.label+'</span>';
   }).join('');
@@ -254,7 +251,7 @@ function construirPanel(permisos) {
     +'<div class="perm-chips">'+chips+'</div>'
     +'</div></div>';
 
-  // Tabs
+  
   html += '<div class="tabs">';
   activas.forEach(function(s, i){
     html += '<button class="tab-btn'+(i===0?' on':'')+'" onclick="cambiarTab(\''+s.id+'\',this)">'
@@ -262,7 +259,7 @@ function construirPanel(permisos) {
   });
   html += '</div>';
 
-  // Contenido de cada tab
+  
   activas.forEach(function(s, i){
     html += '<div id="tab-'+s.id+'" class="tab'+(i===0?' on':'')+'">';
     if (s.tipo === 'dashboard') {
@@ -279,7 +276,7 @@ function construirPanel(permisos) {
 
   body.innerHTML = html;
 
-  // Inicializar primera sección
+  
   if (activas.length) {
     var primera = activas[0];
     if (primera.tipo === 'dashboard') cargarDashboardUsuario();
@@ -306,7 +303,6 @@ function cambiarTab(id, btn) {
   else if (sec.tipo === 'cms') { if (!window._cmsIniciado){ window._cmsIniciado=true; initCMS(); } cambiarTabCMS(sec.cmsTab); }
 }
 
-// ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function renderTabDashboard() {
   return '<div class="card">'
     +'<h3><i class="fas fa-chart-pie"></i> Dashboard — métricas de evaluaciones</h3>'
@@ -376,7 +372,6 @@ function cargarDashboardUsuario() {
   });
 }
 
-// ── EVALUACIONES ───────────────────────────────────────────────────────────────
 function renderTabEvaluaciones() {
   return '<div class="card">'
     +'<h3><i class="fas fa-building"></i> Activar dependencias para evaluaciones</h3>'
@@ -551,7 +546,6 @@ function cargarEval(pag) {
     });
 }
 
-// ── DESCARGAS ─────────────────────────────────────────────────────────────────
 var DIV_DATA_U = [];
 
 function renderTabDescargas() {
@@ -562,13 +556,13 @@ function renderTabDescargas() {
     +'<button class="dtab" onclick="descTabU(\'persona\',this)"><i class="fas fa-user-search"></i> Buscar Persona</button>'
     +'</div>'
 
-    // Tab divisiones
+    
     +'<div id="u-dtab-division">'
     +'<p style="font-size:12px;color:#666;margin-bottom:10px;">Seleccione una división para descargar el PDF de todas sus unidades.</p>'
     +'<div id="u-div-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;"></div>'
     +'</div>'
 
-    // Tab por unidad
+    
     +'<div id="u-dtab-unidad" style="display:none;"><div class="descarga-grid">'
     +'<div class="descarga-box" style="max-width:640px;"><strong>Reporte por unidad</strong>'
     +'<p>Vista previa del listado. Unidades agrupadas en DIVOPUS 1, 2, 3, DIVUES y UNIDADES ADM. RPC.</p>'
@@ -580,7 +574,7 @@ function renderTabDescargas() {
     +'<button class="btn btn-r" onclick="desc(\'unidad\',\'u-d-uni\')" style="width:100%;justify-content:center;">Descargar PDF</button></div>'
     +'</div></div>'
 
-    // Tab persona
+    
     +'<div id="u-dtab-persona" style="display:none;">'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">'
     +'<input id="u-bus-cip" type="text" placeholder="CIP..." style="padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;width:140px;"/>'
@@ -749,7 +743,6 @@ function linkPdfEval(r) {
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escJs(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 
-// ── CMS ───────────────────────────────────────────────────────────────────────
 function renderTabCMS(cmsTab, label) {
   return '<div class="card">'
     +'<h3><i class="fas fa-edit"></i> Editor — '+label+'</h3>'
@@ -763,7 +756,6 @@ function renderTabCMS(cmsTab, label) {
     +'</div>';
 }
 
-// ── Utils ──────────────────────────────────────────────────────────────────────
 function val(id){ var el=document.getElementById(id); return el?el.value:''; }
 function set(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
 function llenarSel(id, items, ph) {

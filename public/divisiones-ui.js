@@ -1,4 +1,4 @@
-/* divisiones-ui.js — UI compartida: divisiones REGPOL Callao */
+
 
 (function injectDivisionesUiStyles() {
   if (document.getElementById('divisiones-ui-styles')) return;

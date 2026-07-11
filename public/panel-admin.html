@@ -11,7 +11,7 @@
     *{box-sizing:border-box;margin:0;padding:0;}
     body{background:#f0f4f0;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;min-height:100vh;}
 
-    /* ── TOP HEADER ── */
+    
     .top-bar{background:linear-gradient(135deg,#002d24,#004d3d);color:#fff;
       padding:0 20px;height:54px;display:flex;align-items:center;justify-content:space-between;
       box-shadow:0 2px 8px rgba(0,0,0,.3);position:sticky;top:0;z-index:100;flex-shrink:0;}
@@ -25,10 +25,10 @@
       color:#fff;padding:5px 13px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;}
     .btn-logout:hover{background:rgba(255,255,255,.25);}
 
-    /* ── LAYOUT ── */
+    
     .layout{display:flex;flex:1;overflow:hidden;}
 
-    /* ── SIDEBAR ── */
+    
     .sidebar{width:220px;background:#fff;border-right:1px solid #e0e8e0;
       display:flex;flex-direction:column;flex-shrink:0;
       box-shadow:2px 0 8px rgba(0,77,61,.06);overflow-y:auto;}
@@ -45,7 +45,7 @@
     .sb-item i{width:18px;text-align:center;color:#888;font-size:13px;}
     .sb-item.on i{color:#004d3d;}
 
-    /* grupo colapsable */
+    
     .sb-group{}
     .sb-group-header{display:flex;align-items:center;justify-content:space-between;
       padding:9px 16px;cursor:pointer;font-size:12px;font-weight:800;color:#004d3d;
@@ -58,18 +58,18 @@
     .sb-group-body .sb-item{padding-left:28px;font-weight:500;border-left:none;}
     .sb-group-body.hidden{display:none;}
 
-    /* ── CONTENT ── */
+    
     .content{flex:1;overflow-y:auto;padding:20px;}
     .page{display:none;} .page.on{display:block;}
 
-    /* ── CARDS ── */
+    
     .card{background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,77,61,.07);
       padding:22px;margin-bottom:18px;}
     .card h3{color:#004d3d;margin:0 0 16px;font-size:14px;
       border-bottom:2px solid #c8a94a;padding-bottom:8px;
       display:flex;align-items:center;gap:8px;}
 
-    /* ── STATS ── */
+    
     .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;}
     .stat{background:#f0f7f0;border-radius:8px;padding:14px;text-align:center;border:1.5px solid #c8e6c9;}
     .stat .n{font-size:26px;font-weight:800;color:#004d3d;}
@@ -96,7 +96,7 @@
     .ult-nom{font-weight:600;font-size:12.5px;}
     .ult-meta{font-size:11px;color:#888;}
 
-    /* ── TABLA DATOS ── */
+    
     .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
     .filtros input,.filtros select{padding:7px 10px;border:1.5px solid #ccc;
       border-radius:6px;font-size:12.5px;min-width:140px;}
@@ -116,7 +116,7 @@
       color:#004d3d;border-radius:4px;cursor:pointer;font-size:11px;}
     .pag-btn.on{background:#004d3d;color:#fff;}
 
-    /* ── DASHBOARD INFORME POR UNIDAD ── */
+    
     .gd-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px;}
     .gd-kpi{background:#f4f8f5;border:1.5px solid #cfdad2;border-left:4px solid #004d3d;border-radius:8px;padding:10px 12px;}
     .gd-kpi .n{font-size:24px;font-weight:800;line-height:1.1;}
@@ -141,7 +141,7 @@
     .gd-alertas{font-size:10px;color:#7a1a1a;margin-top:2px;}
     @media(max-width:640px){.gd-esc-label{width:92px;font-size:10px;}}
 
-    /* ── BOTONES ── */
+    
     .btn{padding:8px 14px;border:none;border-radius:6px;cursor:pointer;font-size:12.5px;
       font-weight:600;display:inline-flex;align-items:center;gap:5px;}
     .btn-v{background:#004d3d;color:#fff;} .btn-v:hover{background:#006b55;}
@@ -151,7 +151,7 @@
     .btn-p{background:#8e44ad;color:#fff;} .btn-p:hover{background:#7d3a99;}
     .btn-editar-datos{background:#004d3d;color:#fff;} .btn-editar-datos:hover{background:#006b55;}
 
-    /* ── MODAL EDITAR DATOS (estilo confirmar envío) ── */
+    
     .modal-editar-datos{
       position:fixed;inset:0;z-index:12000;display:none;align-items:center;justify-content:center;
       padding:20px;background:rgba(0,45,36,.72);backdrop-filter:blur(3px);}
@@ -185,7 +185,7 @@
     .btn-eval-modal:disabled{opacity:.45;cursor:not-allowed;}
     @media (max-width:480px){.modal-editar-datos-acciones{flex-direction:column-reverse;}}
 
-    /* ── MODAL ── */
+    
     .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
       z-index:1000;align-items:center;justify-content:center;}
     .modal.open{display:flex;}
@@ -208,7 +208,7 @@
       font-weight:400;color:#333;cursor:pointer;margin-bottom:5px;}
     .perm-box label:last-child{margin-bottom:0;}
 
-    /* ── DESCARGAS GRID ── */
+    
     .descarga-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
     .descarga-box{border:1.5px solid #c8e6c9;border-radius:8px;padding:14px;}
     .descarga-box strong{color:#004d3d;font-size:13px;}
@@ -216,7 +216,7 @@
     .descarga-box select{width:100%;padding:7px;margin-bottom:8px;border-radius:5px;
       border:1.5px solid #ccc;font-size:12.5px;}
 
-    /* ── CMS ── */
+    
     .cms-panel{display:none;}
     .cms-panel.activo{display:block;}
     .alerta{padding:9px 14px;border-radius:7px;font-size:13px;margin-bottom:12px;
@@ -271,17 +271,17 @@
       border-radius:6px;font-size:13px;font-family:inherit;}
     .cms-input:focus,.cms-select:focus,.cms-textarea:focus{border-color:#004d3d;outline:none;}
 
-    /* ── INFO TINFO ── */
+    
     .tinfo{font-size:11.5px;color:#666;margin-bottom:8px;}
 
-    /* ── DOWNLOAD TABS ── */
+    
     .dtab{padding:7px 14px;border:none;background:#e8f0e8;border-radius:6px;
       cursor:pointer;font-size:12px;font-weight:600;color:#555;transition:all .15s;
       display:inline-flex;align-items:center;gap:5px;}
     .dtab:hover{background:#c8e6c9;}
     .dtab.on{background:#004d3d;color:#fff;}
 
-    /* ── DIVISIONES CARD ── */
+    
     .div-card{border:1.5px solid #c8e6c9;border-radius:9px;overflow:hidden;margin-bottom:12px;}
     .div-card-head{background:#004d3d;color:#fff;padding:10px 14px;
       display:flex;align-items:center;justify-content:space-between;}
@@ -293,7 +293,7 @@
     .uni-row:nth-child(odd){background:#f0f7f0;}
     .uni-num{width:24px;font-weight:700;color:#888;font-size:11px;flex-shrink:0;}
 
-    /* ── RRHH acordeón ── */
+    
     .rrhh-acc-div{border:1.5px solid #c8e6c9;border-radius:9px;margin-bottom:10px;overflow:hidden;}
     .rrhh-acc-div-h,.rrhh-acc-uni-h{background:#004d3d;color:#fff;padding:10px 14px;cursor:pointer;
       display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;user-select:none;}
@@ -305,7 +305,7 @@
     .rrhh-acc-uni{border:1px solid #dde8e5;border-radius:7px;margin:6px 0;overflow:hidden;}
     .rrhh-acc-n{margin-left:auto;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px;font-size:11px;}
     #rrhh-stats.stats-grid{margin-bottom:12px;}
-    /* RRHH: acciones en horizontal */
+    
     #rrhh-wrap-lista table.t td .btn-acciones-celda,
     #rrhh-acordeon table.t td .btn-acciones-celda{
       flex-direction:row;flex-wrap:nowrap;gap:4px;align-items:center;max-width:none;min-width:168px;
@@ -330,14 +330,14 @@
     .uni-tipo{font-size:10.5px;background:#e8f5e9;color:#1a7a3a;border-radius:10px;
       padding:1px 7px;margin:0 6px;font-weight:600;}
 
-    /* ── DESCARGA BOXES ── */
+    
     .descarga-box{border:1.5px solid #c8e6c9;border-radius:8px;padding:14px;}
     .descarga-box strong{color:#004d3d;font-size:13px;display:block;margin-bottom:4px;}
     .descarga-box p{font-size:11.5px;color:#666;margin:0 0 8px;}
     .descarga-box select{width:100%;padding:7px;margin-bottom:8px;border-radius:5px;
       border:1.5px solid #ccc;font-size:12.5px;}
 
-    /* ── RESPONSIVE ── */
+    
     @media(max-width:900px){
       .layout{flex-direction:column;}
       .sidebar{
@@ -365,7 +365,7 @@
       .btn{padding:7px 10px;font-size:11px;}
     }
 
-    /* Evitar flash del menú Super Admin antes de aplicar permisos */
+    
     html.panel-iniciando .top-bar,
     html.panel-iniciando .layout { visibility: hidden; }
     html.panel-listo .top-bar,
@@ -435,7 +435,6 @@
 </head>
 <body>
 
-<!-- TOP BAR -->
 <div class="top-bar">
   <div class="top-bar-left">
     <i class="fas fa-shield-alt" style="font-size:20px;color:#c8a94a;"></i>
@@ -448,10 +447,9 @@
   </div>
 </div>
 
-<!-- LAYOUT -->
 <div class="layout">
 
-  <!-- SIDEBAR -->
+  
   <nav class="sidebar">
 
     <div class="sb-section" id="sb-sec-general">
@@ -461,7 +459,7 @@
       </div>
     </div>
 
-    <!-- GESTIÓN OPERATIVA (Psicología, Convenios, Educación) -->
+    
     <div class="sb-section" id="sb-sec-gestion">
       <div class="sb-section-label">Gestión</div>
 
@@ -535,7 +533,7 @@
       </div>
     </div>
 
-    <!-- ADMINISTRACIÓN (solo Super Admin) -->
+    
     <div class="sb-section" data-rol-unitic>
       <div class="sb-section-label">Administración</div>
       <div class="sb-item" data-page="usuarios" onclick="ir('usuarios',this)">
@@ -546,7 +544,7 @@
       </div>
     </div>
 
-    <!-- RECURSOS HUMANOS (Super Admin + permiso recursos_humanos) -->
+    
     <div class="sb-section" id="sb-sec-rrhh">
       <div class="sb-section-label">Recursos Humanos</div>
       <div class="sb-item" data-page="rrhh-nomina" onclick="ir('rrhh-nomina',this)">
@@ -557,7 +555,7 @@
       </div>
     </div>
 
-    <!-- PORTAL WEB (solo Super Admin — contenido visible en la página pública) -->
+    
     <div class="sb-section" id="sb-sec-portal" data-rol-unitic>
       <div class="sb-section-label">Portal Web</div>
       <div class="sb-item" data-page="menu-publicacion" onclick="ir('menu-publicacion',this)" style="background:rgba(200,169,74,.12);border-left:3px solid #c8a94a;">
@@ -576,10 +574,10 @@
 
   </nav>
 
-  <!-- CONTENT -->
+  
   <main class="content">
 
-    <!-- DASHBOARD -->
+    
     <div id="page-dashboard" class="page on">
       <div id="dash-panel-unitic" class="card" style="display:none;">
         <h3><i class="fas fa-tachometer-alt"></i> Dashboard — Super Admin <span style="font-size:12px;font-weight:500;color:#666;">Resumen general del sistema</span></h3>
@@ -664,7 +662,7 @@
       </div>
     </div>
 
-    <!-- EVALUACIONES -->
+    
     <div id="page-evaluaciones" class="page">
       <div class="card">
         <h3><i class="fas fa-clipboard-list"></i> EVALUACIONES — TODAS LAS DEPENDENCIAS</h3>
@@ -679,7 +677,7 @@
       </div>
     </div>
 
-    <!-- PREGUNTAS -->
+    
     <div id="page-preguntas" class="page">
       <div class="card">
         <h3><i class="fas fa-list-ol"></i> Gestión de preguntas del cuestionario</h3>
@@ -697,7 +695,7 @@
       </div>
     </div>
 
-    <!-- USUARIOS -->
+    
     <div id="page-usuarios" class="page">
       <div class="card">
         <h3><i class="fas fa-users-cog"></i> Usuarios y permisos</h3>
@@ -713,7 +711,7 @@
       </div>
     </div>
 
-    <!-- RESPUESTAS — consulta, PDF y eliminación unificados -->
+    
     <div id="page-descargas" class="page">
       <div class="card">
         <h3><i class="fas fa-list-alt"></i> RESPUESTAS</h3>
@@ -741,7 +739,7 @@
       </div>
     </div>
 
-    <!-- DIVISIONES / UNIDADES -->
+    
     <div id="page-divisiones" class="page">
       <div class="card">
         <h3><i class="fas fa-sitemap"></i> Gestión de divisiones y unidades</h3>
@@ -752,7 +750,7 @@
       </div>
     </div>
 
-    <!-- RRHH — NÓMINA -->
+    
     <div id="page-rrhh-nomina" class="page">
       <div class="card">
         <h3><i class="fas fa-id-badge"></i> Recursos Humanos — Nómina</h3>
@@ -797,7 +795,7 @@
       </div>
     </div>
 
-    <!-- RRHH — REPORTES -->
+    
     <div id="page-rrhh-reportes" class="page">
       <div class="card">
         <h3><i class="fas fa-chart-bar"></i> Reportes y cuadros — Personal</h3>
@@ -812,7 +810,7 @@
       </div>
     </div>
 
-    <!-- PUBLICACIÓN DEL MENÚ (Super Admin) -->
+    
     <div id="page-menu-publicacion" class="page">
       <div class="card">
         <h3 style="margin:0 0 8px;color:#004d3d;font-size:17px;border:none;padding:0;">
@@ -824,22 +822,22 @@
       </div>
     </div>
 
-    <!-- CMS PORTAL -->
+    
     <div id="page-cms" class="page">
       <div class="card">
         <h3><i class="fas fa-globe"></i> Portal Web — contenido público</h3>
         <p style="font-size:12px;color:#666;margin:-8px 0 14px;">Solo Super Admin. Aquí se editan textos, imágenes y tarjetas visibles en la página institucional.</p>
 
-        <!-- Alerta global CMS -->
+        
         <div id="alerta-cms" class="alerta" style="display:none;"></div>
 
-        <!-- Botón publicar -->
+        
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
           <button class="btn btn-v" onclick="guardarSitioWeb()"><i class="fas fa-upload"></i> Publicar cambios</button>
           <input type="hidden" id="cms-actualizacion"/>
         </div>
 
-        <!-- PANEL: Novedades -->
+        
         <div id="cms-panel-novedades" class="cms-panel">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
             <strong style="color:#004d3d;">Novedades institucionales</strong>
@@ -849,17 +847,17 @@
           <button class="btn btn-v" onclick="guardarSitioWeb()" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar Novedades</button>
         </div>
 
-        <!-- PANEL: Convenios -->
+        
         <div id="cms-panel-convenios" class="cms-panel">
           <div id="cms-lista-convenios"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
         </div>
 
-        <!-- PANEL: Cursos -->
+        
         <div id="cms-panel-cursos" class="cms-panel">
           <div id="cms-lista-cursos"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
         </div>
 
-        <!-- PANEL: Descansos médicos (web) -->
+        
         <div id="cms-panel-descansos" class="cms-panel">
           <p style="font-size:12px;color:#666;margin:0 0 14px;">Edita la sección <strong>Descansos médicos</strong> de la página principal (títulos y tarjetas Registrar / Consultar).</p>
           <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;cursor:pointer;">
@@ -898,7 +896,7 @@
           <button class="btn btn-v" onclick="guardarSitioWeb()"><i class="fas fa-save"></i> Guardar Descansos (web)</button>
         </div>
 
-        <!-- PANEL: Bienestar Policial -->
+        
         <div id="cms-panel-bienestar" class="cms-panel">
           <p style="font-size:12px;color:#666;margin:0 0 14px;">Edita la tarjeta de <strong>Bienestar Policial</strong> visible en la página principal (sección MMPI-2).</p>
           <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;cursor:pointer;">
@@ -939,7 +937,7 @@
           <button class="btn btn-v" onclick="guardarSitioWeb()"><i class="fas fa-save"></i> Guardar Bienestar</button>
         </div>
 
-        <!-- PANEL: Reseña Histórica -->
+        
         <div id="cms-panel-resena" class="cms-panel">
           <div style="background:#f0f7f4;border:1.5px dashed #004d3d;border-radius:8px;padding:12px;margin-bottom:14px;">
             <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Fotografía de la introducción (diapositiva 1 del carrusel)</strong>
@@ -972,7 +970,7 @@
           <button class="btn btn-v" onclick="guardarSitioWeb()" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar Reseña</button>
         </div>
 
-        <!-- PANEL: Nuestra Labor -->
+        
         <div id="cms-panel-labor" class="cms-panel">
           <div style="background:#f0f7f4;border:1.5px dashed #004d3d;border-radius:8px;padding:12px;margin-bottom:14px;">
             <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Imagen del banner superior</strong>
@@ -1002,21 +1000,21 @@
           <button class="btn btn-v" onclick="guardarSitioWeb()" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar Labor</button>
         </div>
 
-        <!-- PANEL: Inicio / Carrusel -->
+        
         <div id="cms-panel-carrusel" class="cms-panel">
           <div id="editor-fotos-encabezado"><p style="color:#bbb;font-size:12px;">Cargando fotos del encabezado...</p></div>
           <div id="editor-carrusel"><p style="color:#bbb;font-size:12px;">Cargando editor de carrusel...</p></div>
         </div>
 
-        <!-- PANEL: Menú -->
+        
         <div id="cms-panel-menu" class="cms-panel">
           <div id="editor-menu"><p style="color:#bbb;font-size:12px;">Cargando editor de menú...</p></div>
         </div>
 
-      </div><!-- /card -->
+      </div>
     </div>
 
-    <!-- GESTIÓN ITEMS (cursos / convenios) -->
+    
     <div id="page-items" class="page">
       <div class="card">
         <h3 id="items-titulo"><i class="fas fa-clipboard-list"></i> Convocatorias</h3>
@@ -1040,7 +1038,7 @@
       </div>
     </div>
 
-    <!-- CONSULTA POR CIP (convenios / cursos) -->
+    
     <div id="page-consulta-cip" class="page">
       <div class="card">
         <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-search"></i> Consulta por CIP</h3>
@@ -1062,7 +1060,7 @@
       </div>
     </div>
 
-    <!-- INSCRITOS DE UN ITEM -->
+    
     <div id="page-inscritos" class="page">
       <div class="card">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
@@ -1093,7 +1091,7 @@
       </div>
     </div>
 
-    <!-- RESULTADOS PDF (Relación de seleccionados) -->
+    
     <div id="page-resultados-pdf" class="page">
       <div class="card">
         <h3 id="rpdf-titulo"><i class="fas fa-file-pdf" style="color:#e74c3c;"></i> Relación de seleccionados</h3>
@@ -1109,7 +1107,7 @@
       </div>
     </div>
 
-    <!-- SORTEOS / RESULTADOS -->
+    
     <div id="page-sorteos" class="page">
       <div class="card">
         <h3 id="sorteos-titulo"><i class="fas fa-trophy" style="color:#c8a94a;"></i> Sorteos y publicación de resultados</h3>
@@ -1144,7 +1142,7 @@
       </div>
     </div>
 
-    <!-- DESCANSOS MÉDICOS: listado -->
+    
     <div id="page-descansos" class="page">
       <div class="card">
         <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-notes-medical" style="color:#c0392b;"></i> Descansos médicos — Listado</h3>
@@ -1176,7 +1174,7 @@
       </div>
     </div>
 
-    <!-- DESCANSOS MÉDICOS: dashboard -->
+    
     <div id="page-descansos-dash" class="page">
       <div class="card">
         <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-chart-bar"></i> Dashboard — Descansos médicos</h3>
@@ -1190,7 +1188,7 @@
       </div>
     </div>
 
-    <!-- DESCANSOS MÉDICOS: import / cotejo -->
+    
     <div id="page-descansos-import" class="page">
       <div class="card">
         <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-file-excel"></i> Importar Excel históricos</h3>
@@ -1214,7 +1212,7 @@
       </div>
     </div>
 
-    <!-- MODAL CMS -->
+    
     <div id="cms-modal" class="cms-modal" role="dialog" aria-modal="true" aria-hidden="true">
       <div class="cms-modal-backdrop" onclick="cerrarCmsModal()"></div>
       <div class="cms-modal-dialog" style="max-width:560px;">
@@ -1233,7 +1231,6 @@
   </main>
 </div>
 
-<!-- Modal detalle DM -->
 <div class="modal" id="dm-modal" style="display:none;align-items:center;justify-content:center;" onclick="if(event.target===this)dmCerrarModal()">
   <div class="modal-box" style="width:min(640px,95vw);">
     <h3><i class="fas fa-notes-medical"></i> Detalle descanso médico</h3>
@@ -1244,7 +1241,6 @@
   </div>
 </div>
 
-<!-- MODAL: Item (curso / convenio) -->
 <div id="modal-item" class="modal">
   <div class="modal-box" style="width:620px;max-height:90vh;overflow-y:auto;">
     <h3><i class="fas fa-clipboard-list"></i> <span id="mi-titulo">Nueva convocatoria</span></h3>
@@ -1347,7 +1343,7 @@
       </div>
     </div>
 
-    <!-- PLANTILLA DESCARGABLE -->
+    
     <hr style="margin:16px 0;border:none;border-top:1.5px solid #e0e8e0;"/>
     <div style="background:#fffdf5;border:2px dashed #c8a94a;border-radius:9px;padding:14px;">
       <div style="font-size:13px;font-weight:800;color:#c8a94a;margin-bottom:8px;display:flex;align-items:center;gap:7px;">
@@ -1377,7 +1373,6 @@
   </div>
 </div>
 
-<!-- MODAL: Resultado PDF (relación de seleccionados) -->
 <div id="modal-resultado-pdf" class="modal">
   <div class="modal-box" style="width:640px;max-height:92vh;overflow-y:auto;">
     <h3><i class="fas fa-file-pdf" style="color:#e74c3c;"></i> <span id="mrp-titulo-modal">Publicar PDF de resultados</span></h3>
@@ -1422,7 +1417,6 @@
   </div>
 </div>
 
-<!-- MODAL: Sorteo -->
 <div id="modal-sorteo" class="modal">
   <div class="modal-box" style="width:620px;max-height:90vh;overflow-y:auto;">
     <h3><i class="fas fa-trophy"></i> <span id="ms-titulo">Nuevo sorteo</span></h3>
@@ -1453,7 +1447,7 @@
       <label for="ms-publicado" style="margin:0;font-size:13px;color:#555;cursor:pointer;">Publicado (visible en el portal)</label>
     </div>
 
-    <!-- Sección resultados (solo tipo resultado) -->
+    
     <div id="ms-resultados-section" style="display:none;">
       <hr style="margin:14px 0;border:none;border-top:1.5px solid #e0e8e0;"/>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -1478,7 +1472,6 @@
   </div>
 </div>
 
-<!-- MODAL: Inscripción (editar estado) -->
 <div id="modal-inscripcion" class="modal">
   <div class="modal-box" style="width:420px;">
     <h3><i class="fas fa-user-check"></i> Gestionar inscripción</h3>
@@ -1503,7 +1496,6 @@
   </div>
 </div>
 
-<!-- MODAL: División -->
 <div id="modal-division" class="modal">
   <div class="modal-box" style="width:420px;">
     <h3><i class="fas fa-sitemap"></i> <span id="md-titulo">Nueva división</span></h3>
@@ -1519,7 +1511,6 @@
   </div>
 </div>
 
-<!-- MODAL: Unidad -->
 <div id="modal-unidad" class="modal">
   <div class="modal-box" style="width:440px;">
     <h3><i class="fas fa-building"></i> <span id="mu2-titulo">Nueva unidad</span></h3>
@@ -1545,7 +1536,6 @@
   </div>
 </div>
 
-<!-- MODAL: Editar datos de registro (Admin / Super Admin) -->
 <div id="modal-editar-datos" class="modal-editar-datos" role="dialog" aria-modal="true" aria-labelledby="editar-datos-titulo" hidden
   onclick="if(event.target===this)cerrarModalEditarDatos()">
   <div class="modal-editar-datos-panel">
@@ -1587,7 +1577,6 @@
   </div>
 </div>
 
-<!-- MODAL: Pregunta -->
 <div id="modal-pregunta" class="modal">
   <div class="modal-box" style="width:460px;">
     <h3><i class="fas fa-question-circle"></i> <span id="mp-titulo">Nueva pregunta</span></h3>
@@ -1603,7 +1592,6 @@
   </div>
 </div>
 
-<!-- MODAL: Usuario -->
 <div id="modal-usuario" class="modal">
   <div class="modal-box">
     <h3><i class="fas fa-user-shield"></i> <span id="mu-titulo">Nuevo usuario</span></h3>
@@ -1658,7 +1646,6 @@
   </div>
 </div>
 
-<!-- MODAL RRHH: Ficha efectivo -->
 <div id="modal-rrhh-ficha" class="modal">
   <div class="modal-box" style="width:min(640px,96vw);max-height:92vh;overflow-y:auto;">
     <h3 id="rrhh-m-titulo"><i class="fas fa-id-card"></i> Efectivo</h3>
@@ -1739,7 +1726,6 @@
   </div>
 </div>
 
-<!-- MODAL RRHH: Eliminar -->
 <div id="modal-rrhh-eliminar" class="modal">
   <div class="modal-box" style="width:min(420px,94vw);">
     <h3><i class="fas fa-trash" style="color:#c0392b;"></i> Eliminar de nómina</h3>
@@ -1754,7 +1740,6 @@
   </div>
 </div>
 
-<!-- Modal informe por unidad — dashboard interactivo + descarga PDF -->
 <div class="modal" id="modal-pdf-grupo">
   <div class="modal-box" style="width:min(1100px,97vw);max-height:94vh;display:flex;flex-direction:column;padding-bottom:12px;">
     <h3 id="modal-pdf-grupo-titulo"><i class="fas fa-chart-pie"></i> Informe de unidad</h3>
@@ -1767,7 +1752,6 @@
   </div>
 </div>
 
-<!-- Modal vista previa resultado MMPI-2 -->
 <div class="modal" id="modal-resultado">
   <div class="modal-box" style="width:min(1180px,97vw);max-height:92vh;overflow:auto;">
     <h3 id="modal-resultado-titulo"><i class="fas fa-chart-bar"></i> Resultado de evaluación MMPI-2</h3>
@@ -1783,7 +1767,7 @@
 <script src="api-config.js?v=2"></script>
 <script src="fecha-local.js?v=1"></script>
 <script src="portal-data.js?v=9"></script>
-<script src="portal.js?v=68"></script>
+<script src="portal.js?v=69"></script>
 <script src="divisiones-ui.js?v=4"></script>
 <script src="panel-cms.js?v=26"></script>
 <script src="panel-descansos.js?v=4"></script>
@@ -1827,7 +1811,6 @@ function mostrarPanelListo() {
   document.documentElement.classList.add('panel-listo');
 }
 
-// ── SESIÓN ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',function(){
   var s=JSON.parse(localStorage.getItem('regpol_session')||'null');
   if(!puedeEntrarPanel(s)){window.location.href='login.html';return;}
@@ -2174,9 +2157,6 @@ function onFiltroRespuestasChange() {
   else vaciarTablaRespuestas();
 }
 
-// ── Informe por unidad: dashboard interactivo (mismo contenido que el PDF) ────
-// Flujo: Área → Grado → Sexo (cascada). Tarjetas de riesgo filtran solo el listado.
-// PDF respeta Área + Grado + Sexo + riesgo de tarjeta. "Quitar filtros" vuelve al inicio.
 var _grupoDatos = null, _grupoUnidadActual = '';
 var _grupoFiltros = { area: '', grado: '', sexo: '', riesgo: '' };
 var GRUPO_FILTRO_CADENA = ['area', 'grado', 'sexo'];
@@ -2239,7 +2219,6 @@ function aplicarCriterioGrupo(rows, tipo, valor) {
   return out;
 }
 
-// Aplica filtros de la cascada hasta `hasta` (excluido). Si hasta es null, aplica Área+Grado+Sexo.
 function filasGrupoHasta(rows, hasta) {
   var out = rows || [];
   var f = _grupoFiltros || {};
@@ -2990,7 +2969,6 @@ function iniciarPanel(s){
   ir('dashboard', dashEl);
 }
 
-// ── NAVEGACIÓN SIDEBAR ────────────────────────────────────────────────────────
 var panelPaginasCargadas = {};
 
 function ir(page, el){
@@ -3055,7 +3033,6 @@ function toggleGrupo(header){
   body.classList.toggle('hidden');
 }
 
-// ── DASHBOARD ───────────────────────────────────────────────────────────────
 function tipoDashboardLocal(){
   if (!SESION) return 'none';
   if (esUnitic()) return 'unitic';
@@ -3237,7 +3214,6 @@ function cargarStatsGestion(tipo){
     });
 }
 
-// ── EVALUACIONES ──────────────────────────────────────────────────────────────
 function cargarConfigEvaluacion() {
   fetch(API + '/listar', { headers: hdr() }).then(function(r) { return r.json(); }).then(function(d) {
     if (d && d.ok) guardarDivisionesEnVentana(d.divisiones || []);
@@ -3414,7 +3390,6 @@ function cargarTabla(pag){
     });
 }
 
-// ── PREGUNTAS ───────────────────────────────────────────────────────────────
 function cargarPreguntas(){
   fetch(API+'/admin/preguntas',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
@@ -3467,7 +3442,6 @@ function desactivarPregunta(id){
   fetch(API+'/admin/preguntas/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarPreguntas();});
 }
 
-// ── USUARIOS ──────────────────────────────────────────────────────────────────
 function cargarUsuarios(){
   fetch(API+'/admin/usuarios',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
@@ -3532,13 +3506,11 @@ function eliminarUsuario(id){
   fetch(API+'/admin/usuarios/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarUsuarios();});
 }
 
-// ── MODALES ─────────────────────────────────────────────────────────────────
 var DIVISIONES_DATA = [];
 
 function cerrarModal(id){document.getElementById(id).classList.remove('open');}
 document.addEventListener('click',function(e){if(e.target.classList.contains('modal'))e.target.classList.remove('open');});
 
-// ── GESTIÓN DIVISIONES ────────────────────────────────────────────────────────
 function cargarDivisiones(){
   fetch(API+'/admin/divisiones',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
@@ -3650,7 +3622,6 @@ function eliminarUnidad(id){
   fetch(API+'/admin/unidades/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarDivisiones();});
 }
 
-// ── SORTEOS Y RESULTADOS ──────────────────────────────────────────────────────
 var SORTEOS_CACHE = [], RESULTADOS_EDIT = [], ITEMS_SORTEO_CACHE = [], CONVENIOS_SORTEO_CACHE = [], SORTEO_CONV_ACTIVO = null;
 var SORTEOS_MODO = 'completo';
 var SORTEOS_TIPO_FILTRO = 'convenio';
@@ -3694,7 +3665,7 @@ function cargarItemsSorteo(tipo){
     .then(function(r){return r.json();})
     .then(function(d){
       ITEMS_SORTEO_CACHE = (d.ok && d.items) ? d.items : [];
-      CONVENIOS_SORTEO_CACHE = ITEMS_SORTEO_CACHE; // compatibilidad
+      CONVENIOS_SORTEO_CACHE = ITEMS_SORTEO_CACHE; 
       var sel = document.getElementById('sorteo-conv-select');
       var prev = sel ? sel.value : '';
       if (sel) {
@@ -3944,7 +3915,7 @@ function importarInscritos(){
   }).then(function(r){return r.json();}).then(function(d){
     if(!d.ok){alert('Error: '+(d.error||''));return;}
     alert('Se importaron '+d.importados+' aprobados para sorteo.');
-    // Recargar sorteo para actualizar resultados
+    
     fetch(API+'/admin/sorteos',{headers:hdr()}).then(function(r){return r.json();}).then(function(dd){
       SORTEOS_CACHE=dd.sorteos||[];
       var s=SORTEOS_CACHE.find(function(x){return x.id==sorteoId;});
@@ -4008,7 +3979,7 @@ function guardarSorteo(){
     .then(function(r){return r.json();}).then(function(d){
       if(!d.ok){alert('Error: '+(d.error||''));return;}
       var sorteoId=id||d.id;
-      // Guardar resultados si es tipo resultado
+      
       if(tipo==='resultado' && RESULTADOS_EDIT.length){
         return fetch(API+'/admin/sorteos/'+sorteoId+'/resultados',{
           method:'POST',headers:hdr(),
@@ -4034,7 +4005,6 @@ function eliminarSorteo(id){
     });
 }
 
-// ── PLANTILLA DE ITEMS ────────────────────────────────────────────────────────
 function cargarPlantillaItem(input){
   var file=input.files&&input.files[0];
   if(!file)return;
@@ -4057,7 +4027,6 @@ function quitarPlantillaItem(){
   document.getElementById('mi-plantilla-label').textContent='Seleccionar plantilla PDF';
 }
 
-// ── GESTIÓN ITEMS (CURSOS / CONVENIOS) ────────────────────────────────────────
 var INSCRITOS_CACHE = [];
 
 function cargarItems(tipo){
@@ -4168,7 +4137,7 @@ function abrirModalItem(id){
     document.getElementById('modal-item').classList.add('open');
     return;
   }
-  // Buscar en caché o hacer fetch individual
+  
   var cached=ITEMS_CACHE.find(function(i){return i.id===id;});
   if(cached && cached.requisitos !== undefined){
     poblarModalItem(cached);
@@ -4205,7 +4174,7 @@ function poblarModalItem(item){
   document.getElementById('mi-visible').checked=item.visible!==false;
   document.getElementById('mi-orden').value=item.orden||0;
   document.getElementById('mi-titulo').textContent='Editar: '+item.titulo;
-  // Plantilla
+  
   document.getElementById('mi-plantilla-data').value='';
   document.getElementById('mi-plantilla-file').value='';
   if(item.plantilla_nombre){
@@ -4252,7 +4221,7 @@ function guardarItem(){
     .then(function(r){return r.json();}).then(function(d){
       if(!d.ok){ alert('Error: '+(d.error||'')); return; }
       var itemId=id||d.id;
-      // Subir plantilla si hay nueva
+      
       var pdfData=document.getElementById('mi-plantilla-data').value;
       if(pdfData==='__QUITAR__'){
         return fetch(API+'/admin/items/'+itemId+'/plantilla',{
@@ -4279,7 +4248,6 @@ function eliminarItem(id){
     });
 }
 
-// ── RESULTADOS PDF (RELACIÓN DE SELECCIONADOS) ────────────────────────────────
 function mostrarAlertaRpdf(texto, tipo){
   var el = document.getElementById('rpdf-alerta');
   if (!el) return;
@@ -4485,7 +4453,6 @@ function eliminarResultadoPdf(id){
     });
 }
 
-// ── INSCRITOS ───────────────────────────────────────────────────────────────
 function verInscritos(itemId, titulo){
   ITEM_ACTIVO_ID=itemId;
   ir('inscritos',null);
@@ -4810,7 +4777,7 @@ function aprobarTodosParaSorteo(){
 function verAprobadosCurso(){
   var verificados = INSCRITOS_CACHE.filter(function(i){return i.estado==='verificado'||i.estado==='aprobado';});
   verificados.sort(function(a,b){
-    // Ordenar por tiempo de servicio descendente (más años primero)
+    
     var ta=parseInt((a.tiempo_servicio||'0 años').split(' ')[0])||0;
     var tb=parseInt((b.tiempo_servicio||'0 años').split(' ')[0])||0;
     return tb-ta;
@@ -4951,7 +4918,6 @@ function exportarInscritos(){
   a.click();
 }
 
-// ── UTILS ───────────────────────────────────────────────────────────────────
 function val(id){var el=document.getElementById(id);return el?el.value:'';}
 function set(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
 function llenarSel(id,items,ph){

@@ -1,4 +1,4 @@
-/* Recursos Humanos — panel admin REGPOL Callao */
+
 (function(global) {
   'use strict';
 
@@ -71,7 +71,7 @@
       if (curD) selD.value = curD;
       llenarUnidadesFiltro(curU);
       llenarSelectUnidadModal('rrhh-m-unidad');
-    } catch (e) { /* ignore */ }
+    } catch (e) {  }
   }
 
   function llenarUnidadesFiltro(keep) {

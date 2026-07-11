@@ -1,4 +1,4 @@
-/* fecha-local.js — Muestra fechas/horas en la zona horaria del navegador (PC del usuario) */
+
 (function() {
   function pad2(n) { return String(n).padStart(2, '0'); }
 

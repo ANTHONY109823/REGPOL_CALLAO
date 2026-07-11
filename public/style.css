@@ -1,4 +1,4 @@
-/* --- 1. CONFIGURACIÓN GLOBAL --- */
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
@@ -41,9 +41,6 @@ img {
 
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 
-
-/* --- BARRA SUPERIOR VERDE CON REDES --- */
-
 .header-social-portal {
     background-color: #004d3d;
     color: white;
@@ -54,7 +51,6 @@ img {
     flex-shrink: 0;
 }
 
-/* Redes a la derecha (botón INGRESAR oculto en portal público) */
 .portal-flex {
     display: flex;
     flex-direction: row;
@@ -70,12 +66,11 @@ img {
     justify-content: flex-end;
 }
 
-/* --- ESTILO DE LOS BOTONES (Basado en tu diseño de WhatsApp) --- */
 .btn-pnp-social {
-    text-decoration: none !important; /* Quita el subrayado azul */
-    color: white !important;          /* Texto siempre blanco */
-    padding: 8px 18px !important;     /* Ajuste de tamaño amigable */
-    border-radius: 50px !important;   /* Bordes redondeados */
+    text-decoration: none !important; 
+    color: white !important;          
+    padding: 8px 18px !important;     
+    border-radius: 50px !important;   
     font-size: 13px !important;
     font-weight: bold !important;
     display: flex !important;
@@ -85,10 +80,9 @@ img {
     transition: all 0.3s ease !important;
 }
 
-/* Colores de fondo por cada red social */
-.btn-pnp-social.fb { background-color: #1877F2 !important; } /* Facebook */
-.btn-pnp-social.tk { background-color: #000000 !important; } /* TikTok */
-.btn-pnp-social.wa { background-color: #25D366 !important; } /* WhatsApp */
+.btn-pnp-social.fb { background-color: #1877F2 !important; } 
+.btn-pnp-social.tk { background-color: #000000 !important; } 
+.btn-pnp-social.wa { background-color: #25D366 !important; } 
 .btn-pnp-social.ingresar {
     background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%) !important;
     border: 2px solid rgba(255,255,255,.9) !important;
@@ -99,7 +93,6 @@ img {
 }
 .btn-pnp-social.ingresar i { font-size: 14px !important; }
 
-/* Efecto al pasar el mouse (Hover) — sin mover el layout */
 .btn-pnp-social:hover {
     filter: brightness(1.08) !important;
     box-shadow: 0 4px 10px rgba(0,0,0,0.25) !important;
@@ -113,7 +106,6 @@ img {
     filter: brightness(0.95) !important;
 }
 
-/* --- RESPONSIVO PARA CELULARES --- */
 @media (max-width: 768px) {
     .portal-flex {
         flex-direction: row;
@@ -134,8 +126,6 @@ img {
         font-size: 11px !important;
     }
 }
-
-/* --- 2. HEADER --- */
 
 .logo-pnp,
 .img-escudo {
@@ -244,7 +234,6 @@ img {
     }
 }
 
-/* --- Inicio: pantalla completa (100% viewport) --- */
 .portal-home .portal-viewport-wrap {
     width: 100%;
     min-height: 100vh;
@@ -297,7 +286,6 @@ img {
     max-width: 1200px;
 }
 
-/* --- 3. NAVEGACIÓN (fija al hacer scroll en página de inicio) --- */
 .nav-main {
     background: var(--verde-pnp);
     position: sticky;
@@ -378,7 +366,6 @@ img {
     border-bottom-color: var(--naranja-pnp);
 }
 
-/* Banner compacto en páginas internas (sin carrusel) — altura exacta fija */
 .portal-page-hero {
     background: linear-gradient(135deg, var(--verde-pnp) 0%, #002d24 100%);
     height: 88px;
@@ -411,7 +398,6 @@ img {
   display: none;
 }
 
-/* --- 4. SECCIÓN SLIDER --- */
 .presentation-slider {
     position: relative;
     width: 100%;
@@ -569,7 +555,6 @@ img {
         0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-
 .slider-dots {
     position: absolute;
     bottom: 20px;
@@ -584,7 +569,6 @@ img {
 .dot:hover { background: rgba(255,255,255,0.85); }
 .dot.active { background: var(--naranja-pnp); }
 
-/* --- 5. TARJETAS Y OTROS --- */
 .content-area { padding: 50px 0; }
 .section-header {
   text-align: center;
@@ -805,7 +789,6 @@ img {
 
 footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; font-size: 13px; }
 
-/* --- CURSOS Y CONVENIOS --- */
 .body-cursos,
 .body-convenios { background: var(--gris-fondo); min-height: 100vh; }
 
@@ -1036,7 +1019,6 @@ footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; 
 #modal-pdf-portal-frame { flex: 1; min-height: 420px; border: none; background: #f5f5f5; }
 .modal-pdf-portal-foot { padding: 12px 16px; border-top: 1px solid #eee; text-align: right; }
 
-/* --- DETALLE CONVENIOS / CURSOS --- */
 .py-5 { padding: 40px 0; }
 
 .grid-detalles {
@@ -1214,7 +1196,6 @@ footer.portal-footer {
     .nav-main ul li a { padding: 0 16px; font-size: 13px; }
 }
 
-/* --- CONTENIDO PORTAL / NOVEDADES --- */
 .body-portal { background: var(--gris-fondo); min-height: 100vh; }
 
 .contenido-texto {
@@ -1281,15 +1262,9 @@ footer.portal-footer {
 .lista-novedades-home .noticia-card { border-left-color: var(--verde-pnp); }
 .texto-vacio { color: #888; text-align: center; padding: 24px; }
 
-/* ═══════════════════════════════════════════════
-   RESPONSIVE FIXES — todos los tamaños de pantalla
-   ═══════════════════════════════════════════════ */
-
-/* Tablas: nunca se salen del contenedor */
 .tabla-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 table.t { min-width: 600px; }
 
-/* Grid de tarjetas: columna única en móvil */
 @media (max-width: 480px) {
   .grid-modern {
     grid-template-columns: 1fr;
@@ -1300,7 +1275,6 @@ table.t { min-width: 600px; }
   }
 }
 
-/* Nav móvil: más visible y fácil de tocar */
 @media (max-width: 600px) {
   .nav-main ul {
     justify-content: flex-start;
@@ -1312,7 +1286,7 @@ table.t { min-width: 600px; }
     height: 46px;
     min-width: 44px;
   }
-  /* Header social más compacto */
+  
   .social-buttons-group {
     gap: 4px;
   }
@@ -1321,13 +1295,12 @@ table.t { min-width: 600px; }
     font-size: 10px !important;
     gap: 4px !important;
   }
-  /* Ocultar texto de redes en móvil muy pequeño */
+  
   .btn-pnp-social.fb span,
   .btn-pnp-social.tk span,
   .btn-pnp-social.wa span { display: none; }
 }
 
-/* Botones: tamaño mínimo de toque 44px */
 .btn-pnp-social {
   min-height: 36px;
 }
@@ -1336,7 +1309,6 @@ table.t { min-width: 600px; }
   min-height: 44px;
 }
 
-/* Cards de novedades en móvil */
 @media (max-width: 600px) {
   .noticia-card { padding: 16px; }
   .noticia-card h3 { font-size: 15px; }
@@ -1348,16 +1320,14 @@ table.t { min-width: 600px; }
   .page-intro h2 { font-size: 18px; }
 }
 
-/* Panel admin sidebar — colapsable en tablet/móvil */
 @media (max-width: 768px) {
-  /* Inscritos tabla — siempre scrollable */
+  
   #inscritos-tabla { overflow-x: auto; }
-  /* Stats grid — 2 columnas en tablet */
+  
   .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .breakdown-grid { grid-template-columns: 1fr; }
 }
 
-/* Carrusel — encajado perfecto en todas las pantallas */
 .presentation-slider {
   position: relative;
   overflow: hidden;
@@ -1377,7 +1347,6 @@ table.t { min-width: 600px; }
   display: block;
 }
 
-/* Formularios: columna única en móvil */
 @media (max-width: 560px) {
   .fi-grid {
     grid-template-columns: 1fr !important;
@@ -1387,19 +1356,16 @@ table.t { min-width: 600px; }
   .btn-desc-plantilla { width: 100%; justify-content: center; }
 }
 
-/* Sorteos flyers — columna única en móvil */
 @media (max-width: 480px) {
   .sorteos-grid { grid-template-columns: 1fr; }
 }
 
-/* Novedades con foto */
 .noticia-card-foto { padding: 0; overflow: hidden; }
 .noticia-card-foto .noticia-foto { width: 100%; height: 180px; overflow: hidden; }
 .noticia-card-foto .noticia-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .noticia-card-foto .noticia-contenido { padding: 16px 20px; }
 .noticia-card-foto h3 { margin-top: 6px; }
 
-/* Caption dentro del slider */
 .slide-caption {
   position: absolute; bottom: 0; left: 0; right: 0;
   background: linear-gradient(transparent, rgba(0,0,0,.55));
@@ -1408,7 +1374,6 @@ table.t { min-width: 600px; }
 .slide-caption strong { display: block; font-size: 16px; font-weight: 700; }
 .slide-caption span   { font-size: 13px; opacity: .85; }
 
-/* --- PÁGINAS INSTITUCIONALES (Reseña / Labor) --- */
 .institucional-page { max-width: 920px; margin: 0 auto; }
 
 .institucional-cabecera {
@@ -1493,7 +1458,6 @@ table.t { min-width: 600px; }
   margin: 0;
 }
 
-/* Carrusel de bloques — Reseña Histórica */
 .institucional-resena--carrusel {
   max-width: 960px;
 }
@@ -1761,9 +1725,7 @@ table.t { min-width: 600px; }
   .institucional-bloque { flex-direction: column; gap: 8px; padding: 18px; }
   .institucional-num { font-size: 1.1rem; }
 }
-/* ═══════════════════════════════════════════════════════════
-   BANNERS HERO DE PÁGINAS (Reseña, Labor, Novedades)
-═══════════════════════════════════════════════════════════ */
+
 .pagina-hero-banner {
   position: relative;
   width: 100%;
@@ -1861,7 +1823,6 @@ table.t { min-width: 600px; }
   text-shadow: 0 1px 4px rgba(0,0,0,0.5);
 }
 
-/* Cuando la cabecera ya no muestra el título h2 (se movió al banner) */
 .institucional-page .institucional-cabecera {
   padding: 18px 28px;
   background: #fff;
@@ -1878,9 +1839,6 @@ table.t { min-width: 600px; }
   .pagina-hero-texto p { font-size: 0.8rem; }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   GRID DE NOVEDADES 3x3
-═══════════════════════════════════════════════════════════ */
 .novedades-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -2001,7 +1959,6 @@ table.t { min-width: 600px; }
   .nov-card-img { height: 140px; }
 }
 
-/* ── TABLA UNIDADES ─────────────────────────────────── */
 .unidades-seccion { margin-bottom: 42px; }
 .unidades-seccion-titulo {
   color: #004d3d; font-size: 14px; font-weight: 800; letter-spacing: .5px;
@@ -2052,9 +2009,6 @@ table.t { min-width: 600px; }
 .btn-mapa:hover { background: #1557b0; color: #fff; }
 .sin-dato { color: #bbb; font-size: 12px; }
 
-/* ═══════════════════════════════════════════════════════════
-   PORTAL INICIO — secciones y tarjetas uniformes
-═══════════════════════════════════════════════════════════ */
 .body-portal.portal-home {
   background: #f0f4f2;
 }

@@ -1,4 +1,4 @@
-/* panel-descansos.js — Módulo Descansos médicos (Admin / Super Admin) */
+
 (function(global) {
   var DM_META = { divisiones: [], unidades: [], grados: [], tipos_documento: [], grados_medico: [] };
   var DM_ROWS = [];
