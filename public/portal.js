@@ -1090,10 +1090,12 @@ function construirSlidesResena(sec) {
   var introImg = String(sec.imagenBanner || '').trim();
   var introTitulo = String(sec.introTitulo || 'Introducción').trim() || 'Introducción';
   if (intro || introImg) {
-    slides.push({ titulo: introTitulo, texto: intro, imagen: introImg });
+    slides.push({ titulo: introTitulo, texto: intro, imagen: introImg, icono: 'fa-landmark' });
   }
   var parrafos = normalizarParrafosResena(sec.parrafos).filter(function(p) {
     return p.titulo || p.texto || p.imagen;
+  }).map(function(p) {
+    return Object.assign({}, p, { icono: p.icono || 'fa-landmark' });
   });
   return slides.concat(parrafos);
 }
@@ -1150,19 +1152,18 @@ function htmlTextoResenaSlide(texto) {
 function htmlResenaCarruselSlide(p, i, isActive) {
   var num = String(i + 1).padStart(2, '0');
   var imgSrc = p.imagen ? urlImagenResenaSlideParaDom(p.imagen) : '';
-  var icono = String(p.icono || '').trim();
+  var icono = String(p.icono || 'fa-landmark').trim() || 'fa-landmark';
   var mediaHtml = '';
   if (imgSrc) {
     mediaHtml = '<div class="resena-slide-media"><img src="' + escHtml(imgSrc) + '" alt="' + escHtml(p.titulo || ('Bloque ' + num)) + '" loading="lazy" decoding="async"/></div>';
-  } else if (icono) {
+  } else {
     mediaHtml = '<div class="resena-slide-media resena-slide-media--icono" aria-hidden="true"><i class="fas ' + escHtml(icono) + '"></i></div>';
   }
   var tituloHtml = p.titulo
     ? '<h3 class="resena-slide-titulo">' + escHtml(p.titulo) + '</h3>'
     : '';
-  var conMedia = !!(imgSrc || icono);
   return '<article class="resena-carrusel-slide institucional-bloque' + (isActive ? ' active' : '') + '" data-idx="' + i + '" aria-hidden="' + (isActive ? 'false' : 'true') + '">'
-    + '<div class="resena-slide-inner' + (conMedia ? ' resena-slide-inner--con-img' : '') + '">'
+    + '<div class="resena-slide-inner resena-slide-inner--con-img">'
     + mediaHtml
     + '<div class="resena-slide-body">'
     + '<span class="institucional-num" aria-hidden="true">' + num + '</span>'
