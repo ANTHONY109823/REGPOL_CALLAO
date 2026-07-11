@@ -1642,7 +1642,8 @@ table.t { min-width: 600px; }
 
 .resena-carrusel {
   position: relative;
-  margin-bottom: 8px;
+  margin-bottom: 0;
+  padding: 0 8px;
 }
 
 .resena-carrusel-viewport {
@@ -1794,6 +1795,75 @@ table.t { min-width: 600px; }
   height: 8px;
   border-radius: 50%;
   background: var(--verde-pnp);
+}
+
+.resena-carrusel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 77, 61, 0.88);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.resena-carrusel-btn:hover {
+  background: var(--verde-pnp);
+  transform: translateY(-50%) scale(1.06);
+}
+
+.resena-carrusel-btn.prev { left: -14px; }
+.resena-carrusel-btn.next { right: -14px; }
+
+.resena-carrusel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.resena-carrusel-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--verde-pnp);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.resena-carrusel-dot.active,
+.resena-carrusel-dot:hover {
+  background: var(--verde-pnp);
+  transform: scale(1.15);
+}
+
+#resena.portal-seccion,
+#labor.portal-seccion {
+  padding-top: 24px;
+  padding-bottom: 22px;
+}
+
+#resena .section-header,
+#labor .section-header {
+  margin-bottom: 16px;
+}
+
+#resena .section-header h3,
+#labor .section-header h3 {
+  margin-bottom: 4px;
+  padding-bottom: 12px;
 }
 
 @media (max-width: 768px) {
