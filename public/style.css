@@ -70,7 +70,8 @@ img {
     gap: 8px;
     flex-wrap: wrap;
     align-items: center;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    min-width: 0;
 }
 
 .topbar-btn {

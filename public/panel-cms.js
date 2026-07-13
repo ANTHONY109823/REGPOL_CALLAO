@@ -4,6 +4,10 @@ var cmsModalGuardarFn = null;
 
 var CMS_ICONOS = [
   { v: 'fa-shield-alt',     l: 'Escudo' },
+  { v: 'fa-building',       l: 'Edificio / Intranet' },
+  { v: 'fa-envelope',       l: 'Correo' },
+  { v: 'fa-link',           l: 'Enlace' },
+  { v: 'fa-globe',          l: 'Web' },
   { v: 'fa-users',          l: 'Personas' },
   { v: 'fa-search',         l: 'Lupa' },
   { v: 'fa-laptop',         l: 'Computadora' },
@@ -21,6 +25,50 @@ var CMS_ICONOS = [
   { v: 'fa-notes-medical',  l: 'Médico' },
   { v: 'fa-file-medical',   l: 'Documento médico' }
 ];
+
+var TOPBAR_SIGCP_DEFAULT = 'https://sigcp.policia.gob.pe/';
+var TOPBAR_CORREO_DEFAULT = 'https://correo.policia.gob.pe/owa/auth/logon.aspx?replaceCurrent=1&url=https%3a%2f%2fcorreo.policia.gob.pe%2fowa';
+
+function topbarBotonesDefault() {
+  return [
+    { id: 'sigcp', label: 'Intranet', url: TOPBAR_SIGCP_DEFAULT, icon: 'fa-building' },
+    { id: 'correo', label: 'Correo', url: TOPBAR_CORREO_DEFAULT, icon: 'fa-envelope' }
+  ];
+}
+
+/** Unifica formato antiguo {sigcp,correo} y nuevo {botones:[]} */
+function normalizarTopbarLinksCMS(raw) {
+  var links = raw && typeof raw === 'object' ? raw : {};
+  var botones = [];
+  if (Array.isArray(links.botones) && links.botones.length) {
+    botones = links.botones.map(function(b, i) {
+      return {
+        id: String(b.id || ('btn_' + i)).trim() || ('btn_' + i),
+        label: String(b.label || '').trim() || ('Botón ' + (i + 1)),
+        url: String(b.url || '').trim(),
+        icon: String(b.icon || 'fa-link').trim().replace(/^fas\s+/, '') || 'fa-link'
+      };
+    });
+  } else {
+    botones = topbarBotonesDefault();
+    if (links.sigcp) botones[0].url = String(links.sigcp).trim();
+    if (links.correo) botones[1].url = String(links.correo).trim();
+  }
+  return { botones: botones, sigcp: (botones[0] && botones[0].url) || '', correo: (botones[1] && botones[1].url) || '' };
+}
+
+function opcionesIconoTopbarCMS(selected) {
+  var sel = String(selected || 'fa-link').replace(/^fas\s+/, '');
+  var known = {};
+  var html = CMS_ICONOS.map(function(ic) {
+    known[ic.v] = true;
+    return '<option value="' + ic.v + '"' + (ic.v === sel ? ' selected' : '') + '>' + ic.l + '</option>';
+  }).join('');
+  if (sel && !known[sel]) {
+    html = '<option value="' + escHtml(sel) + '" selected>' + escHtml(sel) + '</option>' + html;
+  }
+  return html;
+}
 
 function descansosPortalDefault() {
   return {
@@ -50,7 +98,8 @@ function initCMS() {
     cmsDataActual = data || {};
     if (!cmsDataActual.carrusel)  cmsDataActual.carrusel  = [];
     if (!cmsDataActual.fotosEncabezado) cmsDataActual.fotosEncabezado = [];
-    if (!cmsDataActual.topbarLinks) cmsDataActual.topbarLinks = { sigcp: '', correo: '' };
+    if (!cmsDataActual.topbarLinks) cmsDataActual.topbarLinks = normalizarTopbarLinksCMS(null);
+    else cmsDataActual.topbarLinks = normalizarTopbarLinksCMS(cmsDataActual.topbarLinks);
     if (!cmsDataActual.novedades) cmsDataActual.novedades = [];
     if (typeof ordenarNovedadesPorFecha === 'function') {
       cmsDataActual.novedades = ordenarNovedadesPorFecha(cmsDataActual.novedades);
@@ -363,8 +412,6 @@ function renderEditorCarrusel() {
   var slides = cmsDataActual.carrusel || [];
   var heroT  = cmsDataActual.heroTexto || {};
   var topbar = cmsDataActual.topbarLinks || {};
-  var sigcpDefault = 'https://sigcp.policia.gob.pe/';
-  var correoDefault = 'https://correo.policia.gob.pe/owa/auth/logon.aspx?replaceCurrent=1&url=https%3a%2f%2fcorreo.policia.gob.pe%2fowa';
 
   var html = '<div class="cms-section-head" style="margin-bottom:14px;">'
     + '<strong style="color:#004d3d;font-size:13px;"><i class="fas fa-images"></i> Diapositivas del carrusel</strong>'
@@ -403,22 +450,90 @@ function renderEditorCarrusel() {
     + '<button class="btn btn-v" onclick="guardarHeroTexto()"><i class="fas fa-save"></i> Guardar textos del hero</button>';
 
   html += '<hr style="margin:20px 0;border:none;border-top:1.5px solid #e0e8e0;"/>'
-    + '<strong style="color:#004d3d;font-size:13px;display:block;margin-bottom:8px;"><i class="fas fa-link"></i> Botones superiores (SIGCP / Correo)</strong>'
-    + '<p style="font-size:11px;color:#666;margin:0 0 10px;">Enlaces de la barra verde superior del portal. Déjelos vacíos para usar los oficiales por defecto.</p>'
-    + '<div class="cms-modal-campo"><label class="cms-label">URL SIGCP</label>'
-    + '<input type="url" id="cms-topbar-sigcp" class="cms-input" placeholder="' + escHtml(sigcpDefault) + '" value="' + escHtml(topbar.sigcp || '') + '"/></div>'
-    + '<div class="cms-modal-campo"><label class="cms-label">URL Correo institucional</label>'
-    + '<input type="url" id="cms-topbar-correo" class="cms-input" placeholder="https://correo.policia.gob.pe/..." value="' + escHtml(topbar.correo || '') + '"/></div>'
-    + '<button class="btn btn-v" onclick="guardarTopbarLinksCMS()"><i class="fas fa-save"></i> Guardar y publicar enlaces</button>';
+    + '<strong style="color:#004d3d;font-size:13px;display:block;margin-bottom:8px;"><i class="fas fa-link"></i> Botones superiores (barra verde)</strong>'
+    + '<p style="font-size:11px;color:#666;margin:0 0 10px;">Se muestran a la izquierda de las redes sociales. Puede editar Intranet/Correo y <strong>agregar más botones</strong> hacia la derecha, con el mismo estilo.</p>'
+    + '<div id="cms-topbar-botones-lista" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">';
+
+  var topNorm = normalizarTopbarLinksCMS(topbar);
+  cmsDataActual.topbarLinks = topNorm;
+  topNorm.botones.forEach(function(b, idx) {
+    html += htmlFilaTopbarBotonCMS(b, idx);
+  });
+  html += '</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">'
+    + '<button type="button" class="btn btn-v btn-sm" onclick="agregarTopbarBotonCMS()"><i class="fas fa-plus"></i> Agregar botón</button>'
+    + '<button type="button" class="btn btn-v" onclick="guardarTopbarLinksCMS()"><i class="fas fa-save"></i> Guardar y publicar botones</button>'
+    + '</div>';
 
   el.innerHTML = html;
 }
 
+function htmlFilaTopbarBotonCMS(b, idx) {
+  b = b || {};
+  return '<div class="cms-topbar-fila" data-idx="' + idx + '" style="border:1.5px solid #e0e8e0;border-radius:8px;padding:10px 12px;background:#fafcfa;">'
+    + '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">'
+    + '<div class="cms-modal-campo" style="flex:1 1 120px;margin:0;min-width:110px;"><label class="cms-label">Texto</label>'
+    + '<input type="text" class="cms-input cms-topbar-label" maxlength="40" value="' + escHtml(b.label || '') + '" placeholder="Ej. Intranet"/></div>'
+    + '<div class="cms-modal-campo" style="flex:2 1 220px;margin:0;min-width:180px;"><label class="cms-label">URL</label>'
+    + '<input type="url" class="cms-input cms-topbar-url" value="' + escHtml(b.url || '') + '" placeholder="https://..."/></div>'
+    + '<div class="cms-modal-campo" style="flex:1 1 140px;margin:0;min-width:130px;"><label class="cms-label">Icono</label>'
+    + '<select class="cms-input cms-topbar-icon">' + opcionesIconoTopbarCMS(b.icon) + '</select></div>'
+    + '<button type="button" class="btn-mini btn-mini-danger" title="Quitar" onclick="eliminarTopbarBotonCMS(' + idx + ')" style="margin-bottom:2px;"><i class="fas fa-trash"></i></button>'
+    + '</div></div>';
+}
+
+function leerTopbarBotonesDesdeDOM() {
+  var filas = document.querySelectorAll('#cms-topbar-botones-lista .cms-topbar-fila');
+  var prev = ((cmsDataActual.topbarLinks || {}).botones) || [];
+  var botones = [];
+  filas.forEach(function(fila, i) {
+    var labelEl = fila.querySelector('.cms-topbar-label');
+    var urlEl = fila.querySelector('.cms-topbar-url');
+    var iconEl = fila.querySelector('.cms-topbar-icon');
+    var label = labelEl ? labelEl.value.trim() : '';
+    var url = urlEl ? urlEl.value.trim() : '';
+    var icon = iconEl ? iconEl.value.trim() : 'fa-link';
+    if (!label && !url) return;
+    botones.push({
+      id: (prev[i] && prev[i].id) ? prev[i].id : ('btn_' + i),
+      label: label || ('Botón ' + (i + 1)),
+      url: url,
+      icon: icon || 'fa-link'
+    });
+  });
+  if (!botones.length) botones = topbarBotonesDefault();
+  return normalizarTopbarLinksCMS({ botones: botones });
+}
+
+function agregarTopbarBotonCMS() {
+  cmsDataActual.topbarLinks = leerTopbarBotonesDesdeDOM();
+  cmsDataActual.topbarLinks.botones.push({
+    id: 'btn_' + Date.now().toString(36),
+    label: 'Nuevo botón',
+    url: '',
+    icon: 'fa-link'
+  });
+  renderEditorCarrusel();
+  var lista = document.getElementById('cms-topbar-botones-lista');
+  if (lista) lista.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function eliminarTopbarBotonCMS(idx) {
+  cmsDataActual.topbarLinks = leerTopbarBotonesDesdeDOM();
+  var botones = (cmsDataActual.topbarLinks.botones || []).slice();
+  if (idx < 0 || idx >= botones.length) return;
+  if (botones.length <= 1) {
+    alert('Debe quedar al menos un botón en la barra superior.');
+    return;
+  }
+  if (!confirm('¿Quitar este botón de la barra superior?')) return;
+  botones.splice(idx, 1);
+  cmsDataActual.topbarLinks = normalizarTopbarLinksCMS({ botones: botones });
+  renderEditorCarrusel();
+}
+
 function guardarTopbarLinksCMS() {
-  cmsDataActual.topbarLinks = {
-    sigcp: (document.getElementById('cms-topbar-sigcp') && document.getElementById('cms-topbar-sigcp').value.trim()) || '',
-    correo: (document.getElementById('cms-topbar-correo') && document.getElementById('cms-topbar-correo').value.trim()) || ''
-  };
+  cmsDataActual.topbarLinks = leerTopbarBotonesDesdeDOM();
   guardarSitioWeb();
 }
 
@@ -1198,12 +1313,12 @@ function recolectarDatosCMS() {
   data.nuestraLabor.intro  = getVal('cms-labor-intro');
   data.nuestraLabor.imagenBanner = leerBannerImg('labor');
   if (!data.nuestraLabor.pilares) data.nuestraLabor.pilares = (cmsDataActual.nuestraLabor || {}).pilares || [];
-  var topbarSigcpEl = document.getElementById('cms-topbar-sigcp');
-  var topbarCorreoEl = document.getElementById('cms-topbar-correo');
-  data.topbarLinks = {
-    sigcp: topbarSigcpEl ? topbarSigcpEl.value.trim() : ((cmsDataActual.topbarLinks || {}).sigcp || ''),
-    correo: topbarCorreoEl ? topbarCorreoEl.value.trim() : ((cmsDataActual.topbarLinks || {}).correo || '')
-  };
+  var topbarDom = document.getElementById('cms-topbar-botones-lista');
+  if (topbarDom) {
+    data.topbarLinks = leerTopbarBotonesDesdeDOM();
+  } else {
+    data.topbarLinks = normalizarTopbarLinksCMS(cmsDataActual.topbarLinks || null);
+  }
   data.bienestarPolicial = {
     tituloSeccion: getVal('cms-bienestar-titulo-seccion') || 'BIENESTAR POLICIAL',
     titulo: getVal('cms-bienestar-titulo'),

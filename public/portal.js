@@ -580,21 +580,65 @@ function aplicarEncabezadoMarca(data) {
   renderFotosEncabezado(data);
 }
 
+function topbarBotonesPorDefecto() {
+  return [
+    { id: 'sigcp', label: 'Intranet', url: 'https://sigcp.policia.gob.pe/', icon: 'fa-building' },
+    { id: 'correo', label: 'Correo', url: 'https://correo.policia.gob.pe/owa/auth/logon.aspx?replaceCurrent=1&url=https%3a%2f%2fcorreo.policia.gob.pe%2fowa', icon: 'fa-envelope' }
+  ];
+}
+
+function normalizarTopbarBotones(links) {
+  var raw = links && typeof links === 'object' ? links : {};
+  var botones = [];
+  if (Array.isArray(raw.botones) && raw.botones.length) {
+    botones = raw.botones.map(function(b, i) {
+      var label = String(b.label || '').trim();
+      var url = String(b.url || '').trim();
+      if (!label && !url) return null;
+      var icon = String(b.icon || 'fa-link').trim().replace(/^fas\s+/, '') || 'fa-link';
+      return {
+        id: String(b.id || ('btn_' + i)),
+        label: label || ('Botón ' + (i + 1)),
+        url: url,
+        icon: icon
+      };
+    }).filter(Boolean);
+  }
+  if (!botones.length) {
+    botones = topbarBotonesPorDefecto();
+    if (raw.sigcp) botones[0].url = String(raw.sigcp).trim() || botones[0].url;
+    if (raw.correo) botones[1].url = String(raw.correo).trim() || botones[1].url;
+  } else {
+    // Compat: si vienen botones sin URL, completar con legacy sigcp/correo por id
+    botones.forEach(function(b) {
+      if (b.url) return;
+      var id = String(b.id || '').toLowerCase();
+      var lab = String(b.label || '').toLowerCase();
+      if ((id === 'sigcp' || lab.indexOf('intranet') !== -1 || lab.indexOf('sigcp') !== -1) && raw.sigcp) {
+        b.url = String(raw.sigcp).trim();
+      } else if ((id === 'correo' || lab.indexOf('correo') !== -1) && raw.correo) {
+        b.url = String(raw.correo).trim();
+      }
+    });
+  }
+  return botones;
+}
+
 function aplicarTopbarLinks(data) {
-  var links = (data && data.topbarLinks) ? data.topbarLinks : {};
-  var sigcp = String(links.sigcp || '').trim();
-  var correo = String(links.correo || '').trim();
-  var defSigcp = 'https://sigcp.policia.gob.pe/';
-  var defCorreo = 'https://correo.policia.gob.pe/owa/auth/logon.aspx?replaceCurrent=1&url=https%3a%2f%2fcorreo.policia.gob.pe%2fowa';
-  document.querySelectorAll('.topbar-btn').forEach(function(a) {
-    var title = (a.getAttribute('title') || '') + ' ' + (a.textContent || '');
-    var t = title.toLowerCase();
-    if (t.indexOf('sigcp') !== -1 || t.indexOf('intranet') !== -1) {
-      a.href = sigcp || defSigcp;
-    } else if (t.indexOf('correo') !== -1) {
-      a.href = correo || defCorreo;
-    }
-  });
+  var host = document.querySelector('.header-social-portal .topbar-links');
+  if (!host) return;
+  var botones = normalizarTopbarBotones(data && data.topbarLinks);
+  var esc = typeof escHtml === 'function' ? escHtml : function(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  };
+  host.innerHTML = botones.map(function(b) {
+    var href = b.url || '#';
+    var icon = b.icon || 'fa-link';
+    if (icon.indexOf('fa-') !== 0) icon = 'fa-link';
+    return '<a href="' + esc(href) + '" target="_blank" rel="noopener noreferrer" class="topbar-btn" title="' + esc(b.label) + '">'
+      + '<i class="fas ' + esc(icon) + '"></i> ' + esc(b.label)
+      + '</a>';
+  }).join('');
 }
 
 function asegurarPanelFotosEncabezado() {
