@@ -2071,6 +2071,7 @@ async function consultarProgresosFiltrados(admin, query) {
   const comisaria = ((query.comisaria || '') + '').toUpperCase();
   const unidad    = ((query.unidad    || '') + '').toUpperCase();
   const busqueda  = ((query.busqueda  || '') + '').toUpperCase();
+  const porRrhh   = String(query.orden || '').toLowerCase() === 'unidad_rrhh';
 
   if (division && division !== 'TODAS') {
     const du = await pool.query(
@@ -2079,18 +2080,50 @@ async function consultarProgresosFiltrados(admin, query) {
     );
     if (du.rows.length) {
       const arr = du.rows.map(function(row) { return row.nombre; });
-      where += ` AND (UPPER(p.comisaria) = ANY($${pi}::text[]) OR UPPER(p.unidad) = ANY($${pi}::text[]))`;
-      params.push(arr); pi++;
+      if (porRrhh) {
+        where += ` AND (
+          UPPER(p.comisaria) = ANY($${pi}::text[]) OR UPPER(p.unidad) = ANY($${pi}::text[])
+          OR UPPER(TRIM(p.cip)) IN (
+            SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
+            WHERE UPPER(TRIM(COALESCE(rr.division_nombre,''))) = $${pi + 1}
+               OR UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) = ANY($${pi}::text[])
+          )
+        )`;
+        params.push(arr, division); pi += 2;
+      } else {
+        where += ` AND (UPPER(p.comisaria) = ANY($${pi}::text[]) OR UPPER(p.unidad) = ANY($${pi}::text[]))`;
+        params.push(arr); pi++;
+      }
     } else {
       where += ' AND 1=0';
     }
   }
   if (comisaria) {
-    where += ` AND (UPPER(p.comisaria) LIKE $${pi} OR UPPER(p.unidad) LIKE $${pi})`;
+    if (porRrhh) {
+      where += ` AND (
+        UPPER(p.comisaria) LIKE $${pi} OR UPPER(p.unidad) LIKE $${pi}
+        OR UPPER(TRIM(p.cip)) IN (
+          SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
+          WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE $${pi}
+        )
+      )`;
+    } else {
+      where += ` AND (UPPER(p.comisaria) LIKE $${pi} OR UPPER(p.unidad) LIKE $${pi})`;
+    }
     params.push('%' + comisaria + '%'); pi++;
   }
   if (unidad) {
-    where += ` AND (UPPER(p.unidad) LIKE $${pi} OR UPPER(p.comisaria) LIKE $${pi})`;
+    if (porRrhh) {
+      where += ` AND (
+        UPPER(p.unidad) LIKE $${pi} OR UPPER(p.comisaria) LIKE $${pi}
+        OR UPPER(TRIM(p.cip)) IN (
+          SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
+          WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE $${pi}
+        )
+      )`;
+    } else {
+      where += ` AND (UPPER(p.unidad) LIKE $${pi} OR UPPER(p.comisaria) LIKE $${pi})`;
+    }
     params.push('%' + unidad + '%'); pi++;
   }
   if (busqueda) {
@@ -2713,22 +2746,55 @@ async function buildWhere(query, baseWhere, baseParams) {
   const comisaria = (query.comisaria || '').toUpperCase();
   const unidad    = (query.unidad    || '').toUpperCase();
   const busqueda  = (query.busqueda  || '').toUpperCase();
+  const porRrhh   = String(query.orden || '').toLowerCase() === 'unidad_rrhh';
 
   if (division) {
     const du = await pool.query(
       `SELECT UPPER(u.nombre) AS nombre FROM unidades_pol u JOIN divisiones d ON d.id=u.division_id WHERE UPPER(d.nombre)=$1`, [division]);
     if (du.rows.length) {
       const arr = du.rows.map(r => r.nombre);
-      where += ` AND (UPPER(comisaria) = ANY($${pi}::text[]) OR UPPER(unidad) = ANY($${pi}::text[]))`;
-      params.push(arr); pi++;
+      if (porRrhh) {
+        where += ` AND (
+          UPPER(comisaria) = ANY($${pi}::text[]) OR UPPER(unidad) = ANY($${pi}::text[])
+          OR UPPER(TRIM(cip)) IN (
+            SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
+            WHERE UPPER(TRIM(COALESCE(rr.division_nombre,''))) = $${pi + 1}
+               OR UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) = ANY($${pi}::text[])
+          )
+        )`;
+        params.push(arr, division); pi += 2;
+      } else {
+        where += ` AND (UPPER(comisaria) = ANY($${pi}::text[]) OR UPPER(unidad) = ANY($${pi}::text[]))`;
+        params.push(arr); pi++;
+      }
     } else { where += ' AND 1=0'; }
   }
   if (comisaria) {
-    where += ` AND (UPPER(comisaria) LIKE $${pi} OR UPPER(unidad) LIKE $${pi})`;
+    if (porRrhh) {
+      where += ` AND (
+        UPPER(comisaria) LIKE $${pi} OR UPPER(unidad) LIKE $${pi}
+        OR UPPER(TRIM(cip)) IN (
+          SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
+          WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE $${pi}
+        )
+      )`;
+    } else {
+      where += ` AND (UPPER(comisaria) LIKE $${pi} OR UPPER(unidad) LIKE $${pi})`;
+    }
     params.push('%' + comisaria + '%'); pi++;
   }
   if (unidad) {
-    where += ` AND (UPPER(unidad) LIKE $${pi} OR UPPER(comisaria) LIKE $${pi})`;
+    if (porRrhh) {
+      where += ` AND (
+        UPPER(unidad) LIKE $${pi} OR UPPER(comisaria) LIKE $${pi}
+        OR UPPER(TRIM(cip)) IN (
+          SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
+          WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE $${pi}
+        )
+      )`;
+    } else {
+      where += ` AND (UPPER(unidad) LIKE $${pi} OR UPPER(comisaria) LIKE $${pi})`;
+    }
     params.push('%' + unidad + '%'); pi++;
   }
   if (busqueda)  {
