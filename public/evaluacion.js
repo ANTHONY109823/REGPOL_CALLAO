@@ -160,9 +160,30 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   ['f-cip','f-dni'].forEach(function(id) {
     document.getElementById(id).addEventListener('input', function(e) {
-      e.target.value = e.target.value.replace(/\D/g,'');
+      e.target.value = e.target.value.replace(/\D/g,'').slice(0, 8);
+      if (id === 'f-cip' && e.target.value.length === 8) {
+        consultarUnidadNominaPorCip(e.target.value);
+      }
+      if (id === 'f-cip' && e.target.value.length < 8) {
+        UNIDAD_NOMINA_OBLIGATORIA = '';
+      }
     });
+    if (id === 'f-cip') {
+      document.getElementById(id).addEventListener('blur', function(e) {
+        if (/^\d{8}$/.test(e.target.value.trim())) consultarUnidadNominaPorCip(e.target.value.trim());
+      });
+    }
   });
+  var selUnidad = document.getElementById('f-unidad');
+  if (selUnidad) {
+    selUnidad.addEventListener('change', function() {
+      if (!UNIDAD_NOMINA_OBLIGATORIA) return;
+      if (String(selUnidad.value || '').trim().toUpperCase() !== String(UNIDAD_NOMINA_OBLIGATORIA).trim().toUpperCase()) {
+        seleccionarComisariaEnSelect('f-unidad', UNIDAD_NOMINA_OBLIGATORIA);
+        mostrarAlerta('Debe registrarse en su unidad de nómina: «' + UNIDAD_NOMINA_OBLIGATORIA + '».', 'error');
+      }
+    });
+  }
 
   ocultarCuestionario();
   cargarPreguntas();
@@ -834,6 +855,7 @@ function guardarRegistroEnServidor(callback) {
       if (!d.ok) {
         var msgDup = mensajeErrorDuplicadoNombre(d);
         if (msgDup) mostrarAlerta(msgDup, 'error');
+        else if (d.mensaje) mostrarAlerta(d.mensaje, 'error');
         if (callback) callback(false);
         return;
       }
@@ -977,6 +999,9 @@ function notificarDuplicadoPorNombre(cipExistente, nombres) {
 
 function mensajeErrorDuplicadoNombre(data) {
   if (!data) return null;
+  if (data.error === 'fuera_nomina' || data.error === 'sin_unidad_nomina' || data.error === 'unidad_incorrecta') {
+    return data.mensaje || 'No puede registrarse: la dependencia no coincide con su unidad de nómina.';
+  }
   if (data.error === 'duplicado_dni') {
     return 'El DNI ya está registrado a nombre de ' + (data.nombres_existente || 'otro efectivo')
       + ' (CIP ' + (data.cip_existente || '') + '). '
@@ -986,6 +1011,74 @@ function mensajeErrorDuplicadoNombre(data) {
   return 'Ya existe un registro a nombre de ' + (data.nombres_existente || 'esta persona')
     + ' con CIP ' + (data.cip_existente || '') + '. '
     + 'No puede registrarse con otro CIP.';
+}
+
+var UNIDAD_NOMINA_OBLIGATORIA = '';
+
+function selectTieneOpcionUnidad(sel, nombre) {
+  if (!sel || !nombre) return false;
+  var target = String(nombre).trim().toUpperCase();
+  for (var i = 0; i < sel.options.length; i++) {
+    if (String(sel.options[i].value || '').trim().toUpperCase() === target) return true;
+  }
+  return false;
+}
+
+function aplicarUnidadNominaEnFormulario(unidadNombre) {
+  var sel = document.getElementById('f-unidad');
+  if (!sel || !unidadNombre) return false;
+  if (!selectTieneOpcionUnidad(sel, unidadNombre)) {
+    mostrarAlerta(
+      'Su unidad de nómina («' + unidadNombre + '») aún no está habilitada para el cuestionario. '
+      + 'Espere a que el Área de Bienestar la active.',
+      'error'
+    );
+    UNIDAD_NOMINA_OBLIGATORIA = unidadNombre;
+    return false;
+  }
+  UNIDAD_NOMINA_OBLIGATORIA = String(unidadNombre).trim();
+  seleccionarComisariaEnSelect('f-unidad', UNIDAD_NOMINA_OBLIGATORIA);
+  sel.classList.add('valido');
+  sel.classList.remove('invalido');
+  return true;
+}
+
+function consultarUnidadNominaPorCip(cip, callback) {
+  if (!/^\d{8}$/.test(String(cip || '').trim())) {
+    UNIDAD_NOMINA_OBLIGATORIA = '';
+    if (callback) callback(null);
+    return;
+  }
+  fetch(LOCAL_API + '/verificar-unidad-nomina?cip=' + encodeURIComponent(cip.trim()))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d || !d.ok) {
+        UNIDAD_NOMINA_OBLIGATORIA = '';
+        if (d && d.mensaje) mostrarAlerta(d.mensaje, 'error');
+        if (callback) callback(null, d);
+        return;
+      }
+      aplicarUnidadNominaEnFormulario(d.unidad_nombre);
+      if (callback) callback(d);
+    })
+    .catch(function() {
+      UNIDAD_NOMINA_OBLIGATORIA = '';
+      if (callback) callback(null);
+    });
+}
+
+function validarUnidadContraNominaLocal() {
+  var uni = (document.getElementById('f-unidad') || {}).value || '';
+  if (!UNIDAD_NOMINA_OBLIGATORIA) {
+    return 'Ingrese su CIP de 8 dígitos para validar su unidad de nómina.';
+  }
+  if (String(uni).trim().toUpperCase() !== String(UNIDAD_NOMINA_OBLIGATORIA).trim().toUpperCase()) {
+    return 'Debe registrarse en su unidad de nómina: «' + UNIDAD_NOMINA_OBLIGATORIA + '».';
+  }
+  if (!selectTieneOpcionUnidad(document.getElementById('f-unidad'), UNIDAD_NOMINA_OBLIGATORIA)) {
+    return 'Su unidad de nómina («' + UNIDAD_NOMINA_OBLIGATORIA + '») aún no está habilitada.';
+  }
+  return '';
 }
 
 function procederRegistroNuevo(cip, btn) {
@@ -1020,6 +1113,12 @@ function continuarAlCuestionario() {
   if (!PREGUNTAS.length) { mostrarAlerta('Espere a que cargue el cuestionario.','error'); return; }
   var err = validarRegistro();
   if (err) { mostrarAlerta(err,'error'); document.getElementById('card-registro').scrollIntoView({behavior:'smooth'}); return; }
+  var errNomina = validarUnidadContraNominaLocal();
+  if (errNomina) {
+    mostrarAlerta(errNomina, 'error');
+    document.getElementById('card-registro').scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
   ocultarAlerta();
 
   var cip = document.getElementById('f-cip').value.trim();
@@ -1504,6 +1603,11 @@ function guardarEdicionEnvio() {
   else if (nom.length < 2) { err = 'Ingrese sus nombres.'; if (nomEl) nomEl.classList.add('invalido'); }
   else if (!/^\d{8}$/.test(dni)) { err = 'El DNI debe tener exactamente 8 dígitos.'; if (dniEl) dniEl.classList.add('invalido'); }
   else if (!uni) { err = 'Seleccione su dependencia.'; if (uniEl) uniEl.classList.add('invalido'); }
+  else if (UNIDAD_NOMINA_OBLIGATORIA
+    && String(uni).trim().toUpperCase() !== String(UNIDAD_NOMINA_OBLIGATORIA).trim().toUpperCase()) {
+    err = 'Debe usar su unidad de nómina: «' + UNIDAD_NOMINA_OBLIGATORIA + '».';
+    if (uniEl) uniEl.classList.add('invalido');
+  }
 
   if (err) { if (msg) msg.textContent = err; return; }
 

@@ -310,6 +310,68 @@ async function purgarRegistrosPersona(cip, dni) {
   await pool.query(`DELETE FROM evaluaciones WHERE ${where}`, params);
 }
 
+function normalizarUnidadNomina(s) {
+  return String(s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, ' ');
+}
+
+async function obtenerUnidadNominaPorCip(cip) {
+  const c = String(cip || '').trim();
+  if (!/^\d{8}$/.test(c)) return null;
+  try {
+    const r = await pool.query(
+      `SELECT cip, unidad_nombre, division_nombre, situacion, apellidos_nombres
+       FROM personal_rrhh WHERE UPPER(TRIM(cip)) = UPPER(TRIM($1)) LIMIT 1`,
+      [c]
+    );
+    return r.rows[0] || null;
+  } catch (e) {
+    console.error('obtenerUnidadNominaPorCip:', e.message);
+    return null;
+  }
+}
+
+/** Bloquea registro si el CIP no está en nómina o la dependencia no es la de RRHH. */
+async function validarUnidadRegistroNomina(cip, unidadDeclarada) {
+  const rr = await obtenerUnidadNominaPorCip(cip);
+  if (!rr) {
+    return {
+      ok: false,
+      error: 'fuera_nomina',
+      mensaje: 'Su CIP no figura en la nómina REGPOL Callao. No puede registrarse. Consulte con el Área de Bienestar o RR.HH.'
+    };
+  }
+  const uniNomina = String(rr.unidad_nombre || '').trim();
+  if (!uniNomina) {
+    return {
+      ok: false,
+      error: 'sin_unidad_nomina',
+      mensaje: 'Su CIP está en nómina pero sin unidad asignada. Consulte con RR.HH.'
+    };
+  }
+  const decl = normalizarUnidadNomina(unidadDeclarada);
+  const real = normalizarUnidadNomina(uniNomina);
+  if (!decl || decl !== real) {
+    return {
+      ok: false,
+      error: 'unidad_incorrecta',
+      unidad_nomina: uniNomina,
+      division_nomina: String(rr.division_nombre || '').trim(),
+      mensaje: 'Debe registrarse en su unidad de nómina: «' + uniNomina + '». La dependencia seleccionada no coincide.'
+    };
+  }
+  return {
+    ok: true,
+    unidad_nomina: uniNomina,
+    division_nomina: String(rr.division_nombre || '').trim(),
+    situacion: String(rr.situacion || '').trim()
+  };
+}
+
 function normalizarFilasPDFGrupo(rows) {
   return deduplicarFilasPorCip(rows).map(function(row) {
     let base;
@@ -1457,6 +1519,16 @@ app.post('/guardar', async (req, res) => {
   try {
     const { comisaria, unidad, nombres, cip, dni, fecha_nac, edad, cargo, area, grado, sexo, armamento, foto, respuestas, completada, tiempo_segundos } = req.body;
     if (!nombres || !cip) return res.json({ ok: false, error: 'Faltan datos obligatorios' });
+    const checkUni = await validarUnidadRegistroNomina(cip, unidad || comisaria);
+    if (!checkUni.ok) {
+      return res.json({
+        ok: false,
+        error: checkUni.error,
+        mensaje: checkUni.mensaje,
+        unidad_nomina: checkUni.unidad_nomina || '',
+        division_nomina: checkUni.division_nomina || ''
+      });
+    }
     const edadFinal = parseInt(edad) || calcularEdadDesdeISO(fecha_nac) || 0;
     const totalResp = contarRespuestasObj(respuestas).total;
 
@@ -1542,6 +1614,16 @@ app.post('/progreso', async (req, res) => {
     const { cip, nombres, comisaria, unidad, cargo, area, grado, sexo, armamento, foto, bloque, total, respuestas, dni, fecha_nac, edad, tiempo_segundos } = req.body;
     const clave = (cip || 'anonimo').toLowerCase().trim();
     const cipTrim = String(cip || '').trim();
+    const checkUni = await validarUnidadRegistroNomina(cipTrim, unidad || comisaria);
+    if (!checkUni.ok) {
+      return res.json({
+        ok: false,
+        error: checkUni.error,
+        mensaje: checkUni.mensaje,
+        unidad_nomina: checkUni.unidad_nomina || '',
+        division_nomina: checkUni.division_nomina || ''
+      });
+    }
     // Solo validar nombre en registro nuevo; quien ya tiene sesión con su CIP sigue igual
     const sesionCip = await pool.query(
       `SELECT 1 FROM progresos
@@ -1602,6 +1684,43 @@ app.post('/progreso', async (req, res) => {
 });
 
 // ── GET /verificar-registro?cip=&dni= — sesión ya iniciada (público) ─────────
+app.get('/verificar-unidad-nomina', async (req, res) => {
+  try {
+    const cip = String(req.query.cip || '').trim();
+    if (!/^\d{8}$/.test(cip)) {
+      return res.json({ ok: false, error: 'cip_invalido', mensaje: 'CIP: 8 dígitos.' });
+    }
+    const rr = await obtenerUnidadNominaPorCip(cip);
+    if (!rr) {
+      return res.json({
+        ok: false,
+        en_nomina: false,
+        error: 'fuera_nomina',
+        mensaje: 'Su CIP no figura en la nómina REGPOL Callao. No puede registrarse. Consulte con el Área de Bienestar o RR.HH.'
+      });
+    }
+    const uni = String(rr.unidad_nombre || '').trim();
+    if (!uni) {
+      return res.json({
+        ok: false,
+        en_nomina: true,
+        error: 'sin_unidad_nomina',
+        mensaje: 'Su CIP está en nómina pero sin unidad asignada. Consulte con RR.HH.'
+      });
+    }
+    return res.json({
+      ok: true,
+      en_nomina: true,
+      cip: rr.cip,
+      unidad_nombre: uni,
+      division_nombre: String(rr.division_nombre || '').trim(),
+      situacion: String(rr.situacion || '').trim()
+    });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 app.get('/verificar-registro', async (req, res) => {
   try {
     const cip = (req.query.cip || '').trim();
