@@ -738,10 +738,10 @@
         <div style="overflow-x:auto;max-height:68vh;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">
           <table class="t" style="margin:0;">
             <thead><tr>
-              <th>División</th><th>Unidad</th><th>Apellidos y Nombres</th><th>CIP</th><th>DNI</th>
+              <th>División</th><th>Unidad</th><th>Grado</th><th>Apellidos y Nombres</th><th>CIP</th><th>DNI</th>
               <th>Fecha</th><th>Edad</th><th>Estado</th><th>Editar</th><th>Ver</th><th>Eliminar</th>
             </tr></thead>
-            <tbody id="tabla-body"><tr><td colspan="11" style="text-align:center;color:#888;padding:24px;font-size:13px;">Seleccione división, unidad o busque por CIP / DNI / nombre y pulse <strong>Buscar</strong>.</td></tr></tbody>
+            <tbody id="tabla-body"><tr><td colspan="12" style="text-align:center;color:#888;padding:24px;font-size:13px;">Seleccione división, unidad o busque por CIP / DNI / nombre y pulse <strong>Buscar</strong>.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -2151,7 +2151,7 @@ function vaciarTablaRespuestas(msg) {
   var body = document.getElementById('tabla-body');
   var texto = msg || 'Seleccione división, unidad o busque por CIP / DNI / nombre y pulse Buscar.';
   if (body) {
-    body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#888;padding:24px;font-size:13px;">'
+    body.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#888;padding:24px;font-size:13px;">'
       + escHtml(texto) + '</td></tr>';
   }
   set('tabla-info', '');
@@ -3353,9 +3353,13 @@ function filaRegistroRespuesta(r, divNombre) {
   var uniReal = (r.unidad_rrhh && String(r.unidad_rrhh).trim())
     ? String(r.unidad_rrhh).trim()
     : (r.unidad || r.comisaria || '—');
+  var grado = (r.grado_rrhh && String(r.grado_rrhh).trim())
+    ? String(r.grado_rrhh).trim()
+    : (r.grado ? String(r.grado).trim() : '—');
   return '<tr' + (r.solo_progreso ? ' style="background:#fffdf5;"' : '') + '>'
     + '<td style="font-size:11px;color:#666;">' + escDatos(divNombre) + '</td>'
     + '<td style="font-size:11px;"><strong>' + escDatos(uniReal) + '</strong></td>'
+    + '<td style="font-size:11px;white-space:nowrap;">' + escDatos(grado) + '</td>'
     + '<td><strong>' + escDatos(r.nombres) + '</strong></td>'
     + '<td>' + escDatos(r.cip) + '</td>'
     + '<td>' + escDatos(r.dni) + '</td>'
@@ -3416,7 +3420,7 @@ function renderTablaRespuestasPorDivision(rows) {
     });
     totalMostrado += regs.length;
     html += '<tr class="fila-division">'
-      + '<td colspan="11" style="background:#004d3d;color:#fff;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.35px;">'
+      + '<td colspan="12" style="background:#004d3d;color:#fff;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.35px;">'
       + '<i class="fas fa-sitemap" style="margin-right:6px;"></i>' + escHtml(divNombre)
       + ' <span style="font-weight:500;opacity:.9;">(' + regs.length + ' registro' + (regs.length === 1 ? '' : 's') + ')</span>'
       + '</td></tr>';
@@ -3424,7 +3428,7 @@ function renderTablaRespuestasPorDivision(rows) {
   });
 
   if (!html) {
-    return { html: '<tr><td colspan="11" style="text-align:center;color:#bbb;padding:22px;">Sin registros para los filtros seleccionados.</td></tr>', total: 0 };
+    return { html: '<tr><td colspan="12" style="text-align:center;color:#bbb;padding:22px;">Sin registros para los filtros seleccionados.</td></tr>', total: 0 };
   }
   return { html: html, total: totalMostrado };
 }
@@ -3438,7 +3442,7 @@ function cargarTabla(pag){
   }
   actualizarBotonesEliminarEval();
   var body = document.getElementById('tabla-body');
-  if (body) body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#bbb;padding:18px;">Cargando...</td></tr>';
+  if (body) body.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#bbb;padding:18px;">Cargando...</td></tr>';
   var div = encodeURIComponent(val('f-div'));
   var uni = encodeURIComponent(val('f-uni'));
   var bus = encodeURIComponent(val('f-bus'));
@@ -3447,7 +3451,7 @@ function cargarTabla(pag){
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.ok) {
-        if (body) body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#c0392b;padding:18px;">' + escHtml(d.error || 'Error al cargar') + '</td></tr>';
+        if (body) body.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#c0392b;padding:18px;">' + escHtml(d.error || 'Error al cargar') + '</td></tr>';
         return;
       }
       var rendered = renderTablaRespuestasPorDivision(d.rows || []);
@@ -3457,7 +3461,7 @@ function cargarTabla(pag){
       if (pags) pags.innerHTML = '';
     })
     .catch(function() {
-      if (body) body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#c0392b;padding:18px;">Error de conexión.</td></tr>';
+      if (body) body.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#c0392b;padding:18px;">Error de conexión.</td></tr>';
     });
 }
 

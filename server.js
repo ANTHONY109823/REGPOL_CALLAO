@@ -1519,15 +1519,26 @@ app.post('/guardar', async (req, res) => {
   try {
     const { comisaria, unidad, nombres, cip, dni, fecha_nac, edad, cargo, area, grado, sexo, armamento, foto, respuestas, completada, tiempo_segundos } = req.body;
     if (!nombres || !cip) return res.json({ ok: false, error: 'Faltan datos obligatorios' });
-    const checkUni = await validarUnidadRegistroNomina(cip, unidad || comisaria);
-    if (!checkUni.ok) {
-      return res.json({
-        ok: false,
-        error: checkUni.error,
-        mensaje: checkUni.mensaje,
-        unidad_nomina: checkUni.unidad_nomina || '',
-        division_nomina: checkUni.division_nomina || ''
-      });
+    const sesionPrevia = await pool.query(
+      `SELECT 1 FROM progresos
+       WHERE LOWER(TRIM(clave))=LOWER(TRIM($1)) OR UPPER(TRIM(cip))=UPPER(TRIM($1))
+       UNION ALL
+       SELECT 1 FROM evaluaciones WHERE UPPER(TRIM(cip))=UPPER(TRIM($1))
+       LIMIT 1`,
+      [String(cip).trim()]
+    );
+    // Solo nuevos registros: no bloquear a quien ya está llenando / tiene avance
+    if (!sesionPrevia.rows.length) {
+      const checkUni = await validarUnidadRegistroNomina(cip, unidad || comisaria);
+      if (!checkUni.ok) {
+        return res.json({
+          ok: false,
+          error: checkUni.error,
+          mensaje: checkUni.mensaje,
+          unidad_nomina: checkUni.unidad_nomina || '',
+          division_nomina: checkUni.division_nomina || ''
+        });
+      }
     }
     const edadFinal = parseInt(edad) || calcularEdadDesdeISO(fecha_nac) || 0;
     const totalResp = contarRespuestasObj(respuestas).total;
@@ -1614,17 +1625,6 @@ app.post('/progreso', async (req, res) => {
     const { cip, nombres, comisaria, unidad, cargo, area, grado, sexo, armamento, foto, bloque, total, respuestas, dni, fecha_nac, edad, tiempo_segundos } = req.body;
     const clave = (cip || 'anonimo').toLowerCase().trim();
     const cipTrim = String(cip || '').trim();
-    const checkUni = await validarUnidadRegistroNomina(cipTrim, unidad || comisaria);
-    if (!checkUni.ok) {
-      return res.json({
-        ok: false,
-        error: checkUni.error,
-        mensaje: checkUni.mensaje,
-        unidad_nomina: checkUni.unidad_nomina || '',
-        division_nomina: checkUni.division_nomina || ''
-      });
-    }
-    // Solo validar nombre en registro nuevo; quien ya tiene sesión con su CIP sigue igual
     const sesionCip = await pool.query(
       `SELECT 1 FROM progresos
        WHERE LOWER(TRIM(clave))=LOWER(TRIM($1)) OR UPPER(TRIM(cip))=UPPER(TRIM($1))
@@ -1633,6 +1633,20 @@ app.post('/progreso', async (req, res) => {
        LIMIT 1`,
       [cipTrim]
     );
+    // Solo registros nuevos: quien ya llenó avance sigue sin bloqueo
+    if (!sesionCip.rows.length) {
+      const checkUni = await validarUnidadRegistroNomina(cipTrim, unidad || comisaria);
+      if (!checkUni.ok) {
+        return res.json({
+          ok: false,
+          error: checkUni.error,
+          mensaje: checkUni.mensaje,
+          unidad_nomina: checkUni.unidad_nomina || '',
+          division_nomina: checkUni.division_nomina || ''
+        });
+      }
+    }
+    // Solo validar nombre en registro nuevo; quien ya tiene sesión con su CIP sigue igual
     if (!sesionCip.rows.length) {
       const dupDni = await buscarRegistroDuplicadoPorDni(dni, cipTrim);
       if (dupDni) {
@@ -2299,7 +2313,7 @@ async function consultarProgresosPendientes(admin, query) {
   const { where, params } = await consultarProgresosFiltrados(admin, query);
   const r = await pool.query(
     `SELECT NULL::INTEGER AS id, p.cip, p.nombres, COALESCE(p.dni,'') AS dni, p.comisaria, p.unidad,
-            p.bloque_max, p.fecha_nac, p.edad,
+            COALESCE(p.grado,'') AS grado, p.bloque_max, p.fecha_nac, p.edad,
             GREATEST(COALESCE(p.total_resp, 0), ${sqlContarRespuestas('p.respuestas')}) AS total_resp,
             FALSE AS completada, TRUE AS solo_progreso,
             ${sqlFechaTxt('p.actualizado')} AS fecha,
