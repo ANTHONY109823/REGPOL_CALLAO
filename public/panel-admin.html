@@ -726,20 +726,6 @@
         <div class="filtros" style="flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;">
           <select id="f-div" onchange="onFiltroDivisionAdmin()"><option value="">Todas las divisiones</option></select>
           <select id="f-uni" onchange="onFiltroRespuestasChange()"><option value="">Todas las unidades</option></select>
-          <select id="f-estado" onchange="cargarTabla(1)" title="Estado del cuestionario">
-            <option value="todos">Todos los estados</option>
-            <option value="en_proceso" selected>En proceso (llegaron)</option>
-            <option value="sin_enviar">566 sin enviar</option>
-            <option value="completo">Completos</option>
-          </select>
-          <select id="f-orden" onchange="cargarTabla(1)" title="Orden de la cola">
-            <option value="unidad_rrhh" selected>Orden: unidad RRHH</option>
-            <option value="avance">Orden: avance (más → menos)</option>
-            <option value="fecha">Orden: fecha</option>
-          </select>
-          <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#333;cursor:pointer;user-select:none;" title="No muestra a quien guardó hace menos de 10 minutos (está llenando ahora)">
-            <input type="checkbox" id="f-excluir-activos" checked onchange="cargarTabla(1)"/> Ocultar quien llena ahora
-          </label>
           <input id="f-bus" type="text" placeholder="CIP / DNI / Nombres..." style="min-width:200px;flex:1;"
             onkeydown="if(event.key==='Enter'){event.preventDefault();cargarTabla(1);}"/>
           <button class="btn btn-v" type="button" onclick="cargarTabla(1)"><i class="fas fa-search"></i> Buscar</button>
@@ -747,20 +733,15 @@
             <i class="fas fa-chart-pie"></i> Ver informe unidad
           </button>
         </div>
-        <p style="font-size:12px;color:#666;margin:-4px 0 10px;">
-          <strong>Dependencia (form)</strong> = lo que eligió el efectivo en el cuestionario.
-          <strong>Unidad RRHH</strong> = nómina real (solo lectura). Con <em>Orden: unidad RRHH</em> la cola se agrupa por la nómina.
-          Si filtra «UNIDADES ADM. RPC» y la nómina es otra (ej. CIA LA LEGUA), verá la unidad real en dorado.
-          Pulse <strong>Ctrl+F5</strong> si no ve estos filtros. No se alteran respuestas ni avances.
-        </p>
+        <p style="font-size:12px;color:#666;margin:-4px 0 10px;">Los registros se ordenan por la <strong>unidad de nómina (RRHH)</strong>. La columna Unidad muestra esa dependencia real. Use <strong>Ver</strong> en cada fila.</p>
         <div class="tinfo" id="tabla-info"></div>
         <div style="overflow-x:auto;max-height:68vh;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">
           <table class="t" style="margin:0;">
             <thead><tr>
-              <th>División</th><th>Dependencia (form)</th><th>Unidad RRHH</th><th>Apellidos y Nombres</th><th>CIP</th><th>DNI</th>
+              <th>División</th><th>Unidad</th><th>Apellidos y Nombres</th><th>CIP</th><th>DNI</th>
               <th>Fecha</th><th>Edad</th><th>Estado</th><th>Editar</th><th>Ver</th><th>Eliminar</th>
             </tr></thead>
-            <tbody id="tabla-body"><tr><td colspan="12" style="text-align:center;color:#888;padding:24px;font-size:13px;">Seleccione división, unidad o busque por CIP / DNI / nombre y pulse <strong>Buscar</strong>.</td></tr></tbody>
+            <tbody id="tabla-body"><tr><td colspan="11" style="text-align:center;color:#888;padding:24px;font-size:13px;">Seleccione división, unidad o busque por CIP / DNI / nombre y pulse <strong>Buscar</strong>.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -2170,7 +2151,7 @@ function vaciarTablaRespuestas(msg) {
   var body = document.getElementById('tabla-body');
   var texto = msg || 'Seleccione división, unidad o busque por CIP / DNI / nombre y pulse Buscar.';
   if (body) {
-    body.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#888;padding:24px;font-size:13px;">'
+    body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#888;padding:24px;font-size:13px;">'
       + escHtml(texto) + '</td></tr>';
   }
   set('tabla-info', '');
@@ -3369,23 +3350,15 @@ function badgeEstadoRegistro(r) {
 }
 
 function filaRegistroRespuesta(r, divNombre) {
-  var uni = r.unidad || r.comisaria || '—';
-  var uniRrhh = r.unidad_rrhh || '';
-  var celdaRrhh;
-  if (!uniRrhh) {
-    celdaRrhh = '<span style="color:#999;font-size:11px;">Sin nómina</span>';
-  } else if (r.unidad_coincide === false) {
-    celdaRrhh = '<strong style="color:#b7791f;" title="Difiere de la dependencia del formulario">'
-      + escDatos(uniRrhh) + '</strong>'
-      + (r.grado_rrhh ? '<div style="font-size:10px;color:#666;">' + escDatos(r.grado_rrhh) + '</div>' : '');
-  } else {
-    celdaRrhh = '<strong style="color:#004d3d;">' + escDatos(uniRrhh) + '</strong>'
-      + (r.grado_rrhh ? '<div style="font-size:10px;color:#666;">' + escDatos(r.grado_rrhh) + '</div>' : '');
-  }
+  var uniReal = (r.unidad_rrhh && String(r.unidad_rrhh).trim())
+    ? String(r.unidad_rrhh).trim()
+    : (r.unidad || r.comisaria || '—');
+  var aviso = (r.unidad_rrhh && r.unidad_coincide === false)
+    ? ' <span style="font-size:10px;color:#b7791f;" title="En el formulario figuraba otra dependencia">(nómina)</span>'
+    : '';
   return '<tr' + (r.solo_progreso ? ' style="background:#fffdf5;"' : '') + '>'
     + '<td style="font-size:11px;color:#666;">' + escDatos(divNombre) + '</td>'
-    + '<td style="font-size:11px;"><strong>' + escDatos(uni) + '</strong></td>'
-    + '<td style="font-size:11px;">' + celdaRrhh + '</td>'
+    + '<td style="font-size:11px;"><strong>' + escDatos(uniReal) + '</strong>' + aviso + '</td>'
     + '<td><strong>' + escDatos(r.nombres) + '</strong></td>'
     + '<td>' + escDatos(r.cip) + '</td>'
     + '<td>' + escDatos(r.dni) + '</td>'
@@ -3402,23 +3375,23 @@ function renderTablaRespuestasPorDivision(rows) {
   var divisiones = window._divisionesData || DIVISIONES_DATA || [];
   var map = mapaUnidadADivision(divisiones);
   var filtroDiv = val('f-div');
-  var ordenSel = val('f-orden') || 'unidad_rrhh';
   var grupos = {};
   var sinDiv = 'OTROS / SIN DIVISIÓN';
   var sinRrhh = 'SIN NÓMINA RRHH';
 
   (rows || []).forEach(function(r) {
+    var uniReal = (r.unidad_rrhh && String(r.unidad_rrhh).trim())
+      ? String(r.unidad_rrhh).trim()
+      : (r.unidad || r.comisaria || '');
     var div;
-    if (ordenSel === 'unidad_rrhh') {
-      div = (r.division_rrhh && String(r.division_rrhh).trim())
-        ? String(r.division_rrhh).trim()
-        : (r.unidad_rrhh ? sinDiv : sinRrhh);
-      if (!r.division_rrhh && r.unidad_rrhh) {
-        div = map[normUniResp(r.unidad_rrhh)] || sinDiv;
-      }
+    if (r.division_rrhh && String(r.division_rrhh).trim()) {
+      div = String(r.division_rrhh).trim();
+    } else if (r.unidad_rrhh) {
+      div = map[normUniResp(r.unidad_rrhh)] || sinDiv;
+    } else if (uniReal) {
+      div = map[normUniResp(uniReal)] || sinDiv;
     } else {
-      var uni = r.unidad || r.comisaria || '';
-      div = map[normUniResp(uni)] || sinDiv;
+      div = sinRrhh;
     }
     if (!grupos[div]) grupos[div] = [];
     grupos[div].push(r);
@@ -3428,8 +3401,9 @@ function renderTablaRespuestasPorDivision(rows) {
   Object.keys(grupos).forEach(function(n) {
     if (orden.indexOf(n) === -1) orden.push(n);
   });
-  if (filtroDiv && ordenSel !== 'unidad_rrhh') {
-    orden = orden.filter(function(n) { return n === filtroDiv; });
+  if (filtroDiv) {
+    // Con orden por unidad real, el filtro de división del catálogo puede no coincidir
+    // con división RRHH; no forzar ocultar grupos RRHH distintos.
   }
 
   var html = '';
@@ -3437,17 +3411,15 @@ function renderTablaRespuestasPorDivision(rows) {
   orden.forEach(function(divNombre) {
     var regs = grupos[divNombre];
     if (!regs || !regs.length) return;
-    if (ordenSel !== 'unidad_rrhh' && ordenSel !== 'avance') {
-      regs.sort(function(a, b) {
-        var ua = normUniResp(a.unidad || a.comisaria);
-        var ub = normUniResp(b.unidad || b.comisaria);
-        if (ua !== ub) return ua.localeCompare(ub, 'es');
-        return String(a.nombres || '').localeCompare(String(b.nombres || ''), 'es');
-      });
-    }
+    regs.sort(function(a, b) {
+      var ua = normUniResp(a.unidad_rrhh || a.unidad || a.comisaria);
+      var ub = normUniResp(b.unidad_rrhh || b.unidad || b.comisaria);
+      if (ua !== ub) return ua.localeCompare(ub, 'es');
+      return String(a.nombres || '').localeCompare(String(b.nombres || ''), 'es');
+    });
     totalMostrado += regs.length;
     html += '<tr class="fila-division">'
-      + '<td colspan="12" style="background:#004d3d;color:#fff;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.35px;">'
+      + '<td colspan="11" style="background:#004d3d;color:#fff;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.35px;">'
       + '<i class="fas fa-sitemap" style="margin-right:6px;"></i>' + escHtml(divNombre)
       + ' <span style="font-weight:500;opacity:.9;">(' + regs.length + ' registro' + (regs.length === 1 ? '' : 's') + ')</span>'
       + '</td></tr>';
@@ -3455,7 +3427,7 @@ function renderTablaRespuestasPorDivision(rows) {
   });
 
   if (!html) {
-    return { html: '<tr><td colspan="12" style="text-align:center;color:#bbb;padding:22px;">Sin registros para los filtros seleccionados.</td></tr>', total: 0 };
+    return { html: '<tr><td colspan="11" style="text-align:center;color:#bbb;padding:22px;">Sin registros para los filtros seleccionados.</td></tr>', total: 0 };
   }
   return { html: html, total: totalMostrado };
 }
@@ -3469,32 +3441,26 @@ function cargarTabla(pag){
   }
   actualizarBotonesEliminarEval();
   var body = document.getElementById('tabla-body');
-  if (body) body.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#bbb;padding:18px;">Cargando...</td></tr>';
+  if (body) body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#bbb;padding:18px;">Cargando...</td></tr>';
   var div = encodeURIComponent(val('f-div'));
   var uni = encodeURIComponent(val('f-uni'));
   var bus = encodeURIComponent(val('f-bus'));
-  var estado = encodeURIComponent(val('f-estado') || 'todos');
-  var orden = encodeURIComponent(val('f-orden') || 'fecha');
-  var excluir = document.getElementById('f-excluir-activos');
-  var excluirMin = (excluir && excluir.checked) ? '10' : '0';
   fetch(API + '/evaluaciones?pagina=1&por_pagina=500&division=' + div + '&unidad=' + uni
-    + '&busqueda=' + bus + '&estado=' + estado + '&orden=' + orden
-    + '&excluir_activos_min=' + excluirMin, { headers: hdr() })
+    + '&busqueda=' + bus + '&orden=unidad_rrhh', { headers: hdr() })
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.ok) {
-        if (body) body.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#c0392b;padding:18px;">' + escHtml(d.error || 'Error al cargar') + '</td></tr>';
+        if (body) body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#c0392b;padding:18px;">' + escHtml(d.error || 'Error al cargar') + '</td></tr>';
         return;
       }
       var rendered = renderTablaRespuestasPorDivision(d.rows || []);
       if (body) body.innerHTML = rendered.html;
-      var modo = (val('f-orden') === 'unidad_rrhh') ? 'cola por unidad RRHH' : 'vista por divisiones';
-      set('tabla-info', rendered.total + ' registro' + (rendered.total === 1 ? '' : 's') + ' — ' + modo);
+      set('tabla-info', rendered.total + ' registro' + (rendered.total === 1 ? '' : 's') + ' — ordenados por unidad');
       var pags = document.getElementById('paginacion');
       if (pags) pags.innerHTML = '';
     })
     .catch(function() {
-      if (body) body.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#c0392b;padding:18px;">Error de conexión.</td></tr>';
+      if (body) body.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#c0392b;padding:18px;">Error de conexión.</td></tr>';
     });
 }
 

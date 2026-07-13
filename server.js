@@ -1946,7 +1946,7 @@ function clasificarEstadoListadoEval(r) {
 function filtrarYOrdenarListadoEvaluaciones(rows, query) {
   let list = Array.isArray(rows) ? rows.slice() : [];
   const estado = String(query.estado || 'todos').toLowerCase().trim();
-  const orden = String(query.orden || 'fecha').toLowerCase().trim();
+  const orden = String(query.orden || 'unidad_rrhh').toLowerCase().trim();
   const excluirMin = Math.max(0, parseInt(query.excluir_activos_min, 10) || 0);
   const ahora = Date.now();
 
