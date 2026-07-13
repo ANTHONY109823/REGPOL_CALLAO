@@ -733,7 +733,7 @@
             <i class="fas fa-chart-pie"></i> Ver informe unidad
           </button>
         </div>
-        <p style="font-size:12px;color:#666;margin:-4px 0 10px;">Los registros se ordenan por la <strong>unidad de nómina (RRHH)</strong>. La columna Unidad muestra esa dependencia real. Use <strong>Ver</strong> en cada fila.</p>
+        <p style="font-size:12px;color:#666;margin:-4px 0 10px;">Ordenados por la <strong>unidad de nómina</strong> (aunque se hayan registrado mal en el cuestionario). Use <strong>Ver</strong> en cada fila.</p>
         <div class="tinfo" id="tabla-info"></div>
         <div style="overflow-x:auto;max-height:68vh;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">
           <table class="t" style="margin:0;">
@@ -3353,12 +3353,9 @@ function filaRegistroRespuesta(r, divNombre) {
   var uniReal = (r.unidad_rrhh && String(r.unidad_rrhh).trim())
     ? String(r.unidad_rrhh).trim()
     : (r.unidad || r.comisaria || '—');
-  var aviso = (r.unidad_rrhh && r.unidad_coincide === false)
-    ? ' <span style="font-size:10px;color:#b7791f;" title="En el formulario figuraba otra dependencia">(nómina)</span>'
-    : '';
   return '<tr' + (r.solo_progreso ? ' style="background:#fffdf5;"' : '') + '>'
     + '<td style="font-size:11px;color:#666;">' + escDatos(divNombre) + '</td>'
-    + '<td style="font-size:11px;"><strong>' + escDatos(uniReal) + '</strong>' + aviso + '</td>'
+    + '<td style="font-size:11px;"><strong>' + escDatos(uniReal) + '</strong></td>'
     + '<td><strong>' + escDatos(r.nombres) + '</strong></td>'
     + '<td>' + escDatos(r.cip) + '</td>'
     + '<td>' + escDatos(r.dni) + '</td>'

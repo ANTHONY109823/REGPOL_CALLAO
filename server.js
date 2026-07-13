@@ -1948,6 +1948,8 @@ function filtrarYOrdenarListadoEvaluaciones(rows, query) {
   const estado = String(query.estado || 'todos').toLowerCase().trim();
   const orden = String(query.orden || 'unidad_rrhh').toLowerCase().trim();
   const excluirMin = Math.max(0, parseInt(query.excluir_activos_min, 10) || 0);
+  const uniFiltro = String(query.unidad || query.comisaria || '').trim().toUpperCase();
+  const divFiltro = String(query.division || '').trim().toUpperCase();
   const ahora = Date.now();
 
   if (excluirMin > 0) {
@@ -1968,6 +1970,26 @@ function filtrarYOrdenarListadoEvaluaciones(rows, query) {
     list = list.filter(function(r) { return clasificarEstadoListadoEval(r).completo; });
   } else if (estado === 'sin_enviar') {
     list = list.filter(function(r) { return clasificarEstadoListadoEval(r).sinEnviar; });
+  }
+
+  // Cola por nómina: el filtro de unidad/división usa la unidad real de RRHH
+  if (orden === 'unidad_rrhh') {
+    if (uniFiltro) {
+      list = list.filter(function(r) {
+        const ur = String(r.unidad_rrhh || '').trim().toUpperCase();
+        if (ur) return ur.indexOf(uniFiltro) !== -1;
+        const ud = String(r.unidad || r.comisaria || '').trim().toUpperCase();
+        return ud.indexOf(uniFiltro) !== -1;
+      });
+    }
+    if (divFiltro && divFiltro !== 'TODAS') {
+      list = list.filter(function(r) {
+        const dr = String(r.division_rrhh || '').trim().toUpperCase();
+        if (dr) return dr === divFiltro;
+        // Sin nómina: se mantiene si ya pasó el WHERE por dependencia del form
+        return true;
+      });
+    }
   }
 
   list.sort(function(a, b) {
@@ -2081,12 +2103,19 @@ async function consultarProgresosFiltrados(admin, query) {
     if (du.rows.length) {
       const arr = du.rows.map(function(row) { return row.nombre; });
       if (porRrhh) {
+        // Prioridad nómina: pertenece a la división por RRHH; si no hay nómina, por form
         where += ` AND (
-          UPPER(p.comisaria) = ANY($${pi}::text[]) OR UPPER(p.unidad) = ANY($${pi}::text[])
-          OR UPPER(TRIM(p.cip)) IN (
+          UPPER(TRIM(p.cip)) IN (
             SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
             WHERE UPPER(TRIM(COALESCE(rr.division_nombre,''))) = $${pi + 1}
                OR UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) = ANY($${pi}::text[])
+          )
+          OR (
+            NOT EXISTS (
+              SELECT 1 FROM personal_rrhh rr2
+              WHERE UPPER(TRIM(rr2.cip)) = UPPER(TRIM(p.cip))
+            )
+            AND (UPPER(p.comisaria) = ANY($${pi}::text[]) OR UPPER(p.unidad) = ANY($${pi}::text[]))
           )
         )`;
         params.push(arr, division); pi += 2;
@@ -2101,10 +2130,16 @@ async function consultarProgresosFiltrados(admin, query) {
   if (comisaria) {
     if (porRrhh) {
       where += ` AND (
-        UPPER(p.comisaria) LIKE $${pi} OR UPPER(p.unidad) LIKE $${pi}
-        OR UPPER(TRIM(p.cip)) IN (
+        UPPER(TRIM(p.cip)) IN (
           SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
           WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE $${pi}
+        )
+        OR (
+          NOT EXISTS (
+            SELECT 1 FROM personal_rrhh rr2
+            WHERE UPPER(TRIM(rr2.cip)) = UPPER(TRIM(p.cip))
+          )
+          AND (UPPER(p.comisaria) LIKE $${pi} OR UPPER(p.unidad) LIKE $${pi})
         )
       )`;
     } else {
@@ -2115,10 +2150,16 @@ async function consultarProgresosFiltrados(admin, query) {
   if (unidad) {
     if (porRrhh) {
       where += ` AND (
-        UPPER(p.unidad) LIKE $${pi} OR UPPER(p.comisaria) LIKE $${pi}
-        OR UPPER(TRIM(p.cip)) IN (
+        UPPER(TRIM(p.cip)) IN (
           SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
           WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE $${pi}
+        )
+        OR (
+          NOT EXISTS (
+            SELECT 1 FROM personal_rrhh rr2
+            WHERE UPPER(TRIM(rr2.cip)) = UPPER(TRIM(p.cip))
+          )
+          AND (UPPER(p.unidad) LIKE $${pi} OR UPPER(p.comisaria) LIKE $${pi})
         )
       )`;
     } else {
@@ -2755,11 +2796,17 @@ async function buildWhere(query, baseWhere, baseParams) {
       const arr = du.rows.map(r => r.nombre);
       if (porRrhh) {
         where += ` AND (
-          UPPER(comisaria) = ANY($${pi}::text[]) OR UPPER(unidad) = ANY($${pi}::text[])
-          OR UPPER(TRIM(cip)) IN (
+          UPPER(TRIM(cip)) IN (
             SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
             WHERE UPPER(TRIM(COALESCE(rr.division_nombre,''))) = $${pi + 1}
                OR UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) = ANY($${pi}::text[])
+          )
+          OR (
+            NOT EXISTS (
+              SELECT 1 FROM personal_rrhh rr2
+              WHERE UPPER(TRIM(rr2.cip)) = UPPER(TRIM(cip))
+            )
+            AND (UPPER(comisaria) = ANY($${pi}::text[]) OR UPPER(unidad) = ANY($${pi}::text[]))
           )
         )`;
         params.push(arr, division); pi += 2;
@@ -2772,10 +2819,16 @@ async function buildWhere(query, baseWhere, baseParams) {
   if (comisaria) {
     if (porRrhh) {
       where += ` AND (
-        UPPER(comisaria) LIKE $${pi} OR UPPER(unidad) LIKE $${pi}
-        OR UPPER(TRIM(cip)) IN (
+        UPPER(TRIM(cip)) IN (
           SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
           WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE $${pi}
+        )
+        OR (
+          NOT EXISTS (
+            SELECT 1 FROM personal_rrhh rr2
+            WHERE UPPER(TRIM(rr2.cip)) = UPPER(TRIM(cip))
+          )
+          AND (UPPER(comisaria) LIKE $${pi} OR UPPER(unidad) LIKE $${pi})
         )
       )`;
     } else {
@@ -2786,10 +2839,16 @@ async function buildWhere(query, baseWhere, baseParams) {
   if (unidad) {
     if (porRrhh) {
       where += ` AND (
-        UPPER(unidad) LIKE $${pi} OR UPPER(comisaria) LIKE $${pi}
-        OR UPPER(TRIM(cip)) IN (
+        UPPER(TRIM(cip)) IN (
           SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
           WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE $${pi}
+        )
+        OR (
+          NOT EXISTS (
+            SELECT 1 FROM personal_rrhh rr2
+            WHERE UPPER(TRIM(rr2.cip)) = UPPER(TRIM(cip))
+          )
+          AND (UPPER(unidad) LIKE $${pi} OR UPPER(comisaria) LIKE $${pi})
         )
       )`;
     } else {
