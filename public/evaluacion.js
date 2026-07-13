@@ -1668,7 +1668,7 @@ function enviarEvaluacion() {
       clearTimeout(timeoutId);
       if(!data.ok) {
         var msgDup = mensajeErrorDuplicadoNombre(data);
-        throw new Error(msgDup || data.error || 'Error del servidor');
+        throw new Error(msgDup || data.mensaje || data.error || 'Error del servidor');
       }
       if (spinner) spinner.style.display='none';
       if (checkIcon) checkIcon.style.display='block';
