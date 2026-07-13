@@ -739,7 +739,7 @@
           <table class="t" style="margin:0;">
             <thead><tr>
               <th>División</th><th>Unidad</th><th>Grado</th><th>Apellidos y Nombres</th><th>CIP</th><th>DNI</th>
-              <th>Fecha</th><th>Edad</th><th>Estado</th><th>Editar</th><th>Ver</th><th>Eliminar</th>
+              <th>Tiempo</th><th>Edad</th><th>Estado</th><th>Editar</th><th>Ver</th><th>Eliminar</th>
             </tr></thead>
             <tbody id="tabla-body"><tr><td colspan="12" style="text-align:center;color:#888;padding:24px;font-size:13px;">Seleccione división, unidad o busque por CIP / DNI / nombre y pulse <strong>Buscar</strong>.</td></tr></tbody>
           </table>
@@ -3409,7 +3409,7 @@ function filaRegistroRespuesta(r, divNombre) {
     + '<td><strong>' + escDatos(r.nombres) + '</strong></td>'
     + '<td>' + escDatos(r.cip) + '</td>'
     + '<td>' + escDatos(r.dni) + '</td>'
-    + '<td style="font-size:11px;">' + escHtml(formatearFechaHoraLocal(r)) + '</td>'
+    + '<td style="font-size:11px;text-align:center;font-variant-numeric:tabular-nums;">' + escHtml(formatearTiempoEval(r.tiempo_segundos)) + '</td>'
     + '<td style="text-align:center;">' + (r.edad ? escHtml(String(r.edad)) : '—') + '</td>'
     + '<td>' + badgeEstadoRegistro(r) + '</td>'
     + '<td>' + btnEditarDatosEval(r) + '</td>'

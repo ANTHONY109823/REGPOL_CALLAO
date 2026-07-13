@@ -2005,6 +2005,7 @@ async function fusionarFilaListadoEval(row) {
       solo_progreso: true,
       edad: resolverEdadFila(prog) || resolverEdadFila(row),
       fecha_nac: prog.fecha_nac || row.fecha_nac,
+      tiempo_segundos: prog.tiempo_segundos != null ? prog.tiempo_segundos : row.tiempo_segundos,
       actualizado_iso: prog.actualizado
         ? new Date(prog.actualizado).toISOString()
         : (row.fecha_iso || null)
@@ -2359,6 +2360,7 @@ async function consultarProgresosPendientes(admin, query) {
     `SELECT NULL::INTEGER AS id, p.cip, p.nombres, COALESCE(p.dni,'') AS dni, p.comisaria, p.unidad,
             COALESCE(p.grado,'') AS grado, p.bloque_max, p.fecha_nac, p.edad,
             GREATEST(COALESCE(p.total_resp, 0), ${sqlContarRespuestas('p.respuestas')}) AS total_resp,
+            COALESCE(p.tiempo_segundos, 0) AS tiempo_segundos,
             FALSE AS completada, TRUE AS solo_progreso,
             ${sqlFechaTxt('p.actualizado')} AS fecha,
             ${sqlFechaIso('p.actualizado')} AS fecha_iso,
@@ -2710,6 +2712,7 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
       `SELECT id, ${sqlFechaTxt('fecha')} AS fecha, ${sqlFechaIso('fecha')} AS fecha_iso,
               comisaria, unidad,
               nombres, cip, dni, fecha_nac, edad, grado, completada, bloque_max,
+              COALESCE(tiempo_segundos, 0) AS tiempo_segundos,
               ${sqlContarRespuestas('respuestas')} AS total_resp,
               FALSE AS solo_progreso
        FROM evaluaciones ${where} ORDER BY fecha DESC LIMIT $${pi} OFFSET $${pi+1}`,
