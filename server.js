@@ -2013,6 +2013,40 @@ async function fusionarFilaListadoEval(row) {
   return row;
 }
 
+/** Peso jerárquico PNP: menor = mayor grado (igual que COD.GRADO en nómina). */
+function pesoJerarquiaGrado(codGrado, gradoTexto) {
+  const cod = parseInt(String(codGrado || '').trim(), 10);
+  if (Number.isFinite(cod) && cod > 0) return cod;
+  const g = String(gradoTexto || '').trim().toUpperCase()
+    .replace(/\bPNP\b/g, '')
+    .replace(/\./g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!g) return 9999;
+  if (g === 'CAS' || g === 'EC' || /EMPLEADO\s*CIVIL/.test(g)) return 9000;
+  const reglas = [
+    [/^GRAL|GENERAL/, 20],
+    [/^CRNL|CORONEL/, 30],
+    [/^CMDTE|COMANDANTE/, 40],
+    [/^MAY$|^MAYOR/, 50],
+    [/^CAP$|^CAPITAN|^CAPITÁN/, 60],
+    [/^TNTE|^TENIENTE/, 70],
+    [/^ALFZ|^ALFEREZ|^ALFÉREZ/, 80],
+    [/^SS$|^SO\s*SUP|^SUPERIOR/, 110],
+    [/^BRIG/, 115],
+    [/^ST1|^SO1|^T1|^TECNICO\s*(DE\s*)?1/, 120],
+    [/^ST2|^SO2|^T2|^TECNICO\s*(DE\s*)?2/, 130],
+    [/^ST3|^SO3|^T3|^TECNICO\s*(DE\s*)?3/, 140],
+    [/^S1|^SUBOF(ICIAL)?\s*(DE\s*)?1/, 150],
+    [/^S2|^SUBOF(ICIAL)?\s*(DE\s*)?2/, 160],
+    [/^S3|^SUBOF(ICIAL)?\s*(DE\s*)?3/, 170]
+  ];
+  for (let i = 0; i < reglas.length; i++) {
+    if (reglas[i][0].test(g)) return reglas[i][1];
+  }
+  return 8000;
+}
+
 /** Solo lectura: cruza CIP con nómina RRHH. No modifica evaluaciones ni progresos. */
 async function enriquecerFilasConRRHH(rows) {
   if (!rows || !rows.length) return rows || [];
@@ -2031,6 +2065,7 @@ async function enriquecerFilasConRRHH(rows) {
         unidad_rrhh: '',
         division_rrhh: '',
         grado_rrhh: '',
+        cod_grado_rrhh: '',
         unidad_coincide: null
       });
     });
@@ -2038,7 +2073,7 @@ async function enriquecerFilasConRRHH(rows) {
   let map = {};
   try {
     const q = await pool.query(
-      `SELECT UPPER(TRIM(cip)) AS cip, unidad_nombre, division_nombre, grado, situacion
+      `SELECT UPPER(TRIM(cip)) AS cip, unidad_nombre, division_nombre, grado, cod_grado, situacion
        FROM personal_rrhh
        WHERE UPPER(TRIM(cip)) = ANY($1::text[])`,
       [cips]
@@ -2058,12 +2093,16 @@ async function enriquecerFilasConRRHH(rows) {
     const coincide = rr
       ? uniDecl.toUpperCase() === uniRrhh.toUpperCase()
       : null;
+    const gradoRrhh = rr ? String(rr.grado || '').trim() : '';
+    const codGrado = rr ? String(rr.cod_grado || '').trim() : '';
     return Object.assign({}, r, {
       unidad_rrhh: uniRrhh,
       division_rrhh: rr ? String(rr.division_nombre || '').trim() : '',
-      grado_rrhh: rr ? String(rr.grado || '').trim() : '',
+      grado_rrhh: gradoRrhh,
+      cod_grado_rrhh: codGrado,
       situacion_rrhh: rr ? String(rr.situacion || '').trim() : '',
-      unidad_coincide: coincide
+      unidad_coincide: coincide,
+      _peso_grado: pesoJerarquiaGrado(codGrado, gradoRrhh || r.grado)
     });
   });
 }
@@ -2133,9 +2172,14 @@ function filtrarYOrdenarListadoEvaluaciones(rows, query) {
       const ua = String(a.unidad_rrhh || a.unidad || a.comisaria || '').toUpperCase();
       const ub = String(b.unidad_rrhh || b.unidad || b.comisaria || '').toUpperCase();
       if (ua !== ub) return ua.localeCompare(ub, 'es');
-      const ta = clasificarEstadoListadoEval(a).total;
-      const tb = clasificarEstadoListadoEval(b).total;
-      if (ta !== tb) return tb - ta;
+      // Jerarquía descendente: menor COD.GRADO = mayor rango (CRNL → … → S3)
+      const pa = (a._peso_grado != null)
+        ? a._peso_grado
+        : pesoJerarquiaGrado(a.cod_grado_rrhh, a.grado_rrhh || a.grado);
+      const pb = (b._peso_grado != null)
+        ? b._peso_grado
+        : pesoJerarquiaGrado(b.cod_grado_rrhh, b.grado_rrhh || b.grado);
+      if (pa !== pb) return pa - pb;
       return String(a.nombres || '').localeCompare(String(b.nombres || ''), 'es');
     }
     if (orden === 'avance') {

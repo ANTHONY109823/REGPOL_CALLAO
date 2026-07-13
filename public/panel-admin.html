@@ -3349,13 +3349,59 @@ function badgeEstadoRegistro(r) {
     : '<span class="badge pend">' + total + '/566</span>';
 }
 
+function pesoJerarquiaGradoResp(codGrado, gradoTexto) {
+  var cod = parseInt(String(codGrado || '').trim(), 10);
+  if (isFinite(cod) && cod > 0) return cod;
+  var g = String(gradoTexto || '').trim().toUpperCase()
+    .replace(/\bPNP\b/g, '')
+    .replace(/\./g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!g) return 9999;
+  if (g === 'CAS' || g === 'EC' || /EMPLEADO\s*CIVIL/.test(g)) return 9000;
+  var reglas = [
+    [/^GRAL|GENERAL/, 20],
+    [/^CRNL|CORONEL/, 30],
+    [/^CMDTE|COMANDANTE/, 40],
+    [/^MAY$|^MAYOR/, 50],
+    [/^CAP$|^CAPITAN|^CAPITÁN/, 60],
+    [/^TNTE|^TENIENTE/, 70],
+    [/^ALFZ|^ALFEREZ|^ALFÉREZ/, 80],
+    [/^SS$|^SO\s*SUP|^SUPERIOR/, 110],
+    [/^BRIG/, 115],
+    [/^ST1|^SO1|^T1|^TECNICO\s*(DE\s*)?1/, 120],
+    [/^ST2|^SO2|^T2|^TECNICO\s*(DE\s*)?2/, 130],
+    [/^ST3|^SO3|^T3|^TECNICO\s*(DE\s*)?3/, 140],
+    [/^S1|^SUBOF(ICIAL)?\s*(DE\s*)?1/, 150],
+    [/^S2|^SUBOF(ICIAL)?\s*(DE\s*)?2/, 160],
+    [/^S3|^SUBOF(ICIAL)?\s*(DE\s*)?3/, 170]
+  ];
+  for (var i = 0; i < reglas.length; i++) {
+    if (reglas[i][0].test(g)) return reglas[i][1];
+  }
+  return 8000;
+}
+
+/** Grado en RESPUESTAS: agrega PNP; CAS / empleado civil / vacío sin sufijo. */
+function formatearGradoRespuestas(grado) {
+  var g = String(grado || '').trim();
+  if (!g) return '—';
+  var u = g.toUpperCase().replace(/\s+/g, ' ').trim();
+  if (u === 'CAS' || u === 'EC' || u === 'E.C.' || /EMPLEADO\s*CIVIL/.test(u)) {
+    return g;
+  }
+  if (/\bPNP\b/i.test(g)) return g;
+  return g.replace(/\s+$/, '') + ' PNP';
+}
+
 function filaRegistroRespuesta(r, divNombre) {
   var uniReal = (r.unidad_rrhh && String(r.unidad_rrhh).trim())
     ? String(r.unidad_rrhh).trim()
     : (r.unidad || r.comisaria || '—');
-  var grado = (r.grado_rrhh && String(r.grado_rrhh).trim())
+  var gradoRaw = (r.grado_rrhh && String(r.grado_rrhh).trim())
     ? String(r.grado_rrhh).trim()
-    : (r.grado ? String(r.grado).trim() : '—');
+    : (r.grado ? String(r.grado).trim() : '');
+  var grado = formatearGradoRespuestas(gradoRaw);
   return '<tr' + (r.solo_progreso ? ' style="background:#fffdf5;"' : '') + '>'
     + '<td style="font-size:11px;color:#666;">' + escDatos(divNombre) + '</td>'
     + '<td style="font-size:11px;"><strong>' + escDatos(uniReal) + '</strong></td>'
@@ -3416,6 +3462,13 @@ function renderTablaRespuestasPorDivision(rows) {
       var ua = normUniResp(a.unidad_rrhh || a.unidad || a.comisaria);
       var ub = normUniResp(b.unidad_rrhh || b.unidad || b.comisaria);
       if (ua !== ub) return ua.localeCompare(ub, 'es');
+      var pa = (a._peso_grado != null)
+        ? a._peso_grado
+        : pesoJerarquiaGradoResp(a.cod_grado_rrhh, a.grado_rrhh || a.grado);
+      var pb = (b._peso_grado != null)
+        ? b._peso_grado
+        : pesoJerarquiaGradoResp(b.cod_grado_rrhh, b.grado_rrhh || b.grado);
+      if (pa !== pb) return pa - pb;
       return String(a.nombres || '').localeCompare(String(b.nombres || ''), 'es');
     });
     totalMostrado += regs.length;
