@@ -635,10 +635,10 @@
       <div id="dash-panel-psico" class="card" style="display:none;">
         <h3><i class="fas fa-brain"></i> Dashboard — Psicología / Bienestar</h3>
         <div class="stats-grid">
-          <div class="stat"><div class="n" id="dp-total">—</div><div class="l">Evaluaciones registradas</div></div>
+          <div class="stat"><div class="n" id="dp-total">—</div><div class="l">Total general</div></div>
           <div class="stat" style="border-color:#a5d6a7;"><div class="n" id="dp-completas" style="color:#1a7a3a;">—</div><div class="l">Completas</div></div>
           <div class="stat" style="border-color:#ffe082;"><div class="n" id="dp-pendientes" style="color:#856404;">—</div><div class="l">Parciales</div></div>
-          <div class="stat"><div class="n" id="dp-curso">—</div><div class="l">En curso</div></div>
+          <div class="stat"><div class="n" id="dp-curso">—</div><div class="l">En curso (sin enviar)</div></div>
         </div>
         <div style="margin-top:14px;">
           <div class="bl-box">
@@ -733,7 +733,7 @@
             <i class="fas fa-chart-pie"></i> Ver informe unidad
           </button>
         </div>
-        <p style="font-size:12px;color:#666;margin:-4px 0 10px;">Ordenados por la <strong>unidad de nómina</strong> (aunque se hayan registrado mal en el cuestionario). Use <strong>Ver</strong> en cada fila.</p>
+        <p style="font-size:12px;color:#666;margin:-4px 0 10px;">Ordenados por la <strong>unidad de nómina</strong> (aunque se hayan registrado mal en el cuestionario). Use <strong>Ver</strong> en cada fila. Con <strong>Todas las unidades</strong> se muestra el listado completo.</p>
         <div class="tinfo" id="tabla-info"></div>
         <div style="overflow-x:auto;max-height:68vh;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">
           <table class="t" style="margin:0;">
@@ -741,7 +741,7 @@
               <th>División</th><th>Unidad</th><th>Grado</th><th>Apellidos y Nombres</th><th>CIP</th><th>DNI</th>
               <th>Tiempo</th><th>Edad</th><th>Estado</th><th>Editar</th><th>Ver</th><th>Eliminar</th>
             </tr></thead>
-            <tbody id="tabla-body"><tr><td colspan="12" style="text-align:center;color:#888;padding:24px;font-size:13px;">Seleccione división, unidad o busque por CIP / DNI / nombre y pulse <strong>Buscar</strong>.</td></tr></tbody>
+            <tbody id="tabla-body"><tr><td colspan="12" style="text-align:center;color:#888;padding:24px;font-size:13px;">Cargando registros…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -2144,12 +2144,13 @@ function actualizarBotonesEliminarEval() {
 }
 
 function hayFiltroRespuestasActivos() {
-  return !!(val('f-uni') || val('f-div') || val('f-bus').trim());
+  // Siempre se puede listar; "Todas" = sin filtro de división/unidad
+  return true;
 }
 
 function vaciarTablaRespuestas(msg) {
   var body = document.getElementById('tabla-body');
-  var texto = msg || 'Seleccione división, unidad o busque por CIP / DNI / nombre y pulse Buscar.';
+  var texto = msg || 'Pulse Buscar para cargar el listado, o deje Todas las divisiones / unidades para ver el total general.';
   if (body) {
     body.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#888;padding:24px;font-size:13px;">'
       + escHtml(texto) + '</td></tr>';
@@ -2167,8 +2168,7 @@ function actualizarBotonesRespuestas() {
 
 function onFiltroRespuestasChange() {
   actualizarBotonesRespuestas();
-  if (hayFiltroRespuestasActivos()) cargarTabla(1);
-  else vaciarTablaRespuestas();
+  cargarTabla(1);
 }
 
 var _grupoDatos = null, _grupoUnidadActual = '';
@@ -3025,7 +3025,7 @@ function ir(page, el){
   if(page==='descargas'){
     if(!ya) cargarFiltrosTabla();
     actualizarBotonesRespuestas();
-    vaciarTablaRespuestas();
+    cargarTabla(1);
   }
   if(page==='dashboard')           cargarDashboard(!ya);
   if(page==='divisiones' && !ya)   cargarDivisiones();
@@ -3140,10 +3140,12 @@ function cargarStatsSistema(){
 
     var psico = document.getElementById('sys-mod-psico');
     if (psico) {
-      psico.innerHTML = sysModKpi('Evaluaciones registradas', r.evaluaciones_total || 0)
+      psico.innerHTML = sysModKpi('Total general', r.evaluaciones_total_general != null ? r.evaluaciones_total_general : ((r.evaluaciones_total || 0) + (r.evaluaciones_en_curso || 0)))
+        + sysModKpi('En evaluaciones', r.evaluaciones_total || 0)
         + sysModKpi('Completas al 100%', r.evaluaciones_completas || 0)
+        + sysModKpi('Parciales', r.evaluaciones_parciales || 0)
         + sysModKpi('En curso (sin enviar)', r.evaluaciones_en_curso || 0)
-        + '<p style="margin:10px 0 0;font-size:11px;color:#666;">Gestión detallada en <strong>Evaluaciones MMPI-2</strong> y <strong>RESPUESTAS</strong>.</p>';
+        + '<p style="margin:10px 0 0;font-size:11px;color:#666;">Mismos conteos que Psicología. Detalle en <strong>RESPUESTAS</strong>.</p>';
     }
     var conv = document.getElementById('sys-mod-convenios');
     if (conv) {
@@ -3202,10 +3204,15 @@ function cargarStatsPsico(){
       mostrarErrorDashboard('psico', (d && d.error) ? d.error : 'No se pudo cargar el dashboard');
       return;
     }
-    var t=d.totalEvaluaciones||0,c=d.totalCompletas||0;
-    set('dp-total',t); set('dp-completas',c);
-    set('dp-pendientes',Math.max(0,t-c));
-    set('dp-curso',d.totalEnCurso||0);
+    var t = d.totalEvaluaciones || 0;
+    var c = d.totalCompletas || 0;
+    var enCurso = d.totalEnCurso || 0;
+    var parciales = (d.totalParciales != null) ? d.totalParciales : Math.max(0, t - c);
+    var totalGen = (d.totalGeneral != null) ? d.totalGeneral : (t + enCurso);
+    set('dp-total', totalGen);
+    set('dp-completas', c);
+    set('dp-pendientes', parciales);
+    set('dp-curso', enCurso);
     var lista = document.getElementById('dp-ult-lista');
     if(!lista) return;
     lista.innerHTML = (d.ultimasEvaluaciones||[]).length
@@ -3310,14 +3317,16 @@ function cargarFiltrosTabla(){
     llenarSelectDivisiones('f-div', d.divisiones, 'Todas las divisiones');
     llenarSelectUnidadesAgrupadas('f-uni', d.divisiones, 'Todas las unidades');
     actualizarBotonesRespuestas();
+    if (document.getElementById('page-descargas') && document.getElementById('page-descargas').classList.contains('on')) {
+      cargarTabla(1);
+    }
   });
 }
 
 function onFiltroDivisionAdmin() {
   onFiltroDivisionCambio('f-div', 'f-uni', window._divisionesData || [], function() {
     actualizarBotonesRespuestas();
-    if (hayFiltroRespuestasActivos()) cargarTabla(1);
-    else vaciarTablaRespuestas();
+    cargarTabla(1);
   });
 }
 
@@ -3488,18 +3497,14 @@ function renderTablaRespuestasPorDivision(rows) {
 
 function cargarTabla(pag){
   window._tablaPaginaActual = 1;
-  if (!hayFiltroRespuestasActivos()) {
-    vaciarTablaRespuestas();
-    actualizarBotonesRespuestas();
-    return;
-  }
   actualizarBotonesEliminarEval();
   var body = document.getElementById('tabla-body');
   if (body) body.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#bbb;padding:18px;">Cargando...</td></tr>';
   var div = encodeURIComponent(val('f-div'));
   var uni = encodeURIComponent(val('f-uni'));
   var bus = encodeURIComponent(val('f-bus'));
-  fetch(API + '/evaluaciones?pagina=1&por_pagina=500&division=' + div + '&unidad=' + uni
+  var sinFiltro = !val('f-div') && !val('f-uni') && !val('f-bus').trim();
+  fetch(API + '/evaluaciones?pagina=1&por_pagina=5000&division=' + div + '&unidad=' + uni
     + '&busqueda=' + bus + '&orden=unidad_rrhh', { headers: hdr() })
     .then(function(r) { return r.json(); })
     .then(function(d) {
@@ -3509,7 +3514,10 @@ function cargarTabla(pag){
       }
       var rendered = renderTablaRespuestasPorDivision(d.rows || []);
       if (body) body.innerHTML = rendered.html;
-      set('tabla-info', rendered.total + ' registro' + (rendered.total === 1 ? '' : 's') + ' — ordenados por unidad');
+      var info = 'Total general: ' + rendered.total + ' registro' + (rendered.total === 1 ? '' : 's');
+      if (sinFiltro) info += ' (todas las divisiones y unidades)';
+      else info += ' — ordenados por unidad';
+      set('tabla-info', info);
       var pags = document.getElementById('paginacion');
       if (pags) pags.innerHTML = '';
     })

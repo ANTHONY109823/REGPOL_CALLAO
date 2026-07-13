@@ -1345,6 +1345,58 @@ function sqlProgresoConRespuestas(alias) {
   return `COALESCE(${a}.total_resp, 0) > 0`;
 }
 
+/**
+ * Conteos unificados Psicología / Super Admin / listado RESPUESTAS.
+ * total_general = filas de evaluaciones + progresos con avance cuyo CIP no tiene evaluación.
+ */
+async function obtenerResumenPsico(admin) {
+  let whereEval = '';
+  const paramsEval = [];
+  let whereProg = `WHERE ${sqlProgresoConRespuestas('p')}
+    AND NOT EXISTS (
+      SELECT 1 FROM evaluaciones e
+      WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(p.cip))
+    )`;
+  const paramsProg = [];
+
+  if (debeFiltrarPorUnidadAsignada(admin)) {
+    whereEval = 'WHERE (UPPER(unidad) LIKE $1 OR UPPER(comisaria) LIKE $1)';
+    paramsEval.push('%' + admin.unidad.toUpperCase() + '%');
+    whereProg += ' AND (UPPER(p.unidad) LIKE $1 OR UPPER(p.comisaria) LIKE $1)';
+    paramsProg.push('%' + admin.unidad.toUpperCase() + '%');
+  }
+
+  const [totalR, completasR, parcialesR, enCursoR] = await Promise.all([
+    pool.query(`SELECT COUNT(*)::int AS t FROM evaluaciones ${whereEval}`, paramsEval),
+    pool.query(
+      `SELECT COUNT(*)::int AS t FROM evaluaciones ${whereEval} ${whereEval ? 'AND' : 'WHERE'} completada=TRUE`,
+      paramsEval
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS t FROM evaluaciones ${whereEval} ${whereEval ? 'AND' : 'WHERE'} (completada IS NOT TRUE)`,
+      paramsEval
+    ),
+    pool.query(`SELECT COUNT(*)::int AS t FROM progresos p ${whereProg}`, paramsProg)
+  ]);
+
+  const evaluaciones = parseInt(totalR.rows[0].t, 10) || 0;
+  const completas = parseInt(completasR.rows[0].t, 10) || 0;
+  const parciales = parseInt(parcialesR.rows[0].t, 10) || 0;
+  const enCurso = parseInt(enCursoR.rows[0].t, 10) || 0;
+
+  return {
+    evaluaciones: evaluaciones,
+    completas: completas,
+    parciales: parciales,
+    en_curso: enCurso,
+    total_general: evaluaciones + enCurso,
+    whereEval: whereEval,
+    paramsEval: paramsEval,
+    whereProg: whereProg,
+    paramsProg: paramsProg
+  };
+}
+
 let statsCache = null;
 let statsCacheKey = '';
 let statsCacheExp = 0;
@@ -1612,6 +1664,7 @@ app.post('/guardar', async (req, res) => {
       );
     }
 
+    invalidarStatsCache();
     res.json({ ok: true, totalResp });
   } catch (e) {
     console.error('Error /guardar:', e.message);
@@ -1691,6 +1744,7 @@ app.post('/progreso', async (req, res) => {
        WHERE clave=$1`,
       [clave, cargo||'', sexo||'', armamentoStr, foto||'', grado||'', dni||'', fecha_nac || null, edadFinal, area||'', tiempoFinal]
     ).catch(()=>{});
+    invalidarStatsCache();
     res.json({ ok: true });
   } catch (e) {
     res.json({ ok: false, error: e.message });
@@ -2256,7 +2310,7 @@ async function consultarProgresosFiltrados(admin, query) {
   let where = `WHERE ${sqlProgresoConRespuestas('p')}
     AND NOT EXISTS (
       SELECT 1 FROM evaluaciones e
-      WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(p.cip)) AND e.completada = TRUE
+      WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(p.cip))
     )`;
   const params = [];
   let pi = 1;
@@ -2446,29 +2500,16 @@ app.get('/stats', requireAuth, async (req, res) => {
       return res.json(statsCache);
     }
 
-    let whereAdmin = '';
-    const params = [];
-    if (debeFiltrarPorUnidadAsignada(req.admin)) {
-      whereAdmin = 'WHERE (UPPER(unidad) LIKE $1 OR UPPER(comisaria) LIKE $1)';
-      params.push('%' + req.admin.unidad.toUpperCase() + '%');
-    }
-    const total    = await pool.query(`SELECT COUNT(*) AS t FROM evaluaciones ${whereAdmin}`, params);
-    const completas= await pool.query(`SELECT COUNT(*) AS t FROM evaluaciones ${whereAdmin} ${whereAdmin?'AND':'WHERE'} completada=TRUE`, params);
+    const resumen = await obtenerResumenPsico(req.admin);
+    const whereAdmin = resumen.whereEval;
+    const params = resumen.paramsEval;
+    const progWhere = resumen.whereProg;
+    const progParams = resumen.paramsProg;
+
     const porComis = await pool.query(
       `SELECT comisaria AS nombre, COUNT(*) AS total FROM evaluaciones ${whereAdmin} GROUP BY comisaria ORDER BY comisaria`, params);
     const porUnidad= await pool.query(
       `SELECT unidad AS nombre, COUNT(*) AS total FROM evaluaciones ${whereAdmin} GROUP BY unidad ORDER BY unidad`, params);
-
-    let progWhere = `WHERE ${sqlProgresoConRespuestas('p')} `
-      + 'AND NOT EXISTS ('
-      + 'SELECT 1 FROM evaluaciones e '
-      + 'WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(p.cip)) AND e.completada = TRUE'
-      + ')';
-    const progParams = [];
-    if (debeFiltrarPorUnidadAsignada(req.admin)) {
-      progWhere += ' AND (UPPER(p.unidad) LIKE $1 OR UPPER(p.comisaria) LIKE $1)';
-      progParams.push('%' + req.admin.unidad.toUpperCase() + '%');
-    }
 
     const ultimas  = await pool.query(
       `SELECT id, cip, ${sqlFechaTxt('fecha')} AS fecha, ${sqlFechaIso('fecha')} AS fecha_iso,
@@ -2489,9 +2530,9 @@ app.get('/stats', requireAuth, async (req, res) => {
 
     const ultimasMerged = ultimas.rows.concat(ultimasProgR.rows)
       .sort(function(a, b) {
-        const fa = (a.fecha || '').split(/[/ :]/).reverse().join('');
-        const fb = (b.fecha || '').split(/[/ :]/).reverse().join('');
-        return fb.localeCompare(fa);
+        const ta = new Date(a.fecha_iso || 0).getTime() || 0;
+        const tb = new Date(b.fecha_iso || 0).getTime() || 0;
+        return tb - ta;
       })
       .slice(0, 10);
 
@@ -2504,17 +2545,15 @@ app.get('/stats', requireAuth, async (req, res) => {
          OR UPPER(TRIM(e.comisaria)) = UPPER(TRIM(u.nombre))
        )
        GROUP BY d.id, d.nombre, d.orden
-       ORDER BY d.orden`, params.length ? [] : []);
-
-    const enCursoR = await pool.query(
-      `SELECT COUNT(*)::int AS t FROM progresos p ${progWhere}`, progParams
-    );
+       ORDER BY d.orden`);
 
     const payload = {
       ok: true,
-      totalEvaluaciones: parseInt(total.rows[0].t),
-      totalCompletas:    parseInt(completas.rows[0].t),
-      totalEnCurso:      parseInt(enCursoR.rows[0].t),
+      totalGeneral:      resumen.total_general,
+      totalEvaluaciones: resumen.evaluaciones,
+      totalCompletas:    resumen.completas,
+      totalParciales:    resumen.parciales,
+      totalEnCurso:      resumen.en_curso,
       porComisaria:      porComis.rows,
       porUnidad:         porUnidad.rows,
       porDivision:       porDivision.rows,
@@ -2539,11 +2578,7 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
     const adminsR = await pool.query('SELECT COUNT(*)::int AS t FROM admins');
     const divsR   = await pool.query('SELECT COUNT(*)::int AS t FROM divisiones');
     const unisR   = await pool.query('SELECT COUNT(*)::int AS t FROM unidades_pol');
-    const evalTot = await pool.query('SELECT COUNT(*)::int AS t FROM evaluaciones');
-    const evalComp = await pool.query('SELECT COUNT(*)::int AS t FROM evaluaciones WHERE completada=TRUE');
-    const progWhere = `WHERE ${sqlProgresoConRespuestas('p')} AND NOT EXISTS (
-      SELECT 1 FROM evaluaciones e WHERE UPPER(TRIM(e.cip))=UPPER(TRIM(p.cip)) AND e.completada=TRUE)`;
-    const progR   = await pool.query(`SELECT COUNT(*)::int AS t FROM progresos p ${progWhere}`);
+    const psico   = await obtenerResumenPsico(req.admin);
 
     const convItems = await pool.query(
       `SELECT COUNT(*)::int AS convocatorias,
@@ -2625,9 +2660,11 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
         admins: adminsR.rows[0].t,
         divisiones: divsR.rows[0].t,
         unidades: unisR.rows[0].t,
-        evaluaciones_total: evalTot.rows[0].t,
-        evaluaciones_completas: evalComp.rows[0].t,
-        evaluaciones_en_curso: progR.rows[0].t,
+        evaluaciones_total: psico.evaluaciones,
+        evaluaciones_completas: psico.completas,
+        evaluaciones_parciales: psico.parciales,
+        evaluaciones_en_curso: psico.en_curso,
+        evaluaciones_total_general: psico.total_general,
         convenios_convocatorias: convItems.rows[0].convocatorias || 0,
         convenios_inscripciones_abiertas: convItems.rows[0].abiertas || 0,
         convenios_inscritos: inscConv.rows[0].total || 0,
@@ -2694,7 +2731,7 @@ app.get('/listar', requireAuth, async (req, res) => {
 app.get('/evaluaciones', requireAuth, async (req, res) => {
   try {
     const pagina    = Math.max(1, parseInt(req.query.pagina) || 1);
-    const porPagina = Math.min(1000, Math.max(1, parseInt(req.query.por_pagina, 10) || 20));
+    const porPagina = Math.min(5000, Math.max(1, parseInt(req.query.por_pagina, 10) || 20));
     const offset    = (pagina - 1) * porPagina;
 
     let baseWhere = 'WHERE 1=1', baseParams = [];
