@@ -1871,10 +1871,130 @@ async function fusionarFilaListadoEval(row) {
       total_resp: totalP,
       solo_progreso: true,
       edad: resolverEdadFila(prog) || resolverEdadFila(row),
-      fecha_nac: prog.fecha_nac || row.fecha_nac
+      fecha_nac: prog.fecha_nac || row.fecha_nac,
+      actualizado_iso: prog.actualizado
+        ? new Date(prog.actualizado).toISOString()
+        : (row.fecha_iso || null)
     });
   }
   return row;
+}
+
+/** Solo lectura: cruza CIP con nómina RRHH. No modifica evaluaciones ni progresos. */
+async function enriquecerFilasConRRHH(rows) {
+  if (!rows || !rows.length) return rows || [];
+  const cips = [];
+  const seen = new Set();
+  rows.forEach(function(r) {
+    const c = String(r.cip || '').trim().toUpperCase();
+    if (c && !seen.has(c)) {
+      seen.add(c);
+      cips.push(c);
+    }
+  });
+  if (!cips.length) {
+    return rows.map(function(r) {
+      return Object.assign({}, r, {
+        unidad_rrhh: '',
+        division_rrhh: '',
+        grado_rrhh: '',
+        unidad_coincide: null
+      });
+    });
+  }
+  let map = {};
+  try {
+    const q = await pool.query(
+      `SELECT UPPER(TRIM(cip)) AS cip, unidad_nombre, division_nombre, grado, situacion
+       FROM personal_rrhh
+       WHERE UPPER(TRIM(cip)) = ANY($1::text[])`,
+      [cips]
+    );
+    q.rows.forEach(function(row) {
+      map[row.cip] = row;
+    });
+  } catch (e) {
+    console.error('enriquecerFilasConRRHH:', e.message);
+    return rows;
+  }
+  return rows.map(function(r) {
+    const cip = String(r.cip || '').trim().toUpperCase();
+    const rr = map[cip];
+    const uniDecl = String(r.unidad || r.comisaria || '').trim();
+    const uniRrhh = rr ? String(rr.unidad_nombre || '').trim() : '';
+    const coincide = rr
+      ? uniDecl.toUpperCase() === uniRrhh.toUpperCase()
+      : null;
+    return Object.assign({}, r, {
+      unidad_rrhh: uniRrhh,
+      division_rrhh: rr ? String(rr.division_nombre || '').trim() : '',
+      grado_rrhh: rr ? String(rr.grado || '').trim() : '',
+      situacion_rrhh: rr ? String(rr.situacion || '').trim() : '',
+      unidad_coincide: coincide
+    });
+  });
+}
+
+function clasificarEstadoListadoEval(r) {
+  const total = parseInt(r.total_resp, 10) || 0;
+  const completo = !r.solo_progreso && !!r.completada && total >= 566;
+  const sinEnviar = !!r.solo_progreso && total >= 566;
+  const enProceso = total > 0 && !completo;
+  return { total: total, completo: completo, sinEnviar: sinEnviar, enProceso: enProceso };
+}
+
+function filtrarYOrdenarListadoEvaluaciones(rows, query) {
+  let list = Array.isArray(rows) ? rows.slice() : [];
+  const estado = String(query.estado || 'todos').toLowerCase().trim();
+  const orden = String(query.orden || 'fecha').toLowerCase().trim();
+  const excluirMin = Math.max(0, parseInt(query.excluir_activos_min, 10) || 0);
+  const ahora = Date.now();
+
+  if (excluirMin > 0) {
+    list = list.filter(function(r) {
+      if (!r.solo_progreso) return true;
+      const iso = r.actualizado_iso || r.fecha_iso;
+      if (!iso) return true;
+      const t = new Date(iso).getTime();
+      if (!Number.isFinite(t)) return true;
+      const mins = (ahora - t) / 60000;
+      return mins >= excluirMin;
+    });
+  }
+
+  if (estado === 'en_proceso') {
+    list = list.filter(function(r) { return clasificarEstadoListadoEval(r).enProceso; });
+  } else if (estado === 'completo') {
+    list = list.filter(function(r) { return clasificarEstadoListadoEval(r).completo; });
+  } else if (estado === 'sin_enviar') {
+    list = list.filter(function(r) { return clasificarEstadoListadoEval(r).sinEnviar; });
+  }
+
+  list.sort(function(a, b) {
+    if (orden === 'unidad_rrhh') {
+      const da = String(a.division_rrhh || '').toUpperCase();
+      const db = String(b.division_rrhh || '').toUpperCase();
+      if (da !== db) return da.localeCompare(db, 'es');
+      const ua = String(a.unidad_rrhh || a.unidad || a.comisaria || '').toUpperCase();
+      const ub = String(b.unidad_rrhh || b.unidad || b.comisaria || '').toUpperCase();
+      if (ua !== ub) return ua.localeCompare(ub, 'es');
+      const ta = clasificarEstadoListadoEval(a).total;
+      const tb = clasificarEstadoListadoEval(b).total;
+      if (ta !== tb) return tb - ta;
+      return String(a.nombres || '').localeCompare(String(b.nombres || ''), 'es');
+    }
+    if (orden === 'avance') {
+      const ta = clasificarEstadoListadoEval(a).total;
+      const tb = clasificarEstadoListadoEval(b).total;
+      if (ta !== tb) return tb - ta;
+      return String(a.nombres || '').localeCompare(String(b.nombres || ''), 'es');
+    }
+    const fa = new Date(a.fecha_iso || a.actualizado_iso || 0).getTime() || 0;
+    const fb = new Date(b.fecha_iso || b.actualizado_iso || 0).getTime() || 0;
+    return fb - fa;
+  });
+
+  return list;
 }
 
 // ── Helper: formato evaluación desde progreso (PDF / listados) ────────────────
@@ -1990,7 +2110,8 @@ async function consultarProgresosPendientes(admin, query) {
             GREATEST(COALESCE(p.total_resp, 0), ${sqlContarRespuestas('p.respuestas')}) AS total_resp,
             FALSE AS completada, TRUE AS solo_progreso,
             ${sqlFechaTxt('p.actualizado')} AS fecha,
-            ${sqlFechaIso('p.actualizado')} AS fecha_iso
+            ${sqlFechaIso('p.actualizado')} AS fecha_iso,
+            ${sqlFechaIso('p.actualizado')} AS actualizado_iso
      FROM progresos p ${where}
      ORDER BY p.actualizado DESC LIMIT 200`,
     params
@@ -2360,12 +2481,16 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
     }
 
     const cipsEval = new Set(rowsEnriquecidas.map(function(r) { return (r.cip || '').toUpperCase(); }));
-    const merged = rowsEnriquecidas.concat(
+    let merged = rowsEnriquecidas.concat(
       progresosRows.filter(function(p) { return !cipsEval.has((p.cip || '').toUpperCase()); })
         .map(enriquecerFilaEdad)
     );
 
-    res.json({ ok: true, rows: merged, total: total + progresosRows.length, pagina, paginas });
+    // Solo lectura: unidad real de nómina + cola operativa (no altera respuestas)
+    merged = await enriquecerFilasConRRHH(merged);
+    merged = filtrarYOrdenarListadoEvaluaciones(merged, req.query);
+
+    res.json({ ok: true, rows: merged, total: merged.length, pagina, paginas });
   } catch (e) {
     res.json({ ok: false, error: e.message });
   }
