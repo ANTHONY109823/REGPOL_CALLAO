@@ -3691,29 +3691,33 @@ app.get('/admin/preview-grupo', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /admin/faltantes-cuestionario?unidad=X — nómina sin registro en cuestionario ──
+// ── GET /admin/faltantes-cuestionario?unidad=X | division=UNIDADES ADM. RPC ──
 app.get('/admin/faltantes-cuestionario', requireAuth, async (req, res) => {
   try {
     const unidad = String(req.query.unidad || req.query.comisaria || '').trim();
-    if (!unidad) {
-      return res.json({ ok: false, error: 'Seleccione una unidad' });
+    const division = String(req.query.division || '').trim();
+    if (!unidad && !division) {
+      return res.json({ ok: false, error: 'Seleccione una unidad o división' });
     }
+    const modoDivision = !unidad && !!division;
+    const alcance = (unidad || division).toUpperCase().trim();
+    const colAlcance = modoDivision ? 'division_nombre' : 'unidad_nombre';
+
     if (debeFiltrarPorUnidadAsignada(req.admin)) {
       const uAdmin = String(req.admin.unidad || '').toUpperCase();
-      if (unidad.toUpperCase().indexOf(uAdmin) === -1 && uAdmin.indexOf(unidad.toUpperCase()) === -1) {
-        return res.status(403).json({ ok: false, error: 'Sin acceso a esta unidad' });
+      if (alcance.indexOf(uAdmin) === -1 && uAdmin.indexOf(alcance) === -1) {
+        return res.status(403).json({ ok: false, error: 'Sin acceso a este alcance' });
       }
     }
 
-    const uniExact = unidad.toUpperCase().trim();
     const nominaR = await pool.query(
       `SELECT cip, dni, apellidos_nombres, grado, cod_grado, unidad_nombre, division_nombre,
               situacion, categoria, sexo
        FROM personal_rrhh
-       WHERE UPPER(TRIM(COALESCE(unidad_nombre,''))) = $1
+       WHERE UPPER(TRIM(COALESCE(${colAlcance},''))) = $1
          AND UPPER(TRIM(COALESCE(situacion,''))) <> 'BAJA'
-       ORDER BY apellidos_nombres ASC`,
-      [uniExact]
+       ORDER BY unidad_nombre ASC, apellidos_nombres ASC`,
+      [alcance]
     );
 
     const regsR = await pool.query(
@@ -3721,7 +3725,7 @@ app.get('/admin/faltantes-cuestionario', requireAuth, async (req, res) => {
        WHERE NULLIF(TRIM(cip), '') IS NOT NULL
          AND ${sqlCipNormExpr('cip')} IN (
            SELECT ${sqlCipNormExpr('cip')} FROM personal_rrhh
-           WHERE UPPER(TRIM(COALESCE(unidad_nombre,''))) = $1
+           WHERE UPPER(TRIM(COALESCE(${colAlcance},''))) = $1
              AND UPPER(TRIM(COALESCE(situacion,''))) <> 'BAJA'
          )
        UNION
@@ -3729,10 +3733,10 @@ app.get('/admin/faltantes-cuestionario', requireAuth, async (req, res) => {
        WHERE NULLIF(TRIM(cip), '') IS NOT NULL
          AND ${sqlCipNormExpr('cip')} IN (
            SELECT ${sqlCipNormExpr('cip')} FROM personal_rrhh
-           WHERE UPPER(TRIM(COALESCE(unidad_nombre,''))) = $1
+           WHERE UPPER(TRIM(COALESCE(${colAlcance},''))) = $1
              AND UPPER(TRIM(COALESCE(situacion,''))) <> 'BAJA'
          )`,
-      [uniExact]
+      [alcance]
     );
     const registrados = new Set(regsR.rows.map(function(r) { return r.cip; }));
 
@@ -3758,12 +3762,17 @@ app.get('/admin/faltantes-cuestionario', requireAuth, async (req, res) => {
       })
       .sort(function(a, b) {
         if (a._peso_grado !== b._peso_grado) return a._peso_grado - b._peso_grado;
+        const ua = String(a.unidad || '').localeCompare(String(b.unidad || ''), 'es');
+        if (ua !== 0) return ua;
         return String(a.nombres || '').localeCompare(String(b.nombres || ''), 'es');
       });
 
     res.json({
       ok: true,
-      unidad: unidad,
+      modo: modoDivision ? 'division' : 'unidad',
+      unidad: unidad || '',
+      division: division || '',
+      label: unidad || division,
       nomina_total: nominaR.rows.length,
       registrados: registrados.size,
       faltantes_total: faltantes.length,

@@ -736,7 +736,7 @@
             <i class="fas fa-user-clock"></i> Faltan registrar
           </button>
         </div>
-        <p style="font-size:12px;color:#666;margin:-4px 0 10px;">Ordenados por la <strong>unidad de nómina</strong> (aunque se hayan registrado mal en el cuestionario). Use <strong>Ver</strong> en cada fila. Con <strong>Todas las unidades</strong> se muestra el listado completo.</p>
+        <p style="font-size:12px;color:#666;margin:-4px 0 10px;">Ordenados por la <strong>unidad de nómina</strong> (aunque se hayan registrado mal en el cuestionario). Use <strong>Ver</strong> en cada fila. Con <strong>UNIDADES ADM. RPC</strong> puede abrir el informe y faltantes de toda la división como un solo bloque.</p>
         <div class="tinfo" id="tabla-info"></div>
         <div style="overflow-x:auto;max-height:68vh;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">
           <table class="t" style="margin:0;">
@@ -2191,12 +2191,34 @@ function vaciarTablaRespuestas(msg) {
   if (pags) pags.innerHTML = '';
 }
 
-function actualizarBotonesRespuestas() {
+function esDivisionAdmRpc(nombre) {
+  return String(nombre || '').trim().toUpperCase() === 'UNIDADES ADM. RPC';
+}
+
+/** Alcance para informe/faltantes: unidad puntual, o toda UNIDADES ADM. RPC como un bloque. */
+function alcanceRespuestasInforme() {
   var uni = val('f-uni');
+  var div = val('f-div');
+  if (uni) return { tipo: 'unidad', valor: uni, label: uni };
+  if (esDivisionAdmRpc(div)) return { tipo: 'division', valor: div, label: div };
+  return null;
+}
+
+function qsAlcanceInforme(alc, extraOrden) {
+  if (!alc) return '';
+  var q = alc.tipo === 'division'
+    ? 'division=' + encodeURIComponent(alc.valor)
+    : 'unidad=' + encodeURIComponent(alc.valor);
+  if (extraOrden !== false) q += '&orden=unidad_rrhh';
+  return q;
+}
+
+function actualizarBotonesRespuestas() {
+  var alc = alcanceRespuestasInforme();
   var btnPdfU = document.getElementById('btn-pdf-unidad');
   var btnFal = document.getElementById('btn-faltantes-unidad');
-  if (btnPdfU) btnPdfU.style.display = uni ? '' : 'none';
-  if (btnFal) btnFal.style.display = uni ? '' : 'none';
+  if (btnPdfU) btnPdfU.style.display = alc ? '' : 'none';
+  if (btnFal) btnFal.style.display = alc ? '' : 'none';
 }
 
 function formatearGradoFaltante(grado) {
@@ -2209,10 +2231,18 @@ function formatearGradoFaltante(grado) {
 }
 
 var _faltantesDatosUltimo = null;
+var _grupoAlcance = null;
 
 function verFaltantesCuestionarioUnidad() {
-  var u = val('f-uni') || _grupoUnidadActual;
-  if (!u) { alert('Seleccione una unidad en el filtro.'); return; }
+  var alc = alcanceRespuestasInforme() || _grupoAlcance;
+  if (!alc || !alc.valor) {
+    if (esDivisionAdmRpc(val('f-div'))) {
+      alert('Seleccione la división UNIDADES ADM. RPC (o una unidad concreta).');
+    } else {
+      alert('Seleccione una unidad en el filtro.');
+    }
+    return;
+  }
   if (!puedeVerEvaluaciones() && !puedeVerDescargas()) {
     alert('Sin permiso para ver esta lista.');
     return;
@@ -2222,27 +2252,42 @@ function verFaltantesCuestionarioUnidad() {
   var info = document.getElementById('faltantes-unidad-info');
   var body = document.getElementById('faltantes-unidad-body');
   var btnPrint = document.getElementById('btn-imprimir-faltantes');
-  if (titulo) titulo.innerHTML = '<i class="fas fa-user-clock"></i> Faltan registrar — ' + escHtml(u);
-  if (info) info.textContent = 'Comparando nómina RRHH (sin bajas) con quienes ya iniciaron o enviaron el cuestionario...';
-  if (body) body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px;">Cargando...</td></tr>';
+  var etiqueta = alc.label || alc.valor;
+  if (titulo) titulo.innerHTML = '<i class="fas fa-user-clock"></i> Faltan registrar — ' + escHtml(etiqueta);
+  if (info) {
+    info.textContent = alc.tipo === 'division'
+      ? 'Comparando toda la nómina de UNIDADES ADM. RPC (sin bajas) con quienes iniciaron o enviaron el cuestionario...'
+      : 'Comparando nómina RRHH (sin bajas) con quienes ya iniciaron o enviaron el cuestionario...';
+  }
+  var thead = document.querySelector('#modal-faltantes-unidad thead tr');
+  var mostrarUniHdr = alc.tipo === 'division';
+  if (thead) {
+    thead.innerHTML = '<th style="width:40px;">N°</th>'
+      + (mostrarUniHdr ? '<th>Unidad</th>' : '')
+      + '<th>Grado</th><th>Apellidos y Nombres</th><th>CIP</th><th>DNI</th><th>Situación</th>';
+  }
+  if (body) body.innerHTML = '<tr><td colspan="' + (mostrarUniHdr ? 7 : 6) + '" style="text-align:center;color:#888;padding:20px;">Cargando...</td></tr>';
   if (btnPrint) btnPrint.style.display = 'none';
   var modal = document.getElementById('modal-faltantes-unidad');
   if (modal) modal.classList.add('open');
 
-  fetch(API + '/admin/faltantes-cuestionario?unidad=' + encodeURIComponent(u), { headers: hdr() })
+  fetch(API + '/admin/faltantes-cuestionario?' + qsAlcanceInforme(alc, false), { headers: hdr() })
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d || !d.ok) throw new Error((d && d.error) || 'No se pudo cargar la lista.');
       _faltantesDatosUltimo = d;
       if (info) {
-        info.textContent = 'Nómina en unidad: ' + (d.nomina_total || 0)
+        info.textContent = 'Nómina: ' + (d.nomina_total || 0)
           + ' · Ya registrados: ' + (d.registrados || 0)
           + ' · Faltan registrar: ' + (d.faltantes_total || 0)
           + ' (solo personal distinto de BAJA).';
       }
       var rows = d.rows || [];
+      var mostrarUni = alc.tipo === 'division' || !!(d.modo === 'division');
       if (!rows.length) {
-        if (body) body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#1a7a3a;padding:22px;font-weight:600;">Todos los de nómina de esta unidad ya iniciaron o enviaron el cuestionario.</td></tr>';
+        if (body) {
+          body.innerHTML = '<tr><td colspan="' + (mostrarUni ? 7 : 6) + '" style="text-align:center;color:#1a7a3a;padding:22px;font-weight:600;">Todos los de nómina en este alcance ya iniciaron o enviaron el cuestionario.</td></tr>';
+        }
         if (btnPrint) btnPrint.style.display = 'none';
         return;
       }
@@ -2251,6 +2296,7 @@ function verFaltantesCuestionarioUnidad() {
         body.innerHTML = rows.map(function(r, i) {
           return '<tr>'
             + '<td style="text-align:center;color:#666;">' + (i + 1) + '</td>'
+            + (mostrarUni ? '<td style="font-size:11px;">' + escDatos(r.unidad || '—') + '</td>' : '')
             + '<td style="white-space:nowrap;font-size:11px;">' + escDatos(formatearGradoFaltante(r.grado)) + '</td>'
             + '<td><strong>' + escDatos(r.nombres) + '</strong></td>'
             + '<td>' + escDatos(r.cip) + '</td>'
@@ -2274,11 +2320,13 @@ function imprimirFaltantesCuestionario() {
     alert('No hay lista de faltantes para imprimir.');
     return;
   }
-  var unidad = d.unidad || val('f-uni') || _grupoUnidadActual || '';
+  var unidad = d.unidad || d.division || val('f-uni') || (_grupoAlcance && _grupoAlcance.label) || _grupoUnidadActual || '';
   var rows = d.rows || [];
+  var mostrarUni = d.modo === 'division';
   var filas = rows.map(function(r, i) {
     return '<tr>'
       + '<td style="text-align:center;">' + (i + 1) + '</td>'
+      + (mostrarUni ? '<td>' + escHtml(r.unidad || '—') + '</td>' : '')
       + '<td>' + escHtml(formatearGradoFaltante(r.grado)) + '</td>'
       + '<td>' + escHtml(r.nombres || '') + '</td>'
       + '<td>' + escHtml(r.cip || '') + '</td>'
@@ -2303,14 +2351,16 @@ function imprimirFaltantesCuestionario() {
     + '@media print{body{margin:8mm;} button{display:none;}}'
     + '</style></head><body>'
     + '<h1>REGPOL CALLAO — Faltan registrar cuestionario</h1>'
-    + '<p><strong>Unidad:</strong> ' + escHtml(unidad)
+    + '<p><strong>' + (mostrarUni ? 'División' : 'Unidad') + ':</strong> ' + escHtml(unidad)
     + ' &nbsp;|&nbsp; Nómina: ' + (d.nomina_total || 0)
     + ' &nbsp;|&nbsp; Registrados: ' + (d.registrados || 0)
     + ' &nbsp;|&nbsp; Faltantes: ' + (d.faltantes_total || rows.length)
     + (fecha ? ' &nbsp;|&nbsp; ' + escHtml(fecha) : '')
     + '</p>'
     + '<table><thead><tr>'
-    + '<th style="width:36px;">N°</th><th>Grado</th><th>Apellidos y Nombres</th><th>CIP</th><th>DNI</th><th>Situación</th>'
+    + '<th style="width:36px;">N°</th>'
+    + (mostrarUni ? '<th>Unidad</th>' : '')
+    + '<th>Grado</th><th>Apellidos y Nombres</th><th>CIP</th><th>DNI</th><th>Situación</th>'
     + '</tr></thead><tbody>' + filas + '</tbody></table>'
     + '<script>window.onload=function(){window.print();};<\/script>'
     + '</body></html>';
@@ -2356,6 +2406,7 @@ function cerrarModalPdfGrupo() {
   if (wrap) wrap.innerHTML = '';
   _grupoDatos = null;
   _grupoNominaResumen = null;
+  _grupoAlcance = null;
   _grupoFiltros = filtrosGrupoVacios();
   cerrarModal('modal-pdf-grupo');
 }
@@ -2470,13 +2521,21 @@ function actualizarTituloInformeGrupo() {
 }
 
 function verPdfUnidadRespuestas() {
-  var u = val('f-uni');
-  if (!u) { alert('Seleccione una unidad en el filtro.'); return; }
+  var alc = alcanceRespuestasInforme();
+  if (!alc || !alc.valor) {
+    if (esDivisionAdmRpc(val('f-div'))) {
+      alert('Seleccione la división UNIDADES ADM. RPC (puede dejar «Todas las unidades»).');
+    } else {
+      alert('Seleccione una unidad en el filtro.');
+    }
+    return;
+  }
   if (!puedeVerEvaluaciones() && !puedeVerDescargas()) {
     alert('Sin permiso para ver el informe de unidad.');
     return;
   }
-  _grupoUnidadActual = u;
+  _grupoAlcance = alc;
+  _grupoUnidadActual = alc.label || alc.valor;
   _grupoFiltros = filtrosGrupoVacios();
   _grupoNominaResumen = null;
 
@@ -2485,24 +2544,30 @@ function verPdfUnidadRespuestas() {
   var loading = document.getElementById('pdf-grupo-loading');
   var wrap = document.getElementById('grupo-dash-wrap');
   var btnDl = document.getElementById('pdf-grupo-descargar');
+  var etiqueta = alc.label || alc.valor;
 
-  if (titulo) titulo.innerHTML = '<i class="fas fa-chart-pie"></i> Informe de unidad — ' + escHtml(u);
+  if (titulo) {
+    titulo.innerHTML = '<i class="fas fa-chart-pie"></i> Informe '
+      + (alc.tipo === 'division' ? 'administrativo' : 'de unidad')
+      + ' — ' + escHtml(etiqueta);
+  }
   if (wrap) wrap.innerHTML = '';
   if (loading) { loading.style.display = ''; loading.textContent = 'Cargando informe...'; }
   if (btnDl) btnDl.style.display = 'none';
   if (modal) modal.classList.add('open');
 
   var hdrs = { headers: hdr() };
+  var qs = qsAlcanceInforme(alc);
   Promise.all([
-    fetch(API + '/admin/preview-grupo?unidad=' + encodeURIComponent(u) + '&orden=unidad_rrhh', hdrs)
+    fetch(API + '/admin/preview-grupo?' + qs, hdrs)
       .then(function(r) { return r.json().catch(function() { return {}; }); }),
-    fetch(API + '/admin/faltantes-cuestionario?unidad=' + encodeURIComponent(u), hdrs)
+    fetch(API + '/admin/faltantes-cuestionario?' + qsAlcanceInforme(alc, false), hdrs)
       .then(function(r) { return r.json().catch(function() { return {}; }); })
   ])
     .then(function(arr) {
       var d = arr[0];
       var fal = arr[1];
-      if (!d || !d.ok) throw new Error((d && d.error) || 'No hay evaluaciones para esta unidad.');
+      if (!d || !d.ok) throw new Error((d && d.error) || 'No hay evaluaciones para este alcance.');
       _grupoDatos = d;
       _grupoNominaResumen = (fal && fal.ok)
         ? {
@@ -2740,8 +2805,10 @@ function nombrePdfSeguroGrupo(base) {
 }
 
 function descargarPdfGrupoActual() {
-  var u = _grupoUnidadActual;
-  if (!u) return;
+  var alc = _grupoAlcance || ( _grupoUnidadActual
+    ? { tipo: 'unidad', valor: _grupoUnidadActual, label: _grupoUnidadActual }
+    : null );
+  if (!alc || !alc.valor) return;
   if (!puedeVerEvaluaciones() && !puedeVerDescargas()) {
     alert('Sin permiso para descargar el informe.');
     return;
@@ -2749,7 +2816,7 @@ function descargarPdfGrupoActual() {
   var btn = document.getElementById('pdf-grupo-descargar');
   if (btn) btn.disabled = true;
   var f = _grupoFiltros || {};
-  var q = 'unidad=' + encodeURIComponent(u) + '&orden=unidad_rrhh';
+  var q = qsAlcanceInforme(alc);
   if (f.area) q += '&area=' + encodeURIComponent(f.area);
   if (f.grado) q += '&grado=' + encodeURIComponent(f.grado);
   if (f.sexo) q += '&sexo=' + encodeURIComponent(f.sexo);
@@ -2769,7 +2836,8 @@ function descargarPdfGrupoActual() {
       var a = document.createElement('a');
       a.href = url;
       var extras = resumenFiltrosActivosGrupo();
-      a.download = 'Cuestionario_' + nombrePdfSeguroGrupo(u + (extras.length ? '_' + extras.join('_') : '')) + '.pdf';
+      var baseNom = alc.label || alc.valor;
+      a.download = 'Cuestionario_' + nombrePdfSeguroGrupo(baseNom + (extras.length ? '_' + extras.join('_') : '')) + '.pdf';
       document.body.appendChild(a);
       a.click();
       a.remove();
