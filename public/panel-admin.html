@@ -626,7 +626,7 @@
         </div>
         <div style="margin-top:14px;">
           <div class="bl-box">
-            <div class="bl-head"><i class="fas fa-stream"></i> Actividad reciente del sistema</div>
+            <div class="bl-head"><i class="fas fa-stream"></i> Actividad reciente — accesos y quién está llenando</div>
             <div id="sys-actividad" style="padding:0 12px;"><p style="color:#bbb;padding:12px;text-align:center;">Cargando...</p></div>
           </div>
         </div>
@@ -3364,10 +3364,23 @@ function cargarStatsSistema(){
     if (act) {
       act.innerHTML = (d.actividad || []).length
         ? (d.actividad || []).map(function(a) {
-            var tipo = a.tipo === 'inscripcion' ? 'Inscripción' : 'Evaluación';
-            var icon = a.tipo === 'inscripcion' ? 'fa-user-plus' : 'fa-clipboard-check';
+            var tipo = 'Evaluación';
+            var icon = 'fa-clipboard-check';
+            var color = '#004d3d';
+            if (a.tipo === 'inscripcion') {
+              tipo = 'Inscripción';
+              icon = 'fa-user-plus';
+            } else if (a.tipo === 'login') {
+              tipo = 'Entró al panel';
+              icon = 'fa-sign-in-alt';
+              color = '#1a5276';
+            } else if (a.tipo === 'llenando') {
+              tipo = (a.estado === 'activo') ? 'Está llenando' : 'Avance guardado';
+              icon = (a.estado === 'activo') ? 'fa-spinner' : 'fa-pen';
+              color = (a.estado === 'activo') ? '#b8860b' : '#7d6608';
+            }
             return '<div class="sys-act-item"><div>'
-              + '<div class="sys-act-tipo"><i class="fas ' + icon + '"></i> ' + tipo + '</div>'
+              + '<div class="sys-act-tipo" style="color:' + color + ';"><i class="fas ' + icon + '"></i> ' + tipo + '</div>'
               + '<strong>' + escHtml(a.titulo || '—') + '</strong>'
               + '<div style="color:#666;font-size:11px;">' + escHtml(a.detalle || '') + '</div></div>'
               + '<span style="color:#bbb;font-size:10.5px;white-space:nowrap;">' + escHtml(formatearFechaHoraLocal(a)) + '</span></div>';

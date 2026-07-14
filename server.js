@@ -407,6 +407,7 @@ async function initDB() {
       permisos JSONB DEFAULT '[]'
     );
     ALTER TABLE admins ADD COLUMN IF NOT EXISTS permisos JSONB DEFAULT '[]';
+    ALTER TABLE admins ADD COLUMN IF NOT EXISTS ultimo_acceso TIMESTAMP;
 
     CREATE TABLE IF NOT EXISTS preguntas (
       id      SERIAL PRIMARY KEY,
@@ -1495,6 +1496,7 @@ app.post('/admin/login', async (req, res) => {
     const exp = Date.now() + SESION_TTL;
     sesiones.set(token, { adminId: a.id, admin: a, exp, dbExp: Date.now() + AUTH_CACHE_TTL });
     await persistirSesionDb(token, a.id, exp);
+    await pool.query('UPDATE admins SET ultimo_acceso=NOW() WHERE id=$1', [a.id]).catch(function() {});
     res.json({ ok: true, token, rol: a.rol, nombre: a.nombre, unidad: a.unidad, permisos: normalizarPermisos(a.permisos) });
   } catch (e) {
     res.json({ ok: false, error: e.message });
@@ -2633,26 +2635,73 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
       if (dmR.rows[0]) dmResumen = dmR.rows[0];
     } catch (e) { /* tabla puede no existir aún */ }
 
+    const ultLlenandoR = await pool.query(
+      `SELECT 'llenando' AS tipo, COALESCE(NULLIF(TRIM(p.nombres),''), p.cip, 'Sin nombre') AS titulo,
+        TRIM(BOTH ' · ' FROM CONCAT_WS(' · ',
+          NULLIF(TRIM(COALESCE(p.unidad, p.comisaria, '')), ''),
+          CASE WHEN COALESCE(p.total_resp, 0) > 0
+            THEN COALESCE(p.total_resp, 0)::text || '/566'
+            ELSE NULL END,
+          CASE WHEN p.actualizado > NOW() - INTERVAL '30 minutes'
+            THEN 'activo ahora'
+            ELSE 'avance guardado' END
+        )) AS detalle,
+        ${sqlFechaTxt('p.actualizado')} AS fecha,
+        ${sqlFechaIso('p.actualizado')} AS fecha_iso,
+        CASE WHEN p.actualizado > NOW() - INTERVAL '30 minutes' THEN 'activo' ELSE 'guardado' END AS estado
+       FROM progresos p
+       WHERE COALESCE(p.total_resp, 0) > 0
+         AND NOT EXISTS (
+           SELECT 1 FROM evaluaciones e
+           WHERE UPPER(TRIM(e.cip)) = UPPER(TRIM(p.cip)) AND e.completada = TRUE
+         )
+       ORDER BY p.actualizado DESC
+       LIMIT 12`
+    );
+    const ultLoginR = await pool.query(
+      `SELECT 'login' AS tipo,
+        COALESCE(NULLIF(TRIM(nombre),''), usuario) AS titulo,
+        TRIM(BOTH ' · ' FROM CONCAT_WS(' · ',
+          NULLIF(TRIM(COALESCE(unidad,'')), ''),
+          CASE rol
+            WHEN 'unitic' THEN 'Super Admin'
+            WHEN 'bienestar' THEN 'Psicología'
+            ELSE COALESCE(rol, 'usuario')
+          END
+        )) AS detalle,
+        ${sqlFechaTxt('ultimo_acceso')} AS fecha,
+        ${sqlFechaIso('ultimo_acceso')} AS fecha_iso,
+        'ok' AS estado
+       FROM admins
+       WHERE ultimo_acceso IS NOT NULL
+       ORDER BY ultimo_acceso DESC
+       LIMIT 8`
+    );
     const ultEvalR = await pool.query(
       `SELECT 'evaluacion' AS tipo, nombres AS titulo,
         COALESCE(unidad, comisaria, '') AS detalle,
         ${sqlFechaTxt('fecha')} AS fecha,
         ${sqlFechaIso('fecha')} AS fecha_iso,
         completada::text AS estado
-       FROM evaluaciones ORDER BY fecha DESC LIMIT 6`);
+       FROM evaluaciones ORDER BY fecha DESC LIMIT 4`);
     const ultInscR = await pool.query(
       `SELECT 'inscripcion' AS tipo, n.nombres AS titulo, i.titulo AS detalle,
-        TO_CHAR(n.fecha,'DD/MM/YYYY HH24:MI') AS fecha, n.estado
+        TO_CHAR(n.fecha,'DD/MM/YYYY HH24:MI') AS fecha,
+        ${sqlFechaIso('n.fecha')} AS fecha_iso,
+        n.estado
        FROM inscripciones n JOIN items_portal i ON i.id=n.item_id
-       ORDER BY n.fecha DESC LIMIT 6`);
+       ORDER BY n.fecha DESC LIMIT 4`);
 
-    const actividad = ultEvalR.rows.concat(ultInscR.rows)
+    const actividad = ultLlenandoR.rows
+      .concat(ultLoginR.rows)
+      .concat(ultEvalR.rows)
+      .concat(ultInscR.rows)
       .sort(function(a, b) {
-        const fa = (a.fecha || '').split(/[/ :]/).reverse().join('');
-        const fb = (b.fecha || '').split(/[/ :]/).reverse().join('');
-        return fb.localeCompare(fa);
+        const ta = new Date(a.fecha_iso || 0).getTime() || 0;
+        const tb = new Date(b.fecha_iso || 0).getTime() || 0;
+        return tb - ta;
       })
-      .slice(0, 10);
+      .slice(0, 14);
 
     res.json({
       ok: true,
