@@ -2710,14 +2710,13 @@ function contarCampoGrupo(rows, campo) {
 }
 
 function htmlOpcionesCampoGrupo(rows, campo, todosLabel, sinLabel) {
-  var total = (rows || []).length;
   var c = contarCampoGrupo(rows, campo);
-  var html = '<option value="">' + escHtml(todosLabel || 'Todos') + ' (' + total + ')</option>';
+  var html = '<option value="">' + escHtml(todosLabel || 'Todos') + '</option>';
   Object.keys(c.counts).sort().forEach(function(k) {
-    html += '<option value="' + escHtml(c.counts[k].label) + '">' + escHtml(c.counts[k].label) + ' (' + c.counts[k].n + ')</option>';
+    html += '<option value="' + escHtml(c.counts[k].label) + '">' + escHtml(c.counts[k].label) + '</option>';
   });
   if (c.sin && sinLabel) {
-    html += '<option value="__SIN__">' + escHtml(sinLabel) + ' (' + c.sin + ')</option>';
+    html += '<option value="__SIN__">' + escHtml(sinLabel) + '</option>';
   }
   return html;
 }
@@ -2777,16 +2776,22 @@ function aplicarFiltroListadoRiesgoGrupo() {
   var tbody = document.getElementById('gd-tbody');
   if (!tbody) return;
   var riesgo = (_grupoFiltros && _grupoFiltros.riesgo) || '';
-  var vis = 0, tot = 0;
+  var vis = 0;
   Array.prototype.forEach.call(tbody.rows, function(tr) {
-    tot++;
     var ok = !riesgo || tr.getAttribute('data-nivel') === riesgo;
     tr.style.display = ok ? '' : 'none';
     if (ok) vis++;
   });
   var info = document.getElementById('gd-filtro-info');
   if (info) {
-    var partes = [vis + ' de ' + tot + ' registro' + (tot === 1 ? '' : 's')];
+    var nom = _grupoNominaResumen || {};
+    var efectivos = (nom.nomina_total != null) ? nom.nomina_total : null;
+    var partes = [];
+    if (efectivos != null) {
+      partes.push(vis + ' visibles · Efectivos: ' + efectivos);
+    } else {
+      partes.push(vis + ' registro' + (vis === 1 ? '' : 's') + ' visible' + (vis === 1 ? '' : 's'));
+    }
     var extras = resumenFiltrosActivosGrupo();
     if (extras.length) partes.push(extras.join(' · '));
     if (riesgo) partes.push('(clic de nuevo en la tarjeta para quitar)');
