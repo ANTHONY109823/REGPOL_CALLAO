@@ -1790,6 +1790,9 @@
     </div>
     <div class="modal-footer" style="margin-top:12px;">
       <button class="btn" style="background:#999;color:#fff;" type="button" onclick="cerrarModal('modal-faltantes-unidad')">Cerrar</button>
+      <button class="btn btn-v" id="btn-imprimir-faltantes" type="button" onclick="imprimirFaltantesCuestionario()" style="display:none;">
+        <i class="fas fa-print"></i> Imprimir
+      </button>
     </div>
   </div>
 </div>
@@ -2205,6 +2208,8 @@ function formatearGradoFaltante(grado) {
   return g + ' PNP';
 }
 
+var _faltantesDatosUltimo = null;
+
 function verFaltantesCuestionarioUnidad() {
   var u = val('f-uni') || _grupoUnidadActual;
   if (!u) { alert('Seleccione una unidad en el filtro.'); return; }
@@ -2212,12 +2217,15 @@ function verFaltantesCuestionarioUnidad() {
     alert('Sin permiso para ver esta lista.');
     return;
   }
+  _faltantesDatosUltimo = null;
   var titulo = document.getElementById('modal-faltantes-titulo');
   var info = document.getElementById('faltantes-unidad-info');
   var body = document.getElementById('faltantes-unidad-body');
+  var btnPrint = document.getElementById('btn-imprimir-faltantes');
   if (titulo) titulo.innerHTML = '<i class="fas fa-user-clock"></i> Faltan registrar — ' + escHtml(u);
   if (info) info.textContent = 'Comparando nómina RRHH (sin bajas) con quienes ya iniciaron o enviaron el cuestionario...';
   if (body) body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px;">Cargando...</td></tr>';
+  if (btnPrint) btnPrint.style.display = 'none';
   var modal = document.getElementById('modal-faltantes-unidad');
   if (modal) modal.classList.add('open');
 
@@ -2225,6 +2233,7 @@ function verFaltantesCuestionarioUnidad() {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d || !d.ok) throw new Error((d && d.error) || 'No se pudo cargar la lista.');
+      _faltantesDatosUltimo = d;
       if (info) {
         info.textContent = 'Nómina en unidad: ' + (d.nomina_total || 0)
           + ' · Ya registrados: ' + (d.registrados || 0)
@@ -2234,8 +2243,10 @@ function verFaltantesCuestionarioUnidad() {
       var rows = d.rows || [];
       if (!rows.length) {
         if (body) body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#1a7a3a;padding:22px;font-weight:600;">Todos los de nómina de esta unidad ya iniciaron o enviaron el cuestionario.</td></tr>';
+        if (btnPrint) btnPrint.style.display = 'none';
         return;
       }
+      if (btnPrint) btnPrint.style.display = '';
       if (body) {
         body.innerHTML = rows.map(function(r, i) {
           return '<tr>'
@@ -2250,9 +2261,67 @@ function verFaltantesCuestionarioUnidad() {
       }
     })
     .catch(function(e) {
+      _faltantesDatosUltimo = null;
+      if (btnPrint) btnPrint.style.display = 'none';
       if (body) body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#c0392b;padding:20px;">' + escHtml(e.message || 'Error') + '</td></tr>';
       if (info) info.textContent = '';
     });
+}
+
+function imprimirFaltantesCuestionario() {
+  var d = _faltantesDatosUltimo;
+  if (!d || !(d.rows || []).length) {
+    alert('No hay lista de faltantes para imprimir.');
+    return;
+  }
+  var unidad = d.unidad || val('f-uni') || _grupoUnidadActual || '';
+  var rows = d.rows || [];
+  var filas = rows.map(function(r, i) {
+    return '<tr>'
+      + '<td style="text-align:center;">' + (i + 1) + '</td>'
+      + '<td>' + escHtml(formatearGradoFaltante(r.grado)) + '</td>'
+      + '<td>' + escHtml(r.nombres || '') + '</td>'
+      + '<td>' + escHtml(r.cip || '') + '</td>'
+      + '<td>' + escHtml(r.dni || '—') + '</td>'
+      + '<td>' + escHtml(r.situacion || '—') + '</td>'
+      + '</tr>';
+  }).join('');
+  var fecha = '';
+  try {
+    fecha = new Date().toLocaleString('es-PE');
+  } catch (e) { fecha = ''; }
+  var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+    + '<title>Faltan registrar — ' + escHtml(unidad) + '</title>'
+    + '<style>'
+    + 'body{font-family:Arial,sans-serif;color:#111;margin:18px;}'
+    + 'h1{font-size:16px;margin:0 0 6px;color:#004d3d;}'
+    + 'p{font-size:12px;margin:0 0 12px;color:#333;}'
+    + 'table{width:100%;border-collapse:collapse;font-size:11px;}'
+    + 'th,td{border:1px solid #ccc;padding:5px 6px;text-align:left;}'
+    + 'th{background:#004d3d;color:#fff;}'
+    + 'tr:nth-child(even) td{background:#f7f7f7;}'
+    + '@media print{body{margin:8mm;} button{display:none;}}'
+    + '</style></head><body>'
+    + '<h1>REGPOL CALLAO — Faltan registrar cuestionario</h1>'
+    + '<p><strong>Unidad:</strong> ' + escHtml(unidad)
+    + ' &nbsp;|&nbsp; Nómina: ' + (d.nomina_total || 0)
+    + ' &nbsp;|&nbsp; Registrados: ' + (d.registrados || 0)
+    + ' &nbsp;|&nbsp; Faltantes: ' + (d.faltantes_total || rows.length)
+    + (fecha ? ' &nbsp;|&nbsp; ' + escHtml(fecha) : '')
+    + '</p>'
+    + '<table><thead><tr>'
+    + '<th style="width:36px;">N°</th><th>Grado</th><th>Apellidos y Nombres</th><th>CIP</th><th>DNI</th><th>Situación</th>'
+    + '</tr></thead><tbody>' + filas + '</tbody></table>'
+    + '<script>window.onload=function(){window.print();};<\/script>'
+    + '</body></html>';
+  var w = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700');
+  if (!w) {
+    alert('Permita ventanas emergentes para imprimir.');
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
 }
 
 function onFiltroRespuestasChange() {
