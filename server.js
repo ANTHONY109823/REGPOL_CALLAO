@@ -3428,17 +3428,32 @@ async function obtenerFilasInformeGrupo(req) {
   };
   if (!division && !comisaria && !unidad) return { error: 'Parámetro requerido', status: 400 };
 
-  const { where, params } = await buildWhere(req.query, 'WHERE 1=1', []);
+  // Misma lógica que RESPUESTAS: unidad de nómina RRHH (no solo la del formulario)
+  const query = Object.assign({}, req.query, { orden: 'unidad_rrhh' });
+
+  let baseWhere = 'WHERE 1=1';
+  const baseParams = [];
+  if (debeFiltrarPorUnidadAsignada(req.admin)) {
+    baseWhere += ' AND (UPPER(unidad) LIKE $1 OR UPPER(comisaria) LIKE $1)';
+    baseParams.push('%' + req.admin.unidad.toUpperCase() + '%');
+  }
+
+  const { where, params } = await buildWhere(query, baseWhere, baseParams);
   const r = await pool.query(
     `SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha FROM evaluaciones ${where} ORDER BY comisaria,nombres`, params);
 
   const cipsEval = new Set(r.rows.map(function(row) { return (row.cip || '').toUpperCase(); }));
-  const progresos = await consultarProgresosParaPDFGrupo(req.admin, req.query);
+  const progresos = await consultarProgresosParaPDFGrupo(req.admin, query);
   let merged = normalizarFilasPDFGrupo(
     r.rows.concat(
       progresos.filter(function(p) { return !cipsEval.has((p.cip || '').toUpperCase()); })
     )
   );
+
+  // Enriquecer y filtrar por unidad real (igual que el listado RESPUESTAS)
+  merged = await enriquecerFilasConRRHH(merged);
+  merged = filtrarYOrdenarListadoEvaluaciones(merged, query);
+
   merged = filtrarFilasInformeGrupo(merged, {
     area: filtros.area,
     grado: filtros.grado,

@@ -2331,7 +2331,8 @@ function verPdfUnidadRespuestas() {
   if (btnDl) btnDl.style.display = 'none';
   if (modal) modal.classList.add('open');
 
-  fetch(API + '/admin/preview-grupo?unidad=' + encodeURIComponent(u), { headers: hdr() })
+  // orden=unidad_rrhh: mismo criterio que RESPUESTAS (unidad de nómina)
+  fetch(API + '/admin/preview-grupo?unidad=' + encodeURIComponent(u) + '&orden=unidad_rrhh', { headers: hdr() })
     .then(function(r) { return r.json().catch(function() { return {}; }); })
     .then(function(d) {
       if (!d || !d.ok) throw new Error((d && d.error) || 'No hay evaluaciones para esta unidad.');
@@ -2568,7 +2569,7 @@ function descargarPdfGrupoActual() {
   var btn = document.getElementById('pdf-grupo-descargar');
   if (btn) btn.disabled = true;
   var f = _grupoFiltros || {};
-  var q = 'unidad=' + encodeURIComponent(u);
+  var q = 'unidad=' + encodeURIComponent(u) + '&orden=unidad_rrhh';
   if (f.area) q += '&area=' + encodeURIComponent(f.area);
   if (f.grado) q += '&grado=' + encodeURIComponent(f.grado);
   if (f.sexo) q += '&sexo=' + encodeURIComponent(f.sexo);
