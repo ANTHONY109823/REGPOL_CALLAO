@@ -707,6 +707,7 @@ async function initDB() {
   }
 
   await sincronizarUnidadAdministrativa();
+  await sincronizarUnidadRegistroDesdeNomina();
   await corregirFotosEncabezadoPortal();
 
   // Seed preguntas en lotes de 100 para no superar límite de parámetros
@@ -951,6 +952,42 @@ async function sincronizarUnidadAdministrativa() {
   const movidos = await moverUsuariosRegistroAdmRpc();
   if (total || movidos) {
     console.log('UNIDADES ADM. RPC: ' + (total + movidos) + ' registro(s) de evaluación/progreso actualizados.');
+  }
+}
+
+/** Corrige unidad/comisaría del cuestionario según nómina RRHH (CIP). */
+async function sincronizarUnidadRegistroDesdeNomina() {
+  try {
+    const rProg = await pool.query(
+      `UPDATE progresos p
+       SET unidad = LEFT(TRIM(rr.unidad_nombre), 150),
+           comisaria = LEFT(TRIM(rr.unidad_nombre), 120)
+       FROM personal_rrhh rr
+       WHERE ${sqlCipNormExpr('rr.cip')} = ${sqlCipNormExpr('p.cip')}
+         AND NULLIF(TRIM(rr.unidad_nombre), '') IS NOT NULL
+         AND (
+           UPPER(TRIM(COALESCE(p.unidad, ''))) IS DISTINCT FROM UPPER(TRIM(rr.unidad_nombre))
+           OR UPPER(TRIM(COALESCE(p.comisaria, ''))) IS DISTINCT FROM UPPER(TRIM(rr.unidad_nombre))
+         )`
+    );
+    const rEval = await pool.query(
+      `UPDATE evaluaciones e
+       SET unidad = LEFT(TRIM(rr.unidad_nombre), 150),
+           comisaria = LEFT(TRIM(rr.unidad_nombre), 120)
+       FROM personal_rrhh rr
+       WHERE ${sqlCipNormExpr('rr.cip')} = ${sqlCipNormExpr('e.cip')}
+         AND NULLIF(TRIM(rr.unidad_nombre), '') IS NOT NULL
+         AND (
+           UPPER(TRIM(COALESCE(e.unidad, ''))) IS DISTINCT FROM UPPER(TRIM(rr.unidad_nombre))
+           OR UPPER(TRIM(COALESCE(e.comisaria, ''))) IS DISTINCT FROM UPPER(TRIM(rr.unidad_nombre))
+         )`
+    );
+    const n = (rProg.rowCount || 0) + (rEval.rowCount || 0);
+    if (n) console.log('Unidades cuestionario alineadas a nómina RRHH: ' + n);
+    return n;
+  } catch (e) {
+    console.error('sincronizarUnidadRegistroDesdeNomina:', e.message);
+    return 0;
   }
 }
 
@@ -1336,12 +1373,13 @@ function sqlCipEnUnidadNominaOForm(alias, ph) {
   )`;
 }
 
-/** Solo CIPs cuya nómina coincide con la unidad (sin fallback al formulario). */
+/** Solo CIPs cuya nómina coincide exactamente con la unidad (sin bajas). */
 function sqlCipSoloUnidadNomina(alias, ph) {
   const p = alias ? alias + '.' : '';
   return `${sqlCipNormExpr(p + 'cip')} IN (
     SELECT ${sqlCipNormExpr('rr.cip')} FROM personal_rrhh rr
-    WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE ${ph}
+    WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) = ${ph}
+      AND UPPER(TRIM(COALESCE(rr.situacion,''))) <> 'BAJA'
   )`;
 }
 
@@ -2269,13 +2307,16 @@ function filtrarYOrdenarListadoEvaluaciones(rows, query) {
     list = list.filter(function(r) { return clasificarEstadoListadoEval(r).sinEnviar; });
   }
 
-  // Cola por nómina: al filtrar unidad/división solo cuenta quien está en RRHH de esa dependencia
+  // Cola por nómina: filtro exacto por unidad RRHH; excluye bajas
   if (orden === 'unidad_rrhh') {
+    list = list.filter(function(r) {
+      return String(r.situacion_rrhh || '').trim().toUpperCase() !== 'BAJA';
+    });
     if (uniFiltro) {
       list = list.filter(function(r) {
         const ur = String(r.unidad_rrhh || '').trim().toUpperCase();
-        // Sin fallback al formulario: evita inflar (ej. registrado en CALLAO pero nómina LA LEGUA)
-        return !!ur && ur.indexOf(uniFiltro) !== -1;
+        // Igualdad exacta (sin LIKE/indexOf): evita inflar con registros mal declarados
+        return !!ur && ur === uniFiltro;
       });
     }
     if (divFiltro && divFiltro !== 'TODAS') {
@@ -2424,18 +2465,20 @@ async function consultarProgresosFiltrados(admin, query) {
   if (comisaria) {
     if (porRrhh) {
       where += ' AND ' + sqlCipSoloUnidadNomina('p', '$' + pi);
+      params.push(comisaria); pi++;
     } else {
       where += ` AND (UPPER(p.comisaria) LIKE $${pi} OR UPPER(p.unidad) LIKE $${pi})`;
+      params.push('%' + comisaria + '%'); pi++;
     }
-    params.push('%' + comisaria + '%'); pi++;
   }
   if (unidad) {
     if (porRrhh) {
       where += ' AND ' + sqlCipSoloUnidadNomina('p', '$' + pi);
+      params.push(unidad); pi++;
     } else {
       where += ` AND (UPPER(p.unidad) LIKE $${pi} OR UPPER(p.comisaria) LIKE $${pi})`;
+      params.push('%' + unidad + '%'); pi++;
     }
-    params.push('%' + unidad + '%'); pi++;
   }
   if (busqueda) {
     where += ` AND (UPPER(p.nombres) LIKE $${pi} OR UPPER(p.cip) LIKE $${pi + 1})`;
@@ -3140,18 +3183,20 @@ async function buildWhere(query, baseWhere, baseParams) {
   if (comisaria) {
     if (porRrhh) {
       where += ' AND ' + sqlCipSoloUnidadNomina('', '$' + pi);
+      params.push(comisaria); pi++;
     } else {
       where += ` AND (UPPER(comisaria) LIKE $${pi} OR UPPER(unidad) LIKE $${pi})`;
+      params.push('%' + comisaria + '%'); pi++;
     }
-    params.push('%' + comisaria + '%'); pi++;
   }
   if (unidad) {
     if (porRrhh) {
       where += ' AND ' + sqlCipSoloUnidadNomina('', '$' + pi);
+      params.push(unidad); pi++;
     } else {
       where += ` AND (UPPER(unidad) LIKE $${pi} OR UPPER(comisaria) LIKE $${pi})`;
+      params.push('%' + unidad + '%'); pi++;
     }
-    params.push('%' + unidad + '%'); pi++;
   }
   if (busqueda)  {
     where += ` AND (UPPER(nombres) LIKE $${pi} OR cip LIKE $${pi+1} OR dni LIKE $${pi+2})`;
@@ -3201,18 +3246,20 @@ async function buildWhereProgresos(query, baseWhere, baseParams) {
   if (comisaria) {
     if (porRrhh) {
       where += ' AND ' + sqlCipSoloUnidadNomina('p', '$' + pi);
+      params.push(comisaria); pi++;
     } else {
       where += ` AND (UPPER(p.comisaria) LIKE $${pi} OR UPPER(p.unidad) LIKE $${pi})`;
+      params.push('%' + comisaria + '%'); pi++;
     }
-    params.push('%' + comisaria + '%'); pi++;
   }
   if (unidad) {
     if (porRrhh) {
       where += ' AND ' + sqlCipSoloUnidadNomina('p', '$' + pi);
+      params.push(unidad); pi++;
     } else {
       where += ` AND (UPPER(p.unidad) LIKE $${pi} OR UPPER(p.comisaria) LIKE $${pi})`;
+      params.push('%' + unidad + '%'); pi++;
     }
-    params.push('%' + unidad + '%'); pi++;
   }
   if (busqueda) {
     where += ` AND (UPPER(p.nombres) LIKE $${pi} OR p.cip LIKE $${pi + 1})`;
@@ -3658,38 +3705,40 @@ app.get('/admin/faltantes-cuestionario', requireAuth, async (req, res) => {
       }
     }
 
-    const uniLike = '%' + unidad.toUpperCase() + '%';
+    const uniExact = unidad.toUpperCase().trim();
     const nominaR = await pool.query(
       `SELECT cip, dni, apellidos_nombres, grado, cod_grado, unidad_nombre, division_nombre,
               situacion, categoria, sexo
        FROM personal_rrhh
-       WHERE UPPER(TRIM(COALESCE(unidad_nombre,''))) LIKE $1
+       WHERE UPPER(TRIM(COALESCE(unidad_nombre,''))) = $1
          AND UPPER(TRIM(COALESCE(situacion,''))) <> 'BAJA'
        ORDER BY apellidos_nombres ASC`,
-      [uniLike]
+      [uniExact]
     );
 
     const regsR = await pool.query(
-      `SELECT UPPER(TRIM(cip)) AS cip FROM evaluaciones
+      `SELECT ${sqlCipNormExpr('cip')} AS cip FROM evaluaciones
        WHERE NULLIF(TRIM(cip), '') IS NOT NULL
-         AND UPPER(TRIM(cip)) IN (
-           SELECT UPPER(TRIM(cip)) FROM personal_rrhh
-           WHERE UPPER(TRIM(COALESCE(unidad_nombre,''))) LIKE $1
+         AND ${sqlCipNormExpr('cip')} IN (
+           SELECT ${sqlCipNormExpr('cip')} FROM personal_rrhh
+           WHERE UPPER(TRIM(COALESCE(unidad_nombre,''))) = $1
+             AND UPPER(TRIM(COALESCE(situacion,''))) <> 'BAJA'
          )
        UNION
-       SELECT UPPER(TRIM(cip)) AS cip FROM progresos
+       SELECT ${sqlCipNormExpr('cip')} AS cip FROM progresos
        WHERE NULLIF(TRIM(cip), '') IS NOT NULL
-         AND UPPER(TRIM(cip)) IN (
-           SELECT UPPER(TRIM(cip)) FROM personal_rrhh
-           WHERE UPPER(TRIM(COALESCE(unidad_nombre,''))) LIKE $1
+         AND ${sqlCipNormExpr('cip')} IN (
+           SELECT ${sqlCipNormExpr('cip')} FROM personal_rrhh
+           WHERE UPPER(TRIM(COALESCE(unidad_nombre,''))) = $1
+             AND UPPER(TRIM(COALESCE(situacion,''))) <> 'BAJA'
          )`,
-      [uniLike]
+      [uniExact]
     );
     const registrados = new Set(regsR.rows.map(function(r) { return r.cip; }));
 
     const faltantes = nominaR.rows
       .filter(function(r) {
-        const cip = String(r.cip || '').trim().toUpperCase();
+        const cip = normalizarCipKey(r.cip);
         return cip && !registrados.has(cip);
       })
       .map(function(r) {
