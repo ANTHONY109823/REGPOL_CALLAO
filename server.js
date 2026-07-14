@@ -3539,6 +3539,92 @@ app.get('/admin/preview-grupo', requireAuth, async (req, res) => {
   }
 });
 
+// ── GET /admin/faltantes-cuestionario?unidad=X — nómina sin registro en cuestionario ──
+app.get('/admin/faltantes-cuestionario', requireAuth, async (req, res) => {
+  try {
+    const unidad = String(req.query.unidad || req.query.comisaria || '').trim();
+    if (!unidad) {
+      return res.json({ ok: false, error: 'Seleccione una unidad' });
+    }
+    if (debeFiltrarPorUnidadAsignada(req.admin)) {
+      const uAdmin = String(req.admin.unidad || '').toUpperCase();
+      if (unidad.toUpperCase().indexOf(uAdmin) === -1 && uAdmin.indexOf(unidad.toUpperCase()) === -1) {
+        return res.status(403).json({ ok: false, error: 'Sin acceso a esta unidad' });
+      }
+    }
+
+    const uniLike = '%' + unidad.toUpperCase() + '%';
+    const nominaR = await pool.query(
+      `SELECT cip, dni, apellidos_nombres, grado, cod_grado, unidad_nombre, division_nombre,
+              situacion, categoria, sexo
+       FROM personal_rrhh
+       WHERE UPPER(TRIM(COALESCE(unidad_nombre,''))) LIKE $1
+         AND UPPER(TRIM(COALESCE(situacion,''))) <> 'BAJA'
+       ORDER BY apellidos_nombres ASC`,
+      [uniLike]
+    );
+
+    const regsR = await pool.query(
+      `SELECT UPPER(TRIM(cip)) AS cip FROM evaluaciones
+       WHERE NULLIF(TRIM(cip), '') IS NOT NULL
+         AND UPPER(TRIM(cip)) IN (
+           SELECT UPPER(TRIM(cip)) FROM personal_rrhh
+           WHERE UPPER(TRIM(COALESCE(unidad_nombre,''))) LIKE $1
+         )
+       UNION
+       SELECT UPPER(TRIM(cip)) AS cip FROM progresos
+       WHERE NULLIF(TRIM(cip), '') IS NOT NULL
+         AND UPPER(TRIM(cip)) IN (
+           SELECT UPPER(TRIM(cip)) FROM personal_rrhh
+           WHERE UPPER(TRIM(COALESCE(unidad_nombre,''))) LIKE $1
+         )`,
+      [uniLike]
+    );
+    const registrados = new Set(regsR.rows.map(function(r) { return r.cip; }));
+
+    const faltantes = nominaR.rows
+      .filter(function(r) {
+        const cip = String(r.cip || '').trim().toUpperCase();
+        return cip && !registrados.has(cip);
+      })
+      .map(function(r) {
+        return {
+          cip: String(r.cip || '').trim(),
+          dni: String(r.dni || '').trim(),
+          nombres: String(r.apellidos_nombres || '').trim(),
+          grado: String(r.grado || '').trim(),
+          cod_grado: String(r.cod_grado || '').trim(),
+          unidad: String(r.unidad_nombre || '').trim(),
+          division: String(r.division_nombre || '').trim(),
+          situacion: String(r.situacion || '').trim(),
+          categoria: String(r.categoria || '').trim(),
+          sexo: String(r.sexo || '').trim(),
+          _peso_grado: pesoJerarquiaGrado(r.cod_grado, r.grado)
+        };
+      })
+      .sort(function(a, b) {
+        if (a._peso_grado !== b._peso_grado) return a._peso_grado - b._peso_grado;
+        return String(a.nombres || '').localeCompare(String(b.nombres || ''), 'es');
+      });
+
+    res.json({
+      ok: true,
+      unidad: unidad,
+      nomina_total: nominaR.rows.length,
+      registrados: registrados.size,
+      faltantes_total: faltantes.length,
+      rows: faltantes.map(function(r) {
+        const out = Object.assign({}, r);
+        delete out._peso_grado;
+        return out;
+      })
+    });
+  } catch (e) {
+    console.error('faltantes-cuestionario:', e.message);
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 // ── GET /pdf/grupo?unidad=X [&area|&grado|&sexo|&riesgo] ─────────────────────
 app.get('/pdf/grupo', requireAuth, async (req, res) => {
   try {

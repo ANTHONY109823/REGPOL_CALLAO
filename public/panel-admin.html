@@ -732,6 +732,9 @@
           <button class="btn btn-o" id="btn-pdf-unidad" style="display:none;" type="button" onclick="verPdfUnidadRespuestas()" title="Abrir el informe interactivo de la unidad seleccionada (dashboard + listado con diagnóstico)">
             <i class="fas fa-chart-pie"></i> Ver informe unidad
           </button>
+          <button class="btn" id="btn-faltantes-unidad" style="display:none;background:#c0392b;color:#fff;" type="button" onclick="verFaltantesCuestionarioUnidad()" title="Personal de nómina de esta unidad que aún no inició el cuestionario">
+            <i class="fas fa-user-clock"></i> Faltan registrar
+          </button>
         </div>
         <p style="font-size:12px;color:#666;margin:-4px 0 10px;">Ordenados por la <strong>unidad de nómina</strong> (aunque se hayan registrado mal en el cuestionario). Use <strong>Ver</strong> en cada fila. Con <strong>Todas las unidades</strong> se muestra el listado completo.</p>
         <div class="tinfo" id="tabla-info"></div>
@@ -1766,6 +1769,31 @@
   </div>
 </div>
 
+<div class="modal" id="modal-faltantes-unidad">
+  <div class="modal-box" style="width:min(920px,96vw);max-height:92vh;display:flex;flex-direction:column;">
+    <h3 id="modal-faltantes-titulo"><i class="fas fa-user-clock"></i> Faltan registrar cuestionario</h3>
+    <p id="faltantes-unidad-info" style="font-size:12px;color:#666;margin:-6px 0 10px;"></p>
+    <div style="flex:1;overflow:auto;border:1.5px solid #dde8e5;border-radius:8px;">
+      <table class="t" style="margin:0;">
+        <thead><tr>
+          <th style="width:40px;">N°</th>
+          <th>Grado</th>
+          <th>Apellidos y Nombres</th>
+          <th>CIP</th>
+          <th>DNI</th>
+          <th>Situación</th>
+        </tr></thead>
+        <tbody id="faltantes-unidad-body">
+          <tr><td colspan="6" style="text-align:center;color:#888;padding:20px;">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer" style="margin-top:12px;">
+      <button class="btn" style="background:#999;color:#fff;" type="button" onclick="cerrarModal('modal-faltantes-unidad')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="modal-resultado">
   <div class="modal-box" style="width:min(1180px,97vw);max-height:92vh;overflow:auto;">
     <h3 id="modal-resultado-titulo"><i class="fas fa-chart-bar"></i> Resultado de evaluación MMPI-2</h3>
@@ -2163,7 +2191,68 @@ function vaciarTablaRespuestas(msg) {
 function actualizarBotonesRespuestas() {
   var uni = val('f-uni');
   var btnPdfU = document.getElementById('btn-pdf-unidad');
+  var btnFal = document.getElementById('btn-faltantes-unidad');
   if (btnPdfU) btnPdfU.style.display = uni ? '' : 'none';
+  if (btnFal) btnFal.style.display = uni ? '' : 'none';
+}
+
+function formatearGradoFaltante(grado) {
+  var g = String(grado || '').trim();
+  if (!g) return '—';
+  var u = g.toUpperCase().replace(/\s+/g, ' ').trim();
+  if (u === 'CAS' || u === 'EC' || u === 'E.C.' || /EMPLEADO\s*CIVIL/.test(u)) return g;
+  if (/\bPNP\b/i.test(g)) return g;
+  return g + ' PNP';
+}
+
+function verFaltantesCuestionarioUnidad() {
+  var u = val('f-uni') || _grupoUnidadActual;
+  if (!u) { alert('Seleccione una unidad en el filtro.'); return; }
+  if (!puedeVerEvaluaciones() && !puedeVerDescargas()) {
+    alert('Sin permiso para ver esta lista.');
+    return;
+  }
+  var titulo = document.getElementById('modal-faltantes-titulo');
+  var info = document.getElementById('faltantes-unidad-info');
+  var body = document.getElementById('faltantes-unidad-body');
+  if (titulo) titulo.innerHTML = '<i class="fas fa-user-clock"></i> Faltan registrar — ' + escHtml(u);
+  if (info) info.textContent = 'Comparando nómina RRHH (sin bajas) con quienes ya iniciaron o enviaron el cuestionario...';
+  if (body) body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:20px;">Cargando...</td></tr>';
+  var modal = document.getElementById('modal-faltantes-unidad');
+  if (modal) modal.classList.add('open');
+
+  fetch(API + '/admin/faltantes-cuestionario?unidad=' + encodeURIComponent(u), { headers: hdr() })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d || !d.ok) throw new Error((d && d.error) || 'No se pudo cargar la lista.');
+      if (info) {
+        info.textContent = 'Nómina en unidad: ' + (d.nomina_total || 0)
+          + ' · Ya registrados: ' + (d.registrados || 0)
+          + ' · Faltan registrar: ' + (d.faltantes_total || 0)
+          + ' (solo personal distinto de BAJA).';
+      }
+      var rows = d.rows || [];
+      if (!rows.length) {
+        if (body) body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#1a7a3a;padding:22px;font-weight:600;">Todos los de nómina de esta unidad ya iniciaron o enviaron el cuestionario.</td></tr>';
+        return;
+      }
+      if (body) {
+        body.innerHTML = rows.map(function(r, i) {
+          return '<tr>'
+            + '<td style="text-align:center;color:#666;">' + (i + 1) + '</td>'
+            + '<td style="white-space:nowrap;font-size:11px;">' + escDatos(formatearGradoFaltante(r.grado)) + '</td>'
+            + '<td><strong>' + escDatos(r.nombres) + '</strong></td>'
+            + '<td>' + escDatos(r.cip) + '</td>'
+            + '<td>' + escDatos(r.dni || '—') + '</td>'
+            + '<td style="font-size:11px;">' + escDatos(r.situacion || '—') + '</td>'
+            + '</tr>';
+        }).join('');
+      }
+    })
+    .catch(function(e) {
+      if (body) body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#c0392b;padding:20px;">' + escHtml(e.message || 'Error') + '</td></tr>';
+      if (info) info.textContent = '';
+    });
 }
 
 function onFiltroRespuestasChange() {
@@ -2388,6 +2477,14 @@ function renderDashboardGrupo() {
   h += '<div class="gd-kpis">' + kpis.map(function(k) {
     return '<div class="gd-kpi" style="border-left-color:' + k.c + ';"><div class="n" style="color:' + k.c + ';">' + k.n + '</div><div class="l">' + k.l + '</div></div>';
   }).join('') + '</div>';
+
+  h += '<div style="margin:0 0 14px;padding:10px 12px;border:1.5px solid #f5c6cb;border-radius:8px;background:#fff5f5;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;">'
+    + '<div style="font-size:12px;color:#922b21;line-height:1.4;">'
+    + '<strong><i class="fas fa-user-clock"></i> Comparación con nómina</strong><br>'
+    + '<span style="color:#666;">Personal de esta unidad en RRHH que aún no inició el cuestionario.</span>'
+    + '</div>'
+    + '<button type="button" class="btn" style="background:#c0392b;color:#fff;white-space:nowrap;" onclick="verFaltantesCuestionarioUnidad()">'
+    + '<i class="fas fa-list"></i> Ver faltantes</button></div>';
 
   h += '<div class="gd-sec">Índice de medición — Nivel de riesgo institucional (sobre ' + d.completos + (d.completos === 1 ? ' evaluación completa' : ' evaluaciones completas') + ')</div>';
   h += '<div class="gd-riesgo">' + GRUPO_NIVELES.map(function(n) {
