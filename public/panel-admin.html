@@ -121,6 +121,9 @@
     
     .gd-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px;}
     .gd-kpi{background:#f4f8f5;border:1.5px solid #cfdad2;border-left:4px solid #004d3d;border-radius:8px;padding:10px 12px;}
+    .gd-kpi.clickable{cursor:pointer;transition:box-shadow .15s,background .15s;}
+    .gd-kpi.clickable:hover{box-shadow:0 2px 8px rgba(0,0,0,.08);background:#eef6f1;}
+    .gd-kpi.sel{background:#e7f3ec;box-shadow:inset 0 0 0 1.5px currentColor;}
     .gd-kpi .n{font-size:24px;font-weight:800;line-height:1.1;}
     .gd-kpi .l{font-size:10px;font-weight:700;color:#666;letter-spacing:.5px;text-transform:uppercase;margin-top:2px;}
     .gd-sec{background:#004d3d;color:#fff;font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;padding:6px 10px;border-radius:6px;margin:4px 0 8px;}
@@ -2398,7 +2401,7 @@ var GRUPO_NIVELES = [
 ];
 
 function filtrosGrupoVacios() {
-  return { area: '', grado: '', sexo: '', riesgo: '' };
+  return { area: '', grado: '', sexo: '', riesgo: '', estado: '' };
 }
 
 function cerrarModalPdfGrupo() {
@@ -2505,6 +2508,8 @@ function datosGrupoVistaActual() {
 function resumenFiltrosActivosGrupo() {
   var f = _grupoFiltros || {};
   var partes = [];
+  if (f.estado === 'completo') partes.push('COMPLETOS');
+  if (f.estado === 'avance') partes.push('EN AVANCE');
   if (f.area) partes.push(etiquetaFiltroGrupo(f.area, 'SIN ÁREA'));
   if (f.grado) partes.push(etiquetaFiltroGrupo(f.grado, 'SIN GRADO'));
   if (f.sexo) partes.push(String(f.sexo).toUpperCase());
@@ -2623,15 +2628,25 @@ function renderDashboardGrupo() {
   var faltantesN = (nom.faltantes_total != null) ? nom.faltantes_total : '—';
   var kpis = [
     { n: efectivosN, l: 'Efectivos', c: '#004d3d', title: 'Total de efectivos en nómina de esta unidad (sin bajas)' },
-    { n: d.completos, l: 'Completos', c: '#1a7a3a' },
-    { n: d.incompletos, l: 'En avance', c: '#b8860b' },
+    {
+      n: d.completos, l: 'Completos', c: '#1a7a3a', key: 'completo',
+      click: 'filtrarEstadoGrupo(\'completo\')',
+      title: 'Clic para ver solo evaluaciones completas (clic de nuevo para quitar)'
+    },
+    {
+      n: d.incompletos, l: 'En avance', c: '#b8860b', key: 'avance',
+      click: 'filtrarEstadoGrupo(\'avance\')',
+      title: 'Clic para ver solo quienes guardaron avance sin enviar (clic de nuevo para quitar)'
+    },
     { n: faltantesN, l: 'Faltantes', c: '#c0392b', click: 'verFaltantesCuestionarioUnidad()', title: 'Personal de nómina que aún no inició el cuestionario' }
   ];
   h += '<div class="gd-kpis">' + kpis.map(function(k) {
+    var sel = (k.key && f.estado === k.key) ? ' sel' : '';
+    var cls = 'gd-kpi' + (k.click ? ' clickable' : '') + sel;
     var click = k.click
-      ? ' onclick="' + k.click + '" style="border-left-color:' + k.c + ';cursor:pointer;" title="' + escHtml(k.title || '') + '"'
+      ? ' onclick="' + k.click + '" style="border-left-color:' + k.c + ';color:' + k.c + ';" title="' + escHtml(k.title || '') + '"'
       : ' style="border-left-color:' + k.c + ';"' + (k.title ? ' title="' + escHtml(k.title) + '"' : '');
-    return '<div class="gd-kpi"' + click + '><div class="n" style="color:' + k.c + ';">' + k.n + '</div><div class="l">' + k.l + '</div></div>';
+    return '<div class="' + cls + '"' + click + '><div class="n" style="color:' + k.c + ';">' + k.n + '</div><div class="l">' + k.l + '</div></div>';
   }).join('') + '</div>';
 
   h += '<div class="gd-sec">Índice de medición — Nivel de riesgo institucional (sobre ' + d.completos + (d.completos === 1 ? ' evaluación completa' : ' evaluaciones completas') + ')</div>';
@@ -2671,9 +2686,10 @@ function renderDashboardGrupo() {
     + '</tr></thead><tbody id="gd-tbody">';
   d.rows.forEach(function(r, i) {
     var ni = nivelInfoGrupo(r);
+    var est = r.completa ? 'completo' : 'avance';
     var alertas = (r.completa && r.alertas && r.alertas.length)
       ? '<div class="gd-alertas">Alertas: ' + escHtml(r.alertas.join(', ')) + '</div>' : '';
-    h += '<tr data-nivel="' + ni.key + '" data-idx="' + i + '">'
+    h += '<tr data-nivel="' + ni.key + '" data-estado="' + est + '" data-idx="' + i + '">'
       + '<td>' + (i + 1) + '</td>'
       + '<td style="font-weight:700;">' + escHtml((r.nombres || '—').toUpperCase()) + '</td>'
       + '<td style="font-size:11px;">' + escHtml((r.area || '—').toUpperCase()) + '</td>'
@@ -2692,7 +2708,7 @@ function renderDashboardGrupo() {
 
   wrap.innerHTML = h;
   poblarSelectsFiltrosGrupo(full);
-  aplicarFiltroListadoRiesgoGrupo();
+  aplicarFiltrosListadoGrupo();
   actualizarTituloInformeGrupo();
 }
 
@@ -2743,11 +2759,13 @@ function poblarSelectsFiltrosGrupo(full) {
 }
 
 function cambiarFiltrosGrupo(origen) {
+  var prev = _grupoFiltros || {};
   var nuevos = {
     area: (document.getElementById('gd-filtro-area') || {}).value || '',
     grado: (document.getElementById('gd-filtro-grado') || {}).value || '',
     sexo: (document.getElementById('gd-filtro-sexo') || {}).value || '',
-    riesgo: ''
+    riesgo: '',
+    estado: prev.estado || ''
   };
   if (origen) {
     var idx = GRUPO_FILTRO_CADENA.indexOf(origen);
@@ -2761,9 +2779,17 @@ function cambiarFiltrosGrupo(origen) {
   renderDashboardGrupo();
 }
 
+function filtrarEstadoGrupo(estado) {
+  if (!_grupoFiltros) _grupoFiltros = filtrosGrupoVacios();
+  _grupoFiltros.estado = _grupoFiltros.estado === estado ? '' : estado;
+  if (_grupoFiltros.estado === 'avance') _grupoFiltros.riesgo = '';
+  renderDashboardGrupo();
+}
+
 function filtrarNivelGrupo(nivel) {
   if (!_grupoFiltros) _grupoFiltros = filtrosGrupoVacios();
   _grupoFiltros.riesgo = _grupoFiltros.riesgo === nivel ? '' : nivel;
+  if (_grupoFiltros.riesgo) _grupoFiltros.estado = 'completo';
   renderDashboardGrupo();
 }
 
@@ -2772,15 +2798,24 @@ function limpiarFiltrosGrupo() {
   renderDashboardGrupo();
 }
 
-function aplicarFiltroListadoRiesgoGrupo() {
+function aplicarFiltrosListadoGrupo() {
   var tbody = document.getElementById('gd-tbody');
   if (!tbody) return;
   var riesgo = (_grupoFiltros && _grupoFiltros.riesgo) || '';
+  var estado = (_grupoFiltros && _grupoFiltros.estado) || '';
   var vis = 0;
+  var nVis = 0;
   Array.prototype.forEach.call(tbody.rows, function(tr) {
-    var ok = !riesgo || tr.getAttribute('data-nivel') === riesgo;
+    var okEstado = !estado || tr.getAttribute('data-estado') === estado;
+    var okRiesgo = !riesgo || tr.getAttribute('data-nivel') === riesgo;
+    var ok = okEstado && okRiesgo;
     tr.style.display = ok ? '' : 'none';
-    if (ok) vis++;
+    if (ok) {
+      vis++;
+      nVis++;
+      var tdNum = tr.cells[0];
+      if (tdNum) tdNum.textContent = String(nVis);
+    }
   });
   var info = document.getElementById('gd-filtro-info');
   if (info) {
@@ -2794,9 +2829,13 @@ function aplicarFiltroListadoRiesgoGrupo() {
     }
     var extras = resumenFiltrosActivosGrupo();
     if (extras.length) partes.push(extras.join(' · '));
-    if (riesgo) partes.push('(clic de nuevo en la tarjeta para quitar)');
+    if (riesgo || estado) partes.push('(clic de nuevo en la tarjeta para quitar)');
     info.textContent = partes.join(' — ');
   }
+}
+
+function aplicarFiltroListadoRiesgoGrupo() {
+  aplicarFiltrosListadoGrupo();
 }
 
 function nombrePdfSeguroGrupo(base) {
