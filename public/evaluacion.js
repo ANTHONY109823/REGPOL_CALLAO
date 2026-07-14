@@ -1259,14 +1259,48 @@ function guardarBloqueEnServidor(callback) {
     body: JSON.stringify(payload)
   }).then(function(r) { return r.json(); })
     .then(function(d) {
+      if (!d || !d.ok) {
+        var msg = (d && (d.mensaje || d.error)) || 'No se pudo guardar en el servidor';
+        mostrarIndicadorGuardado('⚠ ' + msg);
+        mostrarAlerta(msg + '. Sus respuestas siguen en este equipo; no cierre la pestaña e intente de nuevo.', 'error');
+        if (callback) callback(false);
+        return;
+      }
       marcarFotoEnServidor();
       mostrarIndicadorGuardado('Bloque '+ESTADO.bloqueActual+' guardado ✓');
-      if(callback) callback();
+      if(callback) callback(true);
     })
     .catch(function(){
-      mostrarIndicadorGuardado('Guardado local ✓');
-      if(callback) callback();
+      mostrarIndicadorGuardado('Guardado local ✓ (sin red)');
+      mostrarAlerta('Sin conexión al servidor. El avance quedó en este navegador; reconéctese y pulse «Guardar y salir» o continúe respondiendo.', 'error');
+      if(callback) callback(false);
     });
+}
+
+function guardarYSalir() {
+  if (!ESTADO.registroCompleto) return;
+  var btn = document.getElementById('btn-guardar-bloque');
+  if (btn) btn.disabled = true;
+  var nResp = Object.keys(ESTADO.respuestas).filter(function(k) {
+    return ESTADO.respuestas[k] === 'V' || ESTADO.respuestas[k] === 'F';
+  }).length;
+  var falta = Math.max(0, TOTAL_PREGUNTAS - nResp);
+  guardarBloqueEnServidor(function(ok) {
+    var msg = ok
+      ? ('Progreso guardado (' + nResp + '/' + TOTAL_PREGUNTAS + ').')
+      : ('Avance conservado en este equipo (' + nResp + '/' + TOTAL_PREGUNTAS + ').');
+    if (falta > 0) {
+      msg += ' Aún faltan ' + falta + ' pregunta(s). NO se envió a Psicología. Para continuar, use su CIP.';
+    } else {
+      msg += ' Debe ir al último bloque y pulsar «Finalizar y Enviar» para registrar en Psicología.';
+    }
+    mostrarIndicadorGuardado(ok ? 'Progreso guardado' : 'Guardado local');
+    mostrarAlerta(msg, falta > 0 ? 'info' : 'exito');
+    setTimeout(function() {
+      volverAlPanelRegistro();
+      if (btn) btn.disabled = false;
+    }, 600);
+  });
 }
 
 function volverAlPanelRegistro() {
@@ -1298,22 +1332,7 @@ function volverAlPanelRegistro() {
       bloque: ESTADO.bloqueActual
     });
   }
-  mostrarAlerta('Progreso guardado. Para continuar ingrese su CIP en el panel superior.', 'exito');
-  setTimeout(ocultarAlerta, 4500);
   scrollABarraContinuarCip(true);
-}
-
-function guardarYSalir() {
-  if (!ESTADO.registroCompleto) return;
-  var btn = document.getElementById('btn-guardar-bloque');
-  if (btn) btn.disabled = true;
-  guardarBloqueEnServidor(function() {
-    mostrarIndicadorGuardado('Progreso guardado. Puede continuar con su CIP.');
-    setTimeout(function() {
-      volverAlPanelRegistro();
-      if (btn) btn.disabled = false;
-    }, 500);
-  });
 }
 
 function continuarConCIP() {
@@ -1422,17 +1441,25 @@ function mostrarBannerProgreso(data) {
 
 function aplicarProgresoRestaurado(data) {
   ESTADO.respuestas   = typeof data.respuestas==='string'?JSON.parse(data.respuestas):(data.respuestas||{});
-  ESTADO.bloqueActual = parseInt(data.bloque,10)||1;
   ESTADO.registroCompleto = true;
+  // Ir al bloque de la primera pregunta sin responder (no solo al bloque_max)
+  var idxPend = primeraPreguntaSinResponder();
+  ESTADO.bloqueActual = idxPend >= 0 ? bloqueDePregunta(idxPend) : TOTAL_BLOQUES;
   aplicarTiempoAcumuladoDesdeData(data);
   reiniciarCronometroEvaluacion(data.cip || obtenerCipEvaluacion());
   var banner=document.getElementById('banner-progreso');
   if(banner) banner.style.display='none';
   ocultarPanelRegistro();
   activarCuestionario(true);
-  var total=Object.keys(ESTADO.respuestas).length;
-  mostrarAlerta('Continúa desde el bloque '+ESTADO.bloqueActual+' — '+total+'/'+TOTAL_PREGUNTAS+' respuestas guardadas.','exito');
-  setTimeout(ocultarAlerta,5000);
+  var total=Object.keys(ESTADO.respuestas).filter(function(k) {
+    return ESTADO.respuestas[k] === 'V' || ESTADO.respuestas[k] === 'F';
+  }).length;
+  var falta = Math.max(0, TOTAL_PREGUNTAS - total);
+  var msg = 'Continúa en el bloque ' + ESTADO.bloqueActual + ' — ' + total + '/' + TOTAL_PREGUNTAS + ' guardadas.';
+  if (falta > 0) msg += ' Faltan ' + falta + '. Al terminar todas, pulse «Finalizar y Enviar» en el último bloque.';
+  else msg += ' Vaya al último bloque y pulse «Finalizar y Enviar».';
+  mostrarAlerta(msg, falta > 0 ? 'info' : 'exito');
+  setTimeout(ocultarAlerta,7000);
 }
 
 function restaurarProgreso() {
@@ -1746,4 +1773,24 @@ function abrirPanelAdmin(e) {
   window.open('panel-admin.html','regpol_panel','noopener,noreferrer');
   return false;
 }
+
+// Al cerrar/recargar: intenta conservar el avance (local + beacon al servidor)
+window.addEventListener('pagehide', function() {
+  try {
+    if (!ESTADO.registroCompleto || _enviandoEvaluacion) return;
+    var payload = construirPayloadProgreso();
+    if (!payload.cip) return;
+    var n = Object.keys(ESTADO.respuestas || {}).filter(function(k) {
+      return ESTADO.respuestas[k] === 'V' || ESTADO.respuestas[k] === 'F';
+    }).length;
+    if (!n) return;
+    localStorage.setItem('progreso_' + payload.cip, JSON.stringify(payload));
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(
+        LOCAL_API + '/progreso',
+        new Blob([JSON.stringify(payload)], { type: 'application/json' })
+      );
+    }
+  } catch (e) { /* ignore */ }
+});
 

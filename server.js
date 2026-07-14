@@ -1703,6 +1703,25 @@ app.post('/guardar', async (req, res) => {
     const edadFinal = parseInt(edad) || calcularEdadDesdeISO(fecha_nac) || 0;
     const totalResp = contarRespuestasObj(respuestas).total;
 
+    // Seguridad: no aceptar "completada" si faltan preguntas (evita envíos parciales)
+    if (completada) {
+      let totalEsperado = 566;
+      try {
+        const pr = await pool.query('SELECT COUNT(*)::int AS n FROM preguntas WHERE activa=TRUE');
+        if (pr.rows[0] && pr.rows[0].n > 0) totalEsperado = pr.rows[0].n;
+      } catch (e) { /* usar 566 */ }
+      if (totalResp < totalEsperado) {
+        return res.json({
+          ok: false,
+          error: 'incompleto',
+          totalResp: totalResp,
+          totalEsperado: totalEsperado,
+          mensaje: 'Debe responder las ' + totalEsperado + ' preguntas antes de enviar. Lleva '
+            + totalResp + '. Continúe con su CIP; no cierre el cuestionario hasta pulsar «Finalizar y Enviar».'
+        });
+      }
+    }
+
     // No crear fila vacía en evaluaciones: el avance vive en progresos hasta Finalizar y Enviar
     if (!completada && totalResp === 0) {
       return res.json({ ok: true, totalResp: 0, soloProgreso: true });
@@ -2005,9 +2024,17 @@ app.get('/verificar-registro', async (req, res) => {
 // ── GET /progreso?cip= ────────────────────────────────────────────────────────
 app.get('/progreso', async (req, res) => {
   try {
-    const clave = (req.query.cip || req.query.email || '').toLowerCase().trim();
-    if (!clave) return res.json({ ok: false, error: 'CIP requerido' });
-    const r = await pool.query('SELECT * FROM progresos WHERE clave=$1', [clave]);
+    const cipRaw = String(req.query.cip || req.query.email || '').trim();
+    if (!cipRaw) return res.json({ ok: false, error: 'CIP requerido' });
+    const clave = cipRaw.toLowerCase();
+    const r = await pool.query(
+      `SELECT * FROM progresos
+       WHERE LOWER(TRIM(clave))=LOWER(TRIM($1))
+          OR UPPER(TRIM(cip))=UPPER(TRIM($2))
+       ORDER BY actualizado DESC NULLS LAST
+       LIMIT 1`,
+      [clave, cipRaw]
+    );
     if (!r.rows.length) return res.json({ ok: true, encontrado: false });
     const row = r.rows[0];
     const totalCalc = Math.max(
