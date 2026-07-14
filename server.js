@@ -213,7 +213,7 @@ function deduplicarFilasPorCip(rows) {
   const seen = new Set();
   const out = [];
   (rows || []).forEach(function(row) {
-    const cip = (row.cip || '').toUpperCase().trim();
+    const cip = normalizarCipKey(row.cip) || String(row.cip || '').toUpperCase().trim();
     if (cip) {
       if (seen.has(cip)) return;
       seen.add(cip);
@@ -319,13 +319,28 @@ function normalizarUnidadNomina(s) {
     .replace(/\s+/g, ' ');
 }
 
+/** CIP a 8 dígitos (misma regla que nómina RRHH). */
+function normalizarCipKey(cip) {
+  let d = String(cip || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.length < 8) d = d.padStart(8, '0');
+  if (d.length > 8) d = d.slice(-8);
+  return d;
+}
+
+function sqlCipNormExpr(campo) {
+  return `LPAD(regexp_replace(TRIM(COALESCE(${campo},'')), '[^0-9]', '', 'g'), 8, '0')`;
+}
+
 async function obtenerUnidadNominaPorCip(cip) {
-  const c = String(cip || '').trim();
+  const c = normalizarCipKey(cip);
   if (!/^\d{8}$/.test(c)) return null;
   try {
     const r = await pool.query(
       `SELECT cip, unidad_nombre, division_nombre, situacion, apellidos_nombres
-       FROM personal_rrhh WHERE UPPER(TRIM(cip)) = UPPER(TRIM($1)) LIMIT 1`,
+       FROM personal_rrhh
+       WHERE ${sqlCipNormExpr('cip')} = $1
+       LIMIT 1`,
       [c]
     );
     return r.rows[0] || null;
@@ -1298,6 +1313,52 @@ function debeFiltrarPorUnidadAsignada(admin) {
   return !normalizarPermisos(admin.permisos).includes('evaluaciones');
 }
 
+/**
+ * Filtro SQL por unidad de nómina (CIP en personal_rrhh).
+ * Si el CIP no está en RRHH, cae a unidad/comisaría del formulario.
+ * @param {string} alias '' | 'p' | 'e'
+ * @param {string} ph placeholder ($1, $2, …)
+ */
+function sqlCipEnUnidadNominaOForm(alias, ph) {
+  const p = alias ? alias + '.' : '';
+  return `(
+    ${sqlCipNormExpr(p + 'cip')} IN (
+      SELECT ${sqlCipNormExpr('rr.cip')} FROM personal_rrhh rr
+      WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE ${ph}
+    )
+    OR (
+      NOT EXISTS (
+        SELECT 1 FROM personal_rrhh rr2
+        WHERE ${sqlCipNormExpr('rr2.cip')} = ${sqlCipNormExpr(p + 'cip')}
+      )
+      AND (UPPER(${p}unidad) LIKE ${ph} OR UPPER(${p}comisaria) LIKE ${ph})
+    )
+  )`;
+}
+
+/** Solo CIPs cuya nómina coincide con la unidad (sin fallback al formulario). */
+function sqlCipSoloUnidadNomina(alias, ph) {
+  const p = alias ? alias + '.' : '';
+  return `${sqlCipNormExpr(p + 'cip')} IN (
+    SELECT ${sqlCipNormExpr('rr.cip')} FROM personal_rrhh rr
+    WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE ${ph}
+  )`;
+}
+
+/** Unidad a mostrar: nómina RRHH si existe; si no, la del registro. */
+function sqlUnidadMostrarDesdeNomina(alias) {
+  const p = alias ? alias + '.' : '';
+  return `COALESCE(
+    NULLIF(TRIM((
+      SELECT rr.unidad_nombre FROM personal_rrhh rr
+      WHERE ${sqlCipNormExpr('rr.cip')} = ${sqlCipNormExpr(p + 'cip')}
+      LIMIT 1
+    )), ''),
+    NULLIF(TRIM(COALESCE(${p}unidad, ${p}comisaria, '')), ''),
+    ''
+  )`;
+}
+
 function puedeGestionarEvaluaciones(admin) {
   if (!admin) return false;
   if (admin.rol === 'unitic' || admin.rol === 'bienestar') return true;
@@ -1321,9 +1382,16 @@ function limpiarClavesLegacyPortalConfig(data) {
   return data;
 }
 
-function adminPuedeAccederRegistro(admin, unidad, comisaria) {
+/** Acceso admin de unidad: prioriza unidad de nómina del CIP. */
+async function adminPuedeAccederRegistro(admin, unidad, comisaria, cip) {
   if (!debeFiltrarPorUnidadAsignada(admin)) return true;
   const u = (admin.unidad || '').toUpperCase();
+  if (cip) {
+    const rr = await obtenerUnidadNominaPorCip(cip);
+    if (rr && String(rr.unidad_nombre || '').trim()) {
+      return String(rr.unidad_nombre).toUpperCase().indexOf(u) !== -1;
+    }
+  }
   const uni = (unidad || '').toUpperCase();
   const com = (comisaria || '').toUpperCase();
   return uni.includes(u) || com.includes(u);
@@ -1361,9 +1429,9 @@ async function obtenerResumenPsico(admin) {
   const paramsProg = [];
 
   if (debeFiltrarPorUnidadAsignada(admin)) {
-    whereEval = 'WHERE (UPPER(unidad) LIKE $1 OR UPPER(comisaria) LIKE $1)';
+    whereEval = 'WHERE ' + sqlCipEnUnidadNominaOForm('', '$1');
     paramsEval.push('%' + admin.unidad.toUpperCase() + '%');
-    whereProg += ' AND (UPPER(p.unidad) LIKE $1 OR UPPER(p.comisaria) LIKE $1)';
+    whereProg += ' AND ' + sqlCipEnUnidadNominaOForm('p', '$1');
     paramsProg.push('%' + admin.unidad.toUpperCase() + '%');
   }
 
@@ -2110,7 +2178,7 @@ async function enriquecerFilasConRRHH(rows) {
   const cips = [];
   const seen = new Set();
   rows.forEach(function(r) {
-    const c = String(r.cip || '').trim().toUpperCase();
+    const c = normalizarCipKey(r.cip);
     if (c && !seen.has(c)) {
       seen.add(c);
       cips.push(c);
@@ -2130,20 +2198,20 @@ async function enriquecerFilasConRRHH(rows) {
   let map = {};
   try {
     const q = await pool.query(
-      `SELECT UPPER(TRIM(cip)) AS cip, unidad_nombre, division_nombre, grado, cod_grado, situacion
+      `SELECT ${sqlCipNormExpr('cip')} AS cip_key, unidad_nombre, division_nombre, grado, cod_grado, situacion
        FROM personal_rrhh
-       WHERE UPPER(TRIM(cip)) = ANY($1::text[])`,
+       WHERE ${sqlCipNormExpr('cip')} = ANY($1::text[])`,
       [cips]
     );
     q.rows.forEach(function(row) {
-      map[row.cip] = row;
+      map[row.cip_key] = row;
     });
   } catch (e) {
     console.error('enriquecerFilasConRRHH:', e.message);
     return rows;
   }
   return rows.map(function(r) {
-    const cip = String(r.cip || '').trim().toUpperCase();
+    const cip = normalizarCipKey(r.cip);
     const rr = map[cip];
     const uniDecl = String(r.unidad || r.comisaria || '').trim();
     const uniRrhh = rr ? String(rr.unidad_nombre || '').trim() : '';
@@ -2201,22 +2269,19 @@ function filtrarYOrdenarListadoEvaluaciones(rows, query) {
     list = list.filter(function(r) { return clasificarEstadoListadoEval(r).sinEnviar; });
   }
 
-  // Cola por nómina: el filtro de unidad/división usa la unidad real de RRHH
+  // Cola por nómina: al filtrar unidad/división solo cuenta quien está en RRHH de esa dependencia
   if (orden === 'unidad_rrhh') {
     if (uniFiltro) {
       list = list.filter(function(r) {
         const ur = String(r.unidad_rrhh || '').trim().toUpperCase();
-        if (ur) return ur.indexOf(uniFiltro) !== -1;
-        const ud = String(r.unidad || r.comisaria || '').trim().toUpperCase();
-        return ud.indexOf(uniFiltro) !== -1;
+        // Sin fallback al formulario: evita inflar (ej. registrado en CALLAO pero nómina LA LEGUA)
+        return !!ur && ur.indexOf(uniFiltro) !== -1;
       });
     }
     if (divFiltro && divFiltro !== 'TODAS') {
       list = list.filter(function(r) {
         const dr = String(r.division_rrhh || '').trim().toUpperCase();
-        if (dr) return dr === divFiltro;
-        // Sin nómina: se mantiene si ya pasó el WHERE por dependencia del form
-        return true;
+        return !!dr && dr === divFiltro;
       });
     }
   }
@@ -2299,12 +2364,7 @@ async function obtenerProgresoParaPDF(cip, admin) {
   if (!r.rows.length) return null;
   const ev = mapearProgresoParaPDF(r.rows[0]);
   if (!ev || (!ev.total_resp && !ev.nombres)) return null;
-  if (debeFiltrarPorUnidadAsignada(admin)) {
-    const u = (admin.unidad || '').toUpperCase();
-    const uni = (ev.unidad || '').toUpperCase();
-    const com = (ev.comisaria || '').toUpperCase();
-    if (!uni.includes(u) && !com.includes(u)) return null;
-  }
+  if (!(await adminPuedeAccederRegistro(admin, ev.unidad, ev.comisaria, ev.cip))) return null;
   return ev;
 }
 
@@ -2318,7 +2378,7 @@ async function consultarProgresosFiltrados(admin, query) {
   let pi = 1;
 
   if (debeFiltrarPorUnidadAsignada(admin)) {
-    where += ` AND (UPPER(p.unidad) LIKE $${pi} OR UPPER(p.comisaria) LIKE $${pi})`;
+    where += ' AND ' + sqlCipEnUnidadNominaOForm('p', '$' + pi);
     params.push('%' + admin.unidad.toUpperCase() + '%');
     pi++;
   }
@@ -2363,19 +2423,7 @@ async function consultarProgresosFiltrados(admin, query) {
   }
   if (comisaria) {
     if (porRrhh) {
-      where += ` AND (
-        UPPER(TRIM(p.cip)) IN (
-          SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
-          WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE $${pi}
-        )
-        OR (
-          NOT EXISTS (
-            SELECT 1 FROM personal_rrhh rr2
-            WHERE UPPER(TRIM(rr2.cip)) = UPPER(TRIM(p.cip))
-          )
-          AND (UPPER(p.comisaria) LIKE $${pi} OR UPPER(p.unidad) LIKE $${pi})
-        )
-      )`;
+      where += ' AND ' + sqlCipSoloUnidadNomina('p', '$' + pi);
     } else {
       where += ` AND (UPPER(p.comisaria) LIKE $${pi} OR UPPER(p.unidad) LIKE $${pi})`;
     }
@@ -2383,19 +2431,7 @@ async function consultarProgresosFiltrados(admin, query) {
   }
   if (unidad) {
     if (porRrhh) {
-      where += ` AND (
-        UPPER(TRIM(p.cip)) IN (
-          SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
-          WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE $${pi}
-        )
-        OR (
-          NOT EXISTS (
-            SELECT 1 FROM personal_rrhh rr2
-            WHERE UPPER(TRIM(rr2.cip)) = UPPER(TRIM(p.cip))
-          )
-          AND (UPPER(p.unidad) LIKE $${pi} OR UPPER(p.comisaria) LIKE $${pi})
-        )
-      )`;
+      where += ' AND ' + sqlCipSoloUnidadNomina('p', '$' + pi);
     } else {
       where += ` AND (UPPER(p.unidad) LIKE $${pi} OR UPPER(p.comisaria) LIKE $${pi})`;
     }
@@ -2509,9 +2545,19 @@ app.get('/stats', requireAuth, async (req, res) => {
     const progParams = resumen.paramsProg;
 
     const porComis = await pool.query(
-      `SELECT comisaria AS nombre, COUNT(*) AS total FROM evaluaciones ${whereAdmin} GROUP BY comisaria ORDER BY comisaria`, params);
-    const porUnidad= await pool.query(
-      `SELECT unidad AS nombre, COUNT(*) AS total FROM evaluaciones ${whereAdmin} GROUP BY unidad ORDER BY unidad`, params);
+      `SELECT nombre, COUNT(*)::int AS total FROM (
+         SELECT TRIM(${sqlUnidadMostrarDesdeNomina('')}) AS nombre
+         FROM evaluaciones ${whereAdmin}
+       ) x
+       WHERE nombre <> ''
+       GROUP BY nombre ORDER BY nombre`, params);
+    const porUnidad = await pool.query(
+      `SELECT nombre, COUNT(*)::int AS total FROM (
+         SELECT TRIM(${sqlUnidadMostrarDesdeNomina('')}) AS nombre
+         FROM evaluaciones ${whereAdmin}
+       ) x
+       WHERE nombre <> ''
+       GROUP BY nombre ORDER BY nombre`, params);
 
     const ultimas  = await pool.query(
       `SELECT id, cip, ${sqlFechaTxt('fecha')} AS fecha, ${sqlFechaIso('fecha')} AS fecha_iso,
@@ -2538,6 +2584,14 @@ app.get('/stats', requireAuth, async (req, res) => {
       })
       .slice(0, 10);
 
+    let ultimasEnriq = await enriquecerFilasConRRHH(ultimasMerged);
+    ultimasEnriq = ultimasEnriq.map(function(r) {
+      if (r.unidad_rrhh) {
+        return Object.assign({}, r, { unidad: r.unidad_rrhh, comisaria: r.unidad_rrhh });
+      }
+      return r;
+    });
+
     const porDivision = await pool.query(
       `SELECT d.nombre, d.orden, COUNT(e.id)::int AS total
        FROM divisiones d
@@ -2559,7 +2613,7 @@ app.get('/stats', requireAuth, async (req, res) => {
       porComisaria:      porComis.rows,
       porUnidad:         porUnidad.rows,
       porDivision:       porDivision.rows,
-      ultimasEvaluaciones: ultimasMerged
+      ultimasEvaluaciones: ultimasEnriq
     };
     statsCache = payload;
     statsCacheKey = cacheKey;
@@ -2638,7 +2692,7 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
     const ultLlenandoR = await pool.query(
       `SELECT 'llenando' AS tipo, COALESCE(NULLIF(TRIM(p.nombres),''), p.cip, 'Sin nombre') AS titulo,
         TRIM(BOTH ' · ' FROM CONCAT_WS(' · ',
-          NULLIF(TRIM(COALESCE(p.unidad, p.comisaria, '')), ''),
+          NULLIF(TRIM(${sqlUnidadMostrarDesdeNomina('p')}), ''),
           CASE WHEN COALESCE(p.total_resp, 0) > 0
             THEN COALESCE(p.total_resp, 0)::text || '/566'
             ELSE NULL END,
@@ -2679,7 +2733,7 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
     );
     const ultEvalR = await pool.query(
       `SELECT 'evaluacion' AS tipo, nombres AS titulo,
-        COALESCE(unidad, comisaria, '') AS detalle,
+        TRIM(${sqlUnidadMostrarDesdeNomina('')}) AS detalle,
         ${sqlFechaTxt('fecha')} AS fecha,
         ${sqlFechaIso('fecha')} AS fecha_iso,
         completada::text AS estado
@@ -2785,7 +2839,7 @@ app.get('/evaluaciones', requireAuth, async (req, res) => {
 
     let baseWhere = 'WHERE 1=1', baseParams = [];
     if (debeFiltrarPorUnidadAsignada(req.admin)) {
-      baseWhere += ' AND (UPPER(unidad) LIKE $1 OR UPPER(comisaria) LIKE $1)';
+      baseWhere += ' AND ' + sqlCipEnUnidadNominaOForm('', '$1');
       baseParams.push('%' + req.admin.unidad.toUpperCase() + '%');
     }
     const { where, params, pi } = await buildWhere(req.query, baseWhere, baseParams);
@@ -2880,14 +2934,15 @@ app.put('/admin/registro-datos', requireAuth, async (req, res) => {
       row = cur.rows[0];
     }
 
-    if (!adminPuedeAccederRegistro(req.admin, row.unidad, row.comisaria)) {
+    const cipRef = String(row.cip || cip || '').trim();
+
+    if (!(await adminPuedeAccederRegistro(req.admin, row.unidad, row.comisaria, row.cip))) {
       return res.status(403).json({ ok: false, error: 'Sin permiso para esta dependencia' });
     }
-    if (!adminPuedeAccederRegistro(req.admin, unidad, unidad)) {
+    if (!(await adminPuedeAccederRegistro(req.admin, unidad, unidad, cipRef))) {
       return res.status(403).json({ ok: false, error: 'Sin permiso para asignar esa dependencia' });
     }
 
-    const cipRef = String(row.cip || cip || '').trim();
     const dupDni = await buscarRegistroDuplicadoPorDni(dni, cipRef);
     if (dupDni) {
       return res.json({
@@ -2945,7 +3000,7 @@ app.delete('/admin/evaluaciones/:id', requireAuth, async (req, res) => {
       [req.params.id]);
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     const row = cur.rows[0];
-    if (!adminPuedeAccederRegistro(req.admin, row.unidad, row.comisaria)) {
+    if (!(await adminPuedeAccederRegistro(req.admin, row.unidad, row.comisaria, row.cip))) {
       return res.status(403).json({ ok: false, error: 'Sin permiso para esta dependencia' });
     }
     await purgarRegistrosPersona(row.cip, row.dni);
@@ -2971,7 +3026,7 @@ app.delete('/admin/progresos', requireAuth, async (req, res) => {
       [cip]);
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     const row = cur.rows[0];
-    if (!adminPuedeAccederRegistro(req.admin, row.unidad, row.comisaria)) {
+    if (!(await adminPuedeAccederRegistro(req.admin, row.unidad, row.comisaria, row.cip))) {
       return res.status(403).json({ ok: false, error: 'Sin permiso para esta dependencia' });
     }
     await purgarRegistrosPersona(row.cip, row.dni);
@@ -3017,7 +3072,7 @@ app.delete('/admin/evaluaciones-lote', requireAuth, async (req, res) => {
     let baseWhere = 'WHERE 1=1';
     const baseParams = [];
     if (debeFiltrarPorUnidadAsignada(req.admin)) {
-      baseWhere += ' AND (UPPER(unidad) LIKE $1 OR UPPER(comisaria) LIKE $1)';
+      baseWhere += ' AND ' + sqlCipEnUnidadNominaOForm('', '$1');
       baseParams.push('%' + req.admin.unidad.toUpperCase() + '%');
     }
     const { where, params } = await buildWhere(req.query, baseWhere, baseParams);
@@ -3026,7 +3081,7 @@ app.delete('/admin/evaluaciones-lote', requireAuth, async (req, res) => {
     let pBase = 'WHERE 1=1';
     const pParams = [];
     if (debeFiltrarPorUnidadAsignada(req.admin)) {
-      pBase += ' AND (UPPER(p.unidad) LIKE $1 OR UPPER(p.comisaria) LIKE $1)';
+      pBase += ' AND ' + sqlCipEnUnidadNominaOForm('p', '$1');
       pParams.push('%' + req.admin.unidad.toUpperCase() + '%');
     }
     const { where: pWhere, params: pPrms } = await buildWhereProgresos(req.query, pBase, pParams);
@@ -3084,19 +3139,7 @@ async function buildWhere(query, baseWhere, baseParams) {
   }
   if (comisaria) {
     if (porRrhh) {
-      where += ` AND (
-        UPPER(TRIM(cip)) IN (
-          SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
-          WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE $${pi}
-        )
-        OR (
-          NOT EXISTS (
-            SELECT 1 FROM personal_rrhh rr2
-            WHERE UPPER(TRIM(rr2.cip)) = UPPER(TRIM(cip))
-          )
-          AND (UPPER(comisaria) LIKE $${pi} OR UPPER(unidad) LIKE $${pi})
-        )
-      )`;
+      where += ' AND ' + sqlCipSoloUnidadNomina('', '$' + pi);
     } else {
       where += ` AND (UPPER(comisaria) LIKE $${pi} OR UPPER(unidad) LIKE $${pi})`;
     }
@@ -3104,19 +3147,7 @@ async function buildWhere(query, baseWhere, baseParams) {
   }
   if (unidad) {
     if (porRrhh) {
-      where += ` AND (
-        UPPER(TRIM(cip)) IN (
-          SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
-          WHERE UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) LIKE $${pi}
-        )
-        OR (
-          NOT EXISTS (
-            SELECT 1 FROM personal_rrhh rr2
-            WHERE UPPER(TRIM(rr2.cip)) = UPPER(TRIM(cip))
-          )
-          AND (UPPER(unidad) LIKE $${pi} OR UPPER(comisaria) LIKE $${pi})
-        )
-      )`;
+      where += ' AND ' + sqlCipSoloUnidadNomina('', '$' + pi);
     } else {
       where += ` AND (UPPER(unidad) LIKE $${pi} OR UPPER(comisaria) LIKE $${pi})`;
     }
@@ -3138,22 +3169,49 @@ async function buildWhereProgresos(query, baseWhere, baseParams) {
   const comisaria = (query.comisaria || '').toUpperCase();
   const unidad    = (query.unidad    || '').toUpperCase();
   const busqueda  = (query.busqueda  || '').toUpperCase();
+  const porRrhh   = String(query.orden || '').toLowerCase() === 'unidad_rrhh';
 
   if (division) {
     const du = await pool.query(
       `SELECT UPPER(u.nombre) AS nombre FROM unidades_pol u JOIN divisiones d ON d.id=u.division_id WHERE UPPER(d.nombre)=$1`, [division]);
     if (du.rows.length) {
       const arr = du.rows.map(r => r.nombre);
-      where += ` AND (UPPER(p.comisaria) = ANY($${pi}::text[]) OR UPPER(p.unidad) = ANY($${pi}::text[]))`;
-      params.push(arr); pi++;
+      if (porRrhh) {
+        where += ` AND (
+          UPPER(TRIM(p.cip)) IN (
+            SELECT UPPER(TRIM(rr.cip)) FROM personal_rrhh rr
+            WHERE UPPER(TRIM(COALESCE(rr.division_nombre,''))) = $${pi + 1}
+               OR UPPER(TRIM(COALESCE(rr.unidad_nombre,''))) = ANY($${pi}::text[])
+          )
+          OR (
+            NOT EXISTS (
+              SELECT 1 FROM personal_rrhh rr2
+              WHERE UPPER(TRIM(rr2.cip)) = UPPER(TRIM(p.cip))
+            )
+            AND (UPPER(p.comisaria) = ANY($${pi}::text[]) OR UPPER(p.unidad) = ANY($${pi}::text[]))
+          )
+        )`;
+        params.push(arr, division); pi += 2;
+      } else {
+        where += ` AND (UPPER(p.comisaria) = ANY($${pi}::text[]) OR UPPER(p.unidad) = ANY($${pi}::text[]))`;
+        params.push(arr); pi++;
+      }
     } else { where += ' AND 1=0'; }
   }
   if (comisaria) {
-    where += ` AND (UPPER(p.comisaria) LIKE $${pi} OR UPPER(p.unidad) LIKE $${pi})`;
+    if (porRrhh) {
+      where += ' AND ' + sqlCipSoloUnidadNomina('p', '$' + pi);
+    } else {
+      where += ` AND (UPPER(p.comisaria) LIKE $${pi} OR UPPER(p.unidad) LIKE $${pi})`;
+    }
     params.push('%' + comisaria + '%'); pi++;
   }
   if (unidad) {
-    where += ` AND (UPPER(p.unidad) LIKE $${pi} OR UPPER(p.comisaria) LIKE $${pi})`;
+    if (porRrhh) {
+      where += ' AND ' + sqlCipSoloUnidadNomina('p', '$' + pi);
+    } else {
+      where += ` AND (UPPER(p.unidad) LIKE $${pi} OR UPPER(p.comisaria) LIKE $${pi})`;
+    }
     params.push('%' + unidad + '%'); pi++;
   }
   if (busqueda) {
@@ -3168,7 +3226,7 @@ app.get('/descargar', requireAuth, async (req, res) => {
   try {
     let baseWhere = 'WHERE 1=1', baseParams = [];
     if (debeFiltrarPorUnidadAsignada(req.admin)) {
-      baseWhere += ' AND (UPPER(unidad) LIKE $1 OR UPPER(comisaria) LIKE $1)';
+      baseWhere += ' AND ' + sqlCipEnUnidadNominaOForm('', '$1');
       baseParams.push('%' + req.admin.unidad.toUpperCase() + '%');
     }
     const { where, params } = await buildWhere(req.query, baseWhere, baseParams);
@@ -3246,12 +3304,7 @@ async function cargarEvaluacionAdmin({ id, cip }, admin) {
     ev.fecha = ev.fecha_txt || ev.fecha;
   }
   if (!ev) return null;
-  if (debeFiltrarPorUnidadAsignada(admin)) {
-    const u = (admin.unidad || '').toUpperCase();
-    const uni = (ev.unidad || '').toUpperCase();
-    const com = (ev.comisaria || '').toUpperCase();
-    if (!uni.includes(u) && !com.includes(u)) return null;
-  }
+  if (!(await adminPuedeAccederRegistro(admin, ev.unidad, ev.comisaria, ev.cip))) return null;
   return await fusionarProgresoEnEvaluacion(ev);
 }
 
@@ -3483,7 +3536,7 @@ async function obtenerFilasInformeGrupo(req) {
   let baseWhere = 'WHERE 1=1';
   const baseParams = [];
   if (debeFiltrarPorUnidadAsignada(req.admin)) {
-    baseWhere += ' AND (UPPER(unidad) LIKE $1 OR UPPER(comisaria) LIKE $1)';
+    baseWhere += ' AND ' + sqlCipEnUnidadNominaOForm('', '$1');
     baseParams.push('%' + req.admin.unidad.toUpperCase() + '%');
   }
 
@@ -3491,11 +3544,14 @@ async function obtenerFilasInformeGrupo(req) {
   const r = await pool.query(
     `SELECT *, TO_CHAR(fecha,'DD/MM/YYYY HH24:MI') AS fecha FROM evaluaciones ${where} ORDER BY comisaria,nombres`, params);
 
-  const cipsEval = new Set(r.rows.map(function(row) { return (row.cip || '').toUpperCase(); }));
+  const cipsEval = new Set(r.rows.map(function(row) { return normalizarCipKey(row.cip) || (row.cip || '').toUpperCase(); }));
   const progresos = await consultarProgresosParaPDFGrupo(req.admin, query);
   let merged = normalizarFilasPDFGrupo(
     r.rows.concat(
-      progresos.filter(function(p) { return !cipsEval.has((p.cip || '').toUpperCase()); })
+      progresos.filter(function(p) {
+        const k = normalizarCipKey(p.cip) || (p.cip || '').toUpperCase();
+        return !cipsEval.has(k);
+      })
     )
   );
 
