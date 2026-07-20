@@ -1174,6 +1174,93 @@ footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; 
 #modal-pdf-portal-frame { flex: 1; min-height: 420px; border: none; background: #f5f5f5; }
 .modal-pdf-portal-foot { padding: 12px 16px; border-top: 1px solid #eee; text-align: right; }
 
+/* Modal RR.HH. — Descanso médico / Faltos */
+.modal-rrhh-portal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  background: rgba(0, 30, 24, 0.55);
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+.modal-rrhh-portal.open { display: flex; }
+.modal-rrhh-box {
+  position: relative;
+  width: min(520px, 100%);
+  background: #fff;
+  border-radius: 14px;
+  border: 1.5px solid #cfdad2;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+  padding: 28px 24px 24px;
+}
+.modal-rrhh-cerrar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: #f0f4f2;
+  color: #004d3d;
+  cursor: pointer;
+  font-size: 16px;
+}
+.modal-rrhh-cerrar:hover { background: #e2ebe6; }
+.modal-rrhh-box h3 {
+  margin: 0 0 6px;
+  color: #004d3d;
+  font-size: 1.25rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.modal-rrhh-sub {
+  margin: 0 0 18px;
+  color: #666;
+  font-size: 13.5px;
+}
+.modal-rrhh-opciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 520px) {
+  .modal-rrhh-opciones { grid-template-columns: 1fr; }
+}
+.modal-rrhh-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-decoration: none;
+  color: inherit;
+  padding: 16px 14px;
+  border: 1.5px solid #d5e0da;
+  border-radius: 12px;
+  background: #f7faf8;
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.modal-rrhh-card:hover {
+  border-color: #004d3d;
+  box-shadow: 0 4px 14px rgba(0, 77, 61, 0.12);
+  transform: translateY(-1px);
+}
+.modal-rrhh-card i { font-size: 28px; margin-bottom: 4px; }
+.modal-rrhh-card strong {
+  color: #004d3d;
+  font-size: 15px;
+  font-weight: 800;
+}
+.modal-rrhh-card span {
+  color: #667;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
 .py-5 { padding: 40px 0; }
 
 .grid-detalles {

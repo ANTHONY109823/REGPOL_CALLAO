@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="favicon.ico?v=3" type="image/x-icon">
+  <link rel="icon" href="favicon.png?v=3" type="image/png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faltos — REGPOL Callao</title>
+  <link rel="stylesheet" href="style.css?v=67">
+  <link rel="stylesheet" href="responsive.css?v=3">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="api-config.js?v=2"></script>
+  <style>
+    .faltos-wrap{max-width:720px;margin:0 auto;padding:28px 16px 56px;}
+    .faltos-card{background:#fff;border:1.5px solid #cfdad2;border-radius:14px;padding:24px;}
+    .faltos-card h2{color:#004d3d;font-size:1.2rem;margin:0 0 8px;font-weight:800;}
+    .faltos-card .sub{color:#666;font-size:13px;margin:0 0 16px;line-height:1.5;}
+    .faltos-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media(max-width:600px){.faltos-grid{grid-template-columns:1fr;}}
+    .faltos-grid label{font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:4px;}
+    .faltos-grid input{width:100%;padding:10px;border:1.5px solid #ccc;border-radius:8px;font-size:14px;box-sizing:border-box;}
+    .faltos-actions{margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+    .faltos-msg{font-size:13px;margin-top:12px;font-weight:600;}
+    .faltos-msg.ok{color:#1a7a3a;}
+    .faltos-msg.err{color:#c0392b;}
+    .faltos-result{margin-top:16px;padding:14px;background:#f4f8f5;border-radius:10px;border:1.5px solid #cfdad2;display:none;}
+    .faltos-result table{width:100%;font-size:13px;border-collapse:collapse;}
+    .faltos-result td{padding:6px 4px;border-bottom:1px solid #e5eee9;}
+    .faltos-result td:first-child{color:#666;width:40%;}
+    .faltos-badge{display:inline-block;padding:3px 10px;border-radius:6px;color:#fff;font-size:12px;font-weight:700;}
+    .faltos-note{margin-top:18px;font-size:12.5px;color:#666;line-height:1.5;background:#fffdf5;border:1px solid #e8d9a8;border-radius:10px;padding:12px;}
+  </style>
+</head>
+<body class="body-portal">
+<div class="header-social-portal">
+  <div class="container portal-flex">
+    <div class="social-buttons-group">
+      <a href="https://www.facebook.com/region.policial.callao.2025" target="_blank" class="btn-pnp-social fb"><i class="fab fa-facebook"></i> Facebook</a>
+      <a href="https://www.tiktok.com/@regionpolicialcallao" target="_blank" class="btn-pnp-social tk"><i class="fab fa-tiktok"></i> TikTok</a>
+      <a href="https://wa.me/51980122452" target="_blank" class="btn-pnp-social wa"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+    </div>
+  </div>
+</div>
+<header class="main-header">
+  <div class="container header-flex">
+    <div class="logo-container">
+      <img src="img/regpol-callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90">
+    </div>
+    <div class="title-text">
+      <h1 class="portal-eslogan">REGI&#211;N POLICIAL CALLAO</h1>
+      <p class="portal-subtitulo">RR.HH. — FALTOS</p>
+    </div>
+  </div>
+</header>
+<nav class="nav-main"><div class="container"><ul></ul></div></nav>
+
+<main class="faltos-wrap">
+  <div class="faltos-card">
+    <h2><i class="fas fa-search" style="color:#004d3d;"></i> Consultar falto</h2>
+    <p class="sub">Ingrese el CIP y el <strong>número de registro</strong> entregado al momento del registro (solo consulta).</p>
+    <div class="faltos-grid">
+      <div>
+        <label>CIP</label>
+        <input id="fl-pub-cip" inputmode="numeric" maxlength="12" placeholder="Ej. 12345678">
+      </div>
+      <div>
+        <label>Nº de registro</label>
+        <input id="fl-pub-numero" maxlength="30" placeholder="FAL-2026-000001">
+      </div>
+    </div>
+    <div class="faltos-actions">
+      <button type="button" class="btn-bienestar" style="border:none;cursor:pointer;" onclick="consultarFaltoPublico()">
+        <i class="fas fa-search"></i> Consultar
+      </button>
+      <a href="login.html" class="btn-bienestar" style="text-decoration:none;background:#b8860b;">
+        <i class="fas fa-sign-in-alt"></i> Registrar en panel
+      </a>
+    </div>
+    <p id="fl-pub-msg" class="faltos-msg"></p>
+    <div id="fl-pub-result" class="faltos-result"></div>
+    <div class="faltos-note">
+      El registro diario lo realiza el personal de cada unidad en el panel administrativo.
+      La situación (TARDE / ABANDONO) solo la actualiza la unidad con CIP + Nº de registro.
+      El admin del área solo consulta y métricas.
+    </div>
+  </div>
+</main>
+
+<footer class="portal-footer">
+  <div class="container"><p>REGPOL CALLAO — UNITIC</p></div>
+</footer>
+<script src="portal-data.js?v=10"></script>
+<script src="portal.js?v=80"></script>
+<script>
+  initPortalPagina({ activeNav: 'rrhh' });
+
+  function apiPub() {
+    return (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function fmt(v) {
+    if (!v) return '—';
+    try { return new Date(v).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); }
+    catch (e) { return String(v); }
+  }
+  function colorSit(s) {
+    if (s === 'TARDE') return '#b8860b';
+    if (s === 'ABANDONO') return '#c0392b';
+    return '#004d3d';
+  }
+
+  async function consultarFaltoPublico() {
+    var cip = (document.getElementById('fl-pub-cip').value || '').trim();
+    var numero = (document.getElementById('fl-pub-numero').value || '').trim();
+    var msg = document.getElementById('fl-pub-msg');
+    var box = document.getElementById('fl-pub-result');
+    msg.className = 'faltos-msg';
+    msg.textContent = 'Consultando...';
+    box.style.display = 'none';
+    try {
+      var r = await fetch(apiPub() + '/portal/faltos/consultar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cip: cip, numero_registro: numero })
+      });
+      var d = await r.json();
+      if (!d.ok) {
+        msg.className = 'faltos-msg err';
+        msg.textContent = d.error || 'No encontrado';
+        return;
+      }
+      var f = d.falto;
+      msg.className = 'faltos-msg ok';
+      msg.textContent = 'Registro encontrado';
+      box.style.display = 'block';
+      box.innerHTML = '<table>'
+        + '<tr><td>Nº registro</td><td><strong>' + esc(f.numero_registro) + '</strong></td></tr>'
+        + '<tr><td>CIP</td><td>' + esc(f.cip) + '</td></tr>'
+        + '<tr><td>Nombres</td><td>' + esc(f.apellidos_nombres) + '</td></tr>'
+        + '<tr><td>Grado</td><td>' + esc(f.grado) + '</td></tr>'
+        + '<tr><td>Unidad</td><td>' + esc(f.unidad) + '</td></tr>'
+        + '<tr><td>Inicio labor</td><td>' + esc(fmt(f.inicio_labor)) + '</td></tr>'
+        + '<tr><td>Situación</td><td><span class="faltos-badge" style="background:' + colorSit(f.situacion) + ';">'
+        + esc(f.situacion) + '</span></td></tr>'
+        + '<tr><td>Reincorporación</td><td>' + esc(fmt(f.reincorporacion)) + '</td></tr>'
+        + '</table>';
+    } catch (e) {
+      msg.className = 'faltos-msg err';
+      msg.textContent = 'Error de conexión';
+    }
+  }
+</script>
+</body>
+</html>

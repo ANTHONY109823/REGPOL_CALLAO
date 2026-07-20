@@ -73,7 +73,7 @@
 <main class="container content-area">
   <div class="consulta-hero">
     <h2><i class="fas fa-search"></i> Consulta de inscripción</h2>
-    <p>Ingrese su CIP para verificar el estado de su expediente, el área que lo gestiona y si ocupó vacante descargar la constancia para presentar en la oficina correspondiente.</p>
+    <p>Ingrese su <strong>CIP</strong> y su <strong>N° de inscripción</strong> para ver el estado de su preinscripción, el aviso del sorteo en Facebook o —si resultó ganador— subir su expediente.</p>
   </div>
 
   <div class="consulta-form">
@@ -83,9 +83,25 @@
           <label for="input-cip">CIP del efectivo policial</label>
           <input type="text" id="input-cip" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="Ej: 31590992" required autocomplete="off">
         </div>
+        <div>
+          <label for="input-nro">N° de inscripción / registro</label>
+          <input type="text" id="input-nro" maxlength="30" placeholder="Ej: PRE-2026-000123" required autocomplete="off" style="letter-spacing:0.5px;text-transform:uppercase;">
+        </div>
         <button type="submit" class="btn-consultar" id="btn-consultar"><i class="fas fa-search"></i> CONSULTAR</button>
+        <a href="#repechaje" class="btn-consultar" style="background:#004d3d;text-decoration:none;" onclick="mostrarRepechaje();return false;">
+          <i class="fas fa-redo-alt"></i> REPECHAJE
+        </a>
       </div>
     </form>
+  </div>
+
+  <div id="repechaje-box" class="consulta-form" style="display:none;border-color:#c8a94a;">
+    <h3 style="margin:0 0 8px;color:#004d3d;font-size:15px;"><i class="fas fa-redo-alt"></i> Repechaje de convenios</h3>
+    <p style="font-size:13px;color:#555;margin:0 0 12px;line-height:1.5;">
+      Solo si hay <strong>vacantes liberadas</strong> (plazo vencido u observación/rechazo).
+      Se registra completo y sube todos sus expedientes; <strong>no entra al sorteo</strong>.
+    </p>
+    <div id="repechaje-lista"><p style="color:#888;font-size:13px;">Cargando convocatorias...</p></div>
   </div>
 
   <div id="consulta-alerta" class="consulta-alerta"></div>
@@ -112,6 +128,9 @@ function escC(s) {
 function getParamCip() {
   return new URLSearchParams(window.location.search).get('cip') || '';
 }
+function getParamNro() {
+  return new URLSearchParams(window.location.search).get('nro') || '';
+}
 
 function mostrarAlerta(msg, tipo) {
   var el = document.getElementById('consulta-alerta');
@@ -120,41 +139,93 @@ function mostrarAlerta(msg, tipo) {
   el.style.display = msg ? 'block' : 'none';
 }
 
+function consultarCip(e) {
+  if (e) e.preventDefault();
+  var cip = (document.getElementById('input-cip').value || '').trim().replace(/\s/g, '');
+  var nro = (document.getElementById('input-nro').value || '').trim().toUpperCase().replace(/\s/g, '');
+  if (!/^\d{6,12}$/.test(cip)) {
+    mostrarAlerta('Ingrese un CIP válido (solo números, 6 a 12 dígitos).', 'error');
+    return;
+  }
+  if (!nro || nro.length < 6) {
+    mostrarAlerta('Ingrese su N° de inscripción (ej: PRE-2026-000123).', 'error');
+    return;
+  }
+  CIP_CONSULTA = cip;
+  var btn = document.getElementById('btn-consultar');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
+  mostrarAlerta('', '');
+  document.getElementById('consulta-resultados').innerHTML = '<p class="loading-msg"><i class="fas fa-spinner fa-spin"></i> Buscando...</p>';
+
+  fetch(API_PUBLIC + '/portal/consulta-inscripcion?cip=' + encodeURIComponent(cip) + '&nro=' + encodeURIComponent(nro))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) {
+        mostrarAlerta(d.error || 'Error al consultar.', 'error');
+        document.getElementById('consulta-resultados').innerHTML = '';
+        return;
+      }
+      mostrarAlerta('Consulta correcta — CIP ' + cip + ' / N° ' + nro + '.', 'info');
+      renderResultados(d.inscripciones || []);
+      if (history.replaceState) {
+        history.replaceState(null, '', 'consulta.html?cip=' + encodeURIComponent(cip) + '&nro=' + encodeURIComponent(nro));
+      }
+    })
+    .catch(function() {
+      mostrarAlerta('Error de conexión. Verifique su internet e intente nuevamente.', 'error');
+      document.getElementById('consulta-resultados').innerHTML = '';
+    })
+    .finally(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-search"></i> CONSULTAR';
+    });
+}
+
 function renderResultados(lista) {
   var wrap = document.getElementById('consulta-resultados');
   if (!lista || !lista.length) {
     wrap.innerHTML = '<div class="sin-resultados"><i class="fas fa-inbox" style="font-size:32px;color:#ccc;display:block;margin-bottom:12px;"></i>'
-      + 'No se encontraron inscripciones registradas con este CIP.</div>';
+      + 'No se encontraron inscripciones con ese CIP y N° de registro.</div>';
     return;
   }
   wrap.innerHTML = lista.map(function(ins) {
-    var esGan = ins.es_ganador;
     var chipCls = 'estado-chip estado-' + escC(ins.estado || 'pendiente');
-  var html = '<div class="consulta-card' + (esGan ? ' ganador' : '') + '">'
+    var html = '<div class="consulta-card' + (ins.puede_descargar_constancia ? ' ganador' : '') + '">'
       + '<div class="tipo">' + escC(ins.tipo === 'curso' ? 'Curso' : 'Convenio') + '</div>'
       + '<h3>' + escC(ins.convocatoria) + '</h3>'
       + '<span class="' + chipCls + '">' + escC(ins.estado_legible) + '</span>'
       + '<div class="consulta-meta">'
+      + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
       + '<div><span>Área gestora</span>' + escC(ins.oficina_gestora) + '</div>'
       + '<div><span>Ubicación del trámite</span>' + escC(ins.ubicacion_tramite) + '</div>'
-      + '<div><span>Fecha de inscripción</span>' + escC(ins.fecha || '') + '</div>'
+      + '<div><span>Fecha de inscripción</span>' + escC(ins.fecha || '—') + '</div>'
       + '<div><span>Postulante</span>' + escC(ins.nombres) + '</div>'
+      + (ins.region_policial ? '<div><span>Región policial</span>' + escC(ins.region_policial) + '</div>' : '')
+      + (ins.unidad ? '<div><span>Unidad</span>' + escC(ins.unidad) + '</div>' : '')
+      + (ins.codifin ? '<div><span>CODIFIN</span>' + escC(ins.codifin) + '</div>' : '')
+      + (ins.modalidad ? '<div><span>Modalidad</span>' + escC(ins.modalidad === 'OTROS' ? (ins.modalidad_otro || 'Otros') : ins.modalidad.replace(/_/g,' ')) + '</div>' : '')
+      + (ins.plazo_expediente ? '<div><span>Plazo expediente</span>' + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</div>' : '')
       + '</div>';
-    if (ins.observacion && ins.estado === 'rechazado') {
+    if (ins.aviso_sorteo_fb && (ins.estado === 'preinscrito' || ins.estado === 'pendiente' || ins.estado === 'aprobado' || ins.estado === 'verificado' || ins.estado === 'reserva')) {
+      html += '<div class="obs-box" style="background:#e8f5f1;border-color:#c8e6c9;color:#004d3d;"><i class="fab fa-facebook"></i> <strong>Sorteo en vivo:</strong> ' + escC(ins.aviso_sorteo_fb) + '</div>';
+    }
+    if (ins.observacion && (ins.estado === 'rechazado' || ins.estado === 'observado' || ins.estado === 'caducado')) {
       html += '<div class="obs-box"><strong>Observación:</strong> ' + escC(ins.observacion) + '</div>';
     }
-    if (esGan) {
+    if (ins.puede_subir_expediente) {
+      html += '<div class="constancia-box" style="border-color:#c8a94a;">'
+        + '<p><strong><i class="fas fa-upload"></i> Suba su expediente PDF</strong> (plazo 2 días desde que fue ganador). '
+        + 'Documentación completa en un solo archivo.</p>'
+        + '<input type="file" id="exp-file-' + ins.id + '" accept="application/pdf" style="margin-bottom:10px;"/>'
+        + '<button type="button" class="btn-pdf-ver" onclick="subirExpediente(' + ins.id + ')"><i class="fas fa-cloud-upload-alt"></i> SUBIR EXPEDIENTE</button>'
+        + '<p id="exp-msg-' + ins.id + '" style="font-size:12px;margin-top:8px;"></p>'
+        + '</div>';
+    }
+    if (ins.puede_descargar_constancia) {
       html += '<div class="constancia-box">'
-        + '<p><strong><i class="fas fa-check-circle" style="color:#1a7a3a;"></i> Usted ocupa vacante en esta convocatoria.</strong> '
-        + 'Descargue o visualice la constancia con lugar de presentación, horario y responsabilidades. Preséntela en la oficina indicada.</p>'
-        + '<div class="consulta-meta">'
-        + (ins.lugar ? '<div><span>Lugar de formación diaria</span>' + escC(ins.lugar) + '</div>' : '')
-        + (ins.horario ? '<div><span>Horario de servicio</span>' + escC(ins.horario) + '</div>' : '')
-        + (ins.uniforme ? '<div><span>Uniforme</span>' + escC(ins.uniforme) + '</div>' : '')
-        + (ins.contactos_responsables ? '<div><span>Contactos responsables</span>' + escC(ins.contactos_responsables) + '</div>' : '')
-        + (ins.fecha_inicio ? '<div><span>Beneficio / inicio</span>' + escC(ins.fecha_inicio) + '</div>' : '')
-        + (ins.duracion ? '<div><span>Detalle</span>' + escC(ins.duracion) + '</div>' : '')
-        + '</div>'
+        + '<p><strong><i class="fas fa-check-circle" style="color:#1a7a3a;"></i> Expediente verificado.</strong> '
+        + 'Descargue su constancia de vacante.</p>'
         + '<div class="constancia-acciones">'
         + '<button type="button" class="btn-pdf-ver" onclick="verConstancia(' + ins.id + ')"><i class="fas fa-eye"></i> VER CONSTANCIA</button>'
         + '<button type="button" class="btn-pdf-desc" onclick="descargarConstancia(' + ins.id + ')"><i class="fas fa-download"></i> DESCARGAR PDF</button>'
@@ -165,45 +236,88 @@ function renderResultados(lista) {
   }).join('');
 }
 
-function consultarCip(e) {
-  if (e) e.preventDefault();
-  var cip = (document.getElementById('input-cip').value || '').trim().replace(/\s/g, '');
-  if (!/^\d{6,12}$/.test(cip)) {
-    mostrarAlerta('Ingrese un CIP válido (solo números, 6 a 12 dígitos).', 'error');
+function fileToDataUrl(file) {
+  return new Promise(function(resolve, reject) {
+    var r = new FileReader();
+    r.onload = function() { resolve(r.result); };
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+async function subirExpediente(id) {
+  var inp = document.getElementById('exp-file-' + id);
+  var msg = document.getElementById('exp-msg-' + id);
+  if (!inp || !inp.files || !inp.files[0]) {
+    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Seleccione un PDF'; }
     return;
   }
-  CIP_CONSULTA = cip;
-  var btn = document.getElementById('btn-consultar');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
-  mostrarAlerta('', '');
-  document.getElementById('consulta-resultados').innerHTML = '<p class="loading-msg"><i class="fas fa-spinner fa-spin"></i> Buscando...</p>';
+  if (msg) { msg.style.color = '#666'; msg.textContent = 'Subiendo...'; }
+  try {
+    var dataUrl = await fileToDataUrl(inp.files[0]);
+    var r = await fetch(API_PUBLIC + '/portal/inscripciones/' + id + '/expediente', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cip: CIP_CONSULTA,
+        pdf_requisitos: dataUrl,
+        pdf_nombre: inp.files[0].name
+      })
+    });
+    var d = await r.json();
+    if (!d.ok) {
+      if (msg) { msg.style.color = '#c0392b'; msg.textContent = d.error || 'Error'; }
+      return;
+    }
+    if (msg) { msg.style.color = '#1a7a3a'; msg.textContent = d.mensaje || 'Enviado'; }
+    consultarCip();
+  } catch (e) {
+    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Error de conexión'; }
+  }
+}
 
-  fetch(API_PUBLIC + '/portal/consulta-inscripcion?cip=' + encodeURIComponent(cip))
+function mostrarRepechaje() {
+  var box = document.getElementById('repechaje-box');
+  if (box) box.style.display = '';
+  if (location.hash !== '#repechaje') location.hash = 'repechaje';
+  cargarListaRepechaje();
+  if (box) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cargarListaRepechaje() {
+  var el = document.getElementById('repechaje-lista');
+  if (!el) return;
+  el.innerHTML = '<p style="color:#888;font-size:13px;">Cargando...</p>';
+  fetch(API_PUBLIC + '/portal/items?tipo=convenio')
     .then(function(r) { return r.json(); })
     .then(function(d) {
-      if (!d.ok) {
-        mostrarAlerta(d.error || 'Error al consultar.', 'error');
-        document.getElementById('consulta-resultados').innerHTML = '';
+      var items = (d.items || []).filter(function(i) { return i.inscripciones_abiertas; });
+      if (!items.length) {
+        el.innerHTML = '<p style="color:#888;font-size:13px;">No hay convocatorias con inscripciones abiertas.</p>';
         return;
       }
-      if (d.total === 0) {
-        mostrarAlerta('No hay inscripciones registradas con el CIP ' + cip + '.', 'info');
-      } else {
-        mostrarAlerta('Se encontraron ' + d.total + ' inscripción(es) para el CIP ' + cip + '.', 'info');
-      }
-      renderResultados(d.inscripciones || []);
-      if (history.replaceState) {
-        history.replaceState(null, '', 'consulta.html?cip=' + encodeURIComponent(cip));
-      }
+      Promise.all(items.map(function(it) {
+        return fetch(API_PUBLIC + '/portal/convenios/vacantes/' + it.id)
+          .then(function(r) { return r.json(); })
+          .then(function(v) { return { item: it, vac: v }; })
+          .catch(function() { return { item: it, vac: { disponibles: 0 } }; });
+      })).then(function(rows) {
+        var conCupo = rows.filter(function(x) { return x.vac && x.vac.disponibles > 0; });
+        if (!conCupo.length) {
+          el.innerHTML = '<p style="color:#856404;font-size:13px;">Por ahora no hay vacantes liberadas para repechaje.</p>';
+          return;
+        }
+        el.innerHTML = conCupo.map(function(x) {
+          return '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px;border:1.5px solid #dde8e5;border-radius:10px;margin-bottom:8px;">'
+            + '<div><strong style="color:#004d3d;">' + escC(x.item.titulo) + '</strong><br>'
+            + '<span style="font-size:12px;color:#666;">Vacantes disponibles: <strong>' + x.vac.disponibles + '</strong> / ' + x.vac.vacantes + '</span></div>'
+            + '<a class="btn-consultar" style="text-decoration:none;" href="detalle.html?id=' + x.item.id + '&tipo=convenio&repechaje=1">'
+            + '<i class="fas fa-file-upload"></i> REGISTRAR REPECHAJE</a></div>';
+        }).join('');
+      });
     })
     .catch(function() {
-      mostrarAlerta('Error de conexión. Verifique su internet e intente nuevamente.', 'error');
-      document.getElementById('consulta-resultados').innerHTML = '';
-    })
-    .finally(function() {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-search"></i> CONSULTAR';
+      el.innerHTML = '<p style="color:#c0392b;font-size:13px;">No se pudo cargar.</p>';
     });
 }
 
@@ -238,10 +352,14 @@ function descargarConstancia(id) {
 initPortalPagina({ activeNav: 'convenios', showPageHero: false });
 
 var cipIni = getParamCip();
-if (cipIni) {
-  document.getElementById('input-cip').value = cipIni;
-  consultarCip();
-}
+var nroIni = getParamNro();
+if (cipIni) document.getElementById('input-cip').value = cipIni;
+if (nroIni) document.getElementById('input-nro').value = nroIni;
+if (cipIni && nroIni) consultarCip();
+if (location.hash === '#repechaje') mostrarRepechaje();
+window.addEventListener('hashchange', function() {
+  if (location.hash === '#repechaje') mostrarRepechaje();
+});
 </script>
 </body>
 </html>

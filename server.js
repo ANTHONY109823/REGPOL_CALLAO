@@ -14,6 +14,8 @@ const { Pool } = require('pg');
 const { Worker } = require('worker_threads');
 const { calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido, significadoEscalaMMPI, diagnosticoFinalMMPI, calcularDiagnosticoFila } = require('./pdf_gen');
 const descansosMedicos = require('./descansos_medicos');
+const faltosMod = require('./faltos');
+const conveniosFlujo = require('./convenios_flujo');
 const recursosHumanos = require('./recursos_humanos');
 
 const app  = express();
@@ -623,6 +625,9 @@ async function initDB() {
   `);
 
   await descansosMedicos.initTablasDescansos(pool);
+  await faltosMod.initTablasFaltos(pool);
+  await conveniosFlujo.initColumnasFlujoConvenios(pool);
+  await conveniosFlujo.migrarEstadosConvenios(pool);
   await recursosHumanos.initTablasRRHH(pool);
 
   // Admins por defecto — la contraseña inicial se toma de variables de entorno.
@@ -641,6 +646,7 @@ async function initDB() {
     ['educacion',    sha256(seedPass('SEED_PASS_EDUCACION',  'Educacion2026!')),  'usuario', 'Oficina de Educación',   null, '["cms_cursos"]'],
     ['imagen',       sha256(seedPass('SEED_PASS_IMAGEN',     'Imagen2026!')),     'usuario', 'Oficina de Imagen',      null, '["cms_inicio","cms_resena","cms_labor","cms_novedades"]'],
     ['descansos',    sha256(seedPass('SEED_PASS_DESCANSOS',  'Descansos2026!')),  'usuario', 'Oficina Descansos Médicos', null, '["cms_descansos"]'],
+    ['faltos',       sha256(seedPass('SEED_PASS_FALTOS',     'Faltos2026!')),     'usuario', 'Oficina de Faltos', null, '["faltos_admin"]'],
     ['rrhh',         sha256(seedPass('SEED_PASS_RRHH',       'RRHH2026!')),       'usuario', 'Recursos Humanos', null, '["recursos_humanos"]'],
   ];
   for (const [u,h,r,n,un,p] of adminsDefecto) {
@@ -2759,6 +2765,20 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
       if (dmR.rows[0]) dmResumen = dmR.rows[0];
     } catch (e) { /* tabla puede no existir aún */ }
 
+    let faltosResumen = { total: 0, falto: 0, tarde: 0, abandono: 0 };
+    try {
+      const falR = await pool.query(
+        `SELECT
+           COUNT(*)::int AS total,
+           COUNT(*) FILTER (WHERE situacion='FALTO')::int AS falto,
+           COUNT(*) FILTER (WHERE situacion='TARDE')::int AS tarde,
+           COUNT(*) FILTER (WHERE situacion='ABANDONO')::int AS abandono
+         FROM faltos WHERE anio=$1`,
+        [2026]
+      );
+      if (falR.rows[0]) faltosResumen = falR.rows[0];
+    } catch (e) { /* tabla puede no existir aún */ }
+
     const ultLlenandoR = await pool.query(
       `SELECT 'llenando' AS tipo, COALESCE(NULLIF(TRIM(p.nombres),''), p.cip, 'Sin nombre') AS titulo,
         TRIM(BOTH ' · ' FROM CONCAT_WS(' · ',
@@ -2856,7 +2876,11 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
         descansos_anio: dmResumen.anio || 0,
         descansos_web: dmResumen.web || 0,
         descansos_historico: dmResumen.historico || 0,
-        descansos_activos: dmResumen.activos || 0
+        descansos_activos: dmResumen.activos || 0,
+        faltos_total: faltosResumen.total || 0,
+        faltos_falto: faltosResumen.falto || 0,
+        faltos_tarde: faltosResumen.tarde || 0,
+        faltos_abandono: faltosResumen.abandono || 0
       },
       actividad
     });
@@ -4647,6 +4671,20 @@ async function cipEnResultadosSorteoItem(itemId, cipDigits) {
 
 async function marcarInscripcionGanadorPorCip(itemId, cipDigits, observacion) {
   const obs = observacion || 'Seleccionado en sorteo público';
+  const item = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [itemId]);
+  const esConvenio = item.rows[0] && item.rows[0].tipo === 'convenio';
+  if (esConvenio) {
+    const plazo = conveniosFlujo.plazoDesdeAhora();
+    const r = await pool.query(
+      `UPDATE inscripciones SET
+         estado='ganador', observacion=$1, modo_ingreso=COALESCE(NULLIF(modo_ingreso,''),'sorteo'),
+         fecha_ganador=COALESCE(fecha_ganador, NOW()),
+         plazo_expediente=COALESCE(plazo_expediente, $2)
+       WHERE item_id=$3 AND ${sqlCipIgual('cip')}=$4
+         AND estado IN ('preinscrito','pendiente','aprobado','verificado','ganador','reserva')`,
+      [obs, plazo.toISOString(), itemId, cipDigits]);
+    return r.rowCount;
+  }
   const r = await pool.query(
     `UPDATE inscripciones SET estado='ganador', observacion=$1
      WHERE item_id=$2 AND ${sqlCipIgual('cip')}=$3
@@ -4673,17 +4711,28 @@ function oficinaGestoraInscripcion(tipo) {
 
 function etiquetaEstadoPublico(estado, tipo) {
   const esConv = tipo === 'convenio';
+  if (esConv) {
+    const mapaConv = {
+      pendiente: 'Preinscrito — a la espera del sorteo',
+      preinscrito: 'Preinscrito — a la espera del sorteo',
+      verificado: 'Preinscrito — a la espera del sorteo',
+      aprobado: 'Preinscrito — a la espera del sorteo',
+      ganador: 'GANADOR — debe subir expediente (plazo 2 días)',
+      en_revision: 'Expediente en revisión por Convenios',
+      observado: 'Expediente OBSERVADO — subsanar a la brevedad',
+      expediente_ok: 'Expediente OK — constancia disponible',
+      reserva: 'Lista de reserva — no ocupó vacante en el sorteo',
+      rechazado: 'Expediente no admitido — revise observaciones',
+      caducado: 'Plazo vencido — vacante liberada para repechaje',
+      repechaje: 'Repechaje — expediente en revisión'
+    };
+    return mapaConv[estado] || estado;
+  }
   const mapa = {
-    pendiente: esConv
-      ? 'Expediente recibido — en revisión por Convenios'
-      : 'Inscripción recibida — en revisión por Educación Policial',
+    pendiente: 'Inscripción recibida — en revisión por Educación Policial',
     verificado: 'Expediente verificado — pendiente de aprobación final',
-    aprobado: esConv
-      ? 'Aprobado — habilitado para sorteo o lista de méritos'
-      : 'Aprobado — en lista de selección',
-    ganador: esConv
-      ? 'VACANTE OCUPADA — seleccionado en convocatoria'
-      : 'SELECCIONADO — vacante asignada en curso',
+    aprobado: 'Aprobado — en lista de selección',
+    ganador: 'SELECCIONADO — vacante asignada en curso',
     reserva: 'Lista de reserva — no ocupó vacante en esta convocatoria',
     rechazado: 'Expediente no admitido — revise observaciones'
   };
@@ -4692,55 +4741,89 @@ function etiquetaEstadoPublico(estado, tipo) {
 
 function ubicacionTramitePublico(estado) {
   const mapa = {
-    pendiente: 'Bandeja de recepción del área gestora',
-    verificado: 'Revisión técnica del expediente',
-    aprobado: 'Lista de habilitados / proceso de sorteo o selección',
-    ganador: 'Proceso concluido — constancia de vacante disponible',
-    reserva: 'Archivo de lista de reserva',
-    rechazado: 'Expediente cerrado — no procede'
+    pendiente: 'Preinscripción / lista de sorteo',
+    preinscrito: 'Lista de preinscritos para sorteo',
+    verificado: 'Lista de preinscritos para sorteo',
+    aprobado: 'Lista de preinscritos para sorteo',
+    ganador: 'Portal — subir expediente (Consulta por CIP)',
+    en_revision: 'Bandeja de revisión de expedientes — Convenios',
+    observado: 'Subsanación del postulante',
+    expediente_ok: 'Proceso concluido — constancia disponible',
+    reserva: 'Lista de reserva / posible repechaje',
+    rechazado: 'Expediente cerrado — no procede',
+    caducado: 'Vacante liberada — repechaje',
+    repechaje: 'Bandeja de revisión — repechaje'
   };
   return mapa[estado] || 'En proceso';
 }
 
-// ── GET /portal/consulta-inscripcion?cip= — consulta pública por CIP ─────────
+function puedeDescargarConstanciaEstado(estado, tipo) {
+  if (tipo === 'convenio') return estado === 'expediente_ok';
+  return estado === 'ganador';
+}
+
+// ── GET /portal/consulta-inscripcion?cip=&nro= — consulta pública CIP + N° registro ─
 app.get('/portal/consulta-inscripcion', async (req, res) => {
   try {
     const cip = normalizarCipConsulta(req.query.cip);
+    const nro = String(req.query.nro || req.query.nro_registro || '').trim().toUpperCase().replace(/\s+/g, '');
     if (!cip) return res.json({ ok: false, error: 'Ingrese un CIP válido (solo números, 6 a 12 dígitos).' });
+    if (!nro || nro.length < 6) {
+      return res.json({ ok: false, error: 'Ingrese su N° de inscripción / registro (ej: PRE-2026-000123).' });
+    }
     const r = await pool.query(
       `SELECT n.id, n.cip, n.nombres, n.unidad, n.cargo, n.grado, n.estado, n.observacion,
               TO_CHAR(n.fecha, 'DD/MM/YYYY HH24:MI') AS fecha,
               n.area AS area_postulante, n.disponibilidad, n.dia_franco,
+              n.telefono, n.email, n.modo_ingreso, n.motivo_observacion,
+              n.plazo_expediente, n.fecha_ganador, n.nro_registro, n.modalidad, n.modalidad_otro,
+              n.codifin, n.region_policial,
+              CASE WHEN COALESCE(n.pdf_requisitos,'')<>'' THEN true ELSE false END AS tiene_pdf,
               i.id AS item_id, i.tipo, i.titulo, i.horario, i.lugar, i.fecha_inicio, i.duracion,
               i.descripcion, i.observaciones AS item_observaciones, i.vacantes,
-              i.uniforme, i.contactos_responsables, i.requisitos
+              i.uniforme, i.contactos_responsables, i.requisitos, i.aviso_sorteo_fb
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
-       WHERE ${sqlCipIgual('n.cip')} = $1 AND i.visible = TRUE
+       WHERE ${sqlCipIgual('n.cip')} = $1
+         AND UPPER(REPLACE(COALESCE(n.nro_registro,''), ' ', '')) = $2
+         AND i.visible = TRUE
        ORDER BY n.fecha DESC`,
-      [cip]);
+      [cip, nro]);
+    await conveniosFlujo.caducarExpedientesVencidos(pool);
     const inscripciones = [];
     for (const row of r.rows) {
       let estado = row.estado;
-      if (estado !== 'ganador') {
+      if (row.tipo === 'convenio' && estado === 'ganador' && row.plazo_expediente && new Date(row.plazo_expediente) < new Date() && !row.tiene_pdf) {
+        estado = 'caducado';
+      }
+      if (row.tipo !== 'convenio' && estado !== 'ganador') {
         const enSorteo = await cipEnResultadosSorteoItem(row.item_id, cip);
         if (enSorteo) {
           await marcarInscripcionGanadorPorCip(row.item_id, cip);
           estado = 'ganador';
         }
       }
+      const puedeSubir = row.tipo === 'convenio' && (estado === 'ganador' || estado === 'observado');
+      const puedeConstancia = puedeDescargarConstanciaEstado(estado, row.tipo);
       inscripciones.push({
         id: row.id,
         cip: row.cip,
+        nro_registro: row.nro_registro || '',
         nombres: row.nombres,
         unidad: row.unidad,
+        region_policial: row.region_policial || '',
         cargo: row.cargo,
         grado: row.grado,
+        modalidad: row.modalidad || '',
+        modalidad_otro: row.modalidad_otro || '',
+        codifin: row.codifin || '',
         estado: estado,
         estado_legible: etiquetaEstadoPublico(estado, row.tipo),
         ubicacion_tramite: ubicacionTramitePublico(estado),
         oficina_gestora: oficinaGestoraInscripcion(row.tipo),
         observacion: row.observacion || '',
+        motivo_observacion: row.motivo_observacion || '',
+        motivo_observacion_label: conveniosFlujo.etiquetaObservacion(row.motivo_observacion),
         fecha: row.fecha,
         area_postulante: row.area_postulante || '',
         disponibilidad: row.disponibilidad || '',
@@ -4755,11 +4838,23 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
         vacantes: row.vacantes,
         uniforme: row.uniforme || '',
         contactos_responsables: row.contactos_responsables || '',
-        es_ganador: estado === 'ganador',
-        puede_descargar_constancia: estado === 'ganador'
+        aviso_sorteo_fb: row.aviso_sorteo_fb || '',
+        modo_ingreso: row.modo_ingreso || '',
+        tiene_pdf: !!row.tiene_pdf,
+        plazo_expediente: row.plazo_expediente || null,
+        fecha_ganador: row.fecha_ganador || null,
+        es_ganador: estado === 'ganador' || estado === 'expediente_ok' || estado === 'en_revision' || estado === 'observado',
+        puede_subir_expediente: puedeSubir,
+        puede_descargar_constancia: puedeConstancia
       });
     }
-    res.json({ ok: true, cip, total: inscripciones.length, inscripciones });
+    if (!inscripciones.length) {
+      return res.json({
+        ok: false,
+        error: 'No se encontró preinscripción con ese CIP y N° de registro. Verifique ambos datos.'
+      });
+    }
+    res.json({ ok: true, cip, nro_registro: nro, total: inscripciones.length, inscripciones });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -4781,13 +4876,22 @@ app.get('/portal/inscripciones/:id/constancia-vacante', async (req, res) => {
     if (!r.rows.length) {
       return res.json({ ok: false, error: 'No se encontró inscripción para este CIP.' });
     }
-    if (r.rows[0].estado !== 'ganador') {
-      const enSorteo = await cipEnResultadosSorteoItem(r.rows[0].item_id, cip);
-      if (enSorteo) {
-        await marcarInscripcionGanadorPorCip(r.rows[0].item_id, cip);
-        r.rows[0].estado = 'ganador';
+    if (!puedeDescargarConstanciaEstado(r.rows[0].estado, r.rows[0].tipo)) {
+      if (r.rows[0].tipo !== 'convenio' && r.rows[0].estado !== 'ganador') {
+        const enSorteo = await cipEnResultadosSorteoItem(r.rows[0].item_id, cip);
+        if (enSorteo) {
+          await marcarInscripcionGanadorPorCip(r.rows[0].item_id, cip);
+          r.rows[0].estado = 'ganador';
+        } else {
+          return res.json({ ok: false, error: 'No se encontró constancia de vacante para este CIP.' });
+        }
       } else {
-        return res.json({ ok: false, error: 'No se encontró constancia de vacante para este CIP.' });
+        return res.json({
+          ok: false,
+          error: r.rows[0].tipo === 'convenio'
+            ? 'La constancia se habilita cuando Convenios verifica su expediente.'
+            : 'No se encontró constancia de vacante para este CIP.'
+        });
       }
     }
     const row = r.rows[0];
@@ -4816,38 +4920,65 @@ app.post('/admin/items/:id/aplicar-sorteo', requireAuth, async (req, res) => {
     if (!cur.rows.length) return res.json({ ok: false, error: 'Convocatoria no encontrada' });
     if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const esConvenio = cur.rows[0].tipo === 'convenio';
     const ganadores = Array.isArray(req.body.ganadores) ? req.body.ganadores : [];
     const reservas = Array.isArray(req.body.reservas) ? req.body.reservas : [];
     let nGan = 0;
     let nRes = 0;
+    const notifs = [];
+    const plazo = conveniosFlujo.plazoDesdeAhora();
     for (const g of ganadores) {
       const insId = parseInt(g.id, 10);
       if (!insId) continue;
       const obs = g.tipo === 'vacaciones'
         ? 'Vacante automática por vacaciones'
         : 'Seleccionado en sorteo público';
-      const r = await pool.query(
-        `UPDATE inscripciones SET estado='ganador', observacion=$1
-         WHERE id=$2 AND item_id=$3 AND estado IN ('aprobado','ganador','verificado')`,
-        [obs, insId, itemId]);
-      if (r.rowCount) nGan++;
+      let r;
+      if (esConvenio) {
+        r = await pool.query(
+          `UPDATE inscripciones SET
+             estado='ganador', observacion=$1, modo_ingreso='sorteo',
+             fecha_ganador=NOW(), plazo_expediente=$2
+           WHERE id=$3 AND item_id=$4
+             AND estado IN ('preinscrito','pendiente','aprobado','verificado','ganador')`,
+          [obs, plazo.toISOString(), insId, itemId]);
+      } else {
+        r = await pool.query(
+          `UPDATE inscripciones SET estado='ganador', observacion=$1
+           WHERE id=$2 AND item_id=$3 AND estado IN ('aprobado','ganador','verificado')`,
+          [obs, insId, itemId]);
+      }
+      if (r.rowCount) {
+        nGan++;
+        if (esConvenio) {
+          try {
+            const n = await conveniosFlujo.notificarInscripcion(pool, insId, 'ganador');
+            notifs.push({ id: insId, ok: n.ok, whatsapp_url: n.whatsapp_url, mailto_url: n.mailto_url, email_enviado: n.email_enviado });
+          } catch (e) { /* ignore */ }
+        }
+      }
     }
     if (ganadores.length && nGan === 0) {
       return res.json({
         ok: false,
-        error: 'No se pudo marcar ningún ganador. Verifique que los inscritos sigan en estado aprobado.'
+        error: esConvenio
+          ? 'No se pudo marcar ningún ganador. Verifique que los preinscritos sigan disponibles.'
+          : 'No se pudo marcar ningún ganador. Verifique que los inscritos sigan en estado aprobado.'
       });
     }
     for (const rid of reservas) {
       const insId = parseInt(rid, 10);
       if (!insId) continue;
+      const estadosReserva = esConvenio
+        ? ['preinscrito', 'pendiente', 'aprobado', 'verificado']
+        : ['aprobado'];
       const r = await pool.query(
         `UPDATE inscripciones SET estado='reserva', observacion='No seleccionado en el sorteo'
-         WHERE id=$1 AND item_id=$2 AND estado='aprobado'`,
-        [insId, itemId]);
+         WHERE id=$1 AND item_id=$2 AND estado = ANY($3::varchar[])`,
+        [insId, itemId, estadosReserva]);
       if (r.rowCount) nRes++;
     }
-    res.json({ ok: true, ganadores: nGan, reservas: nRes });
+    res.json({ ok: true, ganadores: nGan, reservas: nRes, notificaciones: notifs });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -5067,41 +5198,300 @@ app.get('/portal/items/:id', async (req, res) => {
 app.post('/portal/items/:id/inscribir', async (req, res) => {
   try {
     const item = await pool.query(
-      'SELECT id,titulo,inscripciones_abiertas,vacantes FROM items_portal WHERE id=$1 AND visible=TRUE',
+      'SELECT id,titulo,tipo,inscripciones_abiertas,vacantes FROM items_portal WHERE id=$1 AND visible=TRUE',
       [req.params.id]);
     if (!item.rows.length) return res.json({ ok: false, error: 'Item no encontrado' });
     if (!item.rows[0].inscripciones_abiertas)
       return res.json({ ok: false, error: 'Las inscripciones no están abiertas para esta convocatoria.' });
+    const esConvenio = item.rows[0].tipo === 'convenio';
+    const modoRepechaje = !!(req.body && req.body.modo_repechaje);
     const {
       cip, nombres, unidad, cargo, telefono, email,
       pdf_requisitos, pdf_nombre,
       dni, grado, area, arma, disponibilidad, dia_franco,
-      fecha_egreso, tiempo_servicio
-    } = req.body;
+      fecha_egreso, tiempo_servicio,
+      modalidad, modalidad_otro, codifin, region_policial
+    } = req.body || {};
     const cipNorm = normalizarCipDigits(cip);
     if (!cipNorm) return res.json({ ok: false, error: 'CIP inválido.' });
     if (!nombres) return res.json({ ok: false, error: 'CIP y nombres son obligatorios.' });
     if (!area || !String(area).trim()) return res.json({ ok: false, error: 'El área es obligatoria.' });
     if (!cargo || !String(cargo).trim()) return res.json({ ok: false, error: 'El cargo es obligatorio.' });
+
+    const regionNorm = conveniosFlujo.limpio(region_policial, 120);
+    const unidadNorm = conveniosFlujo.limpio(unidad, 150);
+    const modalidadNorm = conveniosFlujo.limpio(modalidad, 40).toUpperCase();
+    const modalidadOtroNorm = conveniosFlujo.limpio(modalidad_otro, 120);
+    const codifinNorm = String(codifin || '').replace(/\D/g, '');
+
+    if (esConvenio) {
+      if (!telefono || !soloDigitosTel(telefono)) {
+        return res.json({ ok: false, error: 'Teléfono/WhatsApp obligatorio (9 dígitos).' });
+      }
+      if (!email || String(email).indexOf('@') < 0) {
+        return res.json({ ok: false, error: 'Correo electrónico obligatorio.' });
+      }
+      if (!regionNorm) {
+        return res.json({ ok: false, error: 'Seleccione su Región Policial (convocatoria nacional).' });
+      }
+      if (!unidadNorm) {
+        return res.json({ ok: false, error: 'Indique su unidad / dependencia.' });
+      }
+      if (!modalidadNorm) {
+        return res.json({ ok: false, error: 'Seleccione la modalidad de trabajo.' });
+      }
+      if (modalidadNorm === 'OTROS' && !modalidadOtroNorm) {
+        return res.json({ ok: false, error: 'Si eligió OTROS, especifique su modalidad de trabajo.' });
+      }
+      if (!/^\d{10,12}$/.test(codifinNorm)) {
+        return res.json({ ok: false, error: 'CODIFIN debe tener entre 10 y 12 dígitos numéricos.' });
+      }
+    }
+
+    if (esConvenio && modoRepechaje) {
+      const vac = await conveniosFlujo.vacantesDisponibles(pool, req.params.id);
+      if (!vac.ok || vac.disponibles < 1) {
+        return res.json({ ok: false, error: 'No hay vacantes disponibles para repechaje en esta convocatoria.' });
+      }
+      const pdfBase64 = pdf_requisitos || '';
+      if (!pdfBase64) return res.json({ ok: false, error: 'En repechaje debe subir el expediente PDF completo.' });
+      if (pdfBase64.length > 7 * 1024 * 1024) {
+        return res.json({ ok: false, error: 'El PDF no debe superar 5 MB.' });
+      }
+    }
+
     const dup = await pool.query(
-      `SELECT id FROM inscripciones WHERE item_id=$1 AND ${sqlCipIgual('cip')}=$2`,
+      `SELECT id, estado FROM inscripciones WHERE item_id=$1 AND ${sqlCipIgual('cip')}=$2`,
       [req.params.id, cipNorm]);
-    if (dup.rows.length)
+    if (dup.rows.length) {
       return res.json({ ok: false, error: 'Ya existe una inscripción con ese CIP para esta convocatoria.' });
+    }
+
     const pdfBase64 = pdf_requisitos || '';
-    if (pdfBase64 && pdfBase64.length > 7 * 1024 * 1024)
-      return res.json({ ok: false, error: 'El PDF no debe superar 5 MB.' });
-    const feNorm = fecha_egreso && fecha_egreso.match(/^\d{4}-\d{2}-\d{2}$/) ? fecha_egreso : null;
-    await pool.query(
+    if (!esConvenio || modoRepechaje) {
+      if (esConvenio && modoRepechaje && !pdfBase64) {
+        return res.json({ ok: false, error: 'Debe adjuntar el expediente PDF.' });
+      }
+      if (!esConvenio && !pdfBase64) {
+        // cursos: keep requiring PDF as before (frontend still sends it)
+      }
+      if (pdfBase64 && pdfBase64.length > 7 * 1024 * 1024) {
+        return res.json({ ok: false, error: 'El PDF no debe superar 5 MB.' });
+      }
+    } else if (pdfBase64) {
+      // preinscripción convenio: ignorar PDF si lo envían
+    }
+
+    const feNorm = fecha_egreso && String(fecha_egreso).match(/^\d{4}-\d{2}-\d{2}$/) ? fecha_egreso : null;
+    let estado = 'pendiente';
+    let modo = '';
+    let pdfSave = '';
+    let pdfNom = '';
+    if (esConvenio && modoRepechaje) {
+      estado = 'repechaje';
+      modo = 'repechaje';
+      pdfSave = pdfBase64;
+      pdfNom = pdf_nombre || 'expediente-repechaje.pdf';
+    } else if (esConvenio) {
+      estado = 'preinscrito';
+      modo = 'sorteo';
+      pdfSave = '';
+      pdfNom = '';
+    } else {
+      estado = 'pendiente';
+      pdfSave = pdfBase64;
+      pdfNom = pdf_nombre || 'requisitos.pdf';
+    }
+
+    const ins = await pool.query(
       `INSERT INTO inscripciones
          (item_id,cip,nombres,unidad,cargo,telefono,email,pdf_requisitos,pdf_nombre,
-          dni,grado,area,arma,disponibilidad,dia_franco,fecha_egreso,tiempo_servicio)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
-      [req.params.id, cipNorm, nombres, unidad||'', cargo||'', telefono||'', email||'',
-       pdfBase64, pdf_nombre||'requisitos.pdf',
+          dni,grado,area,arma,disponibilidad,dia_franco,fecha_egreso,tiempo_servicio,
+          estado,modo_ingreso,modalidad,modalidad_otro,codifin,region_policial)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+       RETURNING id`,
+      [req.params.id, cipNorm, nombres, unidadNorm || unidad || '', cargo||'', telefono||'', email||'',
+       pdfSave, pdfNom,
        dni||'', grado||'', area||'', arma||'', disponibilidad||'', dia_franco||'',
-       feNorm, tiempo_servicio||'']);
-    res.json({ ok: true, mensaje: 'Inscripción registrada correctamente.' });
+       feNorm, tiempo_servicio||'', estado, modo,
+       modalidadNorm || '', modalidadOtroNorm || '',
+       esConvenio ? codifinNorm : (codifinNorm || ''),
+       regionNorm || '']);
+
+    const newId = ins.rows[0].id;
+    const nroRegistro = await conveniosFlujo.asegurarNroRegistro(pool, newId);
+    let avisoFb = '';
+    if (esConvenio) {
+      const itAviso = await pool.query('SELECT aviso_sorteo_fb FROM items_portal WHERE id=$1', [req.params.id]);
+      avisoFb = (itAviso.rows[0] && itAviso.rows[0].aviso_sorteo_fb) || '';
+    }
+
+    res.json({
+      ok: true,
+      id: newId,
+      estado: estado,
+      nro_registro: nroRegistro,
+      aviso_sorteo_fb: avisoFb,
+      mensaje: modoRepechaje
+        ? ('Repechaje registrado. N° de registro: ' + nroRegistro + '. Su expediente quedó en revisión.')
+        : (esConvenio
+          ? ('Preinscripción registrada. Su N° de registro es ' + nroRegistro
+            + '. Consérvelo: consultará con CIP + N° de inscripción.'
+            + (avisoFb ? (' ' + avisoFb) : ' El día del sorteo en vivo por Facebook será publicado por el área de Convenios.'))
+          : ('Inscripción registrada. N° de registro: ' + nroRegistro + '.'))
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+function soloDigitosTel(v) {
+  const d = String(v || '').replace(/\D/g, '');
+  return d.length >= 9;
+}
+
+// ── Flujo convenios v2: vacantes, expediente, revisión, notificaciones ────────
+app.get('/portal/convenios/vacantes/:itemId', async (req, res) => {
+  try {
+    const vac = await conveniosFlujo.vacantesDisponibles(pool, req.params.itemId);
+    if (!vac.ok) return res.json(vac);
+    res.json(vac);
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.get('/portal/convenios/catalogo-observaciones', function(req, res) {
+  res.json({
+    ok: true,
+    catalogo: conveniosFlujo.CATALOGO_OBSERVACIONES,
+    modalidades: conveniosFlujo.MODALIDADES_TRABAJO,
+    regiones: conveniosFlujo.REGIONES_POLICIALES
+  });
+});
+
+app.get('/portal/convenios/catalogos', function(req, res) {
+  res.json({
+    ok: true,
+    modalidades: conveniosFlujo.MODALIDADES_TRABAJO,
+    regiones: conveniosFlujo.REGIONES_POLICIALES,
+    catalogo_observaciones: conveniosFlujo.CATALOGO_OBSERVACIONES
+  });
+});
+
+app.post('/portal/inscripciones/:id/expediente', async (req, res) => {
+  try {
+    await conveniosFlujo.caducarExpedientesVencidos(pool);
+    const id = parseInt(req.params.id, 10);
+    const cip = normalizarCipDigits(req.body && req.body.cip);
+    const pdf = (req.body && req.body.pdf_requisitos) || '';
+    const pdfNombre = (req.body && req.body.pdf_nombre) || 'expediente.pdf';
+    if (!id || !cip) return res.json({ ok: false, error: 'CIP e inscripción requeridos' });
+    if (!pdf) return res.json({ ok: false, error: 'Adjunte el PDF del expediente' });
+    if (pdf.length > 7 * 1024 * 1024) return res.json({ ok: false, error: 'El PDF no debe superar 5 MB' });
+
+    const r = await pool.query(
+      `SELECT n.*, i.tipo, i.titulo FROM inscripciones n
+       JOIN items_portal i ON i.id=n.item_id
+       WHERE n.id=$1 AND ${sqlCipIgual('n.cip')}=$2`,
+      [id, cip]);
+    if (!r.rows.length) return res.json({ ok: false, error: 'Inscripción no encontrada' });
+    const row = r.rows[0];
+    if (row.tipo !== 'convenio') return res.json({ ok: false, error: 'Solo aplica a convenios' });
+    if (row.estado !== 'ganador' && row.estado !== 'observado') {
+      return res.json({ ok: false, error: 'No puede subir expediente en el estado actual (' + row.estado + ')' });
+    }
+    if (row.estado === 'ganador' && row.plazo_expediente && new Date(row.plazo_expediente) < new Date()) {
+      await pool.query(`UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente' WHERE id=$1`, [id]);
+      return res.json({ ok: false, error: 'El plazo de 2 días ya venció. La vacante pasó a repechaje.' });
+    }
+
+    await pool.query(
+      `UPDATE inscripciones SET
+         pdf_requisitos=$1, pdf_nombre=$2, estado='en_revision',
+         motivo_observacion='', observacion=CASE WHEN estado='observado' THEN observacion ELSE observacion END
+       WHERE id=$3`,
+      [pdf, pdfNombre, id]);
+
+    res.json({ ok: true, mensaje: 'Expediente recibido. Quedó en revisión por Convenios.', estado: 'en_revision' });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.get('/admin/convenios/catalogo-observaciones', requireAuth, function(req, res) {
+  res.json({ ok: true, catalogo: conveniosFlujo.CATALOGO_OBSERVACIONES });
+});
+
+app.get('/admin/items/:id/vacantes-info', requireAuth, async (req, res) => {
+  try {
+    const cur = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [req.params.id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const vac = await conveniosFlujo.vacantesDisponibles(pool, req.params.id);
+    res.json(vac);
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.post('/admin/inscripciones/:id/revisar-expediente', requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const cur = await pool.query(
+      `SELECT n.*, i.tipo, i.titulo FROM inscripciones n
+       JOIN items_portal i ON i.id=n.item_id WHERE n.id=$1`, [id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    if (cur.rows[0].tipo !== 'convenio') return res.json({ ok: false, error: 'Solo convenios' });
+    if (!puedeOperarInscritos(req.admin, 'convenio'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+
+    const accion = String((req.body && req.body.accion) || '').toLowerCase();
+    const motivo = String((req.body && req.body.motivo_observacion) || '').trim();
+    const observacion = String((req.body && req.body.observacion) || '').trim();
+
+    if (accion === 'aprobar') {
+      await pool.query(
+        `UPDATE inscripciones SET estado='expediente_ok', motivo_observacion='',
+           observacion=COALESCE(NULLIF($1,''), 'Expediente verificado — constancia habilitada')
+         WHERE id=$2 AND estado IN ('en_revision','repechaje','observado')`,
+        [observacion, id]);
+      const n = await conveniosFlujo.notificarInscripcion(pool, id, 'expediente_ok');
+      return res.json({ ok: true, estado: 'expediente_ok', notificacion: n });
+    }
+
+    if (accion === 'observar') {
+      if (!motivo) return res.json({ ok: false, error: 'Seleccione un motivo de observación' });
+      const label = conveniosFlujo.etiquetaObservacion(motivo);
+      const obsTxt = observacion
+        ? (label + '. ' + observacion + ' — Subsanar a la brevedad.')
+        : (label + ' — Subsanar a la brevedad.');
+      await pool.query(
+        `UPDATE inscripciones SET estado='observado', motivo_observacion=$1, observacion=$2
+         WHERE id=$3 AND estado IN ('en_revision','repechaje','observado')`,
+        [motivo, obsTxt, id]);
+      const n = await conveniosFlujo.notificarInscripcion(pool, id, 'observado');
+      return res.json({ ok: true, estado: 'observado', notificacion: n });
+    }
+
+    if (accion === 'rechazar') {
+      await pool.query(
+        `UPDATE inscripciones SET estado='rechazado',
+           observacion=COALESCE(NULLIF($1,''), 'Expediente rechazado'),
+           motivo_observacion=COALESCE(NULLIF($2,''), motivo_observacion)
+         WHERE id=$3`,
+        [observacion, motivo, id]);
+      return res.json({ ok: true, estado: 'rechazado' });
+    }
+
+    return res.json({ ok: false, error: 'Acción inválida (aprobar | observar | rechazar)' });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.post('/admin/inscripciones/:id/notificar', requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const tipo = String((req.body && req.body.tipo) || 'ganador');
+    const cur = await pool.query(
+      `SELECT i.tipo FROM inscripciones n JOIN items_portal i ON i.id=n.item_id WHERE n.id=$1`, [id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const n = await conveniosFlujo.notificarInscripcion(pool, id, tipo);
+    res.json(n);
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -5145,20 +5535,21 @@ app.post('/admin/items', requireAuth, async (req, res) => {
   try {
     const { tipo, titulo, descripcion, estado, icono, color, requisitos, horario,
             vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
-            formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables } = req.body;
+            formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables,
+            aviso_sorteo_fb } = req.body;
     if (!puedeGestionarItem(req.admin, tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     if (!titulo) return res.json({ ok: false, error: 'El título es obligatorio.' });
     const r = await pool.query(
       `INSERT INTO items_portal(tipo,titulo,descripcion,estado,icono,color,requisitos,horario,
-        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden,uniforme,contactos_responsables)
-       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING id`,
+        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden,uniforme,contactos_responsables,aviso_sorteo_fb)
+       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING id`,
       [tipo, titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
        horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
        lugar||'', observaciones||'', ventana_inscripcion||'', formulario_url||'',
        !!inscripciones_abiertas, visible!==false, parseInt(orden)||0,
-       uniforme||'', contactos_responsables||'']);
+       uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'']);
     invalidarPortalItemsCache();
     res.json({ ok: true, id: r.rows[0].id });
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -5173,18 +5564,19 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const { titulo, descripcion, estado, icono, color, requisitos, horario,
             vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
-            formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables } = req.body;
+            formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables,
+            aviso_sorteo_fb } = req.body;
     await pool.query(
       `UPDATE items_portal SET titulo=$1,descripcion=$2,estado=$3,icono=$4,color=$5,
         requisitos=$6::jsonb,horario=$7,vacantes=$8,fecha_inicio=$9,duracion=$10,
         lugar=$11,observaciones=$12,ventana_inscripcion=$13,formulario_url=$14,inscripciones_abiertas=$15,
-        visible=$16,orden=$17,uniforme=$18,contactos_responsables=$19,actualizado=NOW() WHERE id=$20`,
+        visible=$16,orden=$17,uniforme=$18,contactos_responsables=$19,aviso_sorteo_fb=$20,actualizado=NOW() WHERE id=$21`,
       [titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
        horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
        lugar||'', observaciones||'', ventana_inscripcion||'', formulario_url||'',
        !!inscripciones_abiertas, visible!==false, parseInt(orden)||0,
-       uniforme||'', contactos_responsables||'', req.params.id]);
+       uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'', req.params.id]);
     invalidarPortalItemsCache();
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -5213,15 +5605,29 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
     const r = await pool.query(
       `SELECT id,item_id,cip,dni,grado,nombres,unidad,area,cargo,telefono,email,
               arma,disponibilidad,dia_franco,fecha_egreso,tiempo_servicio,
-              estado,observacion,fecha,
+              estado,observacion,fecha,modo_ingreso,motivo_observacion,
+              fecha_ganador,plazo_expediente,nro_registro,modalidad,modalidad_otro,
+              codifin,region_policial,
               CASE WHEN pdf_requisitos IS NOT NULL AND pdf_requisitos<>'' THEN true ELSE false END AS tiene_pdf,
               pdf_nombre
        FROM inscripciones WHERE item_id=$1 ORDER BY fecha ASC`, [req.params.id]);
-    res.json({ ok: true, inscritos: r.rows, tipo: cur.rows[0].tipo });
+    if (cur.rows[0].tipo === 'convenio') await conveniosFlujo.caducarExpedientesVencidos(pool);
+    const vac = cur.rows[0].tipo === 'convenio'
+      ? await conveniosFlujo.vacantesDisponibles(pool, req.params.id)
+      : null;
+    res.json({
+      ok: true,
+      inscritos: r.rows,
+      tipo: cur.rows[0].tipo,
+      vacantes_info: vac,
+      catalogo_observaciones: conveniosFlujo.CATALOGO_OBSERVACIONES,
+      modalidades: conveniosFlujo.MODALIDADES_TRABAJO,
+      regiones: conveniosFlujo.REGIONES_POLICIALES
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── GET /admin/items/:id/candidatos — aprobados para la rueda de sorteo ────────
+// ── GET /admin/items/:id/candidatos — preinscritos (convenio) / aprobados (curso) ─
 app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
   try {
     const cur = await pool.query(
@@ -5230,11 +5636,24 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const esConvenio = cur.rows[0].tipo === 'convenio';
+    if (esConvenio) await conveniosFlujo.caducarExpedientesVencidos(pool);
+    const estados = esConvenio
+      ? ['preinscrito', 'pendiente', 'aprobado', 'verificado', 'ganador', 'reserva']
+      : ['verificado', 'aprobado', 'ganador', 'reserva'];
     const r = await pool.query(
-      `SELECT id,cip,dni,grado,nombres,unidad,area,cargo,disponibilidad,dia_franco,tiempo_servicio,estado
-       FROM inscripciones WHERE item_id=$1 AND estado IN ('verificado','aprobado','ganador','reserva')
-       ORDER BY fecha ASC`, [req.params.id]);
-    res.json({ ok: true, candidatos: r.rows, item: cur.rows[0] });
+      `SELECT id,cip,dni,grado,nombres,unidad,area,cargo,disponibilidad,dia_franco,tiempo_servicio,estado,
+              telefono,email,modo_ingreso
+       FROM inscripciones WHERE item_id=$1 AND estado = ANY($2::varchar[])
+       ORDER BY fecha ASC`, [req.params.id, estados]);
+    const vac = esConvenio ? await conveniosFlujo.vacantesDisponibles(pool, req.params.id) : null;
+    res.json({
+      ok: true,
+      candidatos: r.rows,
+      item: cur.rows[0],
+      flujo: esConvenio ? 'convenio_v2' : 'curso',
+      vacantes_info: vac
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -5288,6 +5707,9 @@ function iniciarDB() {
 
 // ── Módulo Descansos médicos (independiente) ─────────────────────────────────
 descansosMedicos.registrarRutas(app, pool, requireAuth);
+
+// ── Módulo Faltos (inasistencias / métricas 2026) ────────────────────────────
+faltosMod.registrarRutas(app, pool, requireAuth);
 
 // ── Módulo Recursos Humanos (nómina interna) ─────────────────────────────────
 recursosHumanos.registrarRutas(app, pool, requireAuth);

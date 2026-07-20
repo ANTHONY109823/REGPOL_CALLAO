@@ -6,7 +6,7 @@
     <link rel="icon" href="favicon.png?v=3" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REGPOL CALLAO - PNP</title>
-    <link rel="stylesheet" href="style.css?v=66">
+    <link rel="stylesheet" href="style.css?v=67">
     <link rel="stylesheet" href="responsive.css?v=3">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -130,10 +130,13 @@
         <div style="background:linear-gradient(135deg,#004d3d,#006b55);border-radius:10px;padding:16px 20px;margin-bottom:20px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
             <div style="color:#fff;">
                 <strong style="font-size:14px;display:block;margin-bottom:4px;"><i class="fas fa-search"></i> Ya se inscribi?</strong>
-                <span style="font-size:13px;opacity:.92;">Consulte el estado de su expediente o descargue su constancia de vacante con su CIP.</span>
+                <span style="font-size:13px;opacity:.92;">Consulte con su CIP + N° de inscripción el estado, el aviso del sorteo Facebook o suba su expediente si resultó ganador.</span>
             </div>
             <a href="consulta.html" style="background:#c8a94a;color:#002d24;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;white-space:nowrap;">
-                <i class="fas fa-id-card"></i> CONSULTA POR CIP
+                <i class="fas fa-id-card"></i> CONSULTA CIP + N°
+            </a>
+            <a href="consulta.html#repechaje" style="background:#004d3d;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;white-space:nowrap;">
+                <i class="fas fa-redo-alt"></i> REPECHAJE
             </a>
         </div>
         <div class="grid-modern" id="grid-convenios"></div>
@@ -232,11 +235,11 @@
     </div>
 </div>
 
-<script src="portal-data.js?v=9"></script>
-<script src="portal.js?v=79"></script>
+<script src="portal-data.js?v=10"></script>
+<script src="portal.js?v=80"></script>
 <script>
     initPortalInicio();
-    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') cerrarNovedadModal(); });
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { cerrarNovedadModal(); cerrarModalRrhhPortal(); } });
 </script>
 </body>
 </html>

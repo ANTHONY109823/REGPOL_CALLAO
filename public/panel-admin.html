@@ -386,11 +386,13 @@
     var tieneCursos = esU || perms.indexOf('cms_cursos') !== -1;
     var tieneConvenios = esU || perms.indexOf('cms_convenios') !== -1;
     var tieneDescansos = esU || perms.indexOf('cms_descansos') !== -1;
+    var tieneFaltos = esU || perms.indexOf('faltos_admin') !== -1 || perms.indexOf('faltos_registrar') !== -1;
+    var tieneFaltosAdmin = esU || perms.indexOf('faltos_admin') !== -1;
     var tieneRRHH = esU || perms.indexOf('recursos_humanos') !== -1;
     var tieneEval = esU || perms.indexOf('evaluaciones') !== -1;
     var tieneDesc = esU || perms.indexOf('descargas') !== -1 || tieneEval;
     var tienePsico = esU || rol === 'bienestar' || tieneEval || tieneDesc;
-    var tieneGestion = esU || tienePsico || tieneCursos || tieneConvenios || tieneDescansos || tieneRRHH;
+    var tieneGestion = esU || tienePsico || tieneCursos || tieneConvenios || tieneDescansos || tieneFaltos || tieneRRHH;
 
     var tienePortalCms = esU || tieneConvenios || tieneCursos || tieneDescansos;
     var st = document.getElementById('panel-perm-style');
@@ -402,7 +404,7 @@
     st.textContent = [
       '[data-rol-unitic]{display:none!important}',
       '[data-perm-evaluaciones],[data-perm-descargas],[data-perm-preguntas]{display:none!important}',
-      '#sb-grp-psico,#sb-grp-convenios,#sb-grp-cursos,#sb-grp-descansos,#sb-sec-gestion,#sb-sec-rrhh,#sb-sec-portal{display:none!important}',
+      '#sb-grp-psico,#sb-grp-convenios,#sb-grp-cursos,#sb-grp-descansos,#sb-grp-faltos,#sb-sec-gestion,#sb-sec-rrhh,#sb-sec-portal{display:none!important}',
       esU ? '[data-rol-unitic]{display:block!important}' : '',
       tienePortalCms ? '#sb-sec-portal{display:block!important}' : '',
       !esU ? '[data-cms-only-unitic]{display:none!important}' : '',
@@ -415,6 +417,8 @@
       tieneConvenios ? '#sb-grp-convenios{display:block!important}' : '',
       tieneCursos ? '#sb-grp-cursos{display:block!important}' : '',
       tieneDescansos ? '#sb-grp-descansos{display:block!important}' : '',
+      tieneFaltos ? '#sb-grp-faltos{display:block!important}' : '',
+      !esU && !tieneFaltosAdmin ? '[data-fl-admin-nav]{display:none!important}' : '',
       (esU || tieneRRHH) ? '#sb-sec-rrhh{display:block!important}' : '',
       tieneGestion ? '#sb-sec-gestion{display:block!important}' : ''
     ].filter(Boolean).join('');
@@ -422,13 +426,15 @@
     var badge = document.querySelector('.super-badge');
     if (badge) {
       if (esU) badge.textContent = 'SUPER ADMIN';
-      else if (tieneRRHH && !tieneCursos && !tieneConvenios && !tienePsico && !tieneDescansos) badge.textContent = 'RECURSOS HUMANOS';
+      else if (tieneRRHH && !tieneCursos && !tieneConvenios && !tienePsico && !tieneDescansos && !tieneFaltos) badge.textContent = 'RECURSOS HUMANOS';
+      else if (tieneFaltos && !tieneCursos && !tieneConvenios && !tienePsico && !tieneDescansos) badge.textContent = 'FALTOS';
       else if (tieneDescansos && !tieneCursos && !tieneConvenios && !tienePsico) badge.textContent = 'DESCANSOS MÉDICOS';
       else if (tieneCursos && tieneConvenios) badge.textContent = 'CONVENIOS + EDUCACIÓN';
       else if (tieneCursos) badge.textContent = 'EDUCACIÓN';
       else if (tieneConvenios) badge.textContent = 'CONVENIOS';
       else if (tienePsico) badge.textContent = 'PSICOLOGÍA';
       else if (tieneDescansos) badge.textContent = 'DESCANSOS MÉDICOS';
+      else if (tieneFaltos) badge.textContent = 'FALTOS';
       else if (tieneRRHH) badge.textContent = 'RECURSOS HUMANOS';
       else badge.textContent = 'USUARIO';
     }
@@ -539,6 +545,24 @@
           </div>
           <div class="sb-item" data-page="descansos-import" onclick="ir('descansos-import',this)">
             <i class="fas fa-file-excel"></i> IMPORTAR EXCEL / COTEJO
+          </div>
+        </div>
+      </div>
+
+      <div class="sb-group" id="sb-grp-faltos" style="margin-top:4px;">
+        <div class="sb-group-header" onclick="toggleGrupo(this)">
+          <div class="gi"><i class="fas fa-user-clock" style="color:#004d3d;font-size:13px;"></i> FALTOS</div>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="sb-group-body">
+          <div class="sb-item" data-page="faltos" onclick="ir('faltos',this)">
+            <i class="fas fa-clipboard-list"></i> REGISTRO Y LISTADO
+          </div>
+          <div class="sb-item" data-page="faltos-dash" onclick="ir('faltos-dash',this)">
+            <i class="fas fa-chart-pie"></i> DASHBOARD
+          </div>
+          <div class="sb-item" data-page="faltos-import" data-fl-admin-nav onclick="ir('faltos-import',this)">
+            <i class="fas fa-file-excel"></i> EXCEL HISTÓRICO 2026
           </div>
         </div>
       </div>
@@ -1088,21 +1112,26 @@
           <h3 id="inscritos-titulo" style="margin:0;border:none;padding:0;"><i class="fas fa-users"></i> Inscritos</h3>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
-          <input type="text" id="inscritos-buscar" placeholder="Buscar por CIP o nombre..." oninput="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:220px;"/>
+          <input type="text" id="inscritos-buscar" placeholder="CIP, N° registro, CODIFIN o nombre..." oninput="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:240px;"/>
+          <select id="inscritos-filtro-region" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
+            <option value="">Todas las regiones</option>
+          </select>
           <select id="inscritos-filtro-unidad" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
             <option value="">Todas las unidades</option>
           </select>
-          <select id="inscritos-filtro-area" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
+          <select id="inscritos-filtro-modalidad" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:180px;">
+            <option value="">Todas las modalidades</option>
+          </select>
+          <select id="inscritos-filtro-area" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:180px;">
             <option value="">Todas las áreas</option>
+          </select>
+          <select id="inscritos-filtro-disp" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
+            <option value="">Disponibilidad</option>
+            <option value="VACACIONES">Vacaciones</option>
+            <option value="FRANCO">Franco</option>
           </select>
           <select id="inscritos-filtro-estado" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
             <option value="">Todos</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="verificado">Verificado</option>
-            <option value="ganador">Ganador</option>
-            <option value="aprobado">Aprobado</option>
-            <option value="reserva">Reserva</option>
-            <option value="rechazado">Rechazado</option>
           </select>
           <button class="btn btn-v" onclick="exportarInscritos()"><i class="fas fa-download"></i> Exportar CSV</button>
         </div>
@@ -1135,7 +1164,7 @@
 
         <div id="sorteo-convenio-panel" style="background:#f0f7f0;border:1.5px solid #c8e6c9;border-radius:10px;padding:16px;margin-bottom:18px;">
           <strong style="color:#004d3d;display:block;margin-bottom:10px;font-size:13px;"><i class="fas fa-handshake"></i> Sorteo de convenio</strong>
-          <p style="font-size:12px;color:#666;margin-bottom:12px;">Flujo: verificar expedientes → aprobar postulantes → sorteo en vivo solo con los aprobados.</p>
+  <p style="font-size:12px;color:#666;margin-bottom:12px;">Convenios: preinscripción (sin PDF) → sorteo directo → aviso WA/correo → expediente 2 días → revisión. Repechaje sube PDF completo (sin sorteo). Cursos mantienen verificación/aprobación.</p>
           <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
             <div style="flex:1;min-width:280px;">
               <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Convocatoria de convenio</label>
@@ -1229,6 +1258,112 @@
         <div id="dm-cotejo-resultado"></div>
         <h4 style="margin:18px 0 8px;font-size:13px;color:#004d3d;">Historial de cotejos</h4>
         <div id="dm-cotejos-hist"></div>
+      </div>
+    </div>
+
+    
+    <div id="page-faltos" class="page">
+      <div class="card" id="fl-block-registro">
+        <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-user-plus" style="color:#004d3d;"></i> Registrar falto</h3>
+        <p style="font-size:12.5px;color:#666;margin-bottom:10px;">Cruzado con nómina RR.HH. Al guardar se muestra el <strong>Nº de registro</strong>. No se puede borrar.</p>
+        <p id="fl-unidad-hint" style="font-size:12px;color:#004d3d;font-weight:600;margin:0 0 10px;"></p>
+        <form id="fl-form-reg" onsubmit="flRegistrar(event)">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+            <div><label style="font-size:11px;font-weight:700;display:block;">CIP *</label>
+              <input id="fl-reg-cip" required inputmode="numeric" maxlength="12" style="width:120px;padding:8px;" onblur="flBuscarRrhh()"></div>
+            <div><label style="font-size:11px;font-weight:700;display:block;">Fecha labor *</label>
+              <input type="date" id="fl-reg-fecha" required style="padding:8px;"></div>
+            <div><label style="font-size:11px;font-weight:700;display:block;">Hora inicio *</label>
+              <input type="time" id="fl-reg-hora" required style="padding:8px;"></div>
+            <div style="flex:1;min-width:180px;"><label style="font-size:11px;font-weight:700;display:block;">Observación</label>
+              <input id="fl-reg-obs" maxlength="500" style="width:100%;padding:8px;"></div>
+            <button class="btn btn-v" type="submit"><i class="fas fa-save"></i> Registrar</button>
+          </div>
+          <div id="fl-rrhh-preview" style="margin-top:10px;padding:10px;background:#f4f8f5;border-radius:8px;font-size:13px;min-height:28px;"></div>
+          <p id="fl-reg-msg" style="font-size:12px;margin-top:8px;"></p>
+        </form>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-search"></i> Consultar / actualizar por CIP + Nº</h3>
+        <p style="font-size:12.5px;color:#666;margin-bottom:10px;">Use el número entregado al registrar. Solo la unidad puede cambiar la situación si ya se reincorporó.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+          <div><label style="font-size:11px;font-weight:700;display:block;">CIP</label>
+            <input id="fl-con-cip" inputmode="numeric" maxlength="12" style="width:120px;padding:8px;"></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">Nº de registro</label>
+            <input id="fl-con-numero" placeholder="FAL-2026-000001" style="width:180px;padding:8px;"></div>
+          <button class="btn btn-o" type="button" onclick="flConsultarNumero()"><i class="fas fa-search"></i> Consultar</button>
+        </div>
+        <p id="fl-con-msg" style="font-size:12px;margin-top:8px;"></p>
+      </div>
+
+      <div class="card" style="margin-top:14px;">
+        <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-list"></i> Listado 2026</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-bottom:12px;">
+          <div><label style="font-size:11px;font-weight:700;display:block;">Año</label>
+            <input type="number" id="fl-f-anio" style="width:90px;padding:7px;" readonly></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">División</label>
+            <select id="fl-f-division" style="min-width:150px;padding:7px;" onchange="flOnDivisionChange();flAplicarFiltros()"></select></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">Unidad</label>
+            <select id="fl-f-unidad" style="min-width:160px;padding:7px;" onchange="flAplicarFiltros()"></select></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">Situación</label>
+            <select id="fl-f-situacion" style="min-width:120px;padding:7px;" onchange="flAplicarFiltros()"></select></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">Mes</label>
+            <select id="fl-f-mes" style="padding:7px;" onchange="flAplicarFiltros()">
+              <option value="">Todos</option>
+              <option value="1">Ene</option><option value="2">Feb</option><option value="3">Mar</option>
+              <option value="4">Abr</option><option value="5">May</option><option value="6">Jun</option>
+              <option value="7">Jul</option><option value="8">Ago</option><option value="9">Sep</option>
+              <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dic</option>
+            </select></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">Desde</label>
+            <input type="date" id="fl-f-desde" style="padding:7px;" onchange="flAplicarFiltros()"></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">Hasta</label>
+            <input type="date" id="fl-f-hasta" style="padding:7px;" onchange="flAplicarFiltros()"></div>
+          <div><label style="font-size:11px;font-weight:700;display:block;">Buscar</label>
+            <input id="fl-f-q" placeholder="CIP / nombre / Nº" style="width:140px;padding:7px;" onkeydown="if(event.key==='Enter')flAplicarFiltros()"></div>
+          <button class="btn btn-v" type="button" onclick="flAplicarFiltros()"><i class="fas fa-filter"></i> Filtrar</button>
+          <button class="btn" type="button" style="background:#888;color:#fff;" onclick="flLimpiarFiltros()">Limpiar</button>
+          <button class="btn btn-o" type="button" onclick="flExportCsv()"><i class="fas fa-file-csv"></i> Excel CSV</button>
+          <span id="fl-total-label" style="font-size:12px;color:#666;margin-left:auto;"></span>
+        </div>
+        <div id="fl-tabla-wrap"><p style="color:#bbb;text-align:center;padding:24px;">Cargando...</p></div>
+      </div>
+    </div>
+
+    <div id="page-faltos-dash" class="page">
+      <div class="card">
+        <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-chart-pie"></i> Dashboard — Faltos 2026</h3>
+        <p style="font-size:12.5px;color:#666;margin-bottom:12px;">Totales por día, mes, unidad y situación (FALTO / TARDE / ABANDONO).</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn btn-v" type="button" onclick="flCargarDashboard()"><i class="fas fa-sync"></i> Actualizar</button>
+          <button class="btn" type="button" style="background:#888;color:#fff;" onclick="ir('faltos',null)">Ir a registro / listado</button>
+        </div>
+        <div id="fl-dash-body"><p style="color:#bbb;padding:16px;">Abra esta sección para cargar métricas.</p></div>
+      </div>
+    </div>
+
+    <div id="page-faltos-import" class="page">
+      <div class="card" data-fl-admin-only>
+        <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-file-excel"></i> Excel histórico 2026 (una sola carga)</h3>
+        <p style="font-size:12.5px;color:#666;margin-bottom:10px;line-height:1.5;">
+          Solo el <strong>admin del área</strong> sube listas pasadas de 2026. Luego el registro diario lo hace cada unidad.
+          Columnas: <code>CIP</code>, <code>FECHA</code>, <code>HORA</code> (opcional), <code>SITUACION</code>, reincorporación (opc.).
+          Siempre se cruza con nómina RR.HH.
+        </p>
+        <input type="file" id="fl-excel-historico" accept=".xlsx,.xls,.csv">
+        <button class="btn btn-o" type="button" style="margin-top:10px;" onclick="flImportarHistorico()"><i class="fas fa-upload"></i> Subir Excel 2026</button>
+        <p id="fl-import-msg" style="font-size:12px;color:#555;margin-top:8px;"></p>
+      </div>
+    </div>
+
+    <div id="fl-modal" class="modal" onclick="if(event.target===this)flCerrarModal()">
+      <div class="modal-box" style="max-width:520px;" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <h3 style="margin:0;color:#004d3d;font-size:16px;"><i class="fas fa-receipt"></i> Comprobante de falto</h3>
+          <button type="button" class="btn" style="padding:6px 10px;" onclick="flCerrarModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="fl-modal-body"></div>
       </div>
     </div>
 
@@ -1343,6 +1478,11 @@
         <label>Ventana de inscripción (texto visible en el portal)</label>
         <input type="text" id="mi-ventana-inscripcion" placeholder="Ej: Las inscripciones se habilitan del 20 al 25 de cada mes." maxlength="300"/>
       </div>
+      <div style="grid-column:1/-1;" id="mi-aviso-sorteo-wrap">
+        <label><i class="fab fa-facebook" style="color:#1877f2;"></i> Aviso sorteo en vivo por Facebook (editable)</label>
+        <textarea id="mi-aviso-sorteo-fb" rows="2" placeholder="Ej: El sorteo en vivo se realizará el 25/07/2026 a las 10:00 h por la página de Facebook REGPOL Callao. Se notificará al cerrar preinscripciones."></textarea>
+        <small style="color:#666;font-size:11.5px;">Se muestra al terminar la preinscripción y en la consulta del efectivo.</small>
+      </div>
       <div style="grid-column:1/-1;">
         <label>URL de formulario externo (opcional)</label>
         <input type="url" id="mi-formulario-url" placeholder="https://forms.google.com/..."/>
@@ -1369,8 +1509,8 @@
       <div style="font-size:13px;font-weight:800;color:#c8a94a;margin-bottom:8px;display:flex;align-items:center;gap:7px;">
         <i class="fas fa-file-pdf"></i> PLANTILLA / FORMULARIO DESCARGABLE
       </div>
-      <p style="font-size:12px;color:#666;margin-bottom:10px;">
-        Suba el formulario modelo (PDF) que los usuarios deberán descargar, completar, firmar y adjuntar al inscribirse.<br/>
+      <p style="font-size:12px;color:#666;margin-bottom:10px;" id="mi-plantilla-ayuda">
+        Suba el formulario modelo (PDF) descargable. En <strong>cursos</strong> se adjunta al inscribirse; en <strong>convenios</strong> solo lo suben ganadores (o repechaje) tras el sorteo.<br/>
         <strong style="color:#c0392b;">Máx. 10 MB. Solo PDF.</strong>
       </p>
       <div id="mi-plantilla-actual" style="display:none;margin-bottom:8px;background:#f0f7f0;border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
@@ -1516,6 +1656,26 @@
   </div>
 </div>
 
+<div id="modal-observar-exp" class="modal">
+  <div class="modal-box" style="width:460px;">
+    <h3><i class="fas fa-exclamation-triangle" style="color:#e67e22;"></i> Observar expediente</h3>
+    <input type="hidden" id="mobs-id"/>
+    <p style="font-size:12.5px;color:#666;margin:-4px 0 12px;line-height:1.45;">
+      Se notificará al efectivo (WhatsApp / correo) con el motivo y la frase «Subsanar a la brevedad».
+    </p>
+    <label>Motivo *</label>
+    <select id="mobs-motivo" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;margin-bottom:10px;">
+      <option value="">— Seleccione —</option>
+    </select>
+    <label>Detalle adicional</label>
+    <textarea id="mobs-detalle" rows="3" placeholder="Observaciones concretas..." style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;"></textarea>
+    <div class="modal-footer">
+      <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-observar-exp')">Cancelar</button>
+      <button class="btn btn-o" onclick="confirmarObservarExpediente()"><i class="fas fa-paper-plane"></i> Observar y avisar</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-division" class="modal">
   <div class="modal-box" style="width:420px;">
     <h3><i class="fas fa-sitemap"></i> <span id="md-titulo">Nueva división</span></h3>
@@ -1647,6 +1807,8 @@
         <div class="pb-title">Educación (Cursos)</div>
         <label><input type="checkbox" value="cms_cursos" class="perm-chk"> Gestionar cursos e inscripciones</label>
         <label><input type="checkbox" value="cms_descansos" class="perm-chk"> Descansos médicos (listado, dashboard, Excel)</label>
+        <label><input type="checkbox" value="faltos_admin" class="perm-chk"> Faltos — Admin área (dashboard, Excel histórico, solo consulta)</label>
+        <label><input type="checkbox" value="faltos_registrar" class="perm-chk"> Faltos — Unidad (registrar diario y cambiar situación; asignar unidad)</label>
         <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Solo operaciones de cursos. No edita el portal web.</p>
       </div>
       <div class="perm-box">
@@ -1814,11 +1976,12 @@
 
 <script src="api-config.js?v=2"></script>
 <script src="fecha-local.js?v=1"></script>
-<script src="portal-data.js?v=9"></script>
-<script src="portal.js?v=71"></script>
+<script src="portal-data.js?v=10"></script>
+<script src="portal.js?v=80"></script>
 <script src="divisiones-ui.js?v=4"></script>
 <script src="panel-cms.js?v=28"></script>
 <script src="panel-descansos.js?v=4"></script>
+<script src="panel-faltos.js?v=1"></script>
 <script src="panel-rrhh.js?v=3"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
@@ -1832,6 +1995,8 @@ var ETIQUETAS_PERM={
   cms_convenios:'Gestión Convenios',
   cms_cursos:'Gestión Cursos',
   cms_descansos:'Descansos médicos',
+  faltos_admin:'Faltos (admin área)',
+  faltos_registrar:'Faltos (unidad)',
   recursos_humanos:'Recursos Humanos'
 };
 
@@ -1848,6 +2013,7 @@ function puedeEntrarPanel(s) {
   return s.rol === 'unitic' || s.rol === 'bienestar'
     || perms.indexOf('cms_cursos') !== -1 || perms.indexOf('cms_convenios') !== -1
     || perms.indexOf('cms_descansos') !== -1
+    || perms.indexOf('faltos_admin') !== -1 || perms.indexOf('faltos_registrar') !== -1
     || perms.indexOf('cms_inicio') !== -1 || perms.indexOf('cms_resena') !== -1
     || perms.indexOf('cms_labor') !== -1 || perms.indexOf('cms_novedades') !== -1
     || perms.indexOf('evaluaciones') !== -1 || perms.indexOf('descargas') !== -1
@@ -3209,6 +3375,8 @@ function puedePublicarResultadosPdf(tipo){
 function puedeGestionConvenios(){ return puedeGestionarConvocatorias() || puedeGestionarSorteosConvenio(); }
 function puedeGestionCursos(){ return puedeGestionarConvocatorias() || puedePublicarResultadosPdf('curso'); }
 function puedeGestionDescansos(){ return esUnitic() || tienePermiso('cms_descansos'); }
+function puedeGestionFaltos(){ return esUnitic() || tienePermiso('faltos_admin') || tienePermiso('faltos_registrar'); }
+function puedeFaltosAdmin(){ return esUnitic() || tienePermiso('faltos_admin'); }
 function puedeGestionRRHH(){ return esUnitic() || tienePermiso('recursos_humanos'); }
 
 function aplicarPermisosSidebar(s){
@@ -3300,6 +3468,8 @@ function ir(page, el){
   if(page==='inscritos'&&!puedeOperarInscritosConvenio()){alert('Sin acceso a inscritos de convenios.');return;}
   if(page==='consulta-cip'&&!puedeConsultarCip()){alert('Sin acceso a consulta por CIP.');return;}
   if((page==='descansos'||page==='descansos-dash'||page==='descansos-import')&&!puedeGestionDescansos()){alert('Sin acceso a Descansos médicos.');return;}
+  if((page==='faltos'||page==='faltos-dash'||page==='faltos-import')&&!puedeGestionFaltos()){alert('Sin acceso a Faltos.');return;}
+  if(page==='faltos-import'&&!puedeFaltosAdmin()){alert('Solo el admin del área puede subir el Excel histórico.');return;}
   if((page==='rrhh-nomina'||page==='rrhh-reportes')&&!puedeGestionRRHH()){alert('Sin acceso a Recursos Humanos.');return;}
   if((page==='usuarios'||page==='divisiones'||page==='menu-publicacion')&&!esUnitic()){alert('Solo el Super Admin puede acceder a esta sección.');return;}
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
@@ -3328,6 +3498,10 @@ function ir(page, el){
   if(page==='sorteos')             { aplicarModoSorteosUI(); cargarItemsSorteo(SORTEOS_TIPO_FILTRO||'convenio'); cargarSorteos(); }
   if(page==='descansos' || page==='descansos-dash' || page==='descansos-import'){
     if(typeof dmInit === 'function') dmInit();
+  }
+  if(page==='faltos' || page==='faltos-dash' || page==='faltos-import'){
+    if(typeof flInit === 'function') flInit();
+    if(page==='faltos-dash' && typeof flCargarDashboard === 'function') flCargarDashboard();
   }
   if(page==='rrhh-nomina' || page==='rrhh-reportes'){
     if(typeof rrhhInit === 'function') rrhhInit();
@@ -3380,14 +3554,16 @@ function toggleGrupo(header){
 function tipoDashboardLocal(){
   if (!SESION) return 'none';
   if (esUnitic()) return 'unitic';
-  if (puedeGestionDescansos() && !puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos() && !puedeGestionRRHH()) return 'descansos';
-  if (puedeGestionRRHH() && !puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos() && !puedeGestionDescansos()) return 'rrhh';
+  if (puedeGestionFaltos() && !puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos() && !puedeGestionDescansos() && !puedeGestionRRHH()) return 'faltos';
+  if (puedeGestionDescansos() && !puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos() && !puedeGestionRRHH() && !puedeGestionFaltos()) return 'descansos';
+  if (puedeGestionRRHH() && !puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos() && !puedeGestionDescansos() && !puedeGestionFaltos()) return 'rrhh';
   if (puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos()) return 'psico';
   if (puedeGestionConvenios() && !puedeGestionCursos() && !puedeGestionPsicologia()) return 'convenios';
   if (puedeGestionCursos() && !puedeGestionConvenios() && !puedeGestionPsicologia()) return 'cursos';
   if (puedeGestionPsicologia()) return 'psico';
   if (puedeGestionConvenios()) return 'convenios';
   if (puedeGestionCursos()) return 'cursos';
+  if (puedeGestionFaltos()) return 'faltos';
   if (puedeGestionDescansos()) return 'descansos';
   if (puedeGestionRRHH()) return 'rrhh';
   return 'gestion';
@@ -3405,6 +3581,11 @@ function cargarDashboard(force){
   if (modo === 'descansos') {
     var el = document.querySelector('[data-page="descansos-dash"]');
     if (el) ir('descansos-dash', el);
+    return;
+  }
+  if (modo === 'faltos') {
+    var elf = document.querySelector('[data-page="faltos-dash"]');
+    if (elf) ir('faltos-dash', elf);
     return;
   }
   if (modo === 'unitic') cargarStatsSistema(force);
@@ -4174,24 +4355,26 @@ function onSelectConvocatoriaSorteo(){
         return;
       }
       var list = d.inscritos || [];
-      var pend = list.filter(function(i){ return i.estado === 'pendiente'; }).length;
-      var verif = list.filter(function(i){ return i.estado === 'verificado'; }).length;
-      var aptos = list.filter(function(i){ return i.estado === 'aprobado'; }).length;
-      var gan = list.filter(function(i){ return i.estado === 'ganador'; }).length;
+      var preins = list.filter(function(i){
+        return i.estado==='preinscrito'||i.estado==='pendiente'||i.estado==='aprobado'||i.estado==='verificado';
+      }).length;
+      var enRev = list.filter(function(i){ return i.estado==='en_revision'||i.estado==='repechaje'; }).length;
+      var gan = list.filter(function(i){ return i.estado==='ganador'||i.estado==='expediente_ok'; }).length;
+      var vacLibres = (d.vacantes_info && d.vacantes_info.disponibles != null) ? d.vacantes_info.disponibles : '—';
       if(stats){
         stats.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">'
-          +'<div><strong style="color:#004d3d;">'+list.length+'</strong><br><span style="color:#888;">Total inscritos</span></div>'
-          +'<div><strong style="color:#856404;">'+pend+'</strong><br><span style="color:#888;">Pendientes revisión</span></div>'
-          +'<div><strong style="color:#1a7a3a;">'+verif+'</strong><br><span style="color:#888;">Verificados (sin aprobar)</span></div>'
-          +'<div><strong style="color:#2980b9;">'+aptos+'</strong><br><span style="color:#888;">Aprobados para sorteo</span></div>'
-          +'<div><strong style="color:#c8a94a;">'+gan+'</strong><br><span style="color:#888;">Ganadores</span></div>'
-          +'<div><strong style="color:#004d3d;">'+(SORTEO_CONV_ACTIVO.vacantes||'—')+'</strong><br><span style="color:#888;">Vacantes</span></div>'
+          +'<div><strong style="color:#004d3d;">'+list.length+'</strong><br><span style="color:#888;">Total</span></div>'
+          +'<div><strong style="color:#856404;">'+preins+'</strong><br><span style="color:#888;">Preinscritos (sorteo)</span></div>'
+          +'<div><strong style="color:#2980b9;">'+enRev+'</strong><br><span style="color:#888;">En revisión / repechaje</span></div>'
+          +'<div><strong style="color:#c8a94a;">'+gan+'</strong><br><span style="color:#888;">Ganadores / OK</span></div>'
+          +'<div><strong style="color:#004d3d;">'+(SORTEO_CONV_ACTIVO.vacantes||'—')+'</strong><br><span style="color:#888;">Vacantes cupo</span></div>'
+          +'<div><strong style="color:#004d3d;">'+vacLibres+'</strong><br><span style="color:#888;">Vac. libres</span></div>'
           +'</div>'
-          +(aptos ? '<p style="margin-top:10px;color:#1a7a3a;"><i class="fas fa-check-circle"></i> Listo para sorteo en vivo con <strong>'+aptos+'</strong> aprobados.</p>'
-            : verif ? '<p style="margin-top:10px;color:#856404;"><i class="fas fa-exclamation-triangle"></i> Hay <strong>'+verif+'</strong> verificados pendientes de aprobación. Apruebe en «Ver inscritos».</p>'
-            : '<p style="margin-top:10px;color:#856404;"><i class="fas fa-exclamation-triangle"></i> No hay postulantes aprobados para el sorteo.</p>');
+          +(preins
+            ? '<p style="margin-top:10px;color:#1a7a3a;"><i class="fas fa-check-circle"></i> Listo para sorteo en vivo con <strong>'+preins+'</strong> preinscritos (sin filtrar).</p>'
+            : '<p style="margin-top:10px;color:#856404;"><i class="fas fa-exclamation-triangle"></i> Aún no hay preinscritos para el sorteo.</p>');
       }
-      if(btnLive) btnLive.disabled = aptos < 1;
+      if(btnLive) btnLive.disabled = preins < 1;
     })
     .catch(function(){
       if(stats) stats.innerHTML = '<span style="color:#c0392b;">Error de conexión al cargar inscritos.</span>';
@@ -4569,6 +4752,8 @@ function abrirModalItem(id){
   document.getElementById('mi-observaciones').value='';
   document.getElementById('mi-requisitos').value='';
   document.getElementById('mi-ventana-inscripcion').value='';
+  var avisoFb=document.getElementById('mi-aviso-sorteo-fb');
+  if(avisoFb) avisoFb.value='';
   document.getElementById('mi-formulario-url').value='';
   document.getElementById('mi-inscripciones-abiertas').checked=false;
   document.getElementById('mi-visible').checked=true;
@@ -4611,6 +4796,8 @@ function poblarModalItem(item){
   var reqs=Array.isArray(item.requisitos)?item.requisitos:[];
   document.getElementById('mi-requisitos').value=reqs.join('\n');
   document.getElementById('mi-ventana-inscripcion').value=item.ventana_inscripcion||'';
+  var avisoFb=document.getElementById('mi-aviso-sorteo-fb');
+  if(avisoFb) avisoFb.value=item.aviso_sorteo_fb||'';
   document.getElementById('mi-formulario-url').value=item.formulario_url||'';
   document.getElementById('mi-inscripciones-abiertas').checked=!!item.inscripciones_abiertas;
   document.getElementById('mi-visible').checked=item.visible!==false;
@@ -4652,6 +4839,7 @@ function guardarItem(){
     contactos_responsables:val('mi-contactos'),
     observaciones:val('mi-observaciones'),
     ventana_inscripcion:val('mi-ventana-inscripcion'),
+    aviso_sorteo_fb:val('mi-aviso-sorteo-fb'),
     formulario_url:val('mi-formulario-url'),
     inscripciones_abiertas:document.getElementById('mi-inscripciones-abiertas').checked,
     visible:document.getElementById('mi-visible').checked,
@@ -4905,15 +5093,90 @@ function verInscritos(itemId, titulo){
   if(selUni) selUni.innerHTML='<option value="">Todas las unidades</option>';
   var selArea=document.getElementById('inscritos-filtro-area');
   if(selArea) selArea.innerHTML='<option value="">Todas las áreas</option>';
+  var selReg=document.getElementById('inscritos-filtro-region');
+  if(selReg) selReg.innerHTML='<option value="">Todas las regiones</option>';
+  var selMod=document.getElementById('inscritos-filtro-modalidad');
+  if(selMod) selMod.innerHTML='<option value="">Todas las modalidades</option>';
+  var selDisp=document.getElementById('inscritos-filtro-disp');
+  if(selDisp) selDisp.value='';
   document.getElementById('inscritos-tabla').innerHTML='<p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i></p>';
   fetch(API+'/admin/items/'+itemId+'/inscritos',{headers:hdr()})
     .then(function(r){return r.json();}).then(function(d){
       if(!d.ok){document.getElementById('inscritos-tabla').innerHTML='<p style="color:#c00;padding:16px;">'+escHtml(d.error||'Error')+'</p>';return;}
       INSCRITOS_CACHE=d.inscritos||[];
+      window.INSCRITOS_VACANTES_INFO=d.vacantes_info||null;
+      window.CATALOGO_OBS_CONV=d.catalogo_observaciones||[];
+      INSCRITOS_TIPO_ACTUAL=d.tipo||'convenio';
+      poblarFiltroEstadoInscritos(INSCRITOS_TIPO_ACTUAL);
       poblarFiltroUnidadesInscritos();
       poblarFiltroAreasInscritos();
-      renderInscritos(obtenerInscritosFiltrados(), d.tipo||'convenio');
+      poblarFiltroRegionInscritos();
+      poblarFiltroModalidadInscritos();
+      renderInscritos(obtenerInscritosFiltrados(), INSCRITOS_TIPO_ACTUAL);
     });
+}
+
+function poblarFiltroEstadoInscritos(tipo){
+  var sel=document.getElementById('inscritos-filtro-estado');
+  if(!sel) return;
+  var opts = tipo==='convenio'
+    ? [
+        ['','Todos'],
+        ['preinscrito','Preinscrito'],
+        ['ganador','Ganador (espera PDF)'],
+        ['en_revision','En revisión'],
+        ['observado','Observado'],
+        ['expediente_ok','Expediente OK'],
+        ['reserva','Reserva'],
+        ['repechaje','Repechaje'],
+        ['caducado','Caducado'],
+        ['rechazado','Rechazado']
+      ]
+    : [
+        ['','Todos'],
+        ['pendiente','Pendiente'],
+        ['verificado','Verificado'],
+        ['aprobado','Aprobado'],
+        ['rechazado','Rechazado']
+      ];
+  sel.innerHTML=opts.map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>';}).join('');
+}
+
+function poblarFiltroRegionInscritos(){
+  var sel=document.getElementById('inscritos-filtro-region');
+  if(!sel) return;
+  var counts={};
+  INSCRITOS_CACHE.forEach(function(i){
+    var u=(i.region_policial||'').trim()||'(Sin región)';
+    counts[u]=(counts[u]||0)+1;
+  });
+  var sorted=Object.keys(counts).sort();
+  var val=sel.value;
+  sel.innerHTML='<option value="">Todas las regiones ('+INSCRITOS_CACHE.length+')</option>'
+    +sorted.map(function(u){
+      var v=u==='(Sin región)'?'':u;
+      return '<option value="'+escHtml(v)+'">'+escHtml(u)+' ('+counts[u]+')</option>';
+    }).join('');
+  if(val) sel.value=val;
+}
+
+function poblarFiltroModalidadInscritos(){
+  var sel=document.getElementById('inscritos-filtro-modalidad');
+  if(!sel) return;
+  var counts={};
+  INSCRITOS_CACHE.forEach(function(i){
+    var u=(i.modalidad||'').trim()||'(Sin modalidad)';
+    counts[u]=(counts[u]||0)+1;
+  });
+  var sorted=Object.keys(counts).sort();
+  var val=sel.value;
+  sel.innerHTML='<option value="">Todas las modalidades ('+INSCRITOS_CACHE.length+')</option>'
+    +sorted.map(function(u){
+      var v=u==='(Sin modalidad)'?'':u;
+      var label=u==='SERVICIO_FRANCO_RETEN'?'Servicio/Franco/Retén':(u==='OTROS'?'Otros':u);
+      return '<option value="'+escHtml(v)+'">'+escHtml(label)+' ('+counts[u]+')</option>';
+    }).join('');
+  if(val) sel.value=val;
 }
 
 function poblarFiltroUnidadesInscritos(){
@@ -4959,12 +5222,22 @@ function obtenerInscritosFiltrados(){
   var unid=unidEl?unidEl.value:'';
   var areaEl=document.getElementById('inscritos-filtro-area');
   var areaF=areaEl?areaEl.value:'';
+  var regEl=document.getElementById('inscritos-filtro-region');
+  var regF=regEl?regEl.value:'';
+  var modEl=document.getElementById('inscritos-filtro-modalidad');
+  var modF=modEl?modEl.value:'';
+  var dispEl=document.getElementById('inscritos-filtro-disp');
+  var dispF=dispEl?dispEl.value:'';
   return INSCRITOS_CACHE.filter(function(i){
-    var matchTxt=!txt||(i.cip||'').toLowerCase().includes(txt)||(i.nombres||'').toLowerCase().includes(txt)||(i.dni||'').toLowerCase().includes(txt);
+    var blob=((i.cip||'')+' '+(i.nombres||'')+' '+(i.dni||'')+' '+(i.nro_registro||'')+' '+(i.codifin||'')+' '+(i.unidad||'')).toLowerCase();
+    var matchTxt=!txt||blob.indexOf(txt)>=0;
     var matchEst=!est||i.estado===est;
     var matchUni=!unid||(i.unidad||'')===unid;
     var matchArea=!areaF||(i.area||'')===areaF;
-    return matchTxt&&matchEst&&matchUni&&matchArea;
+    var matchReg=!regF||(i.region_policial||'')===regF;
+    var matchMod=!modF||(i.modalidad||'')===modF;
+    var matchDisp=!dispF||(i.disponibilidad||'')===dispF;
+    return matchTxt&&matchEst&&matchUni&&matchArea&&matchReg&&matchMod&&matchDisp;
   });
 }
 
@@ -4977,25 +5250,22 @@ var INSCRITOS_TIPO_ACTUAL = 'convenio';
 function renderInscritos(list, tipo){
   if(tipo) INSCRITOS_TIPO_ACTUAL = tipo;
   var total=INSCRITOS_CACHE.length;
+  var esConvenio = INSCRITOS_TIPO_ACTUAL==='convenio';
+  var preins = INSCRITOS_CACHE.filter(function(i){return i.estado==='preinscrito'||i.estado==='pendiente'||i.estado==='aprobado'||i.estado==='verificado';}).length;
+  var enRev = INSCRITOS_CACHE.filter(function(i){return i.estado==='en_revision'||i.estado==='repechaje';}).length;
+  var obs = INSCRITOS_CACHE.filter(function(i){return i.estado==='observado';}).length;
   var pend =INSCRITOS_CACHE.filter(function(i){return i.estado==='pendiente';}).length;
   var verif=INSCRITOS_CACHE.filter(function(i){return i.estado==='verificado';}).length;
-  var esConvenio = INSCRITOS_TIPO_ACTUAL==='convenio';
-  var aptos = esConvenio
-    ? INSCRITOS_CACHE.filter(function(i){return i.estado==='aprobado';}).length
-    : INSCRITOS_CACHE.filter(function(i){return i.estado==='aprobado';}).length;
-  var gan  = esConvenio
-    ? INSCRITOS_CACHE.filter(function(i){return i.estado==='ganador';}).length
-    : INSCRITOS_CACHE.filter(function(i){return i.estado==='aprobado';}).length;
-  var rech =INSCRITOS_CACHE.filter(function(i){return i.estado==='rechazado';}).length;
+  var aptos = esConvenio ? preins : INSCRITOS_CACHE.filter(function(i){return i.estado==='aprobado';}).length;
+  var gan  = INSCRITOS_CACHE.filter(function(i){return i.estado==='ganador'||i.estado==='expediente_ok';}).length;
+  var rech =INSCRITOS_CACHE.filter(function(i){return i.estado==='rechazado'||i.estado==='caducado';}).length;
+  var vacInfo = window.INSCRITOS_VACANTES_INFO || null;
 
   var btnAccion = '';
   if(esConvenio && aptos>0){
     btnAccion='<a href="sorteo-live.html?item_id='+ITEM_ACTIVO_ID+'" target="_blank" '
       +'class="btn btn-o" style="text-decoration:none;margin-left:8px;">'
-      +'<i class="fas fa-random"></i> ABRIR SORTEO EN VIVO ('+aptos+' aprobados)</a>';
-  } else if(esConvenio && verif>0){
-    btnAccion='<button class="btn btn-v" style="margin-left:8px;" onclick="aprobarTodosParaSorteo()">'
-      +'<i class="fas fa-user-check"></i> APROBAR TODOS PARA SORTEO ('+verif+')</button>';
+      +'<i class="fas fa-random"></i> ABRIR SORTEO EN VIVO ('+aptos+' preinscritos)</a>';
   } else if(!esConvenio && verif>0){
     btnAccion='<button class="btn btn-v" style="margin-left:8px;" onclick="verAprobadosCurso()">'
       +'<i class="fas fa-list-ol"></i> VER LISTA DE APROBADOS ('+verif+' verificados)</button>';
@@ -5005,11 +5275,15 @@ function renderInscritos(list, tipo){
     '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
     +'<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;flex:1;">'
     +'<div class="stat"><div class="n">'+total+'</div><div class="l">Total</div></div>'
-    +'<div class="stat" style="border-color:#ffe082;"><div class="n" style="color:#856404;">'+pend+'</div><div class="l">Pendientes</div></div>'
-    +'<div class="stat" style="border-color:#a5d6a7;"><div class="n" style="color:#1a7a3a;">'+verif+'</div><div class="l">Verificados</div></div>'
-    +(esConvenio?'<div class="stat" style="border-color:#2980b9;"><div class="n" style="color:#2980b9;">'+aptos+'</div><div class="l">Aprobados sorteo</div></div>':'')
-    +'<div class="stat" style="border-color:#c8a94a;"><div class="n" style="color:#856404;">'+gan+'</div><div class="l">'+(esConvenio?'Ganadores':'Aprobados')+'</div></div>'
-    +'<div class="stat" style="border-color:#f5c2c7;"><div class="n" style="color:#c0392b;">'+rech+'</div><div class="l">Rechazados</div></div>'
+    +(esConvenio
+      ? ('<div class="stat" style="border-color:#ffe082;"><div class="n" style="color:#856404;">'+preins+'</div><div class="l">Preinscritos</div></div>'
+        +'<div class="stat" style="border-color:#2980b9;"><div class="n" style="color:#2980b9;">'+enRev+'</div><div class="l">En revisión</div></div>'
+        +'<div class="stat" style="border-color:#e67e22;"><div class="n" style="color:#e67e22;">'+obs+'</div><div class="l">Observados</div></div>')
+      : ('<div class="stat" style="border-color:#ffe082;"><div class="n" style="color:#856404;">'+pend+'</div><div class="l">Pendientes</div></div>'
+        +'<div class="stat" style="border-color:#a5d6a7;"><div class="n" style="color:#1a7a3a;">'+verif+'</div><div class="l">Verificados</div></div>'))
+    +'<div class="stat" style="border-color:#c8a94a;"><div class="n" style="color:#856404;">'+gan+'</div><div class="l">'+(esConvenio?'Ganadores/OK':'Aprobados')+'</div></div>'
+    +'<div class="stat" style="border-color:#f5c2c7;"><div class="n" style="color:#c0392b;">'+rech+'</div><div class="l">Rech./Caduc.</div></div>'
+    +(vacInfo ? '<div class="stat" style="border-color:#004d3d;"><div class="n" style="color:#004d3d;">'+vacInfo.disponibles+'</div><div class="l">Vac. libres</div></div>' : '')
     +'</div>'
     +btnAccion
     +'</div>';
@@ -5019,13 +5293,15 @@ function renderInscritos(list, tipo){
     return;
   }
 
-  var colorEst={pendiente:'#856404',verificado:'#1a7a3a',ganador:'#c8a94a',aprobado:'#c8a94a',rechazado:'#c0392b',reserva:'#6c757d'};
-  var bgEst   ={pendiente:'#fff3cd',verificado:'#d4edda',ganador:'#fff8e1',aprobado:'#fff8e1',rechazado:'#f8d7da',reserva:'#e9ecef'};
+  var colorEst={pendiente:'#856404',preinscrito:'#856404',verificado:'#1a7a3a',ganador:'#c8a94a',aprobado:'#c8a94a',rechazado:'#c0392b',reserva:'#6c757d',en_revision:'#2980b9',observado:'#e67e22',expediente_ok:'#1a7a3a',caducado:'#888',repechaje:'#8e44ad'};
+  var bgEst   ={pendiente:'#fff3cd',preinscrito:'#fff3cd',verificado:'#d4edda',ganador:'#fff8e1',aprobado:'#fff8e1',rechazado:'#f8d7da',reserva:'#e9ecef',en_revision:'#eaf2fb',observado:'#fef5e7',expediente_ok:'#d4edda',caducado:'#eee',repechaje:'#f5eef8'};
 
   document.getElementById('inscritos-tabla').innerHTML=
-    '<div style="overflow-x:auto;"><table class="t t-inscritos" style="min-width:900px;"><thead><tr>'
-    +'<th>#</th><th>Grado</th><th>CIP</th><th>DNI</th><th>Apellidos y Nombres</th><th>Unidad</th><th>Área</th>'
-    +(esConvenio?'<th>Disponib.</th>':'<th>T. Servicio</th>')
+    '<div style="overflow-x:auto;"><table class="t t-inscritos" style="min-width:1100px;"><thead><tr>'
+    +'<th>#</th><th>N° Reg.</th><th>Grado</th><th>CIP</th><th>CODIFIN</th><th>Apellidos y Nombres</th>'
+    +(esConvenio?'<th>Región</th>':'')
+    +'<th>Unidad</th><th>Área</th>'
+    +(esConvenio?'<th>Modalidad</th><th>Disponib.</th>':'<th>T. Servicio</th>')
     +'<th>PDF</th><th>Estado</th><th>Fecha</th><th class="col-acciones">Acciones</th>'
     +'</tr></thead><tbody>'
     +list.map(function(ins,idx){
@@ -5039,29 +5315,49 @@ function renderInscritos(list, tipo){
       } else {
         dispBadge='<span style="font-size:12px;color:#1a1a1a;">'+escHtml(ins.tiempo_servicio||'—')+'</span>';
       }
+      var modLabel = !ins.modalidad ? '—' : (ins.modalidad==='OTROS' ? (ins.modalidad_otro||'Otros') : (ins.modalidad==='SERVICIO_FRANCO_RETEN'?'Serv./Franco/Retén':ins.modalidad));
+      var acciones='';
+      if(esConvenio){
+        if(ins.estado==='en_revision'||ins.estado==='repechaje'){
+          acciones='<button type="button" class="btn-mini btn-mini-ok" onclick="revisarExpedienteConv('+ins.id+',\'aprobar\')"><i class="fas fa-check"></i> OK</button> '
+            +'<button type="button" class="btn-mini btn-mini-solid" onclick="abrirObservarExpediente('+ins.id+')"><i class="fas fa-exclamation"></i> Observar</button> '
+            +'<button type="button" class="btn-mini btn-mini-danger" onclick="revisarExpedienteConv('+ins.id+',\'rechazar\')"><i class="fas fa-times"></i></button> ';
+        }
+        if(ins.estado==='ganador'){
+          acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'ganador\')"><i class="fab fa-whatsapp"></i> Avisar</button> ';
+        }
+        if(ins.estado==='observado'){
+          acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'observado\')"><i class="fab fa-whatsapp"></i> Reenviar</button> ';
+        }
+        acciones+='<button type="button" class="btn-mini btn-mini-solid" title="Editar inscripción" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i></button>';
+      } else {
+        acciones=(ins.estado==='pendiente'
+          ?'<button type="button" class="btn-mini btn-mini-solid" title="Verificar expediente" onclick="verificarInscripcion('+ins.id+')"><i class="fas fa-check-double"></i> Verificar</button> '
+          :'')
+        +(ins.estado==='verificado'
+          ?'<button type="button" class="btn-mini btn-mini-ok" onclick="cambiarEstadoAprobado('+ins.id+',\'aprobado\')"><i class="fas fa-check"></i> Aprobar</button> '
+          :'')
+        +'<button type="button" class="btn-mini btn-mini-solid" title="Editar inscripción" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i> Editar</button>';
+      }
       return '<tr>'
         +'<td class="col-num">'+(idx+1)+'</td>'
+        +'<td style="font-weight:700;color:#004d3d;font-size:11.5px;white-space:nowrap;">'+escHtml(ins.nro_registro||'—')+'</td>'
         +'<td style="font-weight:600;">'+escHtml(ins.grado||'')+'</td>'
         +'<td style="font-weight:700;color:#004d3d;">'+escHtml(ins.cip||'')+'</td>'
-        +'<td>'+escHtml(ins.dni||'')+'</td>'
+        +'<td style="font-size:12px;">'+escHtml(ins.codifin||'—')+'</td>'
         +'<td style="font-weight:600;">'+escHtml(ins.nombres||'')+'</td>'
+        +(esConvenio?'<td style="font-size:11.5px;">'+escHtml(ins.region_policial||'—')+'</td>':'')
         +'<td>'+escHtml(ins.unidad||'')+'</td>'
         +'<td>'+escHtml(ins.area||'—')+'</td>'
-        +'<td>'+dispBadge+'</td>'
+        +(esConvenio
+          ? ('<td style="font-size:11.5px;">'+escHtml(modLabel)+'</td><td>'+dispBadge+'</td>')
+          : ('<td>'+dispBadge+'</td>'))
         +'<td style="text-align:center;">'+(ins.tiene_pdf
           ?'<button type="button" class="btn-mini btn-mini-pdf" title="Ver PDF del expediente" onclick="verPdfInscripcion('+ins.id+')"><i class="fas fa-file-pdf"></i> PDF</button>'
           :'<span style="color:#888;font-size:12px;">—</span>')+'</td>'
         +'<td><span class="badge badge-estado" style="background:'+bg+';color:'+c+';">'+escHtml(etiquetaEstadoInscripcion(ins.estado, esConvenio))+'</span></td>'
         +'<td class="col-fecha">'+fecha+'</td>'
-        +'<td class="col-acciones">'
-        +(ins.estado==='pendiente'
-          ?'<button type="button" class="btn-mini btn-mini-solid" title="Verificar expediente" onclick="verificarInscripcion('+ins.id+')"><i class="fas fa-check-double"></i> Verificar</button> '
-          :'')
-        +(esConvenio && ins.estado==='verificado'
-          ?'<button type="button" class="btn-mini btn-mini-azul" title="Aprobar para sorteo" onclick="aprobarParaSorteo('+ins.id+')"><i class="fas fa-user-check"></i> Aprobar</button> '
-          :'')
-        +'<button type="button" class="btn-mini btn-mini-solid" title="Editar inscripción" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i> Editar</button>'
-        +'</td>'
+        +'<td class="col-acciones">'+acciones+'</td>'
         +'</tr>';
     }).join('')
     +'</tbody></table></div>';
@@ -5070,11 +5366,17 @@ function renderInscritos(list, tipo){
 function etiquetaEstadoInscripcion(estado, esConvenio){
   if(!esConvenio) return estado;
   var mapa={
-    pendiente:'Pendiente',
-    verificado:'Expediente verificado',
-    aprobado:'Aprobado para sorteo',
-    ganador:'Ganador',
+    pendiente:'Preinscrito',
+    verificado:'Preinscrito',
+    aprobado:'Preinscrito',
+    preinscrito:'Preinscrito',
+    ganador:'Ganador — espera PDF',
+    en_revision:'En revisión',
+    observado:'Observado',
+    expediente_ok:'Expediente OK',
     reserva:'Reserva',
+    repechaje:'Repechaje',
+    caducado:'Caducado',
     rechazado:'Rechazado'
   };
   return mapa[estado] || estado;
@@ -5181,14 +5483,102 @@ function descargarConstanciaPanel(id) {
 }
 
 function verificarInscripcion(id){
-  if(!confirm('¿El expediente está correcto?\nEl postulante quedará VERIFICADO y deberá ser APROBADO por el área antes de entrar al sorteo.')) return;
+  if(!confirm('¿El expediente está correcto?\nEl postulante quedará VERIFICADO.')) return;
   fetch(API+'/admin/inscripciones/'+id,{
     method:'PUT', headers:hdr(),
-    body:JSON.stringify({estado:'verificado', observacion:'Expediente verificado por el área de convenios'})
+    body:JSON.stringify({estado:'verificado', observacion:'Expediente verificado'})
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok) verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/.*— /,''));
     else alert('Error: '+(d.error||''));
   });
+}
+
+function refrescarInscritosActivos(){
+  var t=document.getElementById('inscritos-titulo');
+  var titulo=t?t.textContent.replace(/.*—\s*/,''):'';
+  verInscritos(ITEM_ACTIVO_ID, titulo);
+}
+
+function mostrarLinksNotificacion(n){
+  if(!n||!n.ok){ alert((n&&n.error)||'No se pudo generar la notificación'); return; }
+  var html='<div style="font-size:13px;line-height:1.5;">'
+    +'<p style="margin:0 0 10px;white-space:pre-wrap;background:#f7faf7;padding:10px;border-radius:8px;border:1px solid #c8e6c9;">'+escHtml(n.mensaje||'')+'</p>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:8px;">'
+    +(n.whatsapp_url?'<a class="btn btn-v" style="text-decoration:none;background:#25D366;color:#fff;" href="'+escHtml(n.whatsapp_url)+'" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> Abrir WhatsApp</a>':'<span style="color:#888;font-size:12px;">Sin teléfono</span>')
+    +(n.mailto_url?'<a class="btn btn-o" style="text-decoration:none;" href="'+escHtml(n.mailto_url)+'"><i class="fas fa-envelope"></i> Abrir correo</a>':'<span style="color:#888;font-size:12px;">Sin correo</span>')
+    +'</div>'
+    +(n.email_enviado?'<p style="margin-top:10px;color:#1a7a3a;font-size:12px;"><i class="fas fa-check"></i> Correo enviado por SMTP.</p>':'')
+    +'</div>';
+  var tit=document.getElementById('cms-modal-titulo');
+  if(tit) tit.innerHTML='<i class="fab fa-whatsapp"></i> Notificar al efectivo';
+  document.getElementById('cms-modal-body').innerHTML=html;
+  var foot=document.querySelector('#cms-modal .cms-modal-footer');
+  if(foot) foot.innerHTML='<button class="btn" style="background:#999;color:#fff;" onclick="cerrarCmsModal()">Cerrar</button>';
+  var modal=document.getElementById('cms-modal');
+  modal.classList.add('visible');
+  modal.setAttribute('aria-hidden','false');
+}
+
+function revisarExpedienteConv(id, accion){
+  if(accion==='aprobar'){
+    if(!confirm('¿Aprobar expediente? Se habilitará la constancia y se generará aviso WA/correo.')) return;
+    fetch(API+'/admin/inscripciones/'+id+'/revisar-expediente',{
+      method:'POST', headers:hdr(),
+      body:JSON.stringify({accion:'aprobar'})
+    }).then(function(r){return r.json();}).then(function(d){
+      if(!d.ok){ alert(d.error||'Error'); return; }
+      if(d.notificacion) mostrarLinksNotificacion(d.notificacion);
+      refrescarInscritosActivos();
+    });
+    return;
+  }
+  if(accion==='rechazar'){
+    var motivo=prompt('Motivo del rechazo (obligatorio):');
+    if(motivo==null) return;
+    if(!String(motivo).trim()){ alert('Indique el motivo.'); return; }
+    fetch(API+'/admin/inscripciones/'+id+'/revisar-expediente',{
+      method:'POST', headers:hdr(),
+      body:JSON.stringify({accion:'rechazar', observacion:String(motivo).trim()})
+    }).then(function(r){return r.json();}).then(function(d){
+      if(!d.ok){ alert(d.error||'Error'); return; }
+      refrescarInscritosActivos();
+    });
+  }
+}
+
+function abrirObservarExpediente(id){
+  document.getElementById('mobs-id').value=id;
+  document.getElementById('mobs-detalle').value='';
+  var sel=document.getElementById('mobs-motivo');
+  var cat=window.CATALOGO_OBS_CONV||[];
+  sel.innerHTML='<option value="">— Seleccione —</option>'
+    +cat.map(function(c){return '<option value="'+escHtml(c.codigo)+'">'+escHtml(c.label)+'</option>';}).join('');
+  document.getElementById('modal-observar-exp').classList.add('open');
+}
+
+function confirmarObservarExpediente(){
+  var id=parseInt(document.getElementById('mobs-id').value,10);
+  var motivo=(document.getElementById('mobs-motivo').value||'').trim();
+  var detalle=(document.getElementById('mobs-detalle').value||'').trim();
+  if(!motivo){ alert('Seleccione un motivo de observación.'); return; }
+  fetch(API+'/admin/inscripciones/'+id+'/revisar-expediente',{
+    method:'POST', headers:hdr(),
+    body:JSON.stringify({accion:'observar', motivo_observacion:motivo, observacion:detalle})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){ alert(d.error||'Error'); return; }
+    cerrarModal('modal-observar-exp');
+    if(d.notificacion) mostrarLinksNotificacion(d.notificacion);
+    refrescarInscritosActivos();
+  });
+}
+
+function notificarInscripcionConv(id, tipo){
+  fetch(API+'/admin/inscripciones/'+id+'/notificar',{
+    method:'POST', headers:hdr(),
+    body:JSON.stringify({tipo:tipo||'ganador'})
+  }).then(function(r){return r.json();}).then(function(d){
+    mostrarLinksNotificacion(d);
+  }).catch(function(){ alert('Error de conexión'); });
 }
 
 function aprobarParaSorteo(id){
@@ -5197,7 +5587,7 @@ function aprobarParaSorteo(id){
     method:'PUT', headers:hdr(),
     body:JSON.stringify({estado:'aprobado', observacion:'Aprobado por el área de convenios para el sorteo'})
   }).then(function(r){return r.json();}).then(function(d){
-    if(d.ok) verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/.*— /,''));
+    if(d.ok) refrescarInscritosActivos();
     else alert('Error: '+(d.error||''));
   });
 }
@@ -5212,7 +5602,7 @@ function aprobarTodosParaSorteo(){
       body:JSON.stringify({estado:'aprobado', observacion:'Aprobado masivamente para el sorteo'})
     }).then(function(r){return r.json();});
   })).then(function(){
-    verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/.*— /,''));
+    refrescarInscritosActivos();
   });
 }
 
@@ -5256,10 +5646,13 @@ function verAprobadosCurso(){
     +'</tbody></table>'
     +'</div>';
 
-  document.getElementById('cms-modal-header').querySelector('h3').textContent='Lista de aprobados — Cursos';
+  document.getElementById('cms-modal-titulo').innerHTML='<i class="fas fa-list-ol"></i> Lista de aprobados — Cursos';
   document.getElementById('cms-modal-body').innerHTML=html;
-  document.getElementById('cms-modal-footer').innerHTML='<button class="btn" style="background:#999;color:#fff;" onclick="document.getElementById(\'cms-modal\').classList.remove(\'visible\')">Cerrar</button>';
-  document.getElementById('cms-modal').classList.add('visible');
+  var foot=document.querySelector('#cms-modal .cms-modal-footer');
+  if(foot) foot.innerHTML='<button class="btn" style="background:#999;color:#fff;" onclick="cerrarCmsModal()">Cerrar</button>';
+  var modal=document.getElementById('cms-modal');
+  modal.classList.add('visible');
+  modal.setAttribute('aria-hidden','false');
 }
 
 function cambiarEstadoAprobado(id, nuevoEstado){
@@ -5270,7 +5663,9 @@ function cambiarEstadoAprobado(id, nuevoEstado){
     if(d.ok){
       var ins=INSCRITOS_CACHE.find(function(i){return i.id===id;});
       if(ins) ins.estado=nuevoEstado;
-      verAprobadosCurso();
+      var modal=document.getElementById('cms-modal');
+      if(modal && modal.classList.contains('visible')) verAprobadosCurso();
+      else refrescarInscritosActivos();
     } else alert('Error: '+(d.error||''));
   });
 }
@@ -5281,10 +5676,12 @@ function abrirModalInscripcion(id){
   document.getElementById('mins-id').value=id;
 
   var filas=[
-    ['Grado',ins.grado],['CIP',ins.cip],['DNI',ins.dni],
-    ['Nombres',ins.nombres],['Unidad',ins.unidad],['Área',ins.area],['Cargo',ins.cargo],
+    ['N° Registro',ins.nro_registro],['Grado',ins.grado],['CIP',ins.cip],['DNI',ins.dni],['CODIFIN',ins.codifin],
+    ['Nombres',ins.nombres],['Región',ins.region_policial],['Unidad',ins.unidad],['Área',ins.area],['Cargo',ins.cargo],
+    ['Modalidad',ins.modalidad],['Modalidad (otro)',ins.modalidad_otro],
     ['Arma/Condición',ins.arma],['Disponibilidad',ins.disponibilidad],['Día Franco',ins.dia_franco],
-    ['T. Servicio',ins.tiempo_servicio],['Teléfono',ins.telefono],['Email',ins.email]
+    ['T. Servicio',ins.tiempo_servicio],['Teléfono',ins.telefono],['Email',ins.email],
+    ['Modo',ins.modo_ingreso],['Motivo obs.',ins.motivo_observacion]
   ].filter(function(f){return f[1];});
 
   document.getElementById('mins-info').innerHTML=
@@ -5298,11 +5695,28 @@ function abrirModalInscripcion(id){
       ?'<div style="margin-top:10px;padding:8px 12px;background:#fff5f5;border-radius:6px;border:1px solid #fcc;">'
        +'<button class="btn-mini" style="background:#e74c3c;color:#fff;" onclick="verPdfInscripcion('+id+')">'
        +'<i class="fas fa-file-pdf"></i> Ver PDF adjunto ('+escHtml(ins.pdf_nombre||'')+')</button></div>'
-      :'<div style="margin-top:8px;font-size:11.5px;color:#c0392b;"><i class="fas fa-exclamation-triangle"></i> Sin PDF adjunto</div>');
+      :'<div style="margin-top:8px;font-size:11.5px;color:#888;"><i class="fas fa-info-circle"></i> Sin PDF (normal en preinscritos)</div>');
 
-  document.getElementById('mins-estado').value=ins.estado||'pendiente';
-  var optAprob=document.getElementById('mins-opt-aprobado');
-  if(optAprob) optAprob.textContent = INSCRITOS_TIPO_ACTUAL==='convenio' ? 'Aprobado para sorteo' : 'Aprobado (méritos)';
+  var selEst=document.getElementById('mins-estado');
+  if(INSCRITOS_TIPO_ACTUAL==='convenio'){
+    selEst.innerHTML=
+      '<option value="preinscrito">Preinscrito (sorteo)</option>'
+      +'<option value="ganador">Ganador — espera PDF</option>'
+      +'<option value="en_revision">En revisión</option>'
+      +'<option value="observado">Observado</option>'
+      +'<option value="expediente_ok">Expediente OK</option>'
+      +'<option value="reserva">Reserva</option>'
+      +'<option value="repechaje">Repechaje</option>'
+      +'<option value="caducado">Caducado</option>'
+      +'<option value="rechazado">Rechazado</option>';
+  } else {
+    selEst.innerHTML=
+      '<option value="pendiente">Pendiente (revisión)</option>'
+      +'<option value="verificado">Verificado</option>'
+      +'<option value="aprobado" id="mins-opt-aprobado">Aprobado (méritos)</option>'
+      +'<option value="rechazado">Rechazado</option>';
+  }
+  selEst.value=ins.estado||(INSCRITOS_TIPO_ACTUAL==='convenio'?'preinscrito':'pendiente');
   document.getElementById('mins-observacion').value=ins.observacion||'';
   document.getElementById('modal-inscripcion').classList.add('open');
 }
@@ -5347,9 +5761,9 @@ function eliminarInscripcion(){
 function exportarInscritos(){
   var list=obtenerInscritosFiltrados();
   if(!list.length){alert('No hay inscritos para exportar con el filtro actual.');return;}
-  var rows=[['CIP','Nombres','Unidad','Área','Cargo','Teléfono','Email','Estado','Observación','Fecha']];
+  var rows=[['NroRegistro','CIP','CODIFIN','Nombres','Region','Unidad','Area','Cargo','Modalidad','ModalidadOtro','Disponibilidad','Telefono','Email','Estado','Observacion','Fecha']];
   list.forEach(function(i){
-    rows.push([i.cip,i.nombres,i.unidad,i.area,i.cargo,i.telefono,i.email,i.estado,i.observacion,
+    rows.push([i.nro_registro,i.cip,i.codifin,i.nombres,i.region_policial,i.unidad,i.area,i.cargo,i.modalidad,i.modalidad_otro,i.disponibilidad,i.telefono,i.email,i.estado,i.observacion,
       i.fecha?new Date(i.fecha).toLocaleDateString('es-PE'):'']);
   });
   var csv=rows.map(function(r){return r.map(function(c){return '"'+(c||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');

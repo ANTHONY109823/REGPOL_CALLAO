@@ -123,7 +123,7 @@
     <div class="cfg-convenio" id="cfg-nombre">Cargando...</div>
     <div class="conv-meta" id="cfg-meta"></div>
     <div class="lista-total-wrap">
-      <div class="lista-total-titulo"><i class="fas fa-users"></i> Totalidad de efectivos aprobados para el sorteo</div>
+      <div class="lista-total-titulo"><i class="fas fa-users"></i> Totalidad de efectivos preinscritos para el sorteo</div>
       <div style="overflow-x:auto;max-height:420px;overflow-y:auto;border:1px solid #004d3d;border-radius:8px;">
         <table class="lista-total-tabla">
           <thead><tr>
@@ -250,7 +250,9 @@ function cargarCandidatos(){
       if(!d.ok){ alert('Error: '+(d.error||'')); return; }
       ITEM_DATA = d.item;
       TODOS_CAND = d.candidatos||[];
-      LISTA_APROBADOS = TODOS_CAND.filter(function(c){ return c.estado==='aprobado'; });
+      LISTA_APROBADOS = TODOS_CAND.filter(function(c){
+        return c.estado==='aprobado' || c.estado==='preinscrito' || c.estado==='pendiente' || c.estado==='verificado';
+      });
       VACANTES = parseInt(ITEM_DATA.vacantes,10)||1;
 
       document.getElementById('cfg-nombre').textContent = ITEM_DATA.titulo||'';
@@ -272,7 +274,7 @@ function etiquetaSituacion(c){
 function renderListaTotalPreview(){
   var tbody = document.getElementById('cfg-lista-total');
   if(!LISTA_APROBADOS.length){
-    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px;color:#c0392b;">No hay efectivos aprobados. Apruebe inscritos en el panel de convenios.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px;color:#c0392b;">No hay preinscritos para el sorteo.</td></tr>';
     return;
   }
   tbody.innerHTML = LISTA_APROBADOS.map(function(c,i){
@@ -315,7 +317,7 @@ function persistirResultadosSorteo(){
   if(SORTEO_PERSISTIDO || !ITEM_ID || !GANADORES.length) return Promise.resolve();
   var idsGan = GANADORES.map(function(g){ return g.id; });
   var reservas = TODOS_CAND.filter(function(c){
-    return c.estado==='aprobado' && idsGan.indexOf(c.id)<0;
+    return (c.estado==='aprobado'||c.estado==='preinscrito'||c.estado==='pendiente'||c.estado==='verificado') && idsGan.indexOf(c.id)<0;
   }).map(function(c){ return c.id; });
   return fetch(API+'/admin/items/'+ITEM_ID+'/aplicar-sorteo',{
     method:'POST', headers:HDR,
@@ -354,7 +356,7 @@ function persistirReservasSiCompleto(){
   if(RESERVAS_PERSISTIDAS || !ITEM_ID) return Promise.resolve();
   var idsGan = GANADORES.map(function(g){ return g.id; });
   var reservas = TODOS_CAND.filter(function(c){
-    return c.estado==='aprobado' && idsGan.indexOf(c.id)<0;
+    return (c.estado==='aprobado'||c.estado==='preinscrito'||c.estado==='pendiente'||c.estado==='verificado') && idsGan.indexOf(c.id)<0;
   }).map(function(c){ return c.id; });
   if(!reservas.length){ RESERVAS_PERSISTIDAS = true; return Promise.resolve(); }
   return fetch(API+'/admin/items/'+ITEM_ID+'/aplicar-sorteo',{

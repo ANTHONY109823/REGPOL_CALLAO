@@ -115,6 +115,7 @@ var ITEM_ID = null;
 var ITEM_TIPO = null;
 var ITEM_DATA = null;
 var DIVISIONES_PUBL = [];
+var MODO_REPECHAJE = /[?&]repechaje=1/.test(location.search || '');
 
 function escHtmlD(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -141,6 +142,9 @@ function renderDetalle(item){
   if(item.horario) horarioHtml += '<div class="info-item"><span>HORARIO:</span><p>'+escHtmlD(item.horario)+'</p></div>';
   if(item.vacantes) horarioHtml += '<div class="info-item"><span>VACANTES:</span><p>'+escHtmlD(String(item.vacantes))+' efectivos</p></div>';
   if(item.lugar) horarioHtml += '<div class="info-item"><span>LUGAR:</span><p>'+escHtmlD(item.lugar)+'</p></div>';
+  if(esConvenio && item.aviso_sorteo_fb) {
+    horarioHtml += '<div class="info-item"><span>SORTEO FACEBOOK:</span><p>'+escHtmlD(item.aviso_sorteo_fb)+'</p></div>';
+  }
 
   var terceraCardHtml = '';
   if(esConvenio && (item.fecha_inicio || item.duracion || item.observaciones)){
@@ -267,8 +271,18 @@ function optsGrado(){
 function renderFormInscripcion(item){
   var esConvenio = item.tipo === 'convenio';
   var esCurso    = item.tipo === 'curso';
+  var esRepechaje = esConvenio && (MODO_REPECHAJE || /[?&]repechaje=1/.test(location.search||''));
   return '<form class="form-inscripcion" id="form-inscripcion" onsubmit="enviarInscripcion(event)">'
-    +'<h3><i class="fas fa-edit"></i> Formulario de Inscripción  '+(esConvenio?'CONVENIO':'CURSO')+'</h3>'
+    +'<h3><i class="fas fa-edit"></i> '+(esRepechaje?'REPECHAJE':'Preinscripción')+'  '+(esConvenio?'CONVENIO':'CURSO')+'</h3>'
+    +(esConvenio && !esRepechaje
+      ? '<p style="font-size:12.5px;color:#666;margin:-6px 0 14px;line-height:1.45;">Solo datos de preinscripción. <strong>No adjunte expediente aquí.</strong> Al terminar recibirá un <strong>N° de registro</strong>. Consulte con <strong>CIP + N° de inscripción</strong>. Si resulta ganador, tendrá <strong>2 días</strong> para subir su PDF.</p>'
+      : '')
+    +(esRepechaje
+      ? '<p style="font-size:12.5px;color:#856404;margin:-6px 0 14px;line-height:1.45;background:#fff8e1;padding:10px;border-radius:8px;">Repechaje: se registra completo y <strong>sube todos sus expedientes ahora</strong>. No entra al sorteo. Sujeto a vacantes liberadas.</p>'
+      : '')
+    +(esConvenio && item.aviso_sorteo_fb
+      ? '<p style="font-size:12.5px;color:#004d3d;margin:0 0 14px;line-height:1.45;background:#e8f5f1;padding:10px;border-radius:8px;border:1px solid #c8e6c9;"><i class="fab fa-facebook"></i> <strong>Sorteo en vivo:</strong> '+escHtmlD(item.aviso_sorteo_fb)+'</p>'
+      : '')
     +'<div id="fi-alerta" class="fi-alerta"></div>'
     +'<div class="fi-grid">'
 
@@ -284,16 +298,36 @@ function renderFormInscripcion(item){
     +'<div class="fi-group"><label>DNI *</label>'
     +'<input type="text" id="fi-dni" maxlength="12" placeholder="Número de DNI" required/></div>'
 
-    
-    +'<div class="fi-group"><label>Unidad / Dependencia *</label>'
-    +'<select id="fi-unidad" required><option value=""> Seleccionar </option></select></div>'
+    +(esConvenio
+      ? ('<div class="fi-group"><label>Región Policial *</label>'
+        +'<select id="fi-region" required onchange="onCambioRegionInscripcion()"><option value="">— Seleccionar región —</option></select></div>'
+        +'<div class="fi-group"><label>Unidad / Dependencia *</label>'
+        +'<input type="text" id="fi-unidad" list="fi-unidad-datalist" maxlength="150" placeholder="Nombre de su comisaría / dependencia" required/>'
+        +'<datalist id="fi-unidad-datalist"></datalist>'
+        +'<small class="fi-hint">Convocatoria nacional: escriba el nombre exacto de su unidad.</small></div>'
+        +'<div class="fi-group"><label>CODIFIN *</label>'
+        +'<input type="text" id="fi-codifin" inputmode="numeric" pattern="[0-9]{10,12}" maxlength="12" placeholder="10 a 12 dígitos" required/>'
+        +'<small class="fi-hint">Solo números, 10 a 12 dígitos.</small></div>'
+        +'<div class="fi-group"><label>Modalidad de trabajo *</label>'
+        +'<select id="fi-modalidad" required onchange="onCambioModalidadTrabajo()">'
+        +'<option value="">— Seleccionar —</option>'
+        +'<option value="24X24">24X24</option>'
+        +'<option value="ADMINISTRATIVO">Administrativo</option>'
+        +'<option value="SERVICIO_FRANCO_RETEN">Servicio / Franco / Retén</option>'
+        +'<option value="OTROS">Otros</option>'
+        +'</select>'
+        +'<div id="fi-modalidad-otro-box" style="display:none;margin-top:8px;">'
+        +'<input type="text" id="fi-modalidad-otro" maxlength="120" placeholder="Especifique su modalidad..."/>'
+        +'</div></div>')
+      : ('<div class="fi-group"><label>Unidad / Dependencia *</label>'
+        +'<select id="fi-unidad" required><option value="">— Seleccionar —</option></select></div>'))
 
     
     +'<div class="fi-group"><label>Cargo *</label>'
     +'<select id="fi-cargo" required>'+optsCargo()+'</select></div>'
     +'<div class="fi-group"><label>Área *</label>'
     +'<select id="fi-area" required onchange="toggleAreaOtroInscripcion()">'
-    +'<option value=""> Seleccionar área </option></select>'
+    +'<option value="">— Seleccionar área —</option></select>'
     +'<div id="fi-area-otro-box" style="display:none;margin-top:8px;">'
     +'<input type="text" id="fi-area-otro" maxlength="120" placeholder="Especifique el área..."/>'
     +'</div></div>'
@@ -301,23 +335,25 @@ function renderFormInscripcion(item){
     +(esConvenio
       ? '<div class="fi-group"><label>Arma (Condición laboral) *</label>'
         +'<select id="fi-arma" required>'
-        +'<option value=""> Seleccionar </option>'
+        +'<option value="">— Seleccionar —</option>'
         +'<option value="DEL ESTADO">DEL ESTADO</option>'
         +'<option value="PARTICULAR">PARTICULAR</option>'
         +'</select></div>'
         +'<div class="fi-group"><label>Situación para el servicio *</label>'
         +'<select id="fi-disponibilidad" required onchange="onCambioDisponibilidad(this.value)">'
-        +'<option value=""> Seleccionar </option>'
-        +'<option value="VACACIONES">Vacaciones  vacante automática (sin sorteo)</option>'
-        +'<option value="FRANCO">Día de franco  participa en sorteo</option>'
+        +'<option value="">— Seleccionar —</option>'
+        +'<option value="VACACIONES">Vacaciones — vacante automática (sin sorteo)</option>'
+        +'<option value="FRANCO">Día de franco — participa en sorteo</option>'
         +'</select>'
         +'<small class="fi-hint" id="disp-aviso" style="display:none;"></small></div>'
-        +'<div class="fi-group"><label>Teléfono / Celular *</label>'
+        +'<div class="fi-group"><label>Teléfono / WhatsApp *</label>'
         +'<input type="tel" id="fi-telefono" maxlength="30" placeholder="Ej: 987654321" required/></div>'
+        +'<div class="fi-group"><label>Correo electrónico *</label>'
+        +'<input type="email" id="fi-email" maxlength="100" placeholder="correo@ejemplo.com" required/></div>'
         +'<div class="fi-group" id="fi-dia-franco-box" style="display:none;">'
         +'<label>Día de franco *</label>'
         +'<select id="fi-dia-franco">'
-        +'<option value=""> Seleccionar </option>'
+        +'<option value="">— Seleccionar —</option>'
         +'<option value="PAR">DÍA PAR</option>'
         +'<option value="IMPAR">DÍA IMPAR</option>'
         +'</select></div>'
@@ -335,12 +371,13 @@ function renderFormInscripcion(item){
       : '')
 
     
-    +'<div class="pdf-upload-box">'
+    +((!esConvenio || esRepechaje)
+    ? ('<div class="pdf-upload-box">'
     +'<div class="pdf-titulo"><i class="fas fa-file-pdf"></i> EXPEDIENTE DE REQUISITOS (PDF)</div>'
     +'<div class="pdf-aviso">'
-    +'Escanee y adjunte <strong>todos sus documentos en un único archivo PDF</strong> correctamente ordenados.<br/>'
-    +'? <strong>Debe estar debidamente firmado, sin enmendaduras y con toda la documentación completa.</strong><br/>'
-    +'El expediente incompleto o con errores será anulado automáticamente.<br/>'
+    +(esRepechaje
+      ? 'En repechaje debe adjuntar <strong>todos sus documentos en un único PDF</strong>.<br/>'
+      : 'Escanee y adjunte <strong>todos sus documentos en un único archivo PDF</strong>.<br/>')
     +'<span style="color:#004d3d;font-weight:700;">Tamaño máximo: 5 MB.</span>'
     +'</div>'
     +renderBannerPlantilla(item)
@@ -349,14 +386,16 @@ function renderFormInscripcion(item){
     +'<div id="fi-pdf-preview" class="pdf-preview-bar" style="display:none;">'
     +'<i class="fas fa-file-pdf"></i><span id="fi-pdf-nombre"></span>'
     +'<button type="button" onclick="quitarPdfInscripcion()" '
-    +'style="background:#c0392b;color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;margin-left:auto;">? Quitar</button>'
+    +'style="background:#c0392b;color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;margin-left:auto;">Quitar</button>'
     +'</div>'
     +'<input type="hidden" id="fi-pdf-data"/>'
-    +'</div>'
+    +'</div>')
+    : '')
 
     +'</div>'
     +'<div style="margin-top:18px;text-align:center;">'
-    +'<button type="submit" class="btn-registro-grande"><i class="fas fa-paper-plane"></i> ENVIAR INSCRIPCIÓN</button>'
+    +'<button type="submit" class="btn-registro-grande"><i class="fas fa-paper-plane"></i> '
+    +(esRepechaje?'ENVIAR REPECHAJE':(esConvenio?'ENVIAR PREINSCRIPCIÓN':'ENVIAR INSCRIPCIÓN'))+'</button>'
     +'</div>'
     +'</form>';
 }
@@ -366,10 +405,10 @@ function onCambioDisponibilidad(val){
   if(aviso){
     if(val === 'VACACIONES'){
       aviso.style.display = 'block';
-      aviso.textContent = 'Al aprobarse, ocupa vacante automáticamente sin sorteo en vivo.';
+      aviso.textContent = 'Ocupa vacante automáticamente al preinscribirse (sin sorteo en vivo).';
     } else if(val === 'FRANCO'){
       aviso.style.display = 'block';
-      aviso.textContent = 'Participará en el sorteo público si su expediente es aprobado.';
+      aviso.textContent = 'Participará en el sorteo público con el resto de preinscritos.';
     } else {
       aviso.style.display = 'none';
       aviso.textContent = '';
@@ -463,24 +502,69 @@ function quitarPdfInscripcion(){
   document.getElementById('fi-pdf-preview').style.display='none';
 }
 
+function onCambioModalidadTrabajo(){
+  var sel = document.getElementById('fi-modalidad');
+  var box = document.getElementById('fi-modalidad-otro-box');
+  if(!box) return;
+  var esOtros = sel && sel.value === 'OTROS';
+  box.style.display = esOtros ? 'block' : 'none';
+  var inp = document.getElementById('fi-modalidad-otro');
+  if(inp){ inp.required = !!esOtros; if(!esOtros) inp.value=''; }
+}
+
+function onCambioRegionInscripcion(){
+  var region = (document.getElementById('fi-region')||{}).value || '';
+  var dl = document.getElementById('fi-unidad-datalist');
+  if(!dl) return;
+  dl.innerHTML = '';
+  if(region.indexOf('CALLAO') >= 0 && DIVISIONES_PUBL && DIVISIONES_PUBL.length){
+    DIVISIONES_PUBL.forEach(function(div){
+      (div.unidades||[]).forEach(function(u){
+        var o = document.createElement('option');
+        o.value = u.nombre || u;
+        dl.appendChild(o);
+      });
+    });
+  }
+}
+
 function cargarDivisionesPublico(){
   fetch(API_PUBLIC + '/config').then(function(r){return r.json();}).then(function(d){
     if(!d.ok||!d.divisiones) return;
     DIVISIONES_PUBL = d.divisiones;
     var sel = document.getElementById('fi-unidad');
-    if(!sel) return;
-    (d.divisiones||[]).forEach(function(div){
-      var og = document.createElement('optgroup');
-      og.label = div.nombre;
-      (div.unidades||[]).forEach(function(u){
-        var o = document.createElement('option');
-        o.value = u.nombre;
-        o.textContent = u.nombre;
-        og.appendChild(o);
+    if(sel && sel.tagName === 'SELECT'){
+      sel.innerHTML = '<option value="">— Seleccionar —</option>';
+      (d.divisiones||[]).forEach(function(div){
+        var og = document.createElement('optgroup');
+        og.label = div.nombre;
+        (div.unidades||[]).forEach(function(u){
+          var o = document.createElement('option');
+          o.value = u.nombre;
+          o.textContent = u.nombre;
+          og.appendChild(o);
+        });
+        sel.appendChild(og);
       });
-      sel.appendChild(og);
-    });
+    }
+    onCambioRegionInscripcion();
   });
+  if(ITEM_TIPO === 'convenio'){
+    fetch(API_PUBLIC + '/portal/convenios/catalogos').then(function(r){return r.json();}).then(function(d){
+      if(!d.ok) return;
+      var selR = document.getElementById('fi-region');
+      if(selR && d.regiones){
+        var cur = selR.value;
+        selR.innerHTML = '<option value="">— Seleccionar región —</option>';
+        d.regiones.forEach(function(r){
+          var o = document.createElement('option');
+          o.value = r; o.textContent = r;
+          selR.appendChild(o);
+        });
+        if(cur) selR.value = cur;
+      }
+    }).catch(function(){});
+  }
 }
 
 function enviarInscripcion(e){
@@ -498,10 +582,15 @@ function enviarInscripcion(e){
   var area    = obtenerAreaInscripcion();
   var cargo   = v('fi-cargo');
   var tel     = v('fi-telefono');
+  var region  = v('fi-region');
+  var modalidad = v('fi-modalidad');
+  var modalidadOtro = v('fi-modalidad-otro');
+  var codifin = v('fi-codifin').replace(/\D/g,'');
   
   var arma           = v('fi-arma');
   var disponibilidad = v('fi-disponibilidad');
   var dia_franco     = v('fi-dia-franco');
+  var email          = v('fi-email');
   
   var fecha_egreso   = v('fi-fecha-egreso');
   var tsEl = document.getElementById('fi-tiempo-servicio');
@@ -511,6 +600,7 @@ function enviarInscripcion(e){
   var pdfFile = document.getElementById('fi-pdf-file');
   var pdfData = pdfEl ? pdfEl.value : '';
   var pdfNomb = (pdfFile&&pdfFile.files&&pdfFile.files[0]) ? pdfFile.files[0].name : 'requisitos.pdf';
+  var esRepechaje = ITEM_TIPO==='convenio' && (MODO_REPECHAJE || /[?&]repechaje=1/.test(location.search||''));
 
   if(!grado||!cip||!dni||!nombres||!unidad||!cargo||!area){
     var selArea = document.getElementById('fi-area');
@@ -521,8 +611,28 @@ function enviarInscripcion(e){
     }
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
+  if(ITEM_TIPO==='convenio' && !region){
+    alerta.textContent='Seleccione su Región Policial.';
+    alerta.className='fi-alerta error'; alerta.style.display='block'; return;
+  }
+  if(ITEM_TIPO==='convenio' && !modalidad){
+    alerta.textContent='Seleccione la modalidad de trabajo.';
+    alerta.className='fi-alerta error'; alerta.style.display='block'; return;
+  }
+  if(ITEM_TIPO==='convenio' && modalidad==='OTROS' && !modalidadOtro){
+    alerta.textContent='Especifique su modalidad de trabajo (Otros).';
+    alerta.className='fi-alerta error'; alerta.style.display='block'; return;
+  }
+  if(ITEM_TIPO==='convenio' && !/^\d{10,12}$/.test(codifin)){
+    alerta.textContent='CODIFIN debe tener entre 10 y 12 dígitos numéricos.';
+    alerta.className='fi-alerta error'; alerta.style.display='block'; return;
+  }
   if(ITEM_TIPO==='convenio' && !tel){
-    alerta.textContent='Ingrese su teléfono o celular de contacto.';
+    alerta.textContent='Ingrese su teléfono / WhatsApp de contacto.';
+    alerta.className='fi-alerta error'; alerta.style.display='block'; return;
+  }
+  if(ITEM_TIPO==='convenio' && (!email || email.indexOf('@')<0)){
+    alerta.textContent='Ingrese un correo electrónico válido.';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
   if(ITEM_TIPO==='convenio' && !disponibilidad){
@@ -537,7 +647,7 @@ function enviarInscripcion(e){
     alerta.textContent='Ingrese su fecha de egreso de la Escuela PNP.';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
-  if(!pdfData){
+  if((ITEM_TIPO!=='convenio' || esRepechaje) && !pdfData){
     alerta.textContent='Debe adjuntar su expediente de requisitos en PDF.';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
@@ -549,15 +659,26 @@ function enviarInscripcion(e){
     method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       cip:cip, dni:dni, grado:grado, nombres:nombres,
-      unidad:unidad, area:area, cargo:cargo, telefono:tel, email:'',
+      unidad:unidad, area:area, cargo:cargo, telefono:tel, email:email||'',
       arma:arma, disponibilidad:disponibilidad, dia_franco:dia_franco,
       fecha_egreso:fecha_egreso||null, tiempo_servicio:tiempo_servicio,
-      pdf_requisitos:pdfData, pdf_nombre:pdfNomb
+      region_policial: region||'',
+      modalidad: modalidad||'',
+      modalidad_otro: modalidadOtro||'',
+      codifin: codifin||'',
+      pdf_requisitos: (ITEM_TIPO==='convenio' && !esRepechaje) ? '' : pdfData,
+      pdf_nombre: pdfNomb,
+      modo_repechaje: !!esRepechaje
     })
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok){
-      alerta.innerHTML='? Inscripción registrada. El área correspondiente revisará su expediente. '
-        +'<a href="consulta.html?cip='+encodeURIComponent(cip)+'" style="color:#004d3d;font-weight:700;">Consultar estado con su CIP</a>.';
+      var nro = d.nro_registro || '';
+      var aviso = d.aviso_sorteo_fb || '';
+      var msg = '<strong>Registro correcto.</strong> '
+        +(nro ? ('Su N° de inscripción es <strong style="font-size:16px;color:#004d3d;">'+escHtmlD(nro)+'</strong>. Consérvelo.<br/>') : '')
+        +(aviso ? ('<span style="display:block;margin:8px 0;padding:8px;background:#e8f5f1;border-radius:6px;"><i class="fab fa-facebook"></i> '+escHtmlD(aviso)+'</span>') : '')
+        +'<a href="consulta.html?cip='+encodeURIComponent(cip)+(nro?'&nro='+encodeURIComponent(nro):'')+'" style="color:#004d3d;font-weight:700;">Consultar con CIP + N° de inscripción</a>.';
+      alerta.innerHTML=msg;
       alerta.className='fi-alerta ok'; alerta.style.display='block';
       document.getElementById('form-inscripcion').reset();
       initCamposInscripcion();
@@ -567,6 +688,7 @@ function enviarInscripcion(e){
       var diaBox=document.getElementById('fi-dia-franco-box');
       if(diaBox) diaBox.style.display='none';
       onCambioDisponibilidad('');
+      onCambioModalidadTrabajo();
       toggleAreaOtroInscripcion();
     } else {
       alerta.textContent=d.error||'Error al procesar la inscripción.';
@@ -576,7 +698,10 @@ function enviarInscripcion(e){
     alerta.textContent='Error de conexión. Intente nuevamente.';
     alerta.className='fi-alerta error'; alerta.style.display='block';
   }).finally(function(){
-    if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane"></i> ENVIAR INSCRIPCIÓN';}
+    if(btn){
+      btn.disabled=false;
+      btn.innerHTML='<i class="fas fa-paper-plane"></i> '+(esRepechaje?'ENVIAR REPECHAJE':(ITEM_TIPO==='convenio'?'ENVIAR PREINSCRIPCIÓN':'ENVIAR INSCRIPCIÓN'));
+    }
   });
 }
 
