@@ -6,7 +6,7 @@
   <link rel="icon" href="favicon.png?v=3" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Faltos — REGPOL Callao</title>
-  <link rel="stylesheet" href="style.css?v=67">
+  <link rel="stylesheet" href="style.css?v=69">
   <link rel="stylesheet" href="responsive.css?v=3">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <script src="api-config.js?v=2"></script>
@@ -37,6 +37,13 @@
     .nro-big{font-size:22px;font-weight:900;color:#004d3d;letter-spacing:1px;}
     .badge-sit{display:inline-block;padding:3px 10px;border-radius:6px;color:#fff;font-size:12px;font-weight:700;}
     .fl-note{margin-top:14px;font-size:12.5px;color:#666;line-height:1.5;background:#fffdf5;border:1px solid #e8d9a8;border-radius:10px;padding:12px;}
+    .fl-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;padding:16px;}
+    .fl-modal-bg.on{display:flex;}
+    .fl-modal{background:#fff;border-radius:12px;padding:22px;max-width:440px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25);}
+    .fl-modal h3{margin:0 0 14px;color:#004d3d;font-size:16px;}
+    .fl-modal .fi-group{margin-bottom:12px;}
+    .fl-modal-actions{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;}
+    .btn-fl.ghost{background:#e8f0ec;color:#004d3d;}
   </style>
 </head>
 <body class="body-portal">
@@ -66,7 +73,6 @@
   <div class="fl-tabs">
     <button type="button" class="fl-tab on" id="tab-reg" onclick="mostrarPanel('reg')"><i class="fas fa-user-clock"></i> Registrar falto</button>
     <button type="button" class="fl-tab" id="tab-con" onclick="mostrarPanel('con')"><i class="fas fa-search"></i> Consultar</button>
-    <button type="button" class="fl-tab" id="tab-sit" onclick="mostrarPanel('sit')"><i class="fas fa-exchange-alt"></i> Actualizar situación</button>
     <a href="index.html" style="margin-left:auto;align-self:center;font-size:13px;color:#004d3d;font-weight:600;"><i class="fas fa-arrow-left"></i> Volver</a>
   </div>
 
@@ -74,32 +80,45 @@
   <div id="panel-reg" class="panel on">
     <div class="fl-card">
       <h2><i class="fas fa-user-clock"></i> Registro de falto</h2>
-      <p class="sub">Lo registra el <strong>personal de cada unidad</strong> (igual que descansos médicos). Se cruza con nómina RR.HH. Al guardar se entrega el <strong>Nº de registro</strong>. Año de control: 2026.</p>
       <div id="reg-alerta" class="fi-alerta"></div>
       <form id="form-fl" onsubmit="enviarFalto(event)">
         <div class="fi-grid">
           <div class="fi-group"><label>CIP del efectivo *</label>
-            <input id="fl-cip" required inputmode="numeric" maxlength="12" placeholder="Ej. 12345678" onblur="buscarRrhh()"></div>
-          <div class="fi-group"><label>Fecha de inicio de labor *</label>
-            <input type="date" id="fl-fecha" required></div>
-          <div class="fi-group"><label>Hora de inicio de labor *</label>
-            <input type="time" id="fl-hora" required></div>
+            <input id="fl-cip" required inputmode="numeric" maxlength="12" placeholder="Ej. 12345678" onblur="rellenarDesdeRrhh()"></div>
+          <div class="fi-group"><label>Grado *</label>
+            <select id="fl-grado" required></select></div>
+          <div class="fi-group"><label>Apellido paterno *</label>
+            <input id="fl-apepat" required maxlength="100" placeholder="Apellido paterno"></div>
+          <div class="fi-group"><label>Apellido materno</label>
+            <input id="fl-apemat" maxlength="100" placeholder="Apellido materno"></div>
+          <div class="fi-group fi-full"><label>Nombres *</label>
+            <input id="fl-nombres" required maxlength="150" placeholder="Nombres"></div>
+          <div class="fi-group"><label>Unidad *</label>
+            <select id="fl-unidad" required><option value="">— Seleccionar —</option></select></div>
+          <div class="fi-group"><label>Cargo *</label>
+            <select id="fl-cargo" required>
+              <option value="">— Seleccionar —</option>
+              <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
+              <option value="PATRULLAJE">PATRULLAJE</option>
+              <option value="INVESTIGACIÓN">INVESTIGACIÓN</option>
+              <option value="JEFE DE UNIDAD">JEFE DE UNIDAD</option>
+            </select></div>
+          <div class="fi-group"><label>Área *</label>
+            <select id="fl-area" required onchange="if(typeof regpolToggleAreaOtro==='function')regpolToggleAreaOtro('fl-area','fl-area-otro-box','fl-area-otro')"></select>
+            <div id="fl-area-otro-box" style="display:none;margin-top:8px;">
+              <input type="text" id="fl-area-otro" maxlength="120" placeholder="Especifique el área...">
+            </div>
+          </div>
+          <div class="fi-group"><label>Inicio de labor (fecha y hora) *</label>
+            <input type="datetime-local" id="fl-inicio" required></div>
           <div class="fi-group fi-full"><label>Observación</label>
             <input id="fl-obs" maxlength="500" placeholder="Opcional"></div>
-          <div class="fi-group fi-full">
-            <label>Datos de nómina RR.HH.</label>
-            <div id="fl-rrhh" class="rrhh-box"><span style="color:#888;">Ingrese el CIP para cruzar con nómina</span></div>
-          </div>
         </div>
         <div style="margin-top:16px;text-align:center;">
           <button type="submit" class="btn-fl" id="btn-reg"><i class="fas fa-save"></i> REGISTRAR FALTO</button>
         </div>
       </form>
       <div id="reg-comprobante" style="display:none;"></div>
-      <div class="fl-note">
-        El admin del área <strong>no registra</strong>: solo consulta, métricas e importación histórica.
-        La situación (TARDE / ABANDONO) la actualiza la unidad con CIP + Nº de registro cuando se reincorpora.
-      </div>
     </div>
   </div>
 
@@ -107,14 +126,13 @@
   <div id="panel-con" class="panel">
     <div class="fl-card">
       <h2><i class="fas fa-search"></i> Consultar falto</h2>
-      <p class="sub">Ingrese CIP y el Nº de registro entregado al momento del registro.</p>
       <div id="con-alerta" class="fi-alerta"></div>
       <form onsubmit="consultarFalto(event)">
         <div class="fi-grid">
           <div class="fi-group"><label>CIP *</label>
             <input id="con-cip" required inputmode="numeric" maxlength="12"></div>
           <div class="fi-group"><label>Nº de registro *</label>
-            <input id="con-numero" required maxlength="30" placeholder="FAL-2026-000001" style="text-transform:uppercase;"></div>
+            <input id="con-numero" required maxlength="20" placeholder="F20260001" style="text-transform:uppercase;"></div>
         </div>
         <div style="margin-top:14px;">
           <button type="submit" class="btn-fl"><i class="fas fa-search"></i> CONSULTAR</button>
@@ -123,43 +141,45 @@
       <div id="con-resultado"></div>
     </div>
   </div>
-
-  <!-- ACTUALIZAR SITUACIÓN -->
-  <div id="panel-sit" class="panel">
-    <div class="fl-card">
-      <h2><i class="fas fa-exchange-alt"></i> Actualizar situación (reincorporación)</h2>
-      <p class="sub">Solo la <strong>unidad</strong> actualiza. Indique CIP, Nº de registro y fecha/hora de reincorporación.
-        ≤ 24 h → <strong>TARDE</strong> · &gt; 24 h → <strong>ABANDONO</strong>.</p>
-      <div id="sit-alerta" class="fi-alerta"></div>
-      <form onsubmit="actualizarSituacion(event)">
-        <div class="fi-grid">
-          <div class="fi-group"><label>CIP *</label>
-            <input id="sit-cip" required inputmode="numeric" maxlength="12"></div>
-          <div class="fi-group"><label>Nº de registro *</label>
-            <input id="sit-numero" required maxlength="30" placeholder="FAL-2026-000001" style="text-transform:uppercase;"></div>
-          <div class="fi-group"><label>Fecha reincorporación *</label>
-            <input type="date" id="sit-fecha" required></div>
-          <div class="fi-group"><label>Hora reincorporación *</label>
-            <input type="time" id="sit-hora" required></div>
-          <div class="fi-group fi-full"><label>Observación</label>
-            <input id="sit-obs" maxlength="500"></div>
-        </div>
-        <div style="margin-top:14px;">
-          <button type="submit" class="btn-fl sec"><i class="fas fa-check"></i> GUARDAR SITUACIÓN</button>
-        </div>
-      </form>
-      <div id="sit-resultado"></div>
-    </div>
-  </div>
 </main>
+
+<!-- Modal: actualizar situación desde consulta -->
+<div id="fl-modal-sit" class="fl-modal-bg" onclick="if(event.target===this)cerrarModalSit()">
+  <div class="fl-modal" role="dialog" aria-modal="true" aria-labelledby="fl-modal-tit">
+    <h3 id="fl-modal-tit"><i class="fas fa-exchange-alt"></i> Situación</h3>
+    <div id="sit-alerta" class="fi-alerta"></div>
+    <form id="form-sit-modal" onsubmit="guardarSituacionModal(event)">
+      <input type="hidden" id="sit-cip">
+      <input type="hidden" id="sit-numero">
+      <div class="fi-group">
+        <label>Reincorporación (fecha y hora) *</label>
+        <input type="datetime-local" id="sit-inicio" required>
+      </div>
+      <div class="fi-group">
+        <label>Observación (motivo) *</label>
+        <textarea id="sit-obs" required maxlength="500" rows="3" placeholder="Describa el motivo"></textarea>
+      </div>
+      <div class="fl-modal-actions">
+        <button type="submit" class="btn-fl sec" id="btn-sit"><i class="fas fa-check"></i> GUARDAR</button>
+        <button type="button" class="btn-fl ghost" onclick="cerrarModalSit()">Cerrar</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <footer class="portal-footer">
   <div class="container"><p>REGPOL CALLAO — UNITIC</p></div>
 </footer>
+<script src="areas-labor.js?v=2"></script>
 <script src="portal-data.js?v=10"></script>
-<script src="portal.js?v=80"></script>
+<script src="portal.js?v=82"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
+var GRADOS_FL = [
+  'CORONEL PNP','COMANDANTE PNP','MAYOR PNP','CAPITAN PNP','TENIENTE PNP','ALFEREZ PNP',
+  'SUPERIOR PNP','BRIGADIER PNP','TECNICO DE 1RA PNP','TECNICO DE 2DA PNP','TECNICO DE 3RA PNP',
+  'SUBOFICIAL DE 1RA PNP','SUBOFICIAL DE 2DA PNP','SUBOFICIAL DE 3RA PNP'
+];
 
 initPortalPagina({ activeNav: 'rrhh' });
 
@@ -191,33 +211,54 @@ function fichaHtml(f) {
     + '<strong>' + esc(f.apellidos_nombres) + '</strong><br>'
     + 'CIP: ' + esc(f.cip) + ' · ' + esc(f.grado || '') + '<br>'
     + 'Unidad: ' + esc(f.unidad) + (f.division ? ' · ' + esc(f.division) : '') + '<br>'
+    + (f.cargo ? ('Cargo: ' + esc(f.cargo) + '<br>') : '')
+    + (f.area ? ('Área: ' + esc(f.area) + '<br>') : '')
     + 'Inicio labor: ' + esc(fmt(f.inicio_labor)) + '<br>'
     + 'Situación: <span class="badge-sit" style="background:' + colorSit(f.situacion) + ';">' + esc(f.situacion) + '</span><br>'
     + (f.reincorporacion ? ('Reincorporación: ' + esc(fmt(f.reincorporacion)) + '<br>') : '')
     + '</div></div>';
 }
 
+function toLocalInput(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  function pad(n) { return String(n).padStart(2, '0'); }
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+    + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
 function mostrarPanel(cual) {
-  ['reg', 'con', 'sit'].forEach(function(p) {
+  ['reg', 'con'].forEach(function(p) {
     var pan = document.getElementById('panel-' + p);
     var tab = document.getElementById('tab-' + p);
     if (pan) pan.classList.toggle('on', p === cual);
     if (tab) tab.classList.toggle('on', p === cual);
   });
   if (history.replaceState) {
-    var hash = cual === 'reg' ? '' : (cual === 'con' ? '#consulta' : '#situacion');
-    history.replaceState(null, '', 'faltos.html' + hash);
+    history.replaceState(null, '', 'faltos.html' + (cual === 'con' ? '#consulta' : ''));
   }
 }
 
-async function buscarRrhh() {
+function abrirModalSit(f) {
+  document.getElementById('sit-cip').value = f.cip || '';
+  document.getElementById('sit-numero').value = f.numero_registro || '';
+  document.getElementById('sit-inicio').value = toLocalInput(f.reincorporacion) || '';
+  document.getElementById('sit-obs').value = f.observacion || '';
+  alerta('sit-alerta', true, '');
+  document.getElementById('sit-alerta').style.display = 'none';
+  document.getElementById('fl-modal-sit').classList.add('on');
+  document.getElementById('sit-inicio').focus();
+}
+
+function cerrarModalSit() {
+  document.getElementById('fl-modal-sit').classList.remove('on');
+}
+
+/** Cruce RR.HH. en segundo plano: rellena campos del formulario sin panel visible. */
+async function rellenarDesdeRrhh() {
   var cip = (document.getElementById('fl-cip').value || '').trim();
-  var box = document.getElementById('fl-rrhh');
-  if (!cip || cip.replace(/\D/g, '').length < 6) {
-    box.innerHTML = '<span style="color:#888;">Ingrese el CIP para cruzar con nómina</span>';
-    return;
-  }
-  box.innerHTML = 'Buscando en RR.HH....';
+  if (!cip || cip.replace(/\D/g, '').length < 6) return;
   try {
     var r = await fetch(API + '/portal/faltos/rrhh-lookup', {
       method: 'POST',
@@ -225,17 +266,50 @@ async function buscarRrhh() {
       body: JSON.stringify({ cip: cip })
     });
     var d = await r.json();
-    if (!d.ok) {
-      box.innerHTML = '<span style="color:#c0392b;">' + esc(d.error || 'No encontrado') + '</span>';
-      return;
-    }
+    if (!d.ok || !d.personal) return;
     var p = d.personal;
-    box.innerHTML = '<strong style="color:#004d3d;">' + esc(p.apellidos_nombres) + '</strong><br>'
-      + '<span style="font-size:12px;color:#555;">' + esc(p.grado) + ' · ' + esc(p.unidad)
-      + (p.division ? ' · ' + esc(p.division) : '') + '</span>';
-  } catch (e) {
-    box.innerHTML = '<span style="color:#c0392b;">Error de conexión</span>';
-  }
+    var apePat = document.getElementById('fl-apepat');
+    var apeMat = document.getElementById('fl-apemat');
+    var nom = document.getElementById('fl-nombres');
+    var gra = document.getElementById('fl-grado');
+    var uni = document.getElementById('fl-unidad');
+    if (p.apellidos_nombres && apePat && !apePat.value) {
+      var raw = String(p.apellidos_nombres).trim();
+      var partes = raw.split(',');
+      if (partes.length >= 2) {
+        var apes = partes[0].trim().split(/\s+/);
+        apePat.value = apes[0] || '';
+        if (apeMat && apes.length > 1) apeMat.value = apes.slice(1).join(' ');
+        if (nom && !nom.value) nom.value = partes.slice(1).join(',').trim();
+      } else if (nom && !nom.value) {
+        nom.value = raw;
+      }
+    }
+    if (gra && p.grado) {
+      var found = false;
+      for (var i = 0; i < gra.options.length; i++) {
+        if (gra.options[i].value === p.grado) { gra.value = p.grado; found = true; break; }
+      }
+      if (!found && p.grado) {
+        var o = document.createElement('option');
+        o.value = p.grado; o.textContent = p.grado;
+        gra.appendChild(o);
+        gra.value = p.grado;
+      }
+    }
+    if (uni && p.unidad) {
+      var ok = false;
+      for (var j = 0; j < uni.options.length; j++) {
+        if (uni.options[j].value === p.unidad) { uni.value = p.unidad; ok = true; break; }
+      }
+      if (!ok) {
+        var ou = document.createElement('option');
+        ou.value = p.unidad; ou.textContent = p.unidad;
+        uni.appendChild(ou);
+        uni.value = p.unidad;
+      }
+    }
+  } catch (e) { /* silencioso */ }
 }
 
 async function enviarFalto(ev) {
@@ -243,14 +317,23 @@ async function enviarFalto(ev) {
   var btn = document.getElementById('btn-reg');
   btn.disabled = true;
   document.getElementById('reg-comprobante').style.display = 'none';
+  var area = (typeof regpolObtenerArea === 'function')
+    ? regpolObtenerArea('fl-area', 'fl-area-otro')
+    : (document.getElementById('fl-area').value || '');
   try {
     var r = await fetch(API + '/portal/faltos/registrar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         cip: document.getElementById('fl-cip').value,
-        fecha_labor: document.getElementById('fl-fecha').value,
-        hora_inicio_labor: document.getElementById('fl-hora').value,
+        grado: document.getElementById('fl-grado').value,
+        apellido_paterno: document.getElementById('fl-apepat').value,
+        apellido_materno: document.getElementById('fl-apemat').value,
+        nombres: document.getElementById('fl-nombres').value,
+        unidad: document.getElementById('fl-unidad').value,
+        cargo: document.getElementById('fl-cargo').value,
+        area: area,
+        inicio_labor_datetime: document.getElementById('fl-inicio').value,
         observacion: document.getElementById('fl-obs').value
       })
     });
@@ -260,12 +343,12 @@ async function enviarFalto(ev) {
       btn.disabled = false;
       return;
     }
-    alerta('reg-alerta', true, d.mensaje || 'Registrado correctamente. Conserve el Nº de registro.');
+    alerta('reg-alerta', true, d.mensaje || 'Registrado. Conserve el Nº de registro.');
     var box = document.getElementById('reg-comprobante');
     box.style.display = 'block';
     box.innerHTML = fichaHtml(d.falto);
     document.getElementById('form-fl').reset();
-    document.getElementById('fl-rrhh').innerHTML = '<span style="color:#888;">Ingrese el CIP para cruzar con nómina</span>';
+    if (typeof regpolToggleAreaOtro === 'function') regpolToggleAreaOtro('fl-area', 'fl-area-otro-box', 'fl-area-otro');
   } catch (e) {
     alerta('reg-alerta', false, 'Error de conexión');
   }
@@ -275,6 +358,8 @@ async function enviarFalto(ev) {
 async function consultarFalto(ev) {
   ev.preventDefault();
   document.getElementById('con-resultado').innerHTML = '';
+  alerta('con-alerta', true, '');
+  document.getElementById('con-alerta').style.display = 'none';
   try {
     var r = await fetch(API + '/portal/faltos/consultar', {
       method: 'POST',
@@ -286,16 +371,16 @@ async function consultarFalto(ev) {
     });
     var d = await r.json();
     if (!d.ok) { alerta('con-alerta', false, d.error || 'No encontrado'); return; }
-    alerta('con-alerta', true, 'Registro encontrado');
-    document.getElementById('con-resultado').innerHTML = fichaHtml(d.falto);
+    abrirModalSit(d.falto);
   } catch (e) {
     alerta('con-alerta', false, 'Error de conexión');
   }
 }
 
-async function actualizarSituacion(ev) {
+async function guardarSituacionModal(ev) {
   ev.preventDefault();
-  document.getElementById('sit-resultado').innerHTML = '';
+  var btn = document.getElementById('btn-sit');
+  btn.disabled = true;
   try {
     var r = await fetch(API + '/portal/faltos/actualizar-situacion', {
       method: 'POST',
@@ -303,25 +388,73 @@ async function actualizarSituacion(ev) {
       body: JSON.stringify({
         cip: document.getElementById('sit-cip').value,
         numero_registro: document.getElementById('sit-numero').value,
-        fecha_reincorporacion: document.getElementById('sit-fecha').value,
-        hora_reincorporacion: document.getElementById('sit-hora').value,
+        reincorporacion_datetime: document.getElementById('sit-inicio').value,
         observacion: document.getElementById('sit-obs').value
       })
     });
     var d = await r.json();
-    if (!d.ok) { alerta('sit-alerta', false, d.error || 'No se pudo actualizar'); return; }
-    alerta('sit-alerta', true, d.mensaje || 'Actualizado');
-    document.getElementById('sit-resultado').innerHTML = fichaHtml(d.falto);
+    if (!d.ok) {
+      alerta('sit-alerta', false, d.error || 'No se pudo actualizar');
+      btn.disabled = false;
+      return;
+    }
+    alerta('sit-alerta', true, 'Guardado');
+    setTimeout(function() {
+      cerrarModalSit();
+      alerta('con-alerta', true, 'Situación actualizada');
+      document.getElementById('con-resultado').innerHTML = '';
+    }, 600);
   } catch (e) {
     alerta('sit-alerta', false, 'Error de conexión');
   }
+  btn.disabled = false;
+}
+
+async function initFormulario() {
+  var selG = document.getElementById('fl-grado');
+  selG.innerHTML = '<option value="">— Seleccionar —</option>'
+    + GRADOS_FL.map(function(g){ return '<option value="'+esc(g)+'">'+esc(g)+'</option>'; }).join('');
+  if (typeof regpolPoblarSelectArea === 'function') regpolPoblarSelectArea(document.getElementById('fl-area'));
+
+  var sel = document.getElementById('fl-unidad');
+  try {
+    var cfg = await fetch(API + '/config').then(function(r){ return r.json(); });
+    sel.innerHTML = '<option value="">— Seleccionar unidad —</option>';
+    (cfg.divisiones || []).forEach(function(d) {
+      var og = document.createElement('optgroup');
+      og.label = d.nombre || 'Sin división';
+      (d.unidades || []).forEach(function(u) {
+        var nom = typeof u === 'string' ? u : (u.nombre || '');
+        if (!nom) return;
+        var o = document.createElement('option');
+        o.value = nom; o.textContent = nom;
+        og.appendChild(o);
+      });
+      if (og.children.length) sel.appendChild(og);
+    });
+  } catch (e) { /* ignore */ }
+
+  // Preferir catálogo de descansos si existe
+  try {
+    var cat = await fetch(API + '/portal/descansos/catalogos').then(function(r){ return r.json(); });
+    if (cat && cat.grados_efectivo && cat.grados_efectivo.length) {
+      selG.innerHTML = '<option value="">— Seleccionar —</option>'
+        + cat.grados_efectivo.map(function(g){ return '<option value="'+esc(g)+'">'+esc(g)+'</option>'; }).join('');
+    }
+  } catch (e2) { /* ignore */ }
 }
 
 (function initHash() {
   var h = (location.hash || '').toLowerCase();
-  if (h.indexOf('consulta') >= 0) mostrarPanel('con');
-  else if (h.indexOf('situacion') >= 0 || h.indexOf('situación') >= 0) mostrarPanel('sit');
-  else mostrarPanel('reg');
+  if (h.indexOf('consulta') >= 0 || h.indexOf('situacion') >= 0 || h.indexOf('situación') >= 0) {
+    mostrarPanel('con');
+  } else {
+    mostrarPanel('reg');
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') cerrarModalSit();
+  });
+  initFormulario();
 })();
 </script>
 </body>

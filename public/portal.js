@@ -498,7 +498,6 @@ function asegurarModalRrhhPortal() {
   wrap.setAttribute('role', 'dialog');
   wrap.setAttribute('aria-modal', 'true');
   wrap.setAttribute('aria-labelledby', 'modal-rrhh-titulo');
-  var linkDm = (typeof esPaginaInicio === 'function' && esPaginaInicio()) ? '#descansos' : 'index.html#descansos';
   wrap.innerHTML = ''
     + '<div class="modal-rrhh-box" onclick="event.stopPropagation()">'
     + '  <button type="button" class="modal-rrhh-cerrar" onclick="cerrarModalRrhhPortal()" title="Cerrar" aria-label="Cerrar">'
@@ -507,7 +506,7 @@ function asegurarModalRrhhPortal() {
     + '  <h3 id="modal-rrhh-titulo"><i class="fas fa-id-badge"></i> RR.HH.</h3>'
     + '  <p class="modal-rrhh-sub">Seleccione el módulo que desea abrir</p>'
     + '  <div class="modal-rrhh-opciones">'
-    + '    <a href="' + linkDm + '" class="modal-rrhh-card" id="modal-rrhh-link-dm">'
+    + '    <a href="descansos.html" class="modal-rrhh-card" onclick="cerrarModalRrhhPortal()">'
     + '      <i class="fas fa-notes-medical" style="color:#c0392b;"></i>'
     + '      <strong>Descanso médico</strong>'
     + '      <span>Registro y consulta de descansos médicos</span>'
@@ -515,22 +514,11 @@ function asegurarModalRrhhPortal() {
     + '    <a href="faltos.html" class="modal-rrhh-card" onclick="cerrarModalRrhhPortal()">'
     + '      <i class="fas fa-user-clock" style="color:#004d3d;"></i>'
     + '      <strong>Faltos</strong>'
-    + '      <span>Registro por unidades (como descansos médicos)</span>'
+    + '      <span>Registro y consulta de faltos</span>'
     + '    </a>'
     + '  </div>'
     + '</div>';
   wrap.addEventListener('click', function() { cerrarModalRrhhPortal(); });
-  var linkEl = wrap.querySelector('#modal-rrhh-link-dm');
-  if (linkEl) {
-    linkEl.addEventListener('click', function(e) {
-      cerrarModalRrhhPortal();
-      if (typeof esPaginaInicio === 'function' && esPaginaInicio()) {
-        e.preventDefault();
-        scrollASeccion('descansos');
-        if (history.pushState) history.pushState(null, '', '#descansos');
-      }
-    });
-  }
   document.body.appendChild(wrap);
 }
 
@@ -580,7 +568,7 @@ function initPortalScrollNav() {
       if (history.pushState) history.pushState(null, '', '#' + hash);
     });
   }
-  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'descansos', 'bienestar', 'resena', 'labor', 'unidades'];
+  var ids = ['inicio', 'novedades', 'convenios', 'cursos', 'bienestar', 'resena', 'labor', 'unidades'];
   var ticking = false;
   function onScroll() {
     if (ticking) return;
@@ -591,9 +579,9 @@ function initPortalScrollNav() {
       var actual = 'inicio';
       ids.forEach(function(id) {
         var el = document.getElementById(id);
-        if (el && el.offsetTop <= y) actual = id;
+        if (!el || el.style.display === 'none') return;
+        if (el.offsetTop <= y) actual = id;
       });
-      if (actual === 'descansos') actual = 'rrhh';
       marcarNavActivo(actual);
     });
   }
@@ -1511,38 +1499,11 @@ function descansosPortalDefault() {
 }
 
 function renderDescansosPortal(data, containerId) {
+  // Hub de módulos eliminado: RR.HH. solo usa el modal → paneles directos
   var el = document.getElementById(containerId);
   var secWrap = document.getElementById('descansos');
-  var def = descansosPortalDefault();
-  var sec = (data && data.descansosPortal) ? data.descansosPortal : def;
-  if (secWrap) secWrap.style.display = (sec.visible === false) ? 'none' : '';
-  var tituloSec = document.getElementById('descansos-titulo-seccion');
-  if (tituloSec) tituloSec.textContent = sec.tituloSeccion || def.tituloSeccion;
-  var sub = document.getElementById('descansos-subtitulo');
-  if (sub) {
-    var subTxt = sec.subtitulo || def.subtitulo || '';
-    sub.textContent = subTxt;
-    sub.style.display = subTxt ? '' : 'none';
-  }
-  if (!el) return;
-  if (sec.visible === false) { el.innerHTML = ''; return; }
-  var reg = sec.tarjetaRegistrar || def.tarjetaRegistrar;
-  var con = sec.tarjetaConsultar || def.tarjetaConsultar;
-  function tarjeta(t, colorIcon) {
-    var icono = t.icono || 'fa-notes-medical';
-    var url = t.botonUrl || '#';
-    return '<a href="' + escHtml(url) + '" class="bienestar-home-card" style="text-decoration:none;display:block;">'
-      + '<i class="fas ' + escHtml(icono) + ' bienestar-home-icon" style="color:' + colorIcon + ';"></i>'
-      + '<h4>' + escHtml(t.titulo || '') + '</h4>'
-      + '<p>' + escHtml(t.descripcion || '') + '</p>'
-      + '<span class="btn-bienestar" style="display:inline-flex;"><i class="fas ' + escHtml(icono) + '"></i> '
-      + escHtml(t.botonTexto || '') + '</span>'
-      + '</a>';
-  }
-  el.innerHTML = '<div class="grid-modern" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">'
-    + tarjeta(reg, '#c0392b')
-    + tarjeta(con, '#004d3d')
-    + '</div>';
+  if (secWrap) secWrap.style.display = 'none';
+  if (el) el.innerHTML = '';
 }
 
 function urlVideoBienestarPortal(path, version) {
@@ -2163,7 +2124,7 @@ function initPortalInicio() {
     cargarSorteosPortal();
     cargarUnidadesPublico();
     var hash = (location.hash || '').replace('#', '').trim();
-    if (hash === 'rrhh') {
+    if (hash === 'rrhh' || hash === 'descansos') {
       setTimeout(function() { abrirModalRrhhPortal(); }, 200);
     } else if (hash) {
       setTimeout(function() { scrollASeccion(hash); }, 300);

@@ -126,7 +126,7 @@
     }
     var html = '<div style="overflow:auto;"><table class="tabla" style="width:100%;font-size:12px;"><thead><tr>'
       + '<th>Nº registro</th><th>CIP</th><th>Nombres</th><th>Grado</th><th>Unidad</th>'
-      + '<th>Inicio labor</th><th>Situación</th><th>Reincorporación</th><th>Origen</th><th></th>'
+      + '<th>Inicio labor</th><th>Hora registro</th><th>Situación</th><th>Reincorporación</th><th>Origen</th><th></th>'
       + '</tr></thead><tbody>';
     FL_ROWS.forEach(function(row) {
       html += '<tr>'
@@ -136,6 +136,7 @@
         + '<td>' + esc(row.grado) + '</td>'
         + '<td>' + esc(row.unidad) + '</td>'
         + '<td style="white-space:nowrap;">' + esc(fmtFechaHora(row.inicio_labor)) + '</td>'
+        + '<td style="white-space:nowrap;color:#004d3d;font-weight:600;">' + esc(fmtFechaHora(row.creado_en)) + '</td>'
         + '<td>' + badgeSit(row.situacion) + '</td>'
         + '<td style="white-space:nowrap;">' + esc(fmtFechaHora(row.reincorporacion)) + '</td>'
         + '<td>' + esc(row.origen) + '</td>'
@@ -277,10 +278,14 @@
       + filaF('Unidad', f.unidad)
       + filaF('División', f.division)
       + filaF('Inicio de labor', fmtFechaHora(f.inicio_labor))
+      + filaF('Hora de registro (sistema)', fmtFechaHora(f.creado_en))
+      + filaF('Registrado por', f.creado_por || '—')
       + filaF('Situación', f.situacion)
       + filaF('Reincorporación', fmtFechaHora(f.reincorporacion))
       + filaF('Observación', f.observacion || '—')
       + filaF('Origen', f.origen)
+      + (f.cargo ? filaF('Cargo', f.cargo) : '')
+      + (f.area ? filaF('Área', f.area) : '')
       + '</table>';
 
     if (conFormSituacion && FL_CAPS.puede_cambiar_situacion) {

@@ -6,7 +6,7 @@
     <link rel="icon" href="favicon.png?v=3" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REGPOL CALLAO - PNP</title>
-    <link rel="stylesheet" href="style.css?v=67">
+    <link rel="stylesheet" href="style.css?v=69">
     <link rel="stylesheet" href="responsive.css?v=3">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -154,7 +154,7 @@
         <div id="lista-pdf-cursos"></div>
     </section>
 
-    <section id="descansos" class="portal-seccion">
+    <section id="descansos" class="portal-seccion" style="display:none;" aria-hidden="true">
         <div class="section-header">
             <h3 id="descansos-titulo-seccion">DESCANSOS M&#201;DICOS</h3>
             <p id="descansos-subtitulo" style="color:#666;font-size:13px;margin-top:6px;">Registro y consulta de descansos m&#233;dicos del personal</p>
@@ -236,7 +236,7 @@
 </div>
 
 <script src="portal-data.js?v=10"></script>
-<script src="portal.js?v=80"></script>
+<script src="portal.js?v=82"></script>
 <script>
     initPortalInicio();
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { cerrarNovedadModal(); cerrarModalRrhhPortal(); } });

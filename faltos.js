@@ -201,6 +201,8 @@ async function initTablasFaltos(pool) {
     CREATE INDEX IF NOT EXISTS idx_faltos_inicio ON faltos(inicio_labor);
     CREATE INDEX IF NOT EXISTS idx_faltos_anio ON faltos(anio);
     CREATE SEQUENCE IF NOT EXISTS faltos_numero_seq START 1;
+    ALTER TABLE faltos ADD COLUMN IF NOT EXISTS cargo VARCHAR(80) DEFAULT '';
+    ALTER TABLE faltos ADD COLUMN IF NOT EXISTS area VARCHAR(120) DEFAULT '';
   `);
 }
 
@@ -208,7 +210,8 @@ async function siguienteNumeroRegistro(pool, anio) {
   const y = anio || ANIO_CONTROL;
   const r = await pool.query('SELECT nextval(\'faltos_numero_seq\')::int AS n');
   const n = r.rows[0].n;
-  return 'FAL-' + y + '-' + String(n).padStart(6, '0');
+  // Formato: F20260001, F20260002, ...
+  return 'F' + y + String(n).padStart(4, '0');
 }
 
 async function buscarPersonalRrhh(pool, cipRaw) {
@@ -248,6 +251,8 @@ function filaPublica(row) {
     grado: row.grado,
     division: row.division,
     unidad: row.unidad,
+    cargo: row.cargo || '',
+    area: row.area || '',
     inicio_labor: row.inicio_labor,
     situacion: row.situacion,
     reincorporacion: row.reincorporacion,
@@ -349,9 +354,10 @@ async function insertarFalto(pool, data, admin, origen) {
   const r = await pool.query(
     `INSERT INTO faltos (
       numero_registro, cip, dni, apellidos_nombres, grado, division, unidad,
+      cargo, area,
       inicio_labor, situacion, reincorporacion, observacion, origen, anio,
       creado_por, creado_por_unidad
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
     RETURNING *`,
     [
       numero,
@@ -361,6 +367,8 @@ async function insertarFalto(pool, data, admin, origen) {
       data.grado || '',
       data.division || '',
       data.unidad,
+      data.cargo || '',
+      data.area || '',
       data.inicio_labor,
       data.situacion || 'FALTO',
       data.reincorporacion || null,
@@ -538,7 +546,7 @@ function registrarRutas(app, pool, requireAuth) {
       const sep = ';';
       const header = [
         'NUMERO', 'CIP', 'NOMBRES', 'GRADO', 'DIVISION', 'UNIDAD',
-        'INICIO_LABOR', 'SITUACION', 'REINCORPORACION', 'OBSERVACION', 'ORIGEN', 'ANIO', 'REGISTRADO_POR', 'CREADO'
+        'INICIO_LABOR', 'HORA_REGISTRO', 'SITUACION', 'REINCORPORACION', 'OBSERVACION', 'ORIGEN', 'ANIO', 'REGISTRADO_POR'
       ].join(sep);
       const lines = r.rows.map(function(row) {
         function c(v) {
@@ -546,9 +554,9 @@ function registrarRutas(app, pool, requireAuth) {
         }
         return [
           c(row.numero_registro), c(row.cip), c(row.apellidos_nombres), c(row.grado),
-          c(row.division), c(row.unidad), c(row.inicio_labor), c(row.situacion),
-          c(row.reincorporacion), c(row.observacion), c(row.origen), c(row.anio),
-          c(row.creado_por), c(row.creado_en)
+          c(row.division), c(row.unidad), c(row.inicio_labor), c(row.creado_en),
+          c(row.situacion), c(row.reincorporacion), c(row.observacion), c(row.origen),
+          c(row.anio), c(row.creado_por)
         ].join(sep);
       });
       const csv = '\uFEFF' + header + '\n' + lines.join('\n');
@@ -839,7 +847,7 @@ function registrarRutas(app, pool, requireAuth) {
         return res.json({ ok: false, error: 'Indique CIP y número de registro' });
       }
       const r = await pool.query(
-        `SELECT numero_registro, cip, apellidos_nombres, grado, unidad, division,
+        `SELECT numero_registro, cip, apellidos_nombres, grado, unidad, division, cargo, area,
                 inicio_labor, situacion, reincorporacion, observacion, anio
          FROM faltos WHERE cip=$1 AND UPPER(numero_registro)=$2`,
         [cip, numero]
@@ -857,6 +865,8 @@ function registrarRutas(app, pool, requireAuth) {
           grado: row.grado,
           unidad: row.unidad,
           division: row.division,
+          cargo: row.cargo || '',
+          area: row.area || '',
           inicio_labor: row.inicio_labor,
           situacion: row.situacion,
           reincorporacion: row.reincorporacion,
@@ -882,31 +892,66 @@ function registrarRutas(app, pool, requireAuth) {
 
   /**
    * Registro público por personal de unidad (igual modelo que descansos médicos).
-   * No requiere login: cruza CIP con RR.HH. y entrega Nº de registro.
+   * Datos del formulario; cruce RR.HH. en segundo plano (completa huecos, no bloquea si hay datos).
    */
   app.post('/portal/faltos/registrar', async function(req, res) {
     try {
       const b = req.body || {};
-      const found = await buscarPersonalRrhh(pool, b.cip);
-      if (found.error) return res.json({ ok: false, error: found.error });
-      const p = found.personal;
+      const cip = normalizarCip(b.cip);
+      if (!cip) return res.json({ ok: false, error: 'CIP inválido' });
 
-      const fecha = parseFecha(b.fecha_labor || b.fecha);
-      const hora = parseHora(b.hora_inicio_labor || b.hora);
-      if (!fecha) return res.json({ ok: false, error: 'Fecha de inicio de labor requerida' });
-      if (!hora) return res.json({ ok: false, error: 'Hora de inicio de labor requerida' });
+      const apePat = limpio(b.apellido_paterno || b.apepat, 100);
+      const apeMat = limpio(b.apellido_materno || b.apemat, 100);
+      const soloNombres = limpio(b.nombres, 150);
+      let nombres = limpio(b.apellidos_nombres, 200);
+      if (!nombres && (apePat || soloNombres)) {
+        const apes = [apePat, apeMat].filter(Boolean).join(' ');
+        nombres = apes && soloNombres ? (apes + ', ' + soloNombres) : (apes || soloNombres);
+      }
+      const grado = limpio(b.grado, 80);
+      let unidad = limpio(b.unidad, 150);
+      const cargo = limpio(b.cargo, 80);
+      const area = limpio(b.area, 120);
+      if (!apePat && !nombres) return res.json({ ok: false, error: 'Ingrese el apellido paterno del efectivo' });
+      if (!soloNombres && !nombres) return res.json({ ok: false, error: 'Ingrese los nombres del efectivo' });
+      if (!nombres) return res.json({ ok: false, error: 'Ingrese apellidos y nombres del efectivo' });
+      if (!unidad) return res.json({ ok: false, error: 'Indique la unidad' });
+      if (!cargo) return res.json({ ok: false, error: 'Indique el cargo' });
+      if (!area) return res.json({ ok: false, error: 'Indique el área' });
+
+      // Segundo plano: enriquecer desde nómina si existe (no se muestra al usuario)
+      let dni = limpio(b.dni, 20);
+      let division = limpio(b.division, 120);
+      const found = await buscarPersonalRrhh(pool, cip);
+      if (!found.error && found.personal) {
+        const p = found.personal;
+        if (!dni) dni = p.dni || '';
+        if (!division) division = p.division || '';
+        if (!grado && p.grado) { /* form grado takes priority if filled */ }
+        if (p.unidad && !unidad) unidad = p.unidad;
+      }
+
+      let fecha = parseFecha(b.fecha_labor || b.fecha);
+      let hora = parseHora(b.hora_inicio_labor || b.hora);
+      // datetime-local: "2026-07-20T14:30"
+      const dt = limpio(b.inicio_labor_datetime || b.datetime_inicio, 30);
+      if (dt && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(dt)) {
+        fecha = dt.slice(0, 10);
+        hora = dt.slice(11, 16);
+      }
+      if (!fecha) return res.json({ ok: false, error: 'Fecha y hora de inicio de labor requeridas' });
+      if (!hora) return res.json({ ok: false, error: 'Fecha y hora de inicio de labor requeridas' });
       const anio = parseInt(fecha.slice(0, 4), 10);
       if (anio !== ANIO_CONTROL) {
         return res.json({ ok: false, error: 'Solo se registran faltos del año ' + ANIO_CONTROL });
       }
       const inicio = construirInicioLabor(fecha, hora);
       if (!inicio) return res.json({ ok: false, error: 'Fecha/hora de labor inválidas' });
-      if (!p.unidad) return res.json({ ok: false, error: 'El CIP no tiene unidad en nómina' });
 
       const dup = await pool.query(
         `SELECT id, numero_registro FROM faltos
          WHERE cip=$1 AND inicio_labor=$2 LIMIT 1`,
-        [p.cip, inicio.toISOString()]
+        [cip, inicio.toISOString()]
       );
       if (dup.rows.length) {
         return res.json({
@@ -916,17 +961,19 @@ function registrarRutas(app, pool, requireAuth) {
       }
 
       const row = await insertarFalto(pool, {
-        cip: p.cip,
-        dni: p.dni,
-        apellidos_nombres: p.apellidos_nombres,
-        grado: p.grado,
-        division: p.division,
-        unidad: p.unidad,
+        cip: cip,
+        dni: dni,
+        apellidos_nombres: nombres,
+        grado: grado || (found.personal && found.personal.grado) || '',
+        division: division,
+        unidad: unidad,
+        cargo: cargo,
+        area: area,
         inicio_labor: inicio.toISOString(),
         situacion: 'FALTO',
         observacion: limpio(b.observacion, 500),
         anio: ANIO_CONTROL
-      }, { usuario: 'portal-unidad', unidad: p.unidad }, 'portal');
+      }, { usuario: 'portal-unidad', unidad: unidad }, 'portal');
 
       res.json({
         ok: true,
@@ -958,7 +1005,10 @@ function registrarRutas(app, pool, requireAuth) {
       const row = cur.rows[0];
 
       let reincorp = null;
-      if (b.fecha_reincorporacion && b.hora_reincorporacion) {
+      const dtSit = limpio(b.reincorporacion_datetime || b.datetime_reincorporacion, 30);
+      if (dtSit && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(dtSit)) {
+        reincorp = construirInicioLabor(dtSit.slice(0, 10), dtSit.slice(11, 16));
+      } else if (b.fecha_reincorporacion && b.hora_reincorporacion) {
         reincorp = construirInicioLabor(parseFecha(b.fecha_reincorporacion), parseHora(b.hora_reincorporacion));
       } else if (b.reincorporacion) {
         reincorp = new Date(b.reincorporacion);
