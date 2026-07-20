@@ -38,15 +38,14 @@ const SECCIONES = [
   {
     titulo: '3. Bloque I — Actitud ante la prueba (caja amarilla)',
     cuerpo: [
-      'Evalúa validez y defensividad. Solo genera texto informativo; NO determina el nivel de riesgo final.',
+      'Evalúa validez y defensividad. Si se superan umbrales críticos, BLOQUEA el Riesgo Bajo y fuerza nivel ALTO no interpretable.',
       '',
-      'Criterio A — Escala L (Mentira), puntaje BRUTO:',
-      '• Si L bruto ≥ 8 → se muestra: «La actitud del evaluado ante la prueba muestra una intencionalidad marcada de distorsión positiva (deseo de simular una moralidad impecable). Este nivel de defensividad constituye un predictor estadístico de problemas de rendimiento futuro y fallas de integridad.»',
+      'Umbrales de invalidez (prioridad L > F > K):',
+      '• L bruto ≥ 8 o L T ≥ 80 → Alto Riesgo de Integridad / Protocolo Severamente Distorsionado — evaluación presencial obligatoria.',
+      '• F T ≥ 90 → Grito de Auxilio / Exageración — evaluación presencial obligatoria.',
+      '• K T ≥ 70 → Distorsión Positiva Consciente (Faking Good) — evaluación presencial obligatoria.',
       '',
-      'Criterio B — Escala K (Corrección), puntaje T (solo si L < 8):',
-      '• Si K T ≥ 60 → se muestra: «Se observa un perfil defensivo moderado/alto. El evaluado tiende a ocultar sus fallas de adaptación, lo que suele correlacionar con un cuestionamiento encubierto de la normativa institucional.»',
-      '',
-      'Nota: Si L ≥ 8, se aplica el Criterio A aunque K también esté elevado.'
+      'Si no hay invalidez crítica y K T ≥ 60 → solo texto informativo de defensividad moderada (no cambia el nivel).'
     ]
   },
   {
@@ -78,7 +77,11 @@ const SECCIONES = [
   {
     titulo: '6. Nivel final de riesgo',
     cuerpo: [
-      'El nivel se determina únicamente por el conteo de alertas (escalas 4, 6, 9) y las reglas compuestas:',
+      'El nivel se determina así:',
+      '',
+      '1) Primero: si hay invalidez de validez (L ≥ 8 / L≥80T / K≥70T / F≥90T) → nivel ALTO (bloqueo de Riesgo Bajo), categoría no interpretable.',
+      '',
+      '2) Si el perfil es válido, se usan alertas clínicas (escalas 4, 6, 9) y reglas compuestas:',
       '',
       'ALTO — si se cumple alguna de estas condiciones:',
       '• 3 o más alertas clínicas (4, 6 o 9 elevadas), O',
@@ -89,35 +92,34 @@ const SECCIONES = [
       'MODERADO — si hay 1 o 2 alertas y no aplican reglas compuestas:',
       'Texto: «Riesgo Moderado (Alerta Preventiva). Se sugiere su inclusión en programas preventivos de control de impulsos o gestión emocional.»',
       '',
-      'BAJO — si no hay alertas ni reglas compuestas:',
+      'BAJO — si no hay alertas ni reglas compuestas ni invalidez de validez:',
       'Texto: «Riesgo Bajo. Continuar con su rol habitual.»'
     ]
   },
   {
     titulo: '7. Ejemplo ilustrativo',
     cuerpo: [
-      'Caso: L bruto = 11, K T = 64, Hipocondría T = 66, Escalas 4/6/9 < 60',
+      'Caso: L bruto = 15, K T = 55, Escalas 4/6/9 < 60',
       '',
       'Resultado del sistema:',
-      '• Bloque I: SÍ (por L ≥ 8) → texto sobre distorsión positiva e integridad.',
-      '• Alertas clínicas: NINGUNA (4, 6 y 9 no alcanzan T ≥ 60).',
-      '• Reglas compuestas: NO aplican.',
-      '• Nivel final: BAJO.',
-      '',
-      'Esto explica por qué puede aparecer un texto de advertencia sobre defensividad junto a un nivel «Riesgo Bajo»: son criterios independientes por diseño.'
+      '• Invalidez de validez: SÍ (L ≥ 8) → BLOQUEO DE RIESGO BAJO.',
+      '• Nivel final: ALTO (ámbar institucional).',
+      '• Categoría: Alto Riesgo de Integridad / Protocolo Severamente Distorsionado — EVALUACIÓN CLÍNICA NO INTERPRETABLE / EVALUACIÓN PRESENCIAL OBLIGATORIA.',
+      '• Resumen: fallas de integridad, moral fingida, encubrimiento de faltas, ocultamiento deliberado de problemas y problemas disciplinarios futuros.'
     ]
   },
   {
     titulo: '8. Tabla resumen',
     cuerpo: [
-      'Componente          | Escalas        | Umbral      | Afecta nivel',
-      'Bloque I              | L, K           | L≥8 o K≥60  | No',
-      'Alerta clínica        | 4 (Pd)         | T ≥ 60      | Sí',
-      'Alerta clínica        | 6 (Pa)         | T ≥ 60      | Sí',
-      'Alerta clínica        | 9 (Ma)         | T ≥ 60      | Sí',
-      'Regla compuesta       | 4 + 6          | ambas ≥60   | Sí → ALTO',
-      'Regla compuesta       | 4 + 9          | ambas ≥60   | Sí → ALTO',
-      'Otras escalas (1,2,3…) | Varias        | según tabla | No (solo tabla)'
+      'Componente          | Escalas        | Umbral           | Afecta nivel',
+      'Invalidez validez     | L / F / K      | L≥8·L≥80·K≥70·F≥90 | Sí → ALTO (bloqueo BAJO)',
+      'Defensividad inform.  | K             | T ≥ 60 (sin gate)| Solo texto',
+      'Alerta clínica        | 4 (Pd)         | T ≥ 60           | Sí',
+      'Alerta clínica        | 6 (Pa)         | T ≥ 60           | Sí',
+      'Alerta clínica        | 9 (Ma)         | T ≥ 60           | Sí',
+      'Regla compuesta       | 4 + 6          | ambas ≥60        | Sí → ALTO',
+      'Regla compuesta       | 4 + 9          | ambas ≥60        | Sí → ALTO',
+      'Otras escalas (1,2,3…) | Varias        | según tabla      | No (solo tabla)'
     ]
   },
   {

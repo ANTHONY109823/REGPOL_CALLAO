@@ -499,10 +499,11 @@ function nivelRiesgoFila(res) {
   }
   if (!res.diag) return { texto: 'SIN CALIFICAR', nivel: '', color: '#888888' };
   const codes = res.alertCodes && res.alertCodes.length ? ' · ' + res.alertCodes.join(', ') : '';
+  const etiqueta = res.diag.invalidez ? (res.diag.nivel + ' · NO INTERPRETABLE') : res.diag.nivel;
   return {
-    texto: res.diag.nivel + codes,
+    texto: etiqueta + codes,
     nivel: res.diag.nivel,
-    color: NIVEL_RIESGO_COLORES[res.diag.nivel] || COLOR_NEGRO
+    color: res.diag.colorNivel || NIVEL_RIESGO_COLORES[res.diag.nivel] || COLOR_NEGRO
   };
 }
 
@@ -1025,18 +1026,59 @@ function significadoEscalaMMPI(esc, esMujer) {
   }
 }
 
+// Color del cuadro final cuando hay bloqueo por invalidez de escalas de validez
+const COLOR_INVALIDEZ_VALIDEZ = '#9a3412'; // ámbar institucional (nunca verde)
+
 // ── Diagnóstico automatizado final — riesgo institucional (Bloques I-III) ─────
 function diagnosticoFinalMMPI(escalas) {
   function porCodigo(c) { return (escalas || []).filter(function(e) { return e.code === c; })[0]; }
-  var L = porCodigo('L'), K = porCodigo('K'), E4 = porCodigo('Pd'), E6 = porCodigo('Pa'), E9 = porCodigo('Ma');
-  var pdL = L ? L.tb : 0;
-  var ptK = K ? K.t : 0;
-  var t4 = E4 ? E4.t : 0, t6 = E6 ? E6.t : 0, t9 = E9 ? E9.t : 0;
+  var L = porCodigo('L'), F = porCodigo('F'), K = porCodigo('K');
+  var E4 = porCodigo('Pd'), E6 = porCodigo('Pa'), E9 = porCodigo('Ma');
+  var pdL = L ? Number(L.tb) || 0 : 0;
+  var ptL = L ? Number(L.t) || 0 : 0;
+  var ptF = F ? Number(F.t) || 0 : 0;
+  var ptK = K ? Number(K.t) || 0 : 0;
+  var t4 = E4 ? Number(E4.t) || 0 : 0;
+  var t6 = E6 ? Number(E6.t) || 0 : 0;
+  var t9 = E9 ? Number(E9.t) || 0 : 0;
+
+  // Umbrales de invalidez → BLOQUEO DE RIESGO BAJO (prioridad L > F > K)
+  var gateL = pdL >= 8 || ptL >= 80;
+  var gateF = ptF >= 90;
+  var gateK = ptK >= 70;
+  if (gateL || gateF || gateK) {
+    var bloqueI, texto;
+    if (gateL) {
+      bloqueI = 'RESUMEN: Fallas de integridad, moral fingida, encubrimiento de faltas, ocultamiento deliberado de problemas y problemas disciplinarios futuros en el trabajo. '
+        + 'El protocolo presenta elevación crítica en validez (L ≥ 8 bruto / L ≥ 80T), lo que invalida la cuantificación automatizada de riesgo clínico (defensividad severa / Faking Good). '
+        + 'ACCIÓN: Clasificar como Perfil Inconcluso por Defensividad; suspender aptitud limpia y derivar a evaluación presencial de contraste.';
+      texto = 'Alto Riesgo de Integridad / Protocolo Severamente Distorsionado — EVALUACIÓN CLÍNICA NO INTERPRETABLE / EVALUACIÓN PRESENCIAL OBLIGATORIA.';
+    } else if (gateF) {
+      bloqueI = 'RESUMEN: Desbordamiento emocional severo o simulación de síntomas (Cry for Help). '
+        + 'Elevación crítica en F (F ≥ 90T) invalida la cuantificación automatizada de riesgo clínico. '
+        + 'ACCIÓN: Requiere evaluación psiquiátrica urgente y re-evaluación presencial.';
+      texto = 'EVALUACIÓN NO INTERPRETABLE / DISTORSIÓN DE VALIDEZ — Grito de Auxilio / Exageración. EVALUACIÓN PRESENCIAL OBLIGATORIA.';
+    } else {
+      bloqueI = 'RESUMEN: Moral fingida, ocultamiento deliberado de problemas y resistencia a supervisión. '
+        + 'Elevación crítica en K (K ≥ 70T) invalida la cuantificación automatizada de riesgo clínico (Faking Good). '
+        + 'ACCIÓN: Clasificar como Perfil Inconcluso por Defensividad; derivar a evaluación presencial de contraste.';
+      texto = 'EVALUACIÓN NO INTERPRETABLE / DISTORSIÓN DE VALIDEZ — Distorsión Positiva Consciente. EVALUACIÓN PRESENCIAL OBLIGATORIA.';
+    }
+    return {
+      bloqueI: bloqueI,
+      alertas: [],
+      reglas: [],
+      nivel: 'ALTO',
+      texto: texto,
+      alertasRojas: 0,
+      invalidez: true,
+      colorNivel: COLOR_INVALIDEZ_VALIDEZ,
+      categoria: 'EVALUACIÓN NO INTERPRETABLE / DISTORSIÓN DE VALIDEZ'
+    };
+  }
 
   var bloqueI = null;
-  if (pdL >= 8) {
-    bloqueI = 'La actitud del evaluado ante la prueba muestra una intencionalidad marcada de distorsión positiva (deseo de simular una moralidad impecable). Este nivel de defensividad constituye un predictor estadístico de problemas de rendimiento futuro y fallas de integridad.';
-  } else if (ptK >= 60) {
+  if (ptK >= 60) {
     bloqueI = 'Se observa un perfil defensivo moderado/alto. El evaluado tiende a ocultar sus fallas de adaptación, lo que suele correlacionar con un cuestionamiento encubierto de la normativa institucional.';
   }
 
@@ -1064,7 +1106,17 @@ function diagnosticoFinalMMPI(escalas) {
     texto = 'Riesgo Bajo. Continuar con su rol habitual.';
   }
 
-  return { bloqueI: bloqueI, alertas: alertas, reglas: reglas, nivel: nivel, texto: texto, alertasRojas: alertasRojas };
+  return {
+    bloqueI: bloqueI,
+    alertas: alertas,
+    reglas: reglas,
+    nivel: nivel,
+    texto: texto,
+    alertasRojas: alertasRojas,
+    invalidez: false,
+    colorNivel: NIVEL_RIESGO_COLORES[nivel] || COLOR_NEGRO,
+    categoria: null
+  };
 }
 
 // ── Diagnóstico completo de una fila (evaluación o avance) — uso en reportes ──
@@ -1123,7 +1175,8 @@ function dibujarLeyendaMmpi(doc, x0, y, W) {
 // Dibuja tabla de resultados MMPI-2 (siempre muestra las 13 escalas)
 // ── Bloque de diagnóstico automatizado final (Bloques I-III + reglas compuestas) ─
 function dibujarDiagnosticoFinalMMPI(doc, diag, x0, y, W, fs) {
-  const colorNivel = diag.nivel === 'ALTO' ? '#c0392b' : (diag.nivel === 'MODERADO' ? '#e67e22' : '#27ae60');
+  const colorNivel = diag.colorNivel
+    || (diag.nivel === 'ALTO' ? '#c0392b' : (diag.nivel === 'MODERADO' ? '#e67e22' : '#27ae60'));
   const padX = 7;
   const innerW = W - padX * 2;
 

@@ -2214,7 +2214,8 @@ function htmlDiagnosticoAutomatizado(diagnostico) {
       + '<p style="font-size:12px;color:#888;margin:0;padding:14px;">Disponible al completar y calificar la evaluación (566/566).</p>'
       + '</div>';
   }
-  var colorNivel = diagnostico.nivel === 'ALTO' ? '#c0392b' : (diagnostico.nivel === 'MODERADO' ? '#e67e22' : '#27ae60');
+  var colorNivel = diagnostico.colorNivel
+    || (diagnostico.nivel === 'ALTO' ? '#c0392b' : (diagnostico.nivel === 'MODERADO' ? '#e67e22' : '#27ae60'));
   var html = '<div style="border:1.5px solid #e0e8e0;border-radius:8px;overflow:hidden;">'
     + '<div style="background:#004d3d;color:#fff;font-weight:700;font-size:12px;padding:9px 12px;">DIAGNÓSTICO AUTOMATIZADO — RIESGO INSTITUCIONAL</div>'
     + '<div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;">';
