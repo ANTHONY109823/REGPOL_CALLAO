@@ -515,7 +515,7 @@ function asegurarModalRrhhPortal() {
     + '    <a href="faltos.html" class="modal-rrhh-card" onclick="cerrarModalRrhhPortal()">'
     + '      <i class="fas fa-user-clock" style="color:#004d3d;"></i>'
     + '      <strong>Faltos</strong>'
-    + '      <span>Registro y consulta de inasistencias</span>'
+    + '      <span>Registro por unidades (como descansos médicos)</span>'
     + '    </a>'
     + '  </div>'
     + '</div>';

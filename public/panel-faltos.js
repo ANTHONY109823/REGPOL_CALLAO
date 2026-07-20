@@ -72,17 +72,23 @@
 
   function aplicarCapsUI() {
     var regBlock = document.getElementById('fl-block-registro');
-    var importPage = document.querySelector('[data-page="faltos-import"]');
-    var btnImportNav = document.querySelector('[data-page="faltos-import"]');
-    if (regBlock) regBlock.style.display = FL_CAPS.puede_registrar ? '' : 'none';
+    var formReg = document.getElementById('fl-form-reg');
+    if (regBlock) regBlock.style.display = '';
+    if (formReg) formReg.style.display = FL_CAPS.puede_registrar ? '' : 'none';
     document.querySelectorAll('[data-fl-admin-only]').forEach(function(el) {
       el.style.display = FL_CAPS.puede_admin ? '' : 'none';
     });
     var uniHint = document.getElementById('fl-unidad-hint');
     if (uniHint) {
-      uniHint.textContent = FL_CAPS.unidad_asignada
-        ? ('Unidad asignada: ' + FL_CAPS.unidad_asignada)
-        : (FL_CAPS.puede_admin ? 'Vista global (admin área / Super Admin)' : '');
+      if (FL_CAPS.puede_registrar && FL_CAPS.unidad_asignada) {
+        uniHint.textContent = 'Unidad asignada: ' + FL_CAPS.unidad_asignada + ' — puede registrar aquí o en el portal público.';
+      } else if (FL_CAPS.puede_admin && !FL_CAPS.puede_registrar) {
+        uniHint.textContent = 'Vista admin: solo consulta / dashboard. El registro lo hacen las unidades en faltos.html';
+      } else if (FL_CAPS.puede_admin) {
+        uniHint.textContent = 'Vista global (admin área / Super Admin)';
+      } else {
+        uniHint.textContent = '';
+      }
     }
   }
 

@@ -11,24 +11,32 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <script src="api-config.js?v=2"></script>
   <style>
-    .faltos-wrap{max-width:720px;margin:0 auto;padding:28px 16px 56px;}
-    .faltos-card{background:#fff;border:1.5px solid #cfdad2;border-radius:14px;padding:24px;}
-    .faltos-card h2{color:#004d3d;font-size:1.2rem;margin:0 0 8px;font-weight:800;}
-    .faltos-card .sub{color:#666;font-size:13px;margin:0 0 16px;line-height:1.5;}
-    .faltos-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-    @media(max-width:600px){.faltos-grid{grid-template-columns:1fr;}}
-    .faltos-grid label{font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:4px;}
-    .faltos-grid input{width:100%;padding:10px;border:1.5px solid #ccc;border-radius:8px;font-size:14px;box-sizing:border-box;}
-    .faltos-actions{margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
-    .faltos-msg{font-size:13px;margin-top:12px;font-weight:600;}
-    .faltos-msg.ok{color:#1a7a3a;}
-    .faltos-msg.err{color:#c0392b;}
-    .faltos-result{margin-top:16px;padding:14px;background:#f4f8f5;border-radius:10px;border:1.5px solid #cfdad2;display:none;}
-    .faltos-result table{width:100%;font-size:13px;border-collapse:collapse;}
-    .faltos-result td{padding:6px 4px;border-bottom:1px solid #e5eee9;}
-    .faltos-result td:first-child{color:#666;width:40%;}
-    .faltos-badge{display:inline-block;padding:3px 10px;border-radius:6px;color:#fff;font-size:12px;font-weight:700;}
-    .faltos-note{margin-top:18px;font-size:12.5px;color:#666;line-height:1.5;background:#fffdf5;border:1px solid #e8d9a8;border-radius:10px;padding:12px;}
+    .fl-wrap{max-width:920px;margin:0 auto;padding:24px 16px 48px;}
+    .fl-tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+    .fl-tab{background:#e8f0ec;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:13px;color:#004d3d;cursor:pointer;}
+    .fl-tab.on{background:#004d3d;color:#fff;}
+    .fl-card{background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:22px;}
+    .fl-card h2{color:#004d3d;font-size:16px;margin:0 0 6px;}
+    .fl-card .sub{color:#666;font-size:13px;margin-bottom:16px;line-height:1.5;}
+    .fi-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media(max-width:700px){.fi-grid{grid-template-columns:1fr;}}
+    .fi-group label{font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:4px;}
+    .fi-group input,.fi-group select,.fi-group textarea{width:100%;padding:9px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit;box-sizing:border-box;}
+    .fi-full{grid-column:1/-1;}
+    .fi-alerta{padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600;margin-bottom:12px;display:none;}
+    .fi-alerta.ok{background:#d4edda;color:#1a7a3a;display:block;}
+    .fi-alerta.error{background:#f8d7da;color:#842029;display:block;}
+    .btn-fl{background:#004d3d;color:#fff;border:none;padding:12px 22px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;}
+    .btn-fl:hover{background:#006b55;}
+    .btn-fl:disabled{opacity:.6;cursor:wait;}
+    .btn-fl.sec{background:#b8860b;}
+    .panel{display:none;}
+    .panel.on{display:block;}
+    .rrhh-box{background:#f4f8f5;border:1.5px solid #cfdad2;border-radius:8px;padding:12px;font-size:13px;min-height:42px;}
+    .result-ok{background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:16px;margin-top:12px;}
+    .nro-big{font-size:22px;font-weight:900;color:#004d3d;letter-spacing:1px;}
+    .badge-sit{display:inline-block;padding:3px 10px;border-radius:6px;color:#fff;font-size:12px;font-weight:700;}
+    .fl-note{margin-top:14px;font-size:12.5px;color:#666;line-height:1.5;background:#fffdf5;border:1px solid #e8d9a8;border-radius:10px;padding:12px;}
   </style>
 </head>
 <body class="body-portal">
@@ -54,34 +62,93 @@
 </header>
 <nav class="nav-main"><div class="container"><ul></ul></div></nav>
 
-<main class="faltos-wrap">
-  <div class="faltos-card">
-    <h2><i class="fas fa-search" style="color:#004d3d;"></i> Consultar falto</h2>
-    <p class="sub">Ingrese el CIP y el <strong>número de registro</strong> entregado al momento del registro (solo consulta).</p>
-    <div class="faltos-grid">
-      <div>
-        <label>CIP</label>
-        <input id="fl-pub-cip" inputmode="numeric" maxlength="12" placeholder="Ej. 12345678">
-      </div>
-      <div>
-        <label>Nº de registro</label>
-        <input id="fl-pub-numero" maxlength="30" placeholder="FAL-2026-000001">
+<main class="fl-wrap">
+  <div class="fl-tabs">
+    <button type="button" class="fl-tab on" id="tab-reg" onclick="mostrarPanel('reg')"><i class="fas fa-user-clock"></i> Registrar falto</button>
+    <button type="button" class="fl-tab" id="tab-con" onclick="mostrarPanel('con')"><i class="fas fa-search"></i> Consultar</button>
+    <button type="button" class="fl-tab" id="tab-sit" onclick="mostrarPanel('sit')"><i class="fas fa-exchange-alt"></i> Actualizar situación</button>
+    <a href="index.html" style="margin-left:auto;align-self:center;font-size:13px;color:#004d3d;font-weight:600;"><i class="fas fa-arrow-left"></i> Volver</a>
+  </div>
+
+  <!-- REGISTRAR (unidades, como descansos médicos) -->
+  <div id="panel-reg" class="panel on">
+    <div class="fl-card">
+      <h2><i class="fas fa-user-clock"></i> Registro de falto</h2>
+      <p class="sub">Lo registra el <strong>personal de cada unidad</strong> (igual que descansos médicos). Se cruza con nómina RR.HH. Al guardar se entrega el <strong>Nº de registro</strong>. Año de control: 2026.</p>
+      <div id="reg-alerta" class="fi-alerta"></div>
+      <form id="form-fl" onsubmit="enviarFalto(event)">
+        <div class="fi-grid">
+          <div class="fi-group"><label>CIP del efectivo *</label>
+            <input id="fl-cip" required inputmode="numeric" maxlength="12" placeholder="Ej. 12345678" onblur="buscarRrhh()"></div>
+          <div class="fi-group"><label>Fecha de inicio de labor *</label>
+            <input type="date" id="fl-fecha" required></div>
+          <div class="fi-group"><label>Hora de inicio de labor *</label>
+            <input type="time" id="fl-hora" required></div>
+          <div class="fi-group fi-full"><label>Observación</label>
+            <input id="fl-obs" maxlength="500" placeholder="Opcional"></div>
+          <div class="fi-group fi-full">
+            <label>Datos de nómina RR.HH.</label>
+            <div id="fl-rrhh" class="rrhh-box"><span style="color:#888;">Ingrese el CIP para cruzar con nómina</span></div>
+          </div>
+        </div>
+        <div style="margin-top:16px;text-align:center;">
+          <button type="submit" class="btn-fl" id="btn-reg"><i class="fas fa-save"></i> REGISTRAR FALTO</button>
+        </div>
+      </form>
+      <div id="reg-comprobante" style="display:none;"></div>
+      <div class="fl-note">
+        El admin del área <strong>no registra</strong>: solo consulta, métricas e importación histórica.
+        La situación (TARDE / ABANDONO) la actualiza la unidad con CIP + Nº de registro cuando se reincorpora.
       </div>
     </div>
-    <div class="faltos-actions">
-      <button type="button" class="btn-bienestar" style="border:none;cursor:pointer;" onclick="consultarFaltoPublico()">
-        <i class="fas fa-search"></i> Consultar
-      </button>
-      <a href="login.html" class="btn-bienestar" style="text-decoration:none;background:#b8860b;">
-        <i class="fas fa-sign-in-alt"></i> Registrar en panel
-      </a>
+  </div>
+
+  <!-- CONSULTAR -->
+  <div id="panel-con" class="panel">
+    <div class="fl-card">
+      <h2><i class="fas fa-search"></i> Consultar falto</h2>
+      <p class="sub">Ingrese CIP y el Nº de registro entregado al momento del registro.</p>
+      <div id="con-alerta" class="fi-alerta"></div>
+      <form onsubmit="consultarFalto(event)">
+        <div class="fi-grid">
+          <div class="fi-group"><label>CIP *</label>
+            <input id="con-cip" required inputmode="numeric" maxlength="12"></div>
+          <div class="fi-group"><label>Nº de registro *</label>
+            <input id="con-numero" required maxlength="30" placeholder="FAL-2026-000001" style="text-transform:uppercase;"></div>
+        </div>
+        <div style="margin-top:14px;">
+          <button type="submit" class="btn-fl"><i class="fas fa-search"></i> CONSULTAR</button>
+        </div>
+      </form>
+      <div id="con-resultado"></div>
     </div>
-    <p id="fl-pub-msg" class="faltos-msg"></p>
-    <div id="fl-pub-result" class="faltos-result"></div>
-    <div class="faltos-note">
-      El registro diario lo realiza el personal de cada unidad en el panel administrativo.
-      La situación (TARDE / ABANDONO) solo la actualiza la unidad con CIP + Nº de registro.
-      El admin del área solo consulta y métricas.
+  </div>
+
+  <!-- ACTUALIZAR SITUACIÓN -->
+  <div id="panel-sit" class="panel">
+    <div class="fl-card">
+      <h2><i class="fas fa-exchange-alt"></i> Actualizar situación (reincorporación)</h2>
+      <p class="sub">Solo la <strong>unidad</strong> actualiza. Indique CIP, Nº de registro y fecha/hora de reincorporación.
+        ≤ 24 h → <strong>TARDE</strong> · &gt; 24 h → <strong>ABANDONO</strong>.</p>
+      <div id="sit-alerta" class="fi-alerta"></div>
+      <form onsubmit="actualizarSituacion(event)">
+        <div class="fi-grid">
+          <div class="fi-group"><label>CIP *</label>
+            <input id="sit-cip" required inputmode="numeric" maxlength="12"></div>
+          <div class="fi-group"><label>Nº de registro *</label>
+            <input id="sit-numero" required maxlength="30" placeholder="FAL-2026-000001" style="text-transform:uppercase;"></div>
+          <div class="fi-group"><label>Fecha reincorporación *</label>
+            <input type="date" id="sit-fecha" required></div>
+          <div class="fi-group"><label>Hora reincorporación *</label>
+            <input type="time" id="sit-hora" required></div>
+          <div class="fi-group fi-full"><label>Observación</label>
+            <input id="sit-obs" maxlength="500"></div>
+        </div>
+        <div style="margin-top:14px;">
+          <button type="submit" class="btn-fl sec"><i class="fas fa-check"></i> GUARDAR SITUACIÓN</button>
+        </div>
+      </form>
+      <div id="sit-resultado"></div>
     </div>
   </div>
 </main>
@@ -92,65 +159,170 @@
 <script src="portal-data.js?v=10"></script>
 <script src="portal.js?v=80"></script>
 <script>
-  initPortalPagina({ activeNav: 'rrhh' });
+var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 
-  function apiPub() {
-    return (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
-  }
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-  function fmt(v) {
-    if (!v) return '—';
-    try { return new Date(v).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); }
-    catch (e) { return String(v); }
-  }
-  function colorSit(s) {
-    if (s === 'TARDE') return '#b8860b';
-    if (s === 'ABANDONO') return '#c0392b';
-    return '#004d3d';
-  }
+initPortalPagina({ activeNav: 'rrhh' });
 
-  async function consultarFaltoPublico() {
-    var cip = (document.getElementById('fl-pub-cip').value || '').trim();
-    var numero = (document.getElementById('fl-pub-numero').value || '').trim();
-    var msg = document.getElementById('fl-pub-msg');
-    var box = document.getElementById('fl-pub-result');
-    msg.className = 'faltos-msg';
-    msg.textContent = 'Consultando...';
-    box.style.display = 'none';
-    try {
-      var r = await fetch(apiPub() + '/portal/faltos/consultar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cip: cip, numero_registro: numero })
-      });
-      var d = await r.json();
-      if (!d.ok) {
-        msg.className = 'faltos-msg err';
-        msg.textContent = d.error || 'No encontrado';
-        return;
-      }
-      var f = d.falto;
-      msg.className = 'faltos-msg ok';
-      msg.textContent = 'Registro encontrado';
-      box.style.display = 'block';
-      box.innerHTML = '<table>'
-        + '<tr><td>Nº registro</td><td><strong>' + esc(f.numero_registro) + '</strong></td></tr>'
-        + '<tr><td>CIP</td><td>' + esc(f.cip) + '</td></tr>'
-        + '<tr><td>Nombres</td><td>' + esc(f.apellidos_nombres) + '</td></tr>'
-        + '<tr><td>Grado</td><td>' + esc(f.grado) + '</td></tr>'
-        + '<tr><td>Unidad</td><td>' + esc(f.unidad) + '</td></tr>'
-        + '<tr><td>Inicio labor</td><td>' + esc(fmt(f.inicio_labor)) + '</td></tr>'
-        + '<tr><td>Situación</td><td><span class="faltos-badge" style="background:' + colorSit(f.situacion) + ';">'
-        + esc(f.situacion) + '</span></td></tr>'
-        + '<tr><td>Reincorporación</td><td>' + esc(fmt(f.reincorporacion)) + '</td></tr>'
-        + '</table>';
-    } catch (e) {
-      msg.className = 'faltos-msg err';
-      msg.textContent = 'Error de conexión';
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function fmt(v) {
+  if (!v) return '—';
+  try { return new Date(v).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); }
+  catch (e) { return String(v); }
+}
+function colorSit(s) {
+  if (s === 'TARDE') return '#b8860b';
+  if (s === 'ABANDONO') return '#c0392b';
+  return '#004d3d';
+}
+function alerta(id, ok, msg) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'fi-alerta ' + (ok ? 'ok' : 'error');
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+}
+function fichaHtml(f) {
+  return '<div class="result-ok">'
+    + '<div style="text-align:center;margin-bottom:10px;"><div style="font-size:11px;color:#666;">Nº DE REGISTRO</div>'
+    + '<div class="nro-big">' + esc(f.numero_registro) + '</div></div>'
+    + '<div style="font-size:13px;line-height:1.7;">'
+    + '<strong>' + esc(f.apellidos_nombres) + '</strong><br>'
+    + 'CIP: ' + esc(f.cip) + ' · ' + esc(f.grado || '') + '<br>'
+    + 'Unidad: ' + esc(f.unidad) + (f.division ? ' · ' + esc(f.division) : '') + '<br>'
+    + 'Inicio labor: ' + esc(fmt(f.inicio_labor)) + '<br>'
+    + 'Situación: <span class="badge-sit" style="background:' + colorSit(f.situacion) + ';">' + esc(f.situacion) + '</span><br>'
+    + (f.reincorporacion ? ('Reincorporación: ' + esc(fmt(f.reincorporacion)) + '<br>') : '')
+    + '</div></div>';
+}
+
+function mostrarPanel(cual) {
+  ['reg', 'con', 'sit'].forEach(function(p) {
+    var pan = document.getElementById('panel-' + p);
+    var tab = document.getElementById('tab-' + p);
+    if (pan) pan.classList.toggle('on', p === cual);
+    if (tab) tab.classList.toggle('on', p === cual);
+  });
+  if (history.replaceState) {
+    var hash = cual === 'reg' ? '' : (cual === 'con' ? '#consulta' : '#situacion');
+    history.replaceState(null, '', 'faltos.html' + hash);
+  }
+}
+
+async function buscarRrhh() {
+  var cip = (document.getElementById('fl-cip').value || '').trim();
+  var box = document.getElementById('fl-rrhh');
+  if (!cip || cip.replace(/\D/g, '').length < 6) {
+    box.innerHTML = '<span style="color:#888;">Ingrese el CIP para cruzar con nómina</span>';
+    return;
+  }
+  box.innerHTML = 'Buscando en RR.HH....';
+  try {
+    var r = await fetch(API + '/portal/faltos/rrhh-lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cip: cip })
+    });
+    var d = await r.json();
+    if (!d.ok) {
+      box.innerHTML = '<span style="color:#c0392b;">' + esc(d.error || 'No encontrado') + '</span>';
+      return;
     }
+    var p = d.personal;
+    box.innerHTML = '<strong style="color:#004d3d;">' + esc(p.apellidos_nombres) + '</strong><br>'
+      + '<span style="font-size:12px;color:#555;">' + esc(p.grado) + ' · ' + esc(p.unidad)
+      + (p.division ? ' · ' + esc(p.division) : '') + '</span>';
+  } catch (e) {
+    box.innerHTML = '<span style="color:#c0392b;">Error de conexión</span>';
   }
+}
+
+async function enviarFalto(ev) {
+  ev.preventDefault();
+  var btn = document.getElementById('btn-reg');
+  btn.disabled = true;
+  document.getElementById('reg-comprobante').style.display = 'none';
+  try {
+    var r = await fetch(API + '/portal/faltos/registrar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cip: document.getElementById('fl-cip').value,
+        fecha_labor: document.getElementById('fl-fecha').value,
+        hora_inicio_labor: document.getElementById('fl-hora').value,
+        observacion: document.getElementById('fl-obs').value
+      })
+    });
+    var d = await r.json();
+    if (!d.ok) {
+      alerta('reg-alerta', false, d.error || 'Error al registrar');
+      btn.disabled = false;
+      return;
+    }
+    alerta('reg-alerta', true, d.mensaje || 'Registrado correctamente. Conserve el Nº de registro.');
+    var box = document.getElementById('reg-comprobante');
+    box.style.display = 'block';
+    box.innerHTML = fichaHtml(d.falto);
+    document.getElementById('form-fl').reset();
+    document.getElementById('fl-rrhh').innerHTML = '<span style="color:#888;">Ingrese el CIP para cruzar con nómina</span>';
+  } catch (e) {
+    alerta('reg-alerta', false, 'Error de conexión');
+  }
+  btn.disabled = false;
+}
+
+async function consultarFalto(ev) {
+  ev.preventDefault();
+  document.getElementById('con-resultado').innerHTML = '';
+  try {
+    var r = await fetch(API + '/portal/faltos/consultar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cip: document.getElementById('con-cip').value,
+        numero_registro: document.getElementById('con-numero').value
+      })
+    });
+    var d = await r.json();
+    if (!d.ok) { alerta('con-alerta', false, d.error || 'No encontrado'); return; }
+    alerta('con-alerta', true, 'Registro encontrado');
+    document.getElementById('con-resultado').innerHTML = fichaHtml(d.falto);
+  } catch (e) {
+    alerta('con-alerta', false, 'Error de conexión');
+  }
+}
+
+async function actualizarSituacion(ev) {
+  ev.preventDefault();
+  document.getElementById('sit-resultado').innerHTML = '';
+  try {
+    var r = await fetch(API + '/portal/faltos/actualizar-situacion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cip: document.getElementById('sit-cip').value,
+        numero_registro: document.getElementById('sit-numero').value,
+        fecha_reincorporacion: document.getElementById('sit-fecha').value,
+        hora_reincorporacion: document.getElementById('sit-hora').value,
+        observacion: document.getElementById('sit-obs').value
+      })
+    });
+    var d = await r.json();
+    if (!d.ok) { alerta('sit-alerta', false, d.error || 'No se pudo actualizar'); return; }
+    alerta('sit-alerta', true, d.mensaje || 'Actualizado');
+    document.getElementById('sit-resultado').innerHTML = fichaHtml(d.falto);
+  } catch (e) {
+    alerta('sit-alerta', false, 'Error de conexión');
+  }
+}
+
+(function initHash() {
+  var h = (location.hash || '').toLowerCase();
+  if (h.indexOf('consulta') >= 0) mostrarPanel('con');
+  else if (h.indexOf('situacion') >= 0 || h.indexOf('situación') >= 0) mostrarPanel('sit');
+  else mostrarPanel('reg');
+})();
 </script>
 </body>
 </html>

@@ -1264,8 +1264,13 @@
     
     <div id="page-faltos" class="page">
       <div class="card" id="fl-block-registro">
-        <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-user-plus" style="color:#004d3d;"></i> Registrar falto</h3>
-        <p style="font-size:12.5px;color:#666;margin-bottom:10px;">Cruzado con nómina RR.HH. Al guardar se muestra el <strong>Nº de registro</strong>. No se puede borrar.</p>
+        <h3 style="margin:0 0 8px;border:none;padding:0;"><i class="fas fa-user-plus" style="color:#004d3d;"></i> Registro de faltos</h3>
+        <p style="font-size:12.5px;color:#666;margin-bottom:10px;line-height:1.5;">
+          El registro diario lo hacen las <strong>unidades en el portal web</strong>
+          (<a href="faltos.html" target="_blank" style="color:#004d3d;font-weight:700;">abrir formulario público</a>),
+          igual que descansos médicos. Aquí el admin del área solo consulta el listado / dashboard.
+          Quienes tienen permiso de unidad pueden registrar también desde este panel.
+        </p>
         <p id="fl-unidad-hint" style="font-size:12px;color:#004d3d;font-weight:600;margin:0 0 10px;"></p>
         <form id="fl-form-reg" onsubmit="flRegistrar(event)">
           <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">

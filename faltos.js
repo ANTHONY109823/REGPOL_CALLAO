@@ -840,7 +840,7 @@ function registrarRutas(app, pool, requireAuth) {
       }
       const r = await pool.query(
         `SELECT numero_registro, cip, apellidos_nombres, grado, unidad, division,
-                inicio_labor, situacion, reincorporacion, anio
+                inicio_labor, situacion, reincorporacion, observacion, anio
          FROM faltos WHERE cip=$1 AND UPPER(numero_registro)=$2`,
         [cip, numero]
       );
@@ -860,8 +860,134 @@ function registrarRutas(app, pool, requireAuth) {
           inicio_labor: row.inicio_labor,
           situacion: row.situacion,
           reincorporacion: row.reincorporacion,
+          observacion: row.observacion || '',
           anio: row.anio
         }
+      });
+    } catch (e) {
+      res.json({ ok: false, error: e.message });
+    }
+  });
+
+  /** Cruce CIP con nómina (público, datos mínimos para el formulario de unidad). */
+  app.post('/portal/faltos/rrhh-lookup', async function(req, res) {
+    try {
+      const found = await buscarPersonalRrhh(pool, (req.body && req.body.cip) || '');
+      if (found.error) return res.json({ ok: false, error: found.error });
+      res.json({ ok: true, personal: found.personal });
+    } catch (e) {
+      res.json({ ok: false, error: e.message });
+    }
+  });
+
+  /**
+   * Registro público por personal de unidad (igual modelo que descansos médicos).
+   * No requiere login: cruza CIP con RR.HH. y entrega Nº de registro.
+   */
+  app.post('/portal/faltos/registrar', async function(req, res) {
+    try {
+      const b = req.body || {};
+      const found = await buscarPersonalRrhh(pool, b.cip);
+      if (found.error) return res.json({ ok: false, error: found.error });
+      const p = found.personal;
+
+      const fecha = parseFecha(b.fecha_labor || b.fecha);
+      const hora = parseHora(b.hora_inicio_labor || b.hora);
+      if (!fecha) return res.json({ ok: false, error: 'Fecha de inicio de labor requerida' });
+      if (!hora) return res.json({ ok: false, error: 'Hora de inicio de labor requerida' });
+      const anio = parseInt(fecha.slice(0, 4), 10);
+      if (anio !== ANIO_CONTROL) {
+        return res.json({ ok: false, error: 'Solo se registran faltos del año ' + ANIO_CONTROL });
+      }
+      const inicio = construirInicioLabor(fecha, hora);
+      if (!inicio) return res.json({ ok: false, error: 'Fecha/hora de labor inválidas' });
+      if (!p.unidad) return res.json({ ok: false, error: 'El CIP no tiene unidad en nómina' });
+
+      const dup = await pool.query(
+        `SELECT id, numero_registro FROM faltos
+         WHERE cip=$1 AND inicio_labor=$2 LIMIT 1`,
+        [p.cip, inicio.toISOString()]
+      );
+      if (dup.rows.length) {
+        return res.json({
+          ok: false,
+          error: 'Ya existe un falto para este CIP en esa fecha/hora (' + dup.rows[0].numero_registro + ')'
+        });
+      }
+
+      const row = await insertarFalto(pool, {
+        cip: p.cip,
+        dni: p.dni,
+        apellidos_nombres: p.apellidos_nombres,
+        grado: p.grado,
+        division: p.division,
+        unidad: p.unidad,
+        inicio_labor: inicio.toISOString(),
+        situacion: 'FALTO',
+        observacion: limpio(b.observacion, 500),
+        anio: ANIO_CONTROL
+      }, { usuario: 'portal-unidad', unidad: p.unidad }, 'portal');
+
+      res.json({
+        ok: true,
+        mensaje: 'Falto registrado. Conserve el Nº de registro para consultar o actualizar la situación.',
+        falto: filaPublica(row)
+      });
+    } catch (e) {
+      res.json({ ok: false, error: e.message });
+    }
+  });
+
+  /**
+   * Actualizar situación (público) con CIP + Nº registro + reincorporación.
+   * ≤24h → TARDE · >24h → ABANDONO
+   */
+  app.post('/portal/faltos/actualizar-situacion', async function(req, res) {
+    try {
+      const b = req.body || {};
+      const cip = normalizarCip(b.cip);
+      const numero = limpio(b.numero_registro || b.numero, 30).toUpperCase();
+      if (!cip || !numero) {
+        return res.json({ ok: false, error: 'Indique CIP y número de registro' });
+      }
+      const cur = await pool.query(
+        'SELECT * FROM faltos WHERE cip=$1 AND UPPER(numero_registro)=$2',
+        [cip, numero]
+      );
+      if (!cur.rows.length) return res.json({ ok: false, error: 'No se encontró el registro' });
+      const row = cur.rows[0];
+
+      let reincorp = null;
+      if (b.fecha_reincorporacion && b.hora_reincorporacion) {
+        reincorp = construirInicioLabor(parseFecha(b.fecha_reincorporacion), parseHora(b.hora_reincorporacion));
+      } else if (b.reincorporacion) {
+        reincorp = new Date(b.reincorporacion);
+        if (isNaN(reincorp.getTime())) reincorp = null;
+      }
+      if (!reincorp) {
+        return res.json({ ok: false, error: 'Indique fecha y hora de reincorporación' });
+      }
+      if (reincorp.getTime() < new Date(row.inicio_labor).getTime()) {
+        return res.json({ ok: false, error: 'La reincorporación no puede ser anterior al inicio de labor' });
+      }
+
+      const situacion = calcularSituacion(row.inicio_labor, reincorp);
+      const obs = b.observacion != null ? limpio(b.observacion, 500) : row.observacion;
+      const upd = await pool.query(
+        `UPDATE faltos SET
+          situacion=$1,
+          reincorporacion=$2,
+          observacion=$3,
+          actualizado_por='portal-unidad',
+          actualizado_en=NOW()
+         WHERE id=$4
+         RETURNING *`,
+        [situacion, reincorp.toISOString(), obs, row.id]
+      );
+      res.json({
+        ok: true,
+        mensaje: 'Situación actualizada a ' + situacion,
+        falto: filaPublica(upd.rows[0])
       });
     } catch (e) {
       res.json({ ok: false, error: e.message });
