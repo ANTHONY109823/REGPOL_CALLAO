@@ -10,8 +10,20 @@
   <link rel="stylesheet" href="responsive.css?v=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
-    .grid-detalles-duo{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.15fr);gap:14px;width:100%;max-width:980px;margin:8px auto 12px;align-items:stretch;justify-content:center;}
-    @media(max-width:800px){.grid-detalles-duo{grid-template-columns:1fr;}}
+    .detalle-cabecera{text-align:center;margin:0 0 10px;}
+    .detalle-cabecera h2{margin:0 0 3px;font-size:clamp(1.15rem,2.3vw,1.4rem);line-height:1.15;color:#004d3d;font-weight:800;}
+    .detalle-cabecera .estado-badge{margin:0;}
+    .ventana-inscripcion-nota{font-size:12px;color:#666;text-align:center;margin:3px 0 0;line-height:1.3;}
+    .detalle-fila-cuadros{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 8px;align-items:start;justify-content:center;max-width:1120px;margin:0 auto;}
+    .detalle-fila-cuadros .btn-volver,
+    .detalle-fila-cuadros .btn-registrarse,
+    .detalle-fila-cuadros .btn-registrarse.is-disabled{align-self:start;margin-top:0;}
+    .grid-detalles-duo{display:grid;grid-template-columns:minmax(240px,1fr) minmax(280px,1.15fr);gap:12px;width:100%;align-items:stretch;margin:0;}
+    @media(max-width:900px){
+      .detalle-fila-cuadros{grid-template-columns:1fr 1fr;gap:8px;}
+      .grid-detalles-duo{grid-column:1/-1;order:1;grid-template-columns:1fr;}
+      .detalle-fila-cuadros .btn-registrarse,.detalle-fila-cuadros .btn-registrarse.is-disabled{justify-self:end;}
+    }
     .card-detalle{background:#fff;border-radius:12px;border:1.5px solid #c8e6c9;padding:16px 16px 14px;text-align:left;width:100%;box-sizing:border-box;}
     .card-detalle.highlight-card{border-color:#c8a94a;}
     .bloque-info-conv{margin-top:12px;padding-top:12px;border-top:1.5px solid #e0ebe4;}
@@ -32,26 +44,17 @@
     .tabla-cupos tbody tr:nth-child(even){background:#f3f8f4;}
     .tabla-cupos tbody tr:hover{background:#e8f5e9;}
     .cupos-vacio{font-size:13px;color:#888;padding:8px 0;}
-    .detalle-topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px 12px;margin:0 0 6px;}
-    .detalle-topbar .btn-volver{justify-self:start;}
-    .detalle-topbar .btn-registrarse,.detalle-topbar .btn-registrarse.is-disabled{justify-self:end;}
-    .detalle-top-centro{text-align:center;min-width:0;}
-    .detalle-top-centro h2{margin:0 0 3px;font-size:clamp(1.15rem,2.3vw,1.4rem);line-height:1.15;color:#004d3d;font-weight:800;}
-    .detalle-top-centro .estado-badge{margin:0;}
-    .ventana-inscripcion-nota{font-size:12px;color:#666;text-align:center;margin:0 0 6px;line-height:1.3;}
-    @media(max-width:700px){
-      .detalle-topbar{grid-template-columns:1fr 1fr;}
-      .detalle-top-centro{grid-column:1/-1;order:-1;}
-    }
-    .page-intro--compact{display:none;}
-    .content-area.detalle-compact{padding-top:6px;padding-bottom:16px;}
-    .btn-volver,.btn-registrarse{padding:8px 14px;border-radius:7px;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:none;text-decoration:none;margin:0;}
+    .content-area.detalle-compact{padding-top:6px;padding-bottom:12px;}
+    html,body.body-cursos{min-height:0!important;height:auto;}
+    body.body-cursos .portal-footer{display:none!important;margin:0!important;padding:0!important;}
+    #cuerpo-detalle{min-height:0;}
+    .btn-volver,.btn-registrarse{padding:8px 14px;border-radius:7px;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:none;text-decoration:none;margin:0;white-space:nowrap;}
     .btn-volver{background:#004d3d;color:#fff;}
     .btn-volver:hover{background:#006b55;}
     .btn-registrarse{background:#c8a94a;color:#002d24;}
     .btn-registrarse:hover{background:#dfc060;color:#002d24;}
     .btn-registrarse.is-disabled{background:#ccc;color:#666;cursor:not-allowed;pointer-events:none;}
-    .form-inscripcion{background:#f7faf7;border-radius:10px;border:1.5px solid #c8e6c9;padding:24px;margin-top:8px;text-align:left;}
+    .form-inscripcion{background:#f7faf7;border-radius:10px;border:1.5px solid #c8e6c9;padding:24px;margin:8px auto 0;text-align:left;max-width:980px;}
     .form-inscripcion h3{color:#004d3d;font-size:15px;margin:0 0 16px;border-bottom:2px solid #c8a94a;padding-bottom:8px;}
     .fi-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
     @media(max-width:600px){.fi-grid{grid-template-columns:1fr;}}
@@ -63,7 +66,6 @@
     .fi-alerta{padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600;margin-bottom:12px;display:none;}
     .fi-alerta.ok{background:#d4edda;color:#1a7a3a;display:block;}
     .fi-alerta.error{background:#f8d7da;color:#842029;display:block;}
-    
     .pdf-upload-box{border:2px dashed #c8a94a;border-radius:9px;padding:16px;background:#fffdf5;grid-column:1/-1;}
     .pdf-upload-box .pdf-titulo{font-size:13px;font-weight:800;color:#c8a94a;margin-bottom:6px;display:flex;align-items:center;gap:7px;}
     .pdf-upload-box .pdf-aviso{font-size:11.5px;color:#666;margin-bottom:10px;line-height:1.5;}
@@ -71,7 +73,6 @@
     .pdf-upload-box input[type="file"]{width:100%;padding:7px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;}
     .pdf-preview-bar{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:#555;}
     .pdf-preview-bar i{color:#e74c3c;font-size:18px;}
-    
     .plantilla-banner{background:linear-gradient(135deg,#004d3d,#006b55);border-radius:10px;padding:16px 20px;margin:16px 0;display:flex;align-items:center;gap:14px;color:#fff;flex-wrap:wrap;}
     .plantilla-banner i.fa-file-pdf{font-size:32px;color:#c8a94a;flex-shrink:0;}
     .plantilla-banner .pb-texto{flex:1;}
@@ -84,9 +85,7 @@
     .estado-EN-PROCESO,.estado-EN_PROCESO{background:#fff3cd;color:#856404;}
     .estado-CERRADO{background:#f8d7da;color:#842029;}
     .inscripciones-cerradas{background:#fff3cd;border:1.5px solid #ffe082;border-radius:8px;padding:14px 18px;color:#856404;font-size:13.5px;font-weight:600;text-align:center;margin-top:8px;}
-    #cuerpo-detalle{min-height:300px;}
     .loading-msg{text-align:center;padding:48px;color:#bbb;font-size:14px;}
-    
     .fi-hint{display:block;margin-top:5px;font-size:11px;color:#666;line-height:1.35;}
   </style>
 </head>
@@ -119,10 +118,6 @@
 <main class="container content-area detalle-compact">
   <div id="cuerpo-detalle"><p class="loading-msg"><i class="fas fa-spinner fa-spin"></i> Cargando información...</p></div>
 </main>
-
-<footer class="portal-footer">
-  <p>&copy; 2026 Regi&#243;n Policial Callao - UNITIC | Todos los derechos reservados | Ing. Anthony Ccayo</p>
-</footer>
 
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=6"></script>
@@ -225,15 +220,13 @@ function renderDetalle(item){
 
   document.title = escHtmlD(item.titulo) + ' — REGPOL Callao';
   document.getElementById('cuerpo-detalle').innerHTML =
-    '<div class="detalle-topbar">'
-    +'<a href="'+tipoHref+'" class="btn-volver"><i class="fas fa-chevron-left"></i> VOLVER A '+tipoLabel+'</a>'
-    +'<div class="detalle-top-centro">'
+    '<div class="detalle-cabecera">'
     +'<h2>'+escHtmlD(item.titulo)+'</h2>'
     +estadoBadge(item.estado)
-    +'</div>'
-    +btnRegistrar
-    +'</div>'
     +(ventanaTxt ? '<p class="ventana-inscripcion-nota">'+escHtmlD(ventanaTxt)+'</p>' : '')
+    +'</div>'
+    +'<div class="detalle-fila-cuadros">'
+    +'<a href="'+tipoHref+'" class="btn-volver"><i class="fas fa-chevron-left"></i> VOLVER A '+tipoLabel+'</a>'
     +'<div class="grid-detalles-duo">'
     +'<div class="card-detalle highlight-card">'
     +'<h3>REQUISITOS</h3>'
@@ -243,6 +236,8 @@ function renderDetalle(item){
     +'</div>'
     +'</div>'
     +(ciasCard || '')
+    +'</div>'
+    +btnRegistrar
     +'</div>'
     +formHtml;
 
