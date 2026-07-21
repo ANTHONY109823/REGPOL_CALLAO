@@ -79,18 +79,24 @@
     .btn-registrarse{background:#c8a94a;color:#002d24;}
     .btn-registrarse:hover{background:#dfc060;color:#002d24;}
     .btn-registrarse.is-disabled{background:#ccc;color:#666;cursor:not-allowed;pointer-events:none;}
-    .form-inscripcion{background:#f7faf7;border-radius:10px;border:1.5px solid #c8e6c9;padding:24px;margin:8px auto 0;text-align:left;max-width:980px;}
-    .form-inscripcion h3{color:#004d3d;font-size:15px;margin:0 0 16px;border-bottom:2px solid #c8a94a;padding-bottom:8px;}
-    .fi-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .form-inscripcion{background:#fff;border-radius:12px;border:1.5px solid #c8e6c9;padding:24px 22px;margin:10px auto 0;text-align:left;max-width:980px;box-shadow:0 2px 10px rgba(0,77,61,.06);}
+    .form-inscripcion h3{color:#004d3d;font-size:16px;font-weight:800;margin:0 0 8px;border-bottom:2px solid #c8a94a;padding-bottom:10px;letter-spacing:.2px;}
+    .form-inscripcion .fi-intro{font-size:12.5px;color:#555;margin:0 0 16px;line-height:1.5;}
+    .fi-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;}
     @media(max-width:600px){.fi-grid{grid-template-columns:1fr;}}
     .fi-group{margin-bottom:0;}
-    .fi-group label{font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:4px;}
-    .fi-group input,.fi-group select{width:100%;padding:9px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit;}
-    .fi-group input:focus,.fi-group select:focus{border-color:#004d3d;outline:none;}
+    .fi-group label{font-size:12px;font-weight:700;color:#004d3d;display:block;margin-bottom:5px;}
+    .fi-group input,.fi-group select{width:100%;padding:10px 12px;border:1.5px solid #c5d9ce;border-radius:8px;font-size:13px;font-family:inherit;background:#fafcfb;color:#333;transition:border-color .15s,box-shadow .15s;}
+    .fi-group input:focus,.fi-group select:focus{border-color:#004d3d;outline:none;background:#fff;box-shadow:0 0 0 3px rgba(0,77,61,.1);}
+    .fi-group select{cursor:pointer;}
     .fi-full{grid-column:1/-1;}
     .fi-alerta{padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600;margin-bottom:12px;display:none;}
     .fi-alerta.ok{background:#d4edda;color:#1a7a3a;display:block;}
     .fi-alerta.error{background:#f8d7da;color:#842029;display:block;}
+    .fi-hint{display:block;margin-top:5px;font-size:11px;color:#666;line-height:1.35;}
+    .btn-enviar-solicitud{display:inline-block;margin-top:8px;background:#004d3d;color:#fff;padding:13px 36px;border-radius:8px;border:none;font-size:14px;font-weight:800;letter-spacing:.4px;cursor:pointer;font-family:inherit;transition:background .2s;}
+    .btn-enviar-solicitud:hover{background:#006b55;}
+    .btn-enviar-solicitud:disabled{opacity:.65;cursor:wait;}
     .pdf-upload-box{border:2px dashed #c8a94a;border-radius:9px;padding:16px;background:#fffdf5;grid-column:1/-1;}
     .pdf-upload-box .pdf-titulo{font-size:13px;font-weight:800;color:#c8a94a;margin-bottom:6px;display:flex;align-items:center;gap:7px;}
     .pdf-upload-box .pdf-aviso{font-size:11.5px;color:#666;margin-bottom:10px;line-height:1.5;}
@@ -111,7 +117,6 @@
     .estado-CERRADO{background:#f8d7da;color:#842029;}
     .inscripciones-cerradas{background:#fff3cd;border:1.5px solid #ffe082;border-radius:8px;padding:14px 18px;color:#856404;font-size:13.5px;font-weight:600;text-align:center;margin-top:8px;}
     .loading-msg{text-align:center;padding:48px;color:#bbb;font-size:14px;}
-    .fi-hint{display:block;margin-top:5px;font-size:11px;color:#666;line-height:1.35;}
   </style>
 </head>
 <body class="body-cursos">
@@ -286,7 +291,7 @@ function mostrarFormInscripcion(){
 function initCamposInscripcion(){
   var selArea = document.getElementById('fi-area');
   if(selArea && typeof regpolPoblarSelectArea === 'function'){
-    regpolPoblarSelectArea(selArea, ' Seleccionar área ');
+    regpolPoblarSelectArea(selArea, 'Seleccionar área');
   }
   toggleAreaOtroInscripcion();
   cargarDivisionesPublico();
@@ -308,7 +313,7 @@ var GRADOS_PNP = [
 var CARGOS_OPCIONES = ['ADMINISTRATIVO', 'PATRULLAJE', 'INVESTIGACIÓN', 'JEFE DE UNIDAD'];
 
 function optsCargo(){
-  return '<option value=""> Seleccionar cargo </option>'
+  return '<option value="">Seleccionar cargo</option>'
     + CARGOS_OPCIONES.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
 }
 
@@ -325,24 +330,29 @@ function obtenerAreaInscripcion() {
 }
 
 function optsGrado(){
-  return '<option value=""> Seleccionar grado </option>'
+  return '<option value="">Seleccionar grado</option>'
     + GRADOS_PNP.map(function(g){return '<option value="'+g+'">'+g+'</option>';}).join('');
+}
+
+function textoBtnEnviar(){
+  return 'ENVIAR SOLICITUD';
 }
 
 function renderFormInscripcion(item){
   var esConvenio = item.tipo === 'convenio';
   var esCurso    = item.tipo === 'curso';
   var esRepechaje = esConvenio && (MODO_REPECHAJE || /[?&]repechaje=1/.test(location.search||''));
+  var tituloForm = esRepechaje ? 'Repechaje - Convenio' : (esConvenio ? 'Preinscripción - Convenio' : 'Inscripción - Curso');
   return '<form class="form-inscripcion" id="form-inscripcion" onsubmit="enviarInscripcion(event)">'
-    +'<h3><i class="fas fa-edit"></i> '+(esRepechaje?'REPECHAJE':'Preinscripción')+'  '+(esConvenio?'CONVENIO':'CURSO')+'</h3>'
+    +'<h3>'+tituloForm+'</h3>'
     +(esConvenio && !esRepechaje
-      ? '<p style="font-size:12.5px;color:#666;margin:-6px 0 14px;line-height:1.45;">Solo datos de preinscripción. <strong>No adjunte expediente aquí.</strong> Al terminar recibirá un <strong>N° de registro</strong>. Consulte con <strong>CIP + N° de inscripción</strong>. Si resulta ganador, tendrá <strong>2 días</strong> para subir su PDF.</p>'
+      ? '<p class="fi-intro">Complete sus datos de preinscripción. <strong>No adjunte expediente aquí.</strong> Al terminar recibirá un <strong>N° de registro</strong>. Consulte con <strong>CIP + N° de inscripción</strong>. Si resulta ganador, tendrá <strong>2 días</strong> para subir su PDF.</p>'
       : '')
     +(esRepechaje
-      ? '<p style="font-size:12.5px;color:#856404;margin:-6px 0 14px;line-height:1.45;background:#fff8e1;padding:10px;border-radius:8px;">Repechaje: se registra completo y <strong>sube todos sus expedientes ahora</strong>. No entra al sorteo. Sujeto a vacantes liberadas.</p>'
+      ? '<p class="fi-intro" style="color:#856404;background:#fff8e1;padding:10px 12px;border-radius:8px;">Repechaje: se registra completo y <strong>sube todos sus expedientes ahora</strong>. No entra al sorteo. Sujeto a vacantes liberadas.</p>'
       : '')
     +(esConvenio && item.aviso_sorteo_fb
-      ? '<p style="font-size:12.5px;color:#004d3d;margin:0 0 14px;line-height:1.45;background:#e8f5f1;padding:10px;border-radius:8px;border:1px solid #c8e6c9;"><i class="fab fa-facebook"></i> <strong>Sorteo en vivo:</strong> '+escHtmlD(item.aviso_sorteo_fb)+'</p>'
+      ? '<p class="fi-intro" style="color:#004d3d;background:#e8f5f1;padding:10px 12px;border-radius:8px;border:1px solid #c8e6c9;"><strong>Sorteo en vivo:</strong> '+escHtmlD(item.aviso_sorteo_fb)+'</p>'
       : '')
     +'<div id="fi-alerta" class="fi-alerta"></div>'
     +'<div class="fi-grid">'
@@ -350,12 +360,12 @@ function renderFormInscripcion(item){
     
     +'<div class="fi-group"><label>Grado / Rango *</label>'
     +'<select id="fi-grado" required>'+optsGrado()+'</select></div>'
-    +'<div class="fi-group fi-full" style="grid-column:unset"><label>Apellidos y Nombres *</label>'
-    +'<input type="text" id="fi-nombres" maxlength="200" placeholder="APELLIDOS APELLIDOS, Nombres" required/></div>'
-
-    
     +'<div class="fi-group"><label>CIP *</label>'
     +'<input type="text" id="fi-cip" maxlength="20" placeholder="Número de CIP" required/></div>'
+    +'<div class="fi-group"><label>Apellidos *</label>'
+    +'<input type="text" id="fi-apellidos" maxlength="120" placeholder="Ej: GARCIA LOPEZ" required/></div>'
+    +'<div class="fi-group"><label>Nombres *</label>'
+    +'<input type="text" id="fi-nombres" maxlength="120" placeholder="Ej: JUAN CARLOS" required/></div>'
     +'<div class="fi-group"><label>DNI *</label>'
     +'<input type="text" id="fi-dni" maxlength="12" placeholder="Número de DNI" required/></div>'
 
@@ -370,7 +380,7 @@ function renderFormInscripcion(item){
 
     +(esConvenio
       ? ('<div class="fi-group"><label>Región Policial *</label>'
-        +'<select id="fi-region" required onchange="onCambioRegionInscripcion()"><option value="">— Seleccionar región —</option></select></div>'
+        +'<select id="fi-region" required onchange="onCambioRegionInscripcion()"><option value="">Seleccionar región</option></select></div>'
         +'<div class="fi-group"><label>Unidad / Dependencia *</label>'
         +'<input type="text" id="fi-unidad" list="fi-unidad-datalist" maxlength="150" placeholder="Nombre de su comisaría / dependencia" required/>'
         +'<datalist id="fi-unidad-datalist"></datalist>'
@@ -380,7 +390,7 @@ function renderFormInscripcion(item){
         +'<small class="fi-hint">Solo números, 10 a 12 dígitos.</small></div>'
         +'<div class="fi-group"><label>Modalidad de trabajo *</label>'
         +'<select id="fi-modalidad" required onchange="onCambioModalidadTrabajo()">'
-        +'<option value="">— Seleccionar —</option>'
+        +'<option value="">Seleccionar modalidad</option>'
         +'<option value="24X24">24X24</option>'
         +'<option value="ADMINISTRATIVO">Administrativo</option>'
         +'<option value="SERVICIO_FRANCO_RETEN">Servicio / Franco / Retén</option>'
@@ -390,14 +400,14 @@ function renderFormInscripcion(item){
         +'<input type="text" id="fi-modalidad-otro" maxlength="120" placeholder="Especifique su modalidad..."/>'
         +'</div></div>')
       : ('<div class="fi-group"><label>Unidad / Dependencia *</label>'
-        +'<select id="fi-unidad" required><option value="">— Seleccionar —</option></select></div>'))
+        +'<select id="fi-unidad" required><option value="">Seleccionar unidad</option></select></div>'))
 
     
     +'<div class="fi-group"><label>Cargo *</label>'
     +'<select id="fi-cargo" required>'+optsCargo()+'</select></div>'
     +'<div class="fi-group"><label>Área *</label>'
     +'<select id="fi-area" required onchange="toggleAreaOtroInscripcion()">'
-    +'<option value="">— Seleccionar área —</option></select>'
+    +'<option value="">Seleccionar área</option></select>'
     +'<div id="fi-area-otro-box" style="display:none;margin-top:8px;">'
     +'<input type="text" id="fi-area-otro" maxlength="120" placeholder="Especifique el área..."/>'
     +'</div></div>'
@@ -405,21 +415,21 @@ function renderFormInscripcion(item){
     +(esConvenio
       ? '<div class="fi-group"><label>Arma (Condición laboral) *</label>'
         +'<select id="fi-arma" required>'
-        +'<option value="">— Seleccionar —</option>'
+        +'<option value="">Seleccionar</option>'
         +'<option value="DEL ESTADO">DEL ESTADO</option>'
         +'<option value="PARTICULAR">PARTICULAR</option>'
         +'</select></div>'
         +'<div class="fi-group"><label>Situación para el servicio *</label>'
         +'<select id="fi-disponibilidad" required onchange="onCambioDisponibilidad(this.value)">'
-        +'<option value="">— Seleccionar —</option>'
-        +'<option value="VACACIONES">Vacaciones — vacante automática (sin sorteo)</option>'
-        +'<option value="FRANCO">Día de franco — participa en sorteo</option>'
+        +'<option value="">Seleccionar situación</option>'
+        +'<option value="VACACIONES">Vacaciones - vacante automática (sin sorteo)</option>'
+        +'<option value="FRANCO">Día de franco - participa en sorteo</option>'
         +'</select>'
         +'<small class="fi-hint" id="disp-aviso" style="display:none;"></small></div>'
         +'<div class="fi-group" id="fi-dia-franco-box" style="display:none;">'
         +'<label>Día de franco *</label>'
         +'<select id="fi-dia-franco">'
-        +'<option value="">— Seleccionar —</option>'
+        +'<option value="">Seleccionar día</option>'
         +'<option value="PAR">DÍA PAR</option>'
         +'<option value="IMPAR">DÍA IMPAR</option>'
         +'</select></div>'
@@ -459,9 +469,8 @@ function renderFormInscripcion(item){
     : '')
 
     +'</div>'
-    +'<div style="margin-top:18px;text-align:center;">'
-    +'<button type="submit" class="btn-registro-grande"><i class="fas fa-paper-plane"></i> '
-    +(esRepechaje?'ENVIAR REPECHAJE':(esConvenio?'ENVIAR PREINSCRIPCIÓN':'ENVIAR INSCRIPCIÓN'))+'</button>'
+    +'<div style="margin-top:20px;text-align:center;">'
+    +'<button type="submit" class="btn-enviar-solicitud">'+textoBtnEnviar()+'</button>'
     +'</div>'
     +'</form>';
 }
@@ -600,7 +609,7 @@ function cargarDivisionesPublico(){
     DIVISIONES_PUBL = d.divisiones;
     var sel = document.getElementById('fi-unidad');
     if(sel && sel.tagName === 'SELECT'){
-      sel.innerHTML = '<option value="">— Seleccionar —</option>';
+      sel.innerHTML = '<option value="">Seleccionar unidad</option>';
       (d.divisiones||[]).forEach(function(div){
         var og = document.createElement('optgroup');
         og.label = div.nombre;
@@ -621,7 +630,7 @@ function cargarDivisionesPublico(){
       var selR = document.getElementById('fi-region');
       if(selR && d.regiones){
         var cur = selR.value;
-        selR.innerHTML = '<option value="">— Seleccionar región —</option>';
+        selR.innerHTML = '<option value="">Seleccionar región</option>';
         d.regiones.forEach(function(r){
           var o = document.createElement('option');
           o.value = r; o.textContent = r;
@@ -643,7 +652,9 @@ function enviarInscripcion(e){
   var cip     = v('fi-cip');
   var dni     = v('fi-dni');
   var grado   = v('fi-grado');
-  var nombres = v('fi-nombres');
+  var apellidos = v('fi-apellidos').toUpperCase();
+  var nombresSolo = v('fi-nombres').toUpperCase();
+  var nombres = (apellidos && nombresSolo) ? (apellidos + ', ' + nombresSolo) : (apellidos || nombresSolo);
   var unidad  = v('fi-unidad');
   var area    = obtenerAreaInscripcion();
   var cargo   = v('fi-cargo');
@@ -668,12 +679,12 @@ function enviarInscripcion(e){
   var pdfNomb = (pdfFile&&pdfFile.files&&pdfFile.files[0]) ? pdfFile.files[0].name : 'requisitos.pdf';
   var esRepechaje = ITEM_TIPO==='convenio' && (MODO_REPECHAJE || /[?&]repechaje=1/.test(location.search||''));
 
-  if(!grado||!cip||!dni||!nombres||!unidad||!cargo||!area){
+  if(!grado||!cip||!dni||!apellidos||!nombresSolo||!unidad||!cargo||!area){
     var selArea = document.getElementById('fi-area');
     if (selArea && selArea.value === 'OTRO' && !area) {
       alerta.textContent='Seleccionó OTRO: indique el área en el cuadro de texto.';
     } else {
-      alerta.textContent='Complete los campos obligatorios: grado, CIP, DNI, nombres, unidad, cargo y área.';
+      alerta.textContent='Complete los campos obligatorios: grado, CIP, DNI, apellidos, nombres, unidad, cargo y área.';
     }
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
@@ -719,7 +730,7 @@ function enviarInscripcion(e){
   }
 
   var btn = document.querySelector('#form-inscripcion button[type="submit"]');
-  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Enviando...';}
+  if(btn){btn.disabled=true;btn.textContent='Enviando...';}
 
   fetch(API_PUBLIC + '/portal/items/'+ITEM_ID+'/inscribir',{
     method:'POST', headers:{'Content-Type':'application/json'},
@@ -766,7 +777,7 @@ function enviarInscripcion(e){
   }).finally(function(){
     if(btn){
       btn.disabled=false;
-      btn.innerHTML='<i class="fas fa-paper-plane"></i> '+(esRepechaje?'ENVIAR REPECHAJE':(ITEM_TIPO==='convenio'?'ENVIAR PREINSCRIPCIÓN':'ENVIAR INSCRIPCIÓN'));
+      btn.textContent=textoBtnEnviar();
     }
   });
 }
