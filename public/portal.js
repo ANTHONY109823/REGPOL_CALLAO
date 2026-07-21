@@ -110,59 +110,104 @@ function htmlTarjetaPortalItem(item) {
     '</div></a>';
 }
 
-function resetMarqueeContainer(el) {
-  if (!el) return;
-  var wrap = el.closest && el.closest('.regpol-marquee-wrap');
-  if (wrap && wrap.parentNode) {
-    if (typeof wrap._regpolMarqueeStop === 'function') wrap._regpolMarqueeStop();
-    wrap.parentNode.insertBefore(el, wrap);
-    wrap.parentNode.removeChild(wrap);
-  }
-  var board = el.closest && el.closest('.convenios-board-wrap');
-  if (board && board.parentNode) {
-    board.parentNode.insertBefore(el, board);
-    board.parentNode.removeChild(board);
-  }
-  el.className = 'grid-modern';
-  el.removeAttribute('style');
-}
-
-function pintarConveniosEnDosFilas(el, items) {
-  resetMarqueeContainer(el);
-  if (!items || !items.length) {
-    el.innerHTML = '<p class="texto-vacio">No hay convenios publicados actualmente.</p>';
-    return;
-  }
-  // Fila 1: mitad inferior (5 si hay 11). Fila 2: el resto (6 si hay 11). Sin duplicar.
-  var corte = Math.floor(items.length / 2);
-  var fila1 = items.slice(0, corte);
-  var fila2 = items.slice(corte);
-  el.className = 'convenios-board';
-  el.innerHTML =
-    '<div class="convenios-fila">' + fila1.map(htmlTarjetaPortalItem).join('') + '</div>'
-    + '<div class="convenios-fila">' + fila2.map(htmlTarjetaPortalItem).join('') + '</div>';
-}
-
 function activarMarqueeCarrusel(container, opts) {
   if (!container) return;
   opts = opts || {};
   var minItems = opts.minItems != null ? opts.minItems : 1;
   var secsPer = opts.secsPerItem != null ? opts.secsPerItem : 7;
   var minSecs = opts.minSecs != null ? opts.minSecs : 28;
+  var rows = opts.rows != null ? opts.rows : 1;
+  var controls = !!opts.controls;
+
+  // Evitar dobles flechas si se vuelve a pintar
+  var prevWrap = container.parentNode && container.parentNode.classList.contains('regpol-marquee-wrap')
+    ? container.parentNode : null;
+  if (prevWrap && prevWrap.parentNode) {
+    prevWrap.parentNode.insertBefore(container, prevWrap);
+    prevWrap.parentNode.removeChild(prevWrap);
+  }
+  container.classList.remove('regpol-marquee', 'regpol-marquee--2rows', 'regpol-marquee--scroll');
+
   var children = Array.prototype.slice.call(container.children).filter(function(n) {
-    return n.nodeType === 1 && !n.classList.contains('texto-vacio');
+    return n.nodeType === 1 && !n.classList.contains('texto-vacio') && !n.classList.contains('regpol-marquee-track');
   });
   if (children.length < minItems) return;
-  if (container.classList.contains('regpol-marquee') && container.querySelector('.regpol-marquee-track')) return;
+
   container.classList.add('regpol-marquee');
+  if (rows > 1) container.classList.add('regpol-marquee--2rows');
   var track = document.createElement('div');
-  track.className = 'regpol-marquee-track';
+  track.className = 'regpol-marquee-track' + (rows > 1 ? ' regpol-marquee-track--2rows' : '');
   children.forEach(function(n) { track.appendChild(n); });
   children.forEach(function(n) { track.appendChild(n.cloneNode(true)); });
   container.innerHTML = '';
   container.appendChild(track);
   var secs = Math.max(minSecs, children.length * secsPer);
   track.style.animationDuration = secs + 's';
+
+  if (!controls) return;
+
+  var parent = container.parentNode;
+  if (!parent) return;
+  var wrap = document.createElement('div');
+  wrap.className = 'regpol-marquee-wrap';
+  parent.insertBefore(wrap, container);
+  wrap.appendChild(container);
+
+  var nav = document.createElement('div');
+  nav.className = 'regpol-marquee-nav';
+  nav.innerHTML =
+    '<button type="button" class="regpol-marquee-btn" data-dir="-1" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>'
+    + '<button type="button" class="regpol-marquee-btn" data-dir="1" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>';
+  wrap.appendChild(nav);
+
+  // Giro circular continuo (sin saltar al primero)
+  track.style.animation = 'none';
+  var offset = 0;
+  var half = 0;
+  var paused = false;
+  var speed = Math.max(0.25, (children.length * (rows > 1 ? 18 : 28)) / Math.max(secs, 1) / 60);
+  var step = rows > 1 ? 278 : 300;
+
+  function medirHalf() {
+    half = track.scrollWidth / 2;
+  }
+  function aplicar() {
+    if (half > 0) {
+      while (offset >= half) offset -= half;
+      while (offset < 0) offset += half;
+    }
+    track.style.transform = 'translate3d(' + (-offset) + 'px,0,0)';
+  }
+  function tick() {
+    if (!wrap.isConnected) return;
+    if (!paused && !document.hidden && half > 0) {
+      offset += speed;
+      aplicar();
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(function() {
+    medirHalf();
+    aplicar();
+    requestAnimationFrame(tick);
+  });
+  window.addEventListener('resize', function() {
+    var ratio = half > 0 ? offset / half : 0;
+    medirHalf();
+    offset = ratio * half;
+    aplicar();
+  });
+
+  nav.querySelectorAll('.regpol-marquee-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      offset += (parseInt(btn.getAttribute('data-dir'), 10) || 1) * step;
+      aplicar();
+    });
+  });
+  wrap.addEventListener('mouseenter', function() { paused = true; });
+  wrap.addEventListener('mouseleave', function() { paused = false; });
+  wrap.addEventListener('focusin', function() { paused = true; });
+  wrap.addEventListener('focusout', function() { paused = false; });
 }
 
 function appendPortalItems(tipo, containerId) {
@@ -172,13 +217,12 @@ function appendPortalItems(tipo, containerId) {
   if (base === null || base === undefined) base = '';
   var cacheKey = 'portal_items_v2_' + tipo;
   function pintar(items) {
-    if (tipo === 'convenio') {
-      pintarConveniosEnDosFilas(el, items);
-      return;
-    }
-    resetMarqueeContainer(el);
     el.innerHTML = items.map(htmlTarjetaPortalItem).join('');
-    activarMarqueeCarrusel(el, { secsPerItem: 8, minSecs: 30 });
+    if (tipo === 'convenio') {
+      activarMarqueeCarrusel(el, { secsPerItem: 8, minSecs: 30, rows: 2, controls: true });
+    } else {
+      activarMarqueeCarrusel(el, { secsPerItem: 8, minSecs: 30 });
+    }
   }
   try {
     var raw = sessionStorage.getItem(cacheKey);
@@ -321,7 +365,12 @@ function aplicarAccesosRapidos(data) {
     var h = sec.querySelector('.section-header h3');
     var p = sec.querySelector('.section-header p');
     if (h && acc.titulo) h.textContent = acc.titulo;
-    if (p && acc.descripcion) p.textContent = acc.descripcion;
+    // Convenios: sin subtítulo para ganar espacio en el carrusel de 2 filas
+    if (s.id === 'convenios') {
+      if (p) p.remove();
+    } else if (p && acc.descripcion) {
+      p.textContent = acc.descripcion;
+    }
   });
 }
 
