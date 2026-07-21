@@ -10,24 +10,27 @@
   <link rel="stylesheet" href="responsive.css?v=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
-    .grid-detalles{display:grid;grid-template-columns:1fr;gap:14px;margin:10px 0 16px;}
-    .card-detalle{background:#fff;border-radius:12px;border:1.5px solid #c8e6c9;padding:20px 18px;text-align:left;}
+    .grid-detalles{display:grid;grid-template-columns:1fr;gap:14px;margin:10px 0 16px;justify-items:center;}
+    .grid-detalles-duo{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.15fr);gap:16px;width:100%;max-width:980px;margin:0 auto;align-items:stretch;}
+    @media(max-width:800px){.grid-detalles-duo{grid-template-columns:1fr;}}
+    .card-detalle{background:#fff;border-radius:12px;border:1.5px solid #c8e6c9;padding:20px 18px;text-align:left;width:100%;box-sizing:border-box;}
     .card-detalle.highlight-card{border-color:#c8a94a;}
+    .card-detalle--reqs{max-width:980px;width:100%;}
     .icon-circle{width:40px;height:40px;background:#004d3d;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:16px;color:#fff;flex-shrink:0;}
     .icon-circle.gold{background:#c8a94a;}
     .card-detalle h3{color:#004d3d;font-size:13px;font-weight:800;letter-spacing:.5px;margin:0 0 12px;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
-    .card-detalle ul{list-style:none;padding:0;text-align:left;margin:0 0 18px;}
+    .card-detalle ul{list-style:none;padding:0;text-align:left;margin:0;}
     .card-detalle ul li{padding:6px 0;font-size:13.5px;color:#555;border-bottom:1px solid #f0f0f0;display:flex;align-items:flex-start;gap:8px;}
     .card-detalle ul li:last-child{border:none;}
     .card-detalle ul li i{color:#004d3d;margin-top:2px;flex-shrink:0;}
-    .info-item{text-align:left;margin-bottom:10px;}
+    .info-item{text-align:left;margin-bottom:12px;}
     .info-item span{font-size:11px;font-weight:800;color:#004d3d;letter-spacing:.5px;display:block;text-transform:uppercase;}
     .info-item p{font-size:14px;color:#444;margin:2px 0 0;}
     .price{font-size:22px;font-weight:900;color:#c8a94a;margin:4px 0 2px;}
     .tabla-cupos-wrap{width:100%;overflow-x:auto;}
-    .tabla-cupos{width:100%;border-collapse:collapse;font-size:13px;min-width:420px;}
-    .tabla-cupos th,.tabla-cupos td{border:1px solid #b7d4c0;padding:8px 10px;}
-    .tabla-cupos th{background:#004d3d;color:#fff;font-weight:700;text-align:center;font-size:12px;letter-spacing:.3px;}
+    .tabla-cupos{width:100%;border-collapse:collapse;font-size:12.5px;}
+    .tabla-cupos th,.tabla-cupos td{border:1px solid #b7d4c0;padding:7px 8px;}
+    .tabla-cupos th{background:#004d3d;color:#fff;font-weight:700;text-align:center;font-size:11.5px;letter-spacing:.3px;}
     .tabla-cupos th:first-child,.tabla-cupos td:first-child{text-align:left;}
     .tabla-cupos td.num{text-align:center;font-variant-numeric:tabular-nums;font-weight:600;color:#004d3d;}
     .tabla-cupos tbody tr:nth-child(even){background:#f3f8f4;}
@@ -50,7 +53,6 @@
     .btn-registrarse:hover{background:#dfc060;color:#002d24;}
     .btn-registrarse.is-disabled{background:#ccc;color:#666;cursor:not-allowed;pointer-events:none;}
     .ventana-inscripcion-nota{font-size:12.5px;color:#666;text-align:center;margin:4px 0 10px;}
-    .bloque-cupos{margin-top:4px;padding-top:14px;border-top:1.5px solid #e0ebe4;}
     .form-inscripcion{background:#f7faf7;border-radius:10px;border:1.5px solid #c8e6c9;padding:24px;margin-top:8px;text-align:left;}
     .form-inscripcion h3{color:#004d3d;font-size:15px;margin:0 0 16px;border-bottom:2px solid #c8a94a;padding-bottom:8px;}
     .fi-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -157,7 +159,26 @@ function renderDetalle(item){
     ? reqs.map(function(r){return '<li><i class="fas fa-check-circle"></i>'+escHtmlD(r)+'</li>';}).join('')
     : '<li><i class="fas fa-info-circle"></i> Sin requisitos especificados.</li>';
 
-  // Por ahora: si no hay cupos guardados en convenio, mostrar DIVOPUS 1
+  var infoHtml = '';
+  if(item.horario) infoHtml += '<div class="info-item"><span>HORARIO:</span><p>'+escHtmlD(item.horario)+'</p></div>';
+  if(item.vacantes) infoHtml += '<div class="info-item"><span>VACANTES:</span><p>'+escHtmlD(String(item.vacantes))+' efectivos</p></div>';
+  if(item.lugar) infoHtml += '<div class="info-item"><span>LUGAR:</span><p>'+escHtmlD(item.lugar)+'</p></div>';
+  if(esConvenio && (item.fecha_inicio || item.duracion || item.observaciones)){
+    if(item.fecha_inicio) infoHtml += '<div class="info-item"><span>BENEFICIO ECONÓMICO:</span><p class="price">'+escHtmlD(item.fecha_inicio)+'</p></div>';
+    if(item.duracion) infoHtml += '<div class="info-item"><p>'+escHtmlD(item.duracion)+'</p></div>';
+    if(item.observaciones) infoHtml += '<div class="info-item"><small>* '+escHtmlD(item.observaciones)+'</small></div>';
+  } else if(esCurso && (item.fecha_inicio || item.duracion || item.observaciones)){
+    if(item.fecha_inicio) infoHtml += '<div class="info-item"><span>FECHA DE INICIO:</span><p class="price" style="color:#004d3d;">'+escHtmlD(item.fecha_inicio)+'</p></div>';
+    if(item.duracion) infoHtml += '<div class="info-item"><span>DURACIÓN:</span><p>'+escHtmlD(item.duracion)+'</p></div>';
+    if(item.observaciones) infoHtml += '<div class="info-item"><small>* '+escHtmlD(item.observaciones)+'</small></div>';
+  }
+  if(esConvenio && item.aviso_sorteo_fb) {
+    infoHtml += '<div class="info-item"><span>SORTEO FACEBOOK:</span><p>'+escHtmlD(item.aviso_sorteo_fb)+'</p></div>';
+  }
+  if(!infoHtml) infoHtml = '<p style="color:#888;font-size:13px;margin:0;">Sin datos publicados.</p>';
+
+  var infoTitulo = esConvenio ? 'HORARIOS / VACANTES / BENEFICIO' : 'HORARIOS / VACANTES / INICIO';
+
   var DIVOPUS1_CIAS = [
     'CIA CALLAO','CIA LA PUNTA','CIA BELLAVISTA','CIA CIUDADELA CHALACA',
     'CIA CIUDAD DEL PESCADOR','CIA RAMON CASTILLA','CIA LA LEGUA','CIA LA PERLA'
@@ -174,11 +195,11 @@ function renderDetalle(item){
     });
   }
 
-  var cuposTabla = '';
+  var ciasCard = '';
   if(cupos.length){
-    cuposTabla = '<div class="bloque-cupos">'
+    ciasCard = '<div class="card-detalle">'
       +'<h3><span class="icon-circle"><i class="fas fa-building"></i></span> '
-      +(esConvenio?'COMISARÍAS Y VACANTES':'UNIDADES Y VACANTES')+'</h3>'
+      +(esConvenio?'COMISARÍAS':'UNIDADES')+'</h3>'
       +'<div class="tabla-cupos-wrap"><table class="tabla-cupos">'
       +'<thead><tr><th>Comisaría</th><th>Vacantes</th><th>Inscritos</th><th>Disponibles</th></tr></thead><tbody>'
       +cupos.map(function(c){
@@ -189,17 +210,14 @@ function renderDetalle(item){
       }).join('')
       +'</tbody></table></div></div>';
   } else if(esConvenio){
-    cuposTabla = '<div class="bloque-cupos"><p class="cupos-vacio">Sin cupos por comisaría publicados.</p></div>';
+    ciasCard = '<div class="card-detalle"><h3><span class="icon-circle"><i class="fas fa-building"></i></span> COMISARÍAS</h3>'
+      +'<p class="cupos-vacio">Sin cupos publicados.</p></div>';
   }
 
-  // Cursos: se mantiene bloque de inicio/duración (convenios ya no muestran horarios/beneficio arriba)
-  var cursoInfoHtml = '';
-  if(esCurso){
-    if(item.horario) cursoInfoHtml += '<div class="info-item"><span>HORARIO:</span><p>'+escHtmlD(item.horario)+'</p></div>';
-    if(item.vacantes) cursoInfoHtml += '<div class="info-item"><span>VACANTES:</span><p>'+escHtmlD(String(item.vacantes))+' efectivos</p></div>';
-    if(item.fecha_inicio) cursoInfoHtml += '<div class="info-item"><span>FECHA DE INICIO:</span><p class="price" style="color:#004d3d;">'+escHtmlD(item.fecha_inicio)+'</p></div>';
-    if(item.duracion) cursoInfoHtml += '<div class="info-item"><span>DURACIÓN:</span><p>'+escHtmlD(item.duracion)+'</p></div>';
-  }
+  var infoCard = '<div class="card-detalle highlight-card">'
+    +'<h3><span class="icon-circle gold"><i class="fas fa-clock"></i></span> '+infoTitulo+'</h3>'
+    +infoHtml
+    +'</div>';
 
   var ventanaTxt = item.ventana_inscripcion || '';
   var btnRegistrar = '';
@@ -225,14 +243,15 @@ function renderDetalle(item){
     +'</div>'
     +(ventanaTxt ? '<p class="ventana-inscripcion-nota">'+escHtmlD(ventanaTxt)+'</p>' : '')
     +'<div class="grid-detalles">'
-    +'<div class="card-detalle highlight-card">'
+    +'<div class="card-detalle card-detalle--reqs">'
     +'<h3><span class="icon-circle"><i class="fas fa-list-ul"></i></span> REQUISITOS</h3>'
     +'<ul>'+reqHtml+'</ul>'
-    +(esCurso && cursoInfoHtml
-      ? ('<div class="bloque-cupos"><h3><span class="icon-circle gold"><i class="fas fa-clock"></i></span> HORARIOS Y VACANTES</h3>'+cursoInfoHtml+'</div>')
-      : '')
-    +cuposTabla
-    +'</div></div>'
+    +'</div>'
+    +'<div class="grid-detalles-duo">'
+    +infoCard
+    +(ciasCard || '')
+    +'</div>'
+    +'</div>'
     +formHtml;
 
   cargarDivisionesPublico();
