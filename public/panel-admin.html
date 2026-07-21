@@ -1672,21 +1672,28 @@
 </div>
 
 <div id="modal-observar-exp" class="modal">
-  <div class="modal-box" style="width:460px;">
-    <h3><i class="fas fa-exclamation-triangle" style="color:#e67e22;"></i> Observar expediente</h3>
+  <div class="modal-box" style="width:480px;">
+    <h3><i class="fas fa-clipboard-check" style="color:#004d3d;"></i> Revisar expediente</h3>
     <input type="hidden" id="mobs-id"/>
     <p style="font-size:12.5px;color:#666;margin:-4px 0 12px;line-height:1.45;">
-      Se notificará al efectivo (WhatsApp / correo) con el motivo y la frase «Subsanar a la brevedad».
+      Elija una acción. En <strong>Observar</strong> se avisará al efectivo (WhatsApp / correo) para que subsane.
     </p>
-    <label>Motivo *</label>
-    <select id="mobs-motivo" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;margin-bottom:10px;">
-      <option value="">— Seleccione —</option>
+    <label>Acción *</label>
+    <select id="mobs-accion" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;margin-bottom:10px;" onchange="onCambioAccionRevision()">
+      <option value="observar">Observar (pedir corrección)</option>
+      <option value="rechazar">Rechazar (cerrar expediente)</option>
     </select>
-    <label>Detalle adicional</label>
+    <div id="mobs-motivo-wrap">
+      <label>Motivo *</label>
+      <select id="mobs-motivo" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;margin-bottom:10px;">
+        <option value="">— Seleccione —</option>
+      </select>
+    </div>
+    <label id="mobs-detalle-label">Detalle adicional</label>
     <textarea id="mobs-detalle" rows="3" placeholder="Observaciones concretas..." style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;"></textarea>
     <div class="modal-footer">
-      <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-observar-exp')">Cancelar</button>
-      <button class="btn btn-o" onclick="confirmarObservarExpediente()"><i class="fas fa-paper-plane"></i> Observar y avisar</button>
+      <button type="button" class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-observar-exp')">Cancelar</button>
+      <button type="button" class="btn btn-o" id="mobs-btn-enviar" onclick="confirmarRevisionExpediente()"><i class="fas fa-paper-plane"></i> Enviar</button>
     </div>
   </div>
 </div>
@@ -5335,15 +5342,17 @@ function renderInscritos(list, tipo){
       var acciones='';
       if(esConvenio){
         if(ins.estado==='en_revision'||ins.estado==='repechaje'){
-          acciones='<button type="button" class="btn-mini btn-mini-ok" onclick="revisarExpedienteConv('+ins.id+',\'aprobar\')"><i class="fas fa-check"></i> OK</button> '
-            +'<button type="button" class="btn-mini btn-mini-solid" onclick="abrirObservarExpediente('+ins.id+')"><i class="fas fa-exclamation"></i> Observar</button> '
-            +'<button type="button" class="btn-mini btn-mini-danger" onclick="revisarExpedienteConv('+ins.id+',\'rechazar\')"><i class="fas fa-times"></i></button> ';
+          acciones='<button type="button" class="btn-mini btn-mini-ok" onclick="revisarExpedienteConv('+ins.id+',\'aprobar\')" title="Aprobar expediente"><i class="fas fa-check"></i> OK</button> '
+            +'<button type="button" class="btn-mini btn-mini-solid" onclick="abrirRevisionExpediente('+ins.id+')" title="Observar o rechazar"><i class="fas fa-exclamation"></i> Observar / Rechazar</button> ';
         }
         if(ins.estado==='ganador'){
           acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'ganador\')" title="Avisar por WhatsApp y correo"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Avisar</button> ';
         }
         if(ins.estado==='observado'){
           acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'observado\')" title="Reenviar aviso WA/correo"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Reenviar</button> ';
+        }
+        if(ins.estado==='expediente_ok'){
+          acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'expediente_ok\')" title="Avisar constancia"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Avisar</button> ';
         }
         acciones+='<button type="button" class="btn-mini btn-mini-solid" title="Editar inscripción" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i></button>';
       } else {
@@ -5545,57 +5554,86 @@ function notificarInscripcionConv(id, tipo){
 }
 
 function revisarExpedienteConv(id, accion){
-  if(accion==='aprobar'){
-    if(!confirm('¿Aprobar expediente? Se habilitará la constancia y se generará aviso WA/correo.')) return;
-    fetch(API+'/admin/inscripciones/'+id+'/revisar-expediente',{
-      method:'POST', headers:hdr(),
-      body:JSON.stringify({accion:'aprobar'})
-    }).then(function(r){return r.json();}).then(function(d){
-      if(!d.ok){ alert(d.error||'Error'); return; }
-      if(d.notificacion) mostrarLinksNotificacion(d.notificacion);
-      refrescarInscritosActivos();
-    });
-    return;
-  }
-  if(accion==='rechazar'){
-    var motivo=prompt('Motivo del rechazo (obligatorio):');
-    if(motivo==null) return;
-    if(!String(motivo).trim()){ alert('Indique el motivo.'); return; }
-    fetch(API+'/admin/inscripciones/'+id+'/revisar-expediente',{
-      method:'POST', headers:hdr(),
-      body:JSON.stringify({accion:'rechazar', observacion:String(motivo).trim()})
-    }).then(function(r){return r.json();}).then(function(d){
-      if(!d.ok){ alert(d.error||'Error'); return; }
-      refrescarInscritosActivos();
-    });
-  }
-}
-
-function abrirObservarExpediente(id){
-  document.getElementById('mobs-id').value=id;
-  document.getElementById('mobs-detalle').value='';
-  var sel=document.getElementById('mobs-motivo');
-  var cat=window.CATALOGO_OBS_CONV||[];
-  sel.innerHTML='<option value="">— Seleccione —</option>'
-    +cat.map(function(c){return '<option value="'+escHtml(c.codigo)+'">'+escHtml(c.label)+'</option>';}).join('');
-  document.getElementById('modal-observar-exp').classList.add('open');
-}
-
-function confirmarObservarExpediente(){
-  var id=parseInt(document.getElementById('mobs-id').value,10);
-  var motivo=(document.getElementById('mobs-motivo').value||'').trim();
-  var detalle=(document.getElementById('mobs-detalle').value||'').trim();
-  if(!motivo){ alert('Seleccione un motivo de observación.'); return; }
+  if(accion!=='aprobar') return;
+  if(!confirm('¿Aprobar expediente? Se habilitará la constancia y se generará aviso WA/correo.')) return;
   fetch(API+'/admin/inscripciones/'+id+'/revisar-expediente',{
     method:'POST', headers:hdr(),
-    body:JSON.stringify({accion:'observar', motivo_observacion:motivo, observacion:detalle})
+    body:JSON.stringify({accion:'aprobar'})
   }).then(function(r){return r.json();}).then(function(d){
     if(!d.ok){ alert(d.error||'Error'); return; }
-    cerrarModal('modal-observar-exp');
     if(d.notificacion) mostrarLinksNotificacion(d.notificacion);
     refrescarInscritosActivos();
   });
 }
+
+function onCambioAccionRevision(){
+  var accion=(document.getElementById('mobs-accion').value||'observar');
+  var wrap=document.getElementById('mobs-motivo-wrap');
+  var lbl=document.getElementById('mobs-detalle-label');
+  var det=document.getElementById('mobs-detalle');
+  var btn=document.getElementById('mobs-btn-enviar');
+  if(accion==='rechazar'){
+    if(wrap) wrap.style.display='none';
+    if(lbl) lbl.textContent='Motivo del rechazo *';
+    if(det) det.placeholder='Indique el motivo del rechazo...';
+    if(btn) btn.innerHTML='<i class="fas fa-paper-plane"></i> Enviar rechazo';
+  } else {
+    if(wrap) wrap.style.display='';
+    if(lbl) lbl.textContent='Detalle adicional';
+    if(det) det.placeholder='Observaciones concretas...';
+    if(btn) btn.innerHTML='<i class="fas fa-paper-plane"></i> Enviar observación';
+  }
+}
+
+function abrirRevisionExpediente(id){
+  document.getElementById('mobs-id').value=id;
+  document.getElementById('mobs-detalle').value='';
+  document.getElementById('mobs-accion').value='observar';
+  var sel=document.getElementById('mobs-motivo');
+  var cat=window.CATALOGO_OBS_CONV||[];
+  sel.innerHTML='<option value="">— Seleccione —</option>'
+    +cat.map(function(c){return '<option value="'+escHtml(c.codigo)+'">'+escHtml(c.label)+'</option>';}).join('');
+  onCambioAccionRevision();
+  document.getElementById('modal-observar-exp').classList.add('open');
+}
+
+/** Compat: llamadas antiguas */
+function abrirObservarExpediente(id){ abrirRevisionExpediente(id); }
+
+function confirmarRevisionExpediente(){
+  var id=parseInt(document.getElementById('mobs-id').value,10);
+  var accion=(document.getElementById('mobs-accion').value||'observar').trim();
+  var motivo=(document.getElementById('mobs-motivo').value||'').trim();
+  var detalle=(document.getElementById('mobs-detalle').value||'').trim();
+  var body;
+
+  if(accion==='rechazar'){
+    if(!detalle){ alert('Indique el motivo del rechazo.'); return; }
+    body={accion:'rechazar', observacion:detalle};
+  } else {
+    if(!motivo){ alert('Seleccione un motivo de observación.'); return; }
+    body={accion:'observar', motivo_observacion:motivo, observacion:detalle};
+  }
+
+  var btn=document.getElementById('mobs-btn-enviar');
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Enviando...'; }
+
+  fetch(API+'/admin/inscripciones/'+id+'/revisar-expediente',{
+    method:'POST', headers:hdr(),
+    body:JSON.stringify(body)
+  }).then(function(r){return r.json();}).then(function(d){
+    if(btn){ btn.disabled=false; onCambioAccionRevision(); }
+    if(!d.ok){ alert(d.error||'Error'); return; }
+    cerrarModal('modal-observar-exp');
+    if(d.notificacion) mostrarLinksNotificacion(d.notificacion);
+    refrescarInscritosActivos();
+  }).catch(function(){
+    if(btn){ btn.disabled=false; onCambioAccionRevision(); }
+    alert('Error de conexión');
+  });
+}
+
+function confirmarObservarExpediente(){ confirmarRevisionExpediente(); }
 
 function aprobarParaSorteo(id){
   if(!confirm('¿Aprobar a este postulante para participar en el SORTEO?\nSolo los aprobados entran a la rueda aleatoria.')) return;
