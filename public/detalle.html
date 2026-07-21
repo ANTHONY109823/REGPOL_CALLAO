@@ -345,9 +345,6 @@ function renderFormInscripcion(item){
   var tituloForm = esRepechaje ? 'Repechaje - Convenio' : (esConvenio ? 'Preinscripción - Convenio' : 'Inscripción - Curso');
   return '<form class="form-inscripcion" id="form-inscripcion" onsubmit="enviarInscripcion(event)">'
     +'<h3>'+tituloForm+'</h3>'
-    +(esConvenio && !esRepechaje
-      ? '<p class="fi-intro">Complete sus datos de preinscripción. <strong>No adjunte expediente aquí.</strong> Al terminar recibirá un <strong>N° de registro</strong>. Consulte con <strong>CIP + N° de inscripción</strong>. Si resulta ganador, tendrá <strong>2 días</strong> para subir su PDF.</p>'
-      : '')
     +(esRepechaje
       ? '<p class="fi-intro" style="color:#856404;background:#fff8e1;padding:10px 12px;border-radius:8px;">Repechaje: se registra completo y <strong>sube todos sus expedientes ahora</strong>. No entra al sorteo. Sujeto a vacantes liberadas.</p>'
       : '')
