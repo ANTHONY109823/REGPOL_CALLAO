@@ -1125,18 +1125,11 @@
           <select id="inscritos-filtro-modalidad" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:180px;">
             <option value="">Todas las modalidades</option>
           </select>
-          <select id="inscritos-filtro-area" class="inscritos-filtro-admin" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:180px;">
-            <option value="">Todas las áreas</option>
-          </select>
           <select id="inscritos-filtro-disp" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
             <option value="">Disponibilidad</option>
             <option value="VACACIONES">Vacaciones</option>
             <option value="FRANCO">Franco</option>
           </select>
-          <select id="inscritos-filtro-estado" class="inscritos-filtro-admin" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
-            <option value="">Todos</option>
-          </select>
-          <button class="btn btn-v inscritos-filtro-admin" id="inscritos-btn-exportar" onclick="exportarInscritos()"><i class="fas fa-download"></i> Exportar CSV</button>
         </div>
         <div id="inscritos-stats" style="margin-bottom:10px;"></div>
         <div id="inscritos-tabla"><p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">Cargando...</p></div>
@@ -5186,20 +5179,6 @@ function volverDesdeInscritos(){
   }
 }
 
-function aplicarBarraFiltrosInscritos(){
-  var simplificado = INSCRITOS_MODO==='ganadores' || INSCRITOS_MODO==='repechaje';
-  document.querySelectorAll('.inscritos-filtro-admin').forEach(function(el){
-    el.style.display = simplificado ? 'none' : '';
-  });
-  // En ganadores/repechaje también ocultamos área/estado/export; dejamos búsqueda y filtros útiles opcionales
-  var area=document.getElementById('inscritos-filtro-area');
-  var est=document.getElementById('inscritos-filtro-estado');
-  var exp=document.getElementById('inscritos-btn-exportar');
-  if(area){ area.style.display = simplificado ? 'none' : ''; if(simplificado) area.value=''; }
-  if(est){ est.style.display = simplificado ? 'none' : ''; if(simplificado) est.value=''; }
-  if(exp){ exp.style.display = simplificado ? 'none' : ''; }
-}
-
 function cargarConvFlujoResumen(vista){
   var boxId = vista==='repechaje' ? 'conv-repechaje-cuadros'
     : (vista==='preinscritos' ? 'conv-preinscritos-cuadros' : 'conv-ganadores-cuadros');
@@ -5341,12 +5320,8 @@ function verInscritos(itemId, titulo, modo){
   var pref = INSCRITOS_MODO==='ganadores' ? 'Ganadores / expedientes' : (INSCRITOS_MODO==='repechaje' ? 'Repechaje' : 'Preinscritos');
   document.getElementById('inscritos-titulo').innerHTML='<i class="fas '+icon+'"></i> '+pref+' — '+escHtml(titulo);
   document.getElementById('inscritos-buscar').value='';
-  document.getElementById('inscritos-filtro-estado').value='';
-  aplicarBarraFiltrosInscritos();
   var selUni=document.getElementById('inscritos-filtro-unidad');
   if(selUni) selUni.innerHTML='<option value="">Todas las unidades</option>';
-  var selArea=document.getElementById('inscritos-filtro-area');
-  if(selArea) selArea.innerHTML='<option value="">Todas las áreas</option>';
   var selReg=document.getElementById('inscritos-filtro-region');
   if(selReg) selReg.innerHTML='<option value="">Todas las regiones</option>';
   var selMod=document.getElementById('inscritos-filtro-modalidad');
@@ -5375,12 +5350,9 @@ function verInscritos(itemId, titulo, modo){
           return ['preinscrito','pendiente','aprobado','verificado'].indexOf(i.estado)>=0;
         });
       }
-      poblarFiltroEstadoInscritos(INSCRITOS_TIPO_ACTUAL);
       poblarFiltroUnidadesInscritos();
-      poblarFiltroAreasInscritos();
       poblarFiltroRegionInscritos();
       poblarFiltroModalidadInscritos();
-      aplicarBarraFiltrosInscritos();
       renderInscritos(obtenerInscritosFiltrados(), INSCRITOS_TIPO_ACTUAL);
     });
 }
@@ -5486,11 +5458,8 @@ function poblarFiltroAreasInscritos(){
 
 function obtenerInscritosFiltrados(){
   var txt=(document.getElementById('inscritos-buscar').value||'').toLowerCase();
-  var est=document.getElementById('inscritos-filtro-estado').value;
   var unidEl=document.getElementById('inscritos-filtro-unidad');
   var unid=unidEl?unidEl.value:'';
-  var areaEl=document.getElementById('inscritos-filtro-area');
-  var areaF=areaEl?areaEl.value:'';
   var regEl=document.getElementById('inscritos-filtro-region');
   var regF=regEl?regEl.value:'';
   var modEl=document.getElementById('inscritos-filtro-modalidad');
@@ -5500,13 +5469,11 @@ function obtenerInscritosFiltrados(){
   return INSCRITOS_CACHE.filter(function(i){
     var blob=((i.cip||'')+' '+(i.nombres||'')+' '+(i.dni||'')+' '+(i.nro_registro||'')+' '+(i.codifin||'')+' '+(i.unidad||'')).toLowerCase();
     var matchTxt=!txt||blob.indexOf(txt)>=0;
-    var matchEst=!est||i.estado===est;
     var matchUni=!unid||(i.unidad||'')===unid;
-    var matchArea=!areaF||(i.area||'')===areaF;
     var matchReg=!regF||(i.region_policial||'')===regF;
     var matchMod=!modF||(i.modalidad||'')===modF;
     var matchDisp=!dispF||(i.disponibilidad||'')===dispF;
-    return matchTxt&&matchEst&&matchUni&&matchArea&&matchReg&&matchMod&&matchDisp;
+    return matchTxt&&matchUni&&matchReg&&matchMod&&matchDisp;
   });
 }
 
