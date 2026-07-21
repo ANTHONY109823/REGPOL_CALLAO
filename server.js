@@ -5490,6 +5490,20 @@ app.post('/admin/inscripciones/:id/notificar', requireAuth, async (req, res) => 
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
+
+    // Permite registrar/actualizar teléfono y correo antes de avisar
+    const tel = req.body && req.body.telefono != null ? String(req.body.telefono).trim() : null;
+    const em = req.body && req.body.email != null ? String(req.body.email).trim() : null;
+    if (tel != null || em != null) {
+      await pool.query(
+        `UPDATE inscripciones SET
+           telefono = CASE WHEN $1::text IS NULL THEN telefono ELSE LEFT($1, 30) END,
+           email = CASE WHEN $2::text IS NULL THEN email ELSE LEFT($2, 100) END
+         WHERE id=$3`,
+        [tel, em, id]
+      );
+    }
+
     const n = await conveniosFlujo.notificarInscripcion(pool, id, tipo);
     res.json(n);
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -5666,10 +5680,24 @@ app.put('/admin/inscripciones/:id', requireAuth, async (req, res) => {
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
-    const { estado, observacion } = req.body;
+    const { estado, observacion, telefono, email } = req.body;
+    const sets = ['estado=$1', 'observacion=$2'];
+    const params = [estado || 'pendiente', observacion || ''];
+    let i = 3;
+    if (telefono != null) {
+      sets.push('telefono=$' + i);
+      params.push(String(telefono).trim().slice(0, 30));
+      i++;
+    }
+    if (email != null) {
+      sets.push('email=$' + i);
+      params.push(String(email).trim().slice(0, 100));
+      i++;
+    }
+    params.push(req.params.id);
     await pool.query(
-      'UPDATE inscripciones SET estado=$1,observacion=$2 WHERE id=$3',
-      [estado||'pendiente', observacion||'', req.params.id]);
+      'UPDATE inscripciones SET ' + sets.join(',') + ' WHERE id=$' + i,
+      params);
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });

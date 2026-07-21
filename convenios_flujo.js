@@ -64,15 +64,43 @@ function etiquetaObservacion(codigo) {
   return c ? c.label : (codigo || '');
 }
 
-function mensajeNotificacion(tipo, ins, itemTitulo) {
+function bloqueDatosConvenio(item) {
+  if (!item) return '';
+  const lineas = [];
+  const horario = limpio(item.horario, 200);
+  const fechaIni = limpio(item.fecha_inicio, 100);
+  const duracion = limpio(item.duracion, 100);
+  const lugar = limpio(item.lugar, 200);
+  const vacantes = item.vacantes != null && item.vacantes !== '' ? String(item.vacantes) : '';
+  const desc = limpio(item.descripcion, 400);
+  if (horario) lineas.push('Horarios / turnos: ' + horario);
+  if (fechaIni) lineas.push('Fecha de inicio: ' + fechaIni);
+  if (duracion) lineas.push('Duración: ' + duracion);
+  if (lugar) lineas.push('Lugar: ' + lugar);
+  if (vacantes) lineas.push('Vacantes: ' + vacantes);
+  if (desc) lineas.push('Detalle: ' + desc);
+  if (!lineas.length) return '';
+  return '\nDatos del convenio:\n' + lineas.map(function(l) { return '• ' + l; }).join('\n') + '\n';
+}
+
+function mensajeNotificacion(tipo, ins, itemTitulo, item) {
   const nombre = limpio(ins.nombres, 120) || 'efectivo';
-  const conv = limpio(itemTitulo, 120) || 'convenio';
+  const conv = limpio(itemTitulo || (item && item.titulo), 120) || 'convenio';
   const num = limpio(ins.cip, 20);
+  const datos = bloqueDatosConvenio(item || {});
+  const nro = limpio(ins.nro_registro, 30);
+  const grado = limpio(ins.grado, 60);
+  const unidad = limpio(ins.unidad, 120);
+  const cabeceraPersona = 'Sr(a). ' + (grado ? grado + ' ' : '') + nombre + ' (CIP ' + num + ')'
+    + (nro ? (' — N° ' + nro) : '')
+    + (unidad ? ('\nUnidad: ' + unidad) : '');
+
   if (tipo === 'ganador') {
     return 'REGPOL Callao — CONVENIOS\n\n'
-      + 'Sr(a). ' + nombre + ' (CIP ' + num + '):\n'
+      + cabeceraPersona + ':\n\n'
       + 'Ha resultado GANADOR(A) en «' + conv + '».\n'
-      + 'Debe subir su expediente completo en un plazo de '
+      + datos
+      + '\nDebe subir su expediente completo en un plazo de '
       + PLAZO_EXPEDIENTE_DIAS + ' días hábiles/calendario desde la notificación,\n'
       + 'ingresando a Consulta por CIP en el portal REGPOL Callao.\n'
       + 'Pasado el plazo, la vacante se libera para REPECHAJE.';
@@ -81,23 +109,26 @@ function mensajeNotificacion(tipo, ins, itemTitulo) {
     const motivo = etiquetaObservacion(ins.motivo_observacion) || 'Observación de expediente';
     const obs = limpio(ins.observacion, 400);
     return 'REGPOL Callao — CONVENIOS\n\n'
-      + 'Sr(a). ' + nombre + ' (CIP ' + num + '):\n'
+      + cabeceraPersona + ':\n\n'
       + 'Su expediente de «' + conv + '» ha sido OBSERVADO.\n'
-      + 'Motivo: ' + motivo + '\n'
+      + datos
+      + '\nMotivo: ' + motivo + '\n'
       + (obs ? ('Detalle: ' + obs + '\n') : '')
       + 'Subsanar a la brevedad y volver a subir el PDF corregido desde Consulta por CIP.';
   }
   if (tipo === 'expediente_ok') {
     return 'REGPOL Callao — CONVENIOS\n\n'
-      + 'Sr(a). ' + nombre + ' (CIP ' + num + '):\n'
+      + cabeceraPersona + ':\n\n'
       + 'Su expediente de «' + conv + '» fue VERIFICADO correctamente.\n'
-      + 'Ya puede descargar su CONSTANCIA DE VACANTE en Consulta por CIP.';
+      + datos
+      + '\nYa puede descargar su CONSTANCIA DE VACANTE en Consulta por CIP.';
   }
   if (tipo === 'caducado') {
     return 'REGPOL Callao — CONVENIOS\n\n'
-      + 'Sr(a). ' + nombre + ' (CIP ' + num + '):\n'
+      + cabeceraPersona + ':\n\n'
       + 'No presentó expediente a tiempo para «' + conv + '».\n'
-      + 'La vacante fue liberada para REPECHAJE.';
+      + datos
+      + '\nLa vacante fue liberada para REPECHAJE.';
   }
   return 'REGPOL Callao — mensaje de convenios.';
 }
@@ -152,7 +183,9 @@ async function enviarEmailSiConfigurado(dest, asunto, cuerpo) {
 
 async function notificarInscripcion(pool, inscripcionId, tipo) {
   const r = await pool.query(
-    `SELECT n.*, i.titulo AS item_titulo, i.tipo AS item_tipo
+    `SELECT n.*,
+            i.titulo AS item_titulo, i.tipo AS item_tipo,
+            i.horario, i.fecha_inicio, i.duracion, i.lugar, i.vacantes, i.descripcion
      FROM inscripciones n
      JOIN items_portal i ON i.id = n.item_id
      WHERE n.id=$1`,
@@ -162,11 +195,20 @@ async function notificarInscripcion(pool, inscripcionId, tipo) {
   const ins = r.rows[0];
   if (ins.item_tipo !== 'convenio') return { ok: false, error: 'Solo aplica a convenios' };
 
-  const mensaje = mensajeNotificacion(tipo, ins, ins.item_titulo);
+  const itemInfo = {
+    titulo: ins.item_titulo,
+    horario: ins.horario,
+    fecha_inicio: ins.fecha_inicio,
+    duracion: ins.duracion,
+    lugar: ins.lugar,
+    vacantes: ins.vacantes,
+    descripcion: ins.descripcion
+  };
+  const mensaje = mensajeNotificacion(tipo, ins, ins.item_titulo, itemInfo);
   const urls = urlsNotificacion(ins, mensaje);
   const emailRes = await enviarEmailSiConfigurado(
     urls.email,
-    'REGPOL Callao — Convenios',
+    'REGPOL Callao — Convenios: ' + limpio(ins.item_titulo, 80),
     mensaje
   );
 
@@ -195,10 +237,15 @@ async function notificarInscripcion(pool, inscripcionId, tipo) {
   return {
     ok: true,
     mensaje: mensaje,
+    inscripcion_id: inscripcionId,
+    tipo_notif: tipo,
+    telefono: urls.telefono || '',
+    email: urls.email || '',
     whatsapp_url: urls.whatsapp_url,
     mailto_url: urls.mailto_url,
     email_enviado: !!(emailRes && emailRes.ok),
-    email_detalle: emailRes
+    email_detalle: emailRes,
+    convenio: itemInfo
   };
 }
 

@@ -1653,6 +1653,16 @@
     </select>
     <label>Observación</label>
     <textarea id="mins-observacion" rows="3" placeholder="Motivo de aceptación o rechazo..."></textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+      <div>
+        <label>Teléfono / WhatsApp</label>
+        <input type="tel" id="mins-telefono" maxlength="30" placeholder="987654321"/>
+      </div>
+      <div>
+        <label>Correo electrónico</label>
+        <input type="email" id="mins-email" maxlength="100" placeholder="correo@ejemplo.com"/>
+      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-r" onclick="eliminarInscripcion()"><i class="fas fa-trash"></i> Eliminar</button>
       <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-inscripcion')">Cancelar</button>
@@ -5330,10 +5340,10 @@ function renderInscritos(list, tipo){
             +'<button type="button" class="btn-mini btn-mini-danger" onclick="revisarExpedienteConv('+ins.id+',\'rechazar\')"><i class="fas fa-times"></i></button> ';
         }
         if(ins.estado==='ganador'){
-          acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'ganador\')"><i class="fab fa-whatsapp"></i> Avisar</button> ';
+          acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'ganador\')" title="Avisar por WhatsApp y correo"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Avisar</button> ';
         }
         if(ins.estado==='observado'){
-          acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'observado\')"><i class="fab fa-whatsapp"></i> Reenviar</button> ';
+          acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'observado\')" title="Reenviar aviso WA/correo"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Reenviar</button> ';
         }
         acciones+='<button type="button" class="btn-mini btn-mini-solid" title="Editar inscripción" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i></button>';
       } else {
@@ -5507,22 +5517,78 @@ function refrescarInscritosActivos(){
 
 function mostrarLinksNotificacion(n){
   if(!n||!n.ok){ alert((n&&n.error)||'No se pudo generar la notificación'); return; }
+  window._notifActual = n;
+  var conv = n.convenio || {};
+  var metaConv = '';
+  if(conv.horario||conv.fecha_inicio||conv.duracion||conv.lugar||conv.vacantes){
+    metaConv = '<div style="margin:0 0 10px;font-size:12px;background:#eef6f2;border:1px solid #c8e6c9;border-radius:8px;padding:10px;line-height:1.55;">'
+      +'<strong style="color:#004d3d;">Datos del convenio</strong><br>'
+      +(conv.horario?'<div><b>Horarios:</b> '+escHtml(conv.horario)+'</div>':'')
+      +(conv.fecha_inicio?'<div><b>Fecha inicio:</b> '+escHtml(conv.fecha_inicio)+'</div>':'')
+      +(conv.duracion?'<div><b>Duración:</b> '+escHtml(conv.duracion)+'</div>':'')
+      +(conv.lugar?'<div><b>Lugar:</b> '+escHtml(conv.lugar)+'</div>':'')
+      +(conv.vacantes!=null&&conv.vacantes!==''?'<div><b>Vacantes:</b> '+escHtml(String(conv.vacantes))+'</div>':'')
+      +'</div>';
+  }
   var html='<div style="font-size:13px;line-height:1.5;">'
-    +'<p style="margin:0 0 10px;white-space:pre-wrap;background:#f7faf7;padding:10px;border-radius:8px;border:1px solid #c8e6c9;">'+escHtml(n.mensaje||'')+'</p>'
-    +'<div style="display:flex;flex-wrap:wrap;gap:8px;">'
-    +(n.whatsapp_url?'<a class="btn btn-v" style="text-decoration:none;background:#25D366;color:#fff;" href="'+escHtml(n.whatsapp_url)+'" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> Abrir WhatsApp</a>':'<span style="color:#888;font-size:12px;">Sin teléfono</span>')
-    +(n.mailto_url?'<a class="btn btn-o" style="text-decoration:none;" href="'+escHtml(n.mailto_url)+'"><i class="fas fa-envelope"></i> Abrir correo</a>':'<span style="color:#888;font-size:12px;">Sin correo</span>')
+    +metaConv
+    +'<p style="margin:0 0 12px;white-space:pre-wrap;background:#f7faf7;padding:10px;border-radius:8px;border:1px solid #c8e6c9;">'+escHtml(n.mensaje||'')+'</p>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">'
+    +'<div><label style="font-size:11px;font-weight:700;color:#555;display:block;margin-bottom:4px;">Teléfono / WhatsApp</label>'
+    +'<input type="tel" id="notif-tel" maxlength="30" value="'+escHtml(n.telefono||'')+'" placeholder="987654321" style="width:100%;padding:8px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;box-sizing:border-box;"></div>'
+    +'<div><label style="font-size:11px;font-weight:700;color:#555;display:block;margin-bottom:4px;">Correo electrónico</label>'
+    +'<input type="email" id="notif-email" maxlength="100" value="'+escHtml(n.email||'')+'" placeholder="correo@ejemplo.com" style="width:100%;padding:8px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;box-sizing:border-box;"></div>'
     +'</div>'
-    +(n.email_enviado?'<p style="margin-top:10px;color:#1a7a3a;font-size:12px;"><i class="fas fa-check"></i> Correo enviado por SMTP.</p>':'')
+    +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'
+    +'<button type="button" class="btn btn-o" onclick="guardarContactoYRenotificar()"><i class="fas fa-save"></i> Guardar contacto y regenerar</button>'
+    +(n.whatsapp_url?'<a class="btn btn-v" style="text-decoration:none;background:#25D366;color:#fff;" href="'+escHtml(n.whatsapp_url)+'" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> Abrir WhatsApp</a>':'<span style="color:#888;font-size:12px;align-self:center;">Sin teléfono</span>')
+    +(n.mailto_url?'<a class="btn btn-o" style="text-decoration:none;background:#004d3d;color:#fff;" href="'+escHtml(n.mailto_url)+'"><i class="fas fa-envelope"></i> Abrir correo</a>':'<span style="color:#888;font-size:12px;align-self:center;">Sin correo</span>')
+    +'</div>'
+    +(n.email_enviado?'<p style="margin:0;color:#1a7a3a;font-size:12px;"><i class="fas fa-check"></i> Correo enviado automáticamente (SMTP).</p>':'')
+    +(!n.email_enviado && n.email ? '<p style="margin:0;color:#856404;font-size:12px;"><i class="fas fa-info-circle"></i> Use «Abrir correo» para enviar el aviso (igual que WhatsApp).</p>':'')
     +'</div>';
   var tit=document.getElementById('cms-modal-titulo');
-  if(tit) tit.innerHTML='<i class="fab fa-whatsapp"></i> Notificar al efectivo';
+  if(tit) tit.innerHTML='<i class="fas fa-bell"></i> Notificar al efectivo';
   document.getElementById('cms-modal-body').innerHTML=html;
   var foot=document.querySelector('#cms-modal .cms-modal-footer');
   if(foot) foot.innerHTML='<button class="btn" style="background:#999;color:#fff;" onclick="cerrarCmsModal()">Cerrar</button>';
   var modal=document.getElementById('cms-modal');
   modal.classList.add('visible');
   modal.setAttribute('aria-hidden','false');
+}
+
+function guardarContactoYRenotificar(){
+  var n = window._notifActual;
+  if(!n || !n.inscripcion_id){ alert('No hay notificación activa.'); return; }
+  var tel = (document.getElementById('notif-tel').value||'').trim();
+  var email = (document.getElementById('notif-email').value||'').trim();
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    alert('Ingrese un correo válido.');
+    return;
+  }
+  fetch(API+'/admin/inscripciones/'+n.inscripcion_id+'/notificar',{
+    method:'POST', headers:hdr(),
+    body:JSON.stringify({
+      tipo: n.tipo_notif || 'ganador',
+      telefono: tel,
+      email: email
+    })
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){ alert(d.error||'No se pudo actualizar'); return; }
+    // Actualizar cache local
+    var ins = INSCRITOS_CACHE.find(function(i){ return i.id === n.inscripcion_id; });
+    if(ins){ ins.telefono = tel; ins.email = email; }
+    mostrarLinksNotificacion(d);
+  }).catch(function(){ alert('Error de conexión'); });
+}
+
+function notificarInscripcionConv(id, tipo){
+  fetch(API+'/admin/inscripciones/'+id+'/notificar',{
+    method:'POST', headers:hdr(),
+    body:JSON.stringify({tipo:tipo||'ganador'})
+  }).then(function(r){return r.json();}).then(function(d){
+    mostrarLinksNotificacion(d);
+  }).catch(function(){ alert('Error de conexión'); });
 }
 
 function revisarExpedienteConv(id, accion){
@@ -5576,15 +5642,6 @@ function confirmarObservarExpediente(){
     if(d.notificacion) mostrarLinksNotificacion(d.notificacion);
     refrescarInscritosActivos();
   });
-}
-
-function notificarInscripcionConv(id, tipo){
-  fetch(API+'/admin/inscripciones/'+id+'/notificar',{
-    method:'POST', headers:hdr(),
-    body:JSON.stringify({tipo:tipo||'ganador'})
-  }).then(function(r){return r.json();}).then(function(d){
-    mostrarLinksNotificacion(d);
-  }).catch(function(){ alert('Error de conexión'); });
 }
 
 function aprobarParaSorteo(id){
@@ -5724,6 +5781,10 @@ function abrirModalInscripcion(id){
   }
   selEst.value=ins.estado||(INSCRITOS_TIPO_ACTUAL==='convenio'?'preinscrito':'pendiente');
   document.getElementById('mins-observacion').value=ins.observacion||'';
+  var telEl=document.getElementById('mins-telefono');
+  var emailEl=document.getElementById('mins-email');
+  if(telEl) telEl.value=ins.telefono||'';
+  if(emailEl) emailEl.value=ins.email||'';
   document.getElementById('modal-inscripcion').classList.add('open');
 }
 
@@ -5742,7 +5803,12 @@ function verPdfInscripcion(id){
 
 function guardarEstadoInscripcion(){
   var id=val('mins-id');
-  var body={estado:val('mins-estado'),observacion:val('mins-observacion')};
+  var body={
+    estado:val('mins-estado'),
+    observacion:val('mins-observacion'),
+    telefono:val('mins-telefono'),
+    email:val('mins-email')
+  };
   fetch(API+'/admin/inscripciones/'+id,{method:'PUT',headers:hdr(),body:JSON.stringify(body)})
     .then(function(r){return r.json();}).then(function(d){
       if(d.ok){
