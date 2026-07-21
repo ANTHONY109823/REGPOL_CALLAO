@@ -499,13 +499,16 @@
         </div>
         <div class="sb-group-body">
           <div class="sb-item" data-page="items-convenio" data-rol-unitic onclick="irGestionItems('convenio',this)">
-            <i class="fas fa-list-alt"></i> CONVOCATORIAS E INSCRITOS
+            <i class="fas fa-users"></i> 1. CONVOCATORIAS E INSCRITOS
           </div>
-          <div class="sb-item" data-page="sorteos" onclick="irGestionSorteos(this)">
-            <i class="fas fa-trophy"></i> SORTEOS Y RESULTADOS
+          <div class="sb-item" data-page="conv-ganadores" onclick="irConvGanadores(this)">
+            <i class="fas fa-trophy"></i> 2. GANADORES Y EXPEDIENTES
+          </div>
+          <div class="sb-item" data-page="conv-repechaje" onclick="irConvRepechaje(this)">
+            <i class="fas fa-redo"></i> 3. REPECHAJE
           </div>
           <div class="sb-item" data-page="resultados-pdf" onclick="irResultadosPdf('convenio',this)">
-            <i class="fas fa-file-pdf"></i> RELACIÓN DE SELECCIONADOS (PDF)
+            <i class="fas fa-file-pdf"></i> RELACIÓN PDF (PUBLICAR)
           </div>
           <div class="sb-item" data-page="consulta-cip" onclick="ir('consulta-cip',this)">
             <i class="fas fa-search"></i> CONSULTA POR CIP
@@ -1108,7 +1111,7 @@
     <div id="page-inscritos" class="page">
       <div class="card">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-          <button class="btn" style="background:#888;color:#fff;" onclick="ir('items',null)"><i class="fas fa-chevron-left"></i> Volver</button>
+          <button class="btn" style="background:#888;color:#fff;" id="inscritos-btn-volver" onclick="volverDesdeInscritos()"><i class="fas fa-chevron-left"></i> Volver</button>
           <h3 id="inscritos-titulo" style="margin:0;border:none;padding:0;"><i class="fas fa-users"></i> Inscritos</h3>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
@@ -1137,6 +1140,35 @@
         </div>
         <div id="inscritos-stats" style="margin-bottom:10px;"></div>
         <div id="inscritos-tabla"><p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">Cargando...</p></div>
+      </div>
+    </div>
+
+    <div id="page-conv-ganadores" class="page">
+      <div class="card">
+        <h3><i class="fas fa-trophy" style="color:#c8a94a;"></i> Ganadores y expedientes</h3>
+        <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
+          Seleccione el convenio. Aquí se avisa a ganadores, se reciben expedientes, se observa o aprueba.
+          <strong>Sin edición de datos</strong> del efectivo.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+          <button class="btn btn-v" type="button" onclick="cargarConvFlujoResumen('ganadores')"><i class="fas fa-sync"></i> Actualizar</button>
+          <button class="btn btn-o" type="button" onclick="irResultadosPdf('convenio', document.querySelector('[data-page=resultados-pdf]'))"><i class="fas fa-file-pdf"></i> Publicar PDF</button>
+        </div>
+        <div id="conv-ganadores-cuadros"><p style="color:#bbb;text-align:center;padding:24px;">Cargando...</p></div>
+      </div>
+    </div>
+
+    <div id="page-conv-repechaje" class="page">
+      <div class="card">
+        <h3><i class="fas fa-redo" style="color:#8e44ad;"></i> Repechaje</h3>
+        <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
+          Vacantes libres actualizadas. Quienes no presentaron expediente a tiempo pasan automáticamente a caducado / repechaje.
+        </p>
+        <div id="conv-repechaje-totales" class="stats-grid" style="margin-bottom:16px;"></div>
+        <div style="margin-bottom:14px;">
+          <button class="btn btn-v" type="button" onclick="cargarConvFlujoResumen('repechaje')"><i class="fas fa-sync"></i> Actualizar contadores</button>
+        </div>
+        <div id="conv-repechaje-cuadros"><p style="color:#bbb;text-align:center;padding:24px;">Cargando...</p></div>
       </div>
     </div>
 
@@ -3488,7 +3520,8 @@ function ir(page, el){
   if(page==='items'&&!esUnitic()){alert('Solo el Super Admin gestiona convocatorias.');return;}
   if(page==='sorteos'&&!puedeGestionarSorteosConvenio()){alert('Sin acceso a sorteos de convenios.');return;}
   if(page==='resultados-pdf'&&!puedePublicarResultadosPdf(RESULTADOS_PDF_TIPO)){alert('Sin acceso a publicación de resultados.');return;}
-  if(page==='inscritos'&&!puedeOperarInscritosConvenio()){alert('Sin acceso a inscritos de convenios.');return;}
+  if(page==='inscritos'&&!puedeOperarInscritosConvenio()&&!esUnitic()){alert('Sin acceso a inscritos de convenios.');return;}
+  if((page==='conv-ganadores'||page==='conv-repechaje')&&!puedeOperarInscritosConvenio()){alert('Sin acceso al flujo de convenios.');return;}
   if(page==='consulta-cip'&&!puedeConsultarCip()){alert('Sin acceso a consulta por CIP.');return;}
   if((page==='descansos'||page==='descansos-dash'||page==='descansos-import')&&!puedeGestionDescansos()){alert('Sin acceso a Descansos médicos.');return;}
   if((page==='faltos'||page==='faltos-dash'||page==='faltos-import')&&!puedeGestionFaltos()){alert('Sin acceso a Faltos.');return;}
@@ -3519,6 +3552,8 @@ function ir(page, el){
   if(page==='resultados-pdf' && !ya){ cargarResultadosPdfAdmin(); }
   if(page==='menu-publicacion'){ cargarPaginaMenuPublicacion(); }
   if(page==='sorteos')             { aplicarModoSorteosUI(); cargarItemsSorteo(SORTEOS_TIPO_FILTRO||'convenio'); cargarSorteos(); }
+  if(page==='conv-ganadores')      { cargarConvFlujoResumen('ganadores'); }
+  if(page==='conv-repechaje')      { cargarConvFlujoResumen('repechaje'); }
   if(page==='descansos' || page==='descansos-dash' || page==='descansos-import'){
     if(typeof dmInit === 'function') dmInit();
   }
@@ -4676,6 +4711,8 @@ function quitarPlantillaItem(){
 }
 
 var INSCRITOS_CACHE = [];
+var INSCRITOS_MODO = 'preinscripcion';
+var CONV_FLUJO_CACHE = [];
 
 function cargarItems(tipo){
   aplicarRestriccionFiltroItems();
@@ -4724,8 +4761,11 @@ function renderTablaItems(items){
         +'<td style="text-align:center;"><strong style="color:#004d3d;">'+escHtml(item.total_inscritos||0)+'</strong></td>'
         +'<td style="text-align:center;">'+badge+'</td>'
         +'<td class="col-acciones"><div class="btn-acciones-celda">'
-        +'<button class="btn-mini" onclick="abrirModalItem('+item.id+')"><i class="fas fa-edit"></i> Editar</button>'
-        +'<button class="btn-mini" onclick="verInscritos('+item.id+',\''+escJs(item.titulo)+'\')"><i class="fas fa-users"></i> Inscritos</button>'
+        +'<button class="btn-mini" onclick="verInscritos('+item.id+',\''+escJs(item.titulo)+'\',\'preinscripcion\')"><i class="fas fa-users"></i> Inscritos</button>'
+        +(item.tipo==='convenio'
+          ? '<button class="btn-mini btn-mini-ok" onclick="abrirSorteoDesdeItem('+item.id+')" title="Abrir sorteo en vivo"><i class="fas fa-random"></i> Mandar a sorteo</button>'
+          : '')
+        +(esUnitic()?'<button class="btn-mini" onclick="abrirModalItem('+item.id+')"><i class="fas fa-edit"></i></button>':'')
         +(esUnitic()?'<button class="btn-mini btn-mini-danger" onclick="eliminarItem('+item.id+')"><i class="fas fa-trash"></i></button>':'')
         +'</div></td>'
         +'</tr>';
@@ -5106,10 +5146,132 @@ function eliminarResultadoPdf(id){
     });
 }
 
-function verInscritos(itemId, titulo){
+function abrirSorteoDesdeItem(itemId){
+  if(!itemId) return;
+  window.open('sorteo-live.html?item_id='+itemId, 'regpol_sorteo_live', 'noopener,noreferrer');
+}
+
+function irConvGanadores(el){
+  ir('conv-ganadores', el);
+}
+
+function irConvRepechaje(el){
+  ir('conv-repechaje', el);
+}
+
+function volverDesdeInscritos(){
+  if(INSCRITOS_MODO==='ganadores'){
+    ir('conv-ganadores', document.querySelector('[data-page="conv-ganadores"]'));
+  } else if(INSCRITOS_MODO==='repechaje'){
+    ir('conv-repechaje', document.querySelector('[data-page="conv-repechaje"]'));
+  } else {
+    ir('items', document.querySelector('[data-page="items-convenio"]') || null);
+  }
+}
+
+function cargarConvFlujoResumen(vista){
+  var boxId = vista==='repechaje' ? 'conv-repechaje-cuadros' : 'conv-ganadores-cuadros';
+  var el = document.getElementById(boxId);
+  if(el) el.innerHTML='<p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>';
+  fetch(API+'/admin/convenios/flujo-resumen',{headers:hdr()})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok){
+        if(el) el.innerHTML='<p style="color:#c0392b;padding:16px;">'+escHtml(d.error||'Error')+'</p>';
+        return;
+      }
+      CONV_FLUJO_CACHE = d.convenios || [];
+      if(vista==='repechaje') renderConvRepechajeCuadros(CONV_FLUJO_CACHE);
+      else renderConvGanadoresCuadros(CONV_FLUJO_CACHE);
+    })
+    .catch(function(){
+      if(el) el.innerHTML='<p style="color:#c0392b;padding:16px;">Error de conexión</p>';
+    });
+}
+
+function renderConvGanadoresCuadros(list){
+  var el=document.getElementById('conv-ganadores-cuadros');
+  if(!el) return;
+  if(!list.length){
+    el.innerHTML='<p style="color:#888;text-align:center;padding:24px;">No hay convenios activos.</p>';
+    return;
+  }
+  el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">'
+    +list.map(function(c){
+      var cola = (c.ganadores||0)+(c.en_revision||0)+(c.observados||0)+(c.expediente_ok||0);
+      return '<div style="background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(0,77,61,.06);">'
+        +'<div style="font-weight:800;color:#004d3d;font-size:14px;margin-bottom:8px;line-height:1.3;">'+escHtml(c.titulo)+'</div>'
+        +'<div style="font-size:12px;color:#666;margin-bottom:10px;line-height:1.45;">'
+        +(c.horario?'<div><b>Horarios:</b> '+escHtml(c.horario)+'</div>':'')
+        +(c.fecha_inicio?'<div><b>Inicio:</b> '+escHtml(c.fecha_inicio)+'</div>':'')
+        +'</div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'
+        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#c8a94a;">'+c.ganadores+'</div><div class="l">Ganadores</div></div>'
+        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#2980b9;">'+c.en_revision+'</div><div class="l">En revisión</div></div>'
+        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#e67e22;">'+c.observados+'</div><div class="l">Observados</div></div>'
+        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#c0392b;">'+c.pendientes_expediente+'</div><div class="l">Sin PDF</div></div>'
+        +'</div>'
+        +'<button type="button" class="btn btn-v" style="width:100%;justify-content:center;" onclick="abrirConvenioGanadores('+c.id+',\''+escJs(c.titulo)+'\')">'
+        +'<i class="fas fa-folder-open"></i> Abrir ('+cola+' en flujo)</button>'
+        +'</div>';
+    }).join('')
+    +'</div>';
+}
+
+function renderConvRepechajeCuadros(list){
+  var el=document.getElementById('conv-repechaje-cuadros');
+  var tot=document.getElementById('conv-repechaje-totales');
+  if(!el) return;
+  var sumDisp=0, sumPend=0, sumCad=0, sumRep=0;
+  list.forEach(function(c){
+    sumDisp += c.disponibles||0;
+    sumPend += c.pendientes_expediente||0;
+    sumCad += c.caducados||0;
+    sumRep += c.repechaje||0;
+  });
+  if(tot){
+    tot.innerHTML=
+      '<div class="stat" style="border-color:#004d3d;"><div class="n" style="color:#004d3d;">'+sumDisp+'</div><div class="l">Vacantes libres</div></div>'
+      +'<div class="stat" style="border-color:#c0392b;"><div class="n" style="color:#c0392b;">'+sumPend+'</div><div class="l">Expedientes por presentar</div></div>'
+      +'<div class="stat" style="border-color:#888;"><div class="n" style="color:#555;">'+sumCad+'</div><div class="l">Caducados (auto)</div></div>'
+      +'<div class="stat" style="border-color:#8e44ad;"><div class="n" style="color:#8e44ad;">'+sumRep+'</div><div class="l">En repechaje</div></div>';
+  }
+  if(!list.length){
+    el.innerHTML='<p style="color:#888;text-align:center;padding:24px;">No hay convenios activos.</p>';
+    return;
+  }
+  el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">'
+    +list.map(function(c){
+      return '<div style="background:#fff;border:1.5px solid #e0d4f0;border-radius:12px;padding:16px;">'
+        +'<div style="font-weight:800;color:#004d3d;font-size:14px;margin-bottom:10px;">'+escHtml(c.titulo)+'</div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:12px;">'
+        +'<div class="stat" style="padding:8px;"><div class="n" style="font-size:18px;color:#004d3d;">'+c.disponibles+'</div><div class="l">Libres / '+c.vacantes+'</div></div>'
+        +'<div class="stat" style="padding:8px;"><div class="n" style="font-size:18px;color:#c0392b;">'+c.pendientes_expediente+'</div><div class="l">Por presentar</div></div>'
+        +'<div class="stat" style="padding:8px;"><div class="n" style="font-size:18px;">'+c.caducados+'</div><div class="l">Caducados</div></div>'
+        +'<div class="stat" style="padding:8px;"><div class="n" style="font-size:18px;color:#8e44ad;">'+c.repechaje+'</div><div class="l">Repechaje</div></div>'
+        +'</div>'
+        +'<button type="button" class="btn btn-o" style="width:100%;justify-content:center;background:#8e44ad;color:#fff;" onclick="abrirConvenioRepechaje('+c.id+',\''+escJs(c.titulo)+'\')">'
+        +'<i class="fas fa-redo"></i> Ver detalle</button>'
+        +'</div>';
+    }).join('')
+    +'</div>';
+}
+
+function abrirConvenioGanadores(itemId, titulo){
+  verInscritos(itemId, titulo, 'ganadores');
+}
+
+function abrirConvenioRepechaje(itemId, titulo){
+  verInscritos(itemId, titulo, 'repechaje');
+}
+
+function verInscritos(itemId, titulo, modo){
+  INSCRITOS_MODO = modo || 'preinscripcion';
   ITEM_ACTIVO_ID=itemId;
   ir('inscritos',null);
-  document.getElementById('inscritos-titulo').innerHTML='<i class="fas fa-users"></i> Inscritos — '+escHtml(titulo);
+  var icon = INSCRITOS_MODO==='ganadores' ? 'fa-trophy' : (INSCRITOS_MODO==='repechaje' ? 'fa-redo' : 'fa-users');
+  var pref = INSCRITOS_MODO==='ganadores' ? 'Ganadores / expedientes' : (INSCRITOS_MODO==='repechaje' ? 'Repechaje' : 'Inscritos');
+  document.getElementById('inscritos-titulo').innerHTML='<i class="fas '+icon+'"></i> '+pref+' — '+escHtml(titulo);
   document.getElementById('inscritos-buscar').value='';
   document.getElementById('inscritos-filtro-estado').value='';
   var selUni=document.getElementById('inscritos-filtro-unidad');
@@ -5130,6 +5292,16 @@ function verInscritos(itemId, titulo){
       window.INSCRITOS_VACANTES_INFO=d.vacantes_info||null;
       window.CATALOGO_OBS_CONV=d.catalogo_observaciones||[];
       INSCRITOS_TIPO_ACTUAL=d.tipo||'convenio';
+      if(INSCRITOS_MODO==='ganadores'){
+        INSCRITOS_CACHE = INSCRITOS_CACHE.filter(function(i){
+          return ['ganador','en_revision','observado','expediente_ok'].indexOf(i.estado)>=0;
+        });
+      } else if(INSCRITOS_MODO==='repechaje'){
+        INSCRITOS_CACHE = INSCRITOS_CACHE.filter(function(i){
+          return ['caducado','repechaje','ganador'].indexOf(i.estado)>=0
+            && (i.estado!=='ganador' || !i.tiene_pdf);
+        });
+      }
       poblarFiltroEstadoInscritos(INSCRITOS_TIPO_ACTUAL);
       poblarFiltroUnidadesInscritos();
       poblarFiltroAreasInscritos();
@@ -5285,10 +5457,9 @@ function renderInscritos(list, tipo){
   var vacInfo = window.INSCRITOS_VACANTES_INFO || null;
 
   var btnAccion = '';
-  if(esConvenio && aptos>0){
-    btnAccion='<a href="sorteo-live.html?item_id='+ITEM_ACTIVO_ID+'" target="_blank" '
-      +'class="btn btn-o" style="text-decoration:none;margin-left:8px;">'
-      +'<i class="fas fa-random"></i> ABRIR SORTEO EN VIVO ('+aptos+' preinscritos)</a>';
+  if(esConvenio && INSCRITOS_MODO==='preinscripcion' && aptos>0){
+    btnAccion='<button type="button" class="btn btn-o" style="margin-left:8px;" onclick="abrirSorteoDesdeItem('+ITEM_ACTIVO_ID+')">'
+      +'<i class="fas fa-random"></i> MANDAR A SORTEO ('+aptos+' preinscritos)</button>';
   } else if(!esConvenio && verif>0){
     btnAccion='<button class="btn btn-v" style="margin-left:8px;" onclick="verAprobadosCurso()">'
       +'<i class="fas fa-list-ol"></i> VER LISTA DE APROBADOS ('+verif+' verificados)</button>';
@@ -5340,6 +5511,7 @@ function renderInscritos(list, tipo){
       }
       var modLabel = !ins.modalidad ? '—' : (ins.modalidad==='OTROS' ? (ins.modalidad_otro||'Otros') : (ins.modalidad==='SERVICIO_FRANCO_RETEN'?'Serv./Franco/Retén':ins.modalidad));
       var acciones='';
+      var sinEditar = INSCRITOS_MODO==='ganadores' || INSCRITOS_MODO==='repechaje';
       if(esConvenio){
         if(ins.estado==='en_revision'||ins.estado==='repechaje'){
           acciones='<button type="button" class="btn-mini btn-mini-ok" onclick="revisarExpedienteConv('+ins.id+',\'aprobar\')" title="Aprobar expediente"><i class="fas fa-check"></i> OK</button> '
@@ -5354,7 +5526,9 @@ function renderInscritos(list, tipo){
         if(ins.estado==='expediente_ok'){
           acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'expediente_ok\')" title="Avisar constancia"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Avisar</button> ';
         }
-        acciones+='<button type="button" class="btn-mini btn-mini-solid" title="Editar inscripción" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i></button>';
+        if(!sinEditar){
+          acciones+='<button type="button" class="btn-mini btn-mini-solid" title="Editar inscripción" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i></button>';
+        }
       } else {
         acciones=(ins.estado==='pendiente'
           ?'<button type="button" class="btn-mini btn-mini-solid" title="Verificar expediente" onclick="verificarInscripcion('+ins.id+')"><i class="fas fa-check-double"></i> Verificar</button> '
@@ -5513,7 +5687,7 @@ function verificarInscripcion(id){
     method:'PUT', headers:hdr(),
     body:JSON.stringify({estado:'verificado', observacion:'Expediente verificado'})
   }).then(function(r){return r.json();}).then(function(d){
-    if(d.ok) verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/.*— /,''));
+    if(d.ok) verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/.*— /,''), INSCRITOS_MODO);
     else alert('Error: '+(d.error||''));
   });
 }
@@ -5521,7 +5695,7 @@ function verificarInscripcion(id){
 function refrescarInscritosActivos(){
   var t=document.getElementById('inscritos-titulo');
   var titulo=t?t.textContent.replace(/.*—\s*/,''):'';
-  verInscritos(ITEM_ACTIVO_ID, titulo);
+  verInscritos(ITEM_ACTIVO_ID, titulo, INSCRITOS_MODO);
 }
 
 function mostrarLinksNotificacion(n){
@@ -5725,6 +5899,10 @@ function cambiarEstadoAprobado(id, nuevoEstado){
 }
 
 function abrirModalInscripcion(id){
+  if(INSCRITOS_MODO==='ganadores' || INSCRITOS_MODO==='repechaje'){
+    alert('En esta etapa no se editan datos. Solo recepción, aviso y observación del expediente.');
+    return;
+  }
   var ins=INSCRITOS_CACHE.find(function(i){return i.id===id;});
   if(!ins)return;
   document.getElementById('mins-id').value=id;
@@ -5804,7 +5982,7 @@ function guardarEstadoInscripcion(){
     .then(function(r){return r.json();}).then(function(d){
       if(d.ok){
         cerrarModal('modal-inscripcion');
-        verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/^[^—]+— /,''));
+        verInscritos(ITEM_ACTIVO_ID, document.getElementById('inscritos-titulo').textContent.replace(/^[^—]+— /,''), INSCRITOS_MODO);
       } else alert('Error: '+(d.error||''));
     });
 }

@@ -5428,6 +5428,63 @@ app.get('/admin/items/:id/vacantes-info', requireAuth, async (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
+/** Resumen del flujo convenios: inscritos / ganadores / repechaje por convocatoria */
+app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
+  try {
+    if (!puedeOperarInscritos(req.admin, 'convenio'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    await conveniosFlujo.caducarExpedientesVencidos(pool);
+    const items = await pool.query(
+      `SELECT id, titulo, vacantes, estado, horario, fecha_inicio, duracion, lugar, orden
+       FROM items_portal
+       WHERE tipo='convenio' AND visible=TRUE
+       ORDER BY orden, id`
+    );
+    const out = [];
+    for (const it of items.rows) {
+      const counts = await pool.query(
+        `SELECT estado, COUNT(*)::int AS n
+         FROM inscripciones WHERE item_id=$1 GROUP BY estado`,
+        [it.id]
+      );
+      const mapa = {};
+      counts.rows.forEach(function(r) { mapa[r.estado] = r.n; });
+      const vac = await conveniosFlujo.vacantesDisponibles(pool, it.id);
+      const pendPdf = await pool.query(
+        `SELECT COUNT(*)::int AS n FROM inscripciones
+         WHERE item_id=$1 AND estado='ganador'
+           AND COALESCE(pdf_requisitos,'')=''`,
+        [it.id]
+      );
+      const pre =
+        (mapa.preinscrito || 0) + (mapa.pendiente || 0) +
+        (mapa.aprobado || 0) + (mapa.verificado || 0);
+      out.push({
+        id: it.id,
+        titulo: it.titulo,
+        estado: it.estado,
+        horario: it.horario || '',
+        fecha_inicio: it.fecha_inicio || '',
+        duracion: it.duracion || '',
+        lugar: it.lugar || '',
+        vacantes: vac.vacantes != null ? vac.vacantes : (it.vacantes || 0),
+        ocupadas: vac.ocupadas != null ? vac.ocupadas : 0,
+        disponibles: vac.disponibles != null ? vac.disponibles : 0,
+        preinscritos: pre,
+        ganadores: mapa.ganador || 0,
+        en_revision: mapa.en_revision || 0,
+        observados: mapa.observado || 0,
+        expediente_ok: mapa.expediente_ok || 0,
+        caducados: mapa.caducado || 0,
+        repechaje: mapa.repechaje || 0,
+        reservas: mapa.reserva || 0,
+        pendientes_expediente: pendPdf.rows[0].n || 0
+      });
+    }
+    res.json({ ok: true, convenios: out });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 app.post('/admin/inscripciones/:id/revisar-expediente', requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
