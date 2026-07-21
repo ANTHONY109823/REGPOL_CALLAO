@@ -5590,7 +5590,7 @@ function renderInscritos(list, tipo){
     '<div style="overflow-x:auto;"><table class="t t-inscritos" style="min-width:1100px;"><thead><tr>'
     +'<th>#</th><th>N° Reg.</th><th>Grado</th><th>CIP</th><th>CODIFIN</th><th>Apellidos y Nombres</th>'
     +(esConvenio?'<th>Región</th>':'')
-    +'<th>Unidad</th><th>Área</th>'
+    +'<th>Unidad</th>'+(esConvenio?'<th>Postula a</th>':'')+'<th>Área</th>'
     +(esConvenio?'<th>Modalidad</th><th>Disponib.</th>':'<th>T. Servicio</th>')
     +'<th>PDF</th><th>Estado</th><th>Fecha</th><th class="col-acciones">Acciones</th>'
     +'</tr></thead><tbody>'
@@ -5643,6 +5643,7 @@ function renderInscritos(list, tipo){
         +'<td style="font-weight:600;">'+escHtml(ins.nombres||'')+'</td>'
         +(esConvenio?'<td style="font-size:11.5px;">'+escHtml(ins.region_policial||'—')+'</td>':'')
         +'<td>'+escHtml(ins.unidad||'')+'</td>'
+        +(esConvenio?'<td style="font-size:11.5px;font-weight:600;color:#004d3d;">'+escHtml(ins.comisaria_postula||'—')+'</td>':'')
         +'<td>'+escHtml(ins.area||'—')+'</td>'
         +(esConvenio
           ? ('<td style="font-size:11.5px;">'+escHtml(modLabel)+'</td><td>'+dispBadge+'</td>')
@@ -6005,7 +6006,7 @@ function abrirModalInscripcion(id){
 
   var filas=[
     ['N° Registro',ins.nro_registro],['Grado',ins.grado],['CIP',ins.cip],['DNI',ins.dni],['CODIFIN',ins.codifin],
-    ['Nombres',ins.nombres],['Región',ins.region_policial],['Unidad',ins.unidad],['Área',ins.area],['Cargo',ins.cargo],
+    ['Nombres',ins.nombres],['Región',ins.region_policial],['Unidad',ins.unidad],['Postula a',ins.comisaria_postula],['Área',ins.area],['Cargo',ins.cargo],
     ['Modalidad',ins.modalidad],['Modalidad (otro)',ins.modalidad_otro],
     ['Arma/Condición',ins.arma],['Disponibilidad',ins.disponibilidad],['Día Franco',ins.dia_franco],
     ['T. Servicio',ins.tiempo_servicio],['Teléfono',ins.telefono],['Email',ins.email],
@@ -6098,9 +6099,9 @@ function eliminarInscripcion(){
 function exportarInscritos(){
   var list=obtenerInscritosFiltrados();
   if(!list.length){alert('No hay inscritos para exportar con el filtro actual.');return;}
-  var rows=[['NroRegistro','CIP','CODIFIN','Nombres','Region','Unidad','Area','Cargo','Modalidad','ModalidadOtro','Disponibilidad','Telefono','Email','Estado','Observacion','Fecha']];
+  var rows=[['NroRegistro','CIP','CODIFIN','Nombres','Region','Unidad','PostulaA','Area','Cargo','Modalidad','ModalidadOtro','Disponibilidad','Telefono','Email','Estado','Observacion','Fecha']];
   list.forEach(function(i){
-    rows.push([i.nro_registro,i.cip,i.codifin,i.nombres,i.region_policial,i.unidad,i.area,i.cargo,i.modalidad,i.modalidad_otro,i.disponibilidad,i.telefono,i.email,i.estado,i.observacion,
+    rows.push([i.nro_registro,i.cip,i.codifin,i.nombres,i.region_policial,i.unidad,i.comisaria_postula,i.area,i.cargo,i.modalidad,i.modalidad_otro,i.disponibilidad,i.telefono,i.email,i.estado,i.observacion,
       i.fecha?new Date(i.fecha).toLocaleDateString('es-PE'):'']);
   });
   var csv=rows.map(function(r){return r.map(function(c){return '"'+(c||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');

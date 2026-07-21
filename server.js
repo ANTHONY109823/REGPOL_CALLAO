@@ -5220,7 +5220,7 @@ app.get('/portal/items/:id', async (req, res) => {
 app.post('/portal/items/:id/inscribir', async (req, res) => {
   try {
     const item = await pool.query(
-      'SELECT id,titulo,tipo,inscripciones_abiertas,vacantes FROM items_portal WHERE id=$1 AND visible=TRUE',
+      'SELECT id,titulo,tipo,inscripciones_abiertas,vacantes,cupos_unidades FROM items_portal WHERE id=$1 AND visible=TRUE',
       [req.params.id]);
     if (!item.rows.length) return res.json({ ok: false, error: 'Item no encontrado' });
     if (!item.rows[0].inscripciones_abiertas)
@@ -5232,7 +5232,8 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       pdf_requisitos, pdf_nombre,
       dni, grado, area, arma, disponibilidad, dia_franco,
       fecha_egreso, tiempo_servicio,
-      modalidad, modalidad_otro, codifin, region_policial
+      modalidad, modalidad_otro, codifin, region_policial,
+      comisaria_postula
     } = req.body || {};
     const cipNorm = normalizarCipDigits(cip);
     if (!cipNorm) return res.json({ ok: false, error: 'CIP inválido.' });
@@ -5245,6 +5246,9 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
     const modalidadNorm = conveniosFlujo.limpio(modalidad, 40).toUpperCase();
     const modalidadOtroNorm = conveniosFlujo.limpio(modalidad_otro, 120);
     const codifinNorm = String(codifin || '').replace(/\D/g, '');
+    const comisariaPostulaNorm = conveniosFlujo.limpio(comisaria_postula, 150);
+    const cuposItem = normalizarCuposUnidades(item.rows[0].cupos_unidades);
+    const cuposConVacante = cuposItem.filter(function(c) { return (c.disponibles || 0) > 0; });
 
     if (esConvenio) {
       if (!telefono || !soloDigitosTel(telefono)) {
@@ -5267,6 +5271,17 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       }
       if (!/^\d{10,12}$/.test(codifinNorm)) {
         return res.json({ ok: false, error: 'CODIFIN debe tener entre 10 y 12 dígitos numéricos.' });
+      }
+      if (cuposConVacante.length) {
+        if (!comisariaPostulaNorm) {
+          return res.json({ ok: false, error: 'Seleccione la comisaría a la que postula.' });
+        }
+        const cupoOk = cuposConVacante.find(function(c) {
+          return String(c.nombre || '').trim().toUpperCase() === comisariaPostulaNorm.toUpperCase();
+        });
+        if (!cupoOk) {
+          return res.json({ ok: false, error: 'La comisaría seleccionada no tiene vacantes disponibles.' });
+        }
       }
     }
 
@@ -5329,8 +5344,8 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       `INSERT INTO inscripciones
          (item_id,cip,nombres,unidad,cargo,telefono,email,pdf_requisitos,pdf_nombre,
           dni,grado,area,arma,disponibilidad,dia_franco,fecha_egreso,tiempo_servicio,
-          estado,modo_ingreso,modalidad,modalidad_otro,codifin,region_policial)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+          estado,modo_ingreso,modalidad,modalidad_otro,codifin,region_policial,comisaria_postula)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
        RETURNING id`,
       [req.params.id, cipNorm, nombres, unidadNorm || unidad || '', cargo||'', telefono||'', email||'',
        pdfSave, pdfNom,
@@ -5338,7 +5353,8 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
        feNorm, tiempo_servicio||'', estado, modo,
        modalidadNorm || '', modalidadOtroNorm || '',
        esConvenio ? codifinNorm : (codifinNorm || ''),
-       regionNorm || '']);
+       regionNorm || '',
+       esConvenio ? comisariaPostulaNorm : '']);
 
     const newId = ins.rows[0].id;
     const nroRegistro = await conveniosFlujo.asegurarNroRegistro(pool, newId);
@@ -5703,7 +5719,7 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
               arma,disponibilidad,dia_franco,fecha_egreso,tiempo_servicio,
               estado,observacion,fecha,modo_ingreso,motivo_observacion,
               fecha_ganador,plazo_expediente,nro_registro,modalidad,modalidad_otro,
-              codifin,region_policial,
+              codifin,region_policial,comisaria_postula,
               CASE WHEN pdf_requisitos IS NOT NULL AND pdf_requisitos<>'' THEN true ELSE false END AS tiene_pdf,
               pdf_nombre
        FROM inscripciones WHERE item_id=$1 ORDER BY fecha ASC`, [req.params.id]);

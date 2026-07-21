@@ -338,6 +338,54 @@ function textoBtnEnviar(){
   return 'ENVIAR SOLICITUD';
 }
 
+function obtenerCuposConVacante(item){
+  var DIVOPUS1_CIAS = [
+    'CIA CALLAO','CIA LA PUNTA','CIA BELLAVISTA','CIA CIUDADELA CHALACA',
+    'CIA CIUDAD DEL PESCADOR','CIA RAMON CASTILLA','CIA LA LEGUA','CIA LA PERLA'
+  ];
+  var cupos = Array.isArray(item && item.cupos_unidades) ? item.cupos_unidades.slice() : [];
+  if(!cupos.length && item && item.tipo === 'convenio'){
+    var totalVac = parseInt(item.vacantes, 10) || 0;
+    var n = DIVOPUS1_CIAS.length;
+    var base = n ? Math.floor(totalVac / n) : 0;
+    var resto = n ? totalVac % n : 0;
+    cupos = DIVOPUS1_CIAS.map(function(nombre, idx){
+      var vac = base + (idx < resto ? 1 : 0);
+      return { nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac };
+    });
+  }
+  return cupos.filter(function(c){
+    var disp = parseInt(c.disponibles, 10);
+    if(isNaN(disp)) disp = Math.max(0, (parseInt(c.vacantes,10)||0) - (parseInt(c.inscritos,10)||0));
+    return disp > 0;
+  }).map(function(c){
+    var disp = parseInt(c.disponibles, 10);
+    if(isNaN(disp)) disp = Math.max(0, (parseInt(c.vacantes,10)||0) - (parseInt(c.inscritos,10)||0));
+    return { nombre: String(c.nombre||'').trim(), disponibles: disp };
+  }).filter(function(c){ return !!c.nombre; });
+}
+
+function htmlSelectorComisariaPostula(item){
+  var disponibles = obtenerCuposConVacante(item);
+  if(!disponibles.length){
+    return '<div class="fi-group fi-full">'
+      +'<label>Comisaría a la que postula</label>'
+      +'<p class="fi-hint" style="margin:0;padding:10px 12px;background:#fff3cd;border-radius:8px;color:#856404;border:1px solid #ffe082;">No hay vacantes disponibles en comisarías para esta convocatoria.</p>'
+      +'<input type="hidden" id="fi-comisaria-postula" value=""/>'
+      +'</div>';
+  }
+  return '<div class="fi-group fi-full">'
+    +'<label>Comisaría a la que postula *</label>'
+    +'<select id="fi-comisaria-postula" required>'
+    +'<option value="">Seleccionar comisaría</option>'
+    +disponibles.map(function(c){
+      return '<option value="'+escHtmlD(c.nombre)+'">'+escHtmlD(c.nombre)+' ('+c.disponibles+' disponibles)</option>';
+    }).join('')
+    +'</select>'
+    +'<small class="fi-hint">Solo se listan comisarías con vacantes disponibles.</small>'
+    +'</div>';
+}
+
 function renderFormInscripcion(item){
   var esConvenio = item.tipo === 'convenio';
   var esCurso    = item.tipo === 'curso';
@@ -363,6 +411,7 @@ function renderFormInscripcion(item){
     +'<input type="text" id="fi-apellidos" maxlength="120" placeholder="Ej: GARCIA LOPEZ" required/></div>'
     +'<div class="fi-group"><label>Nombres *</label>'
     +'<input type="text" id="fi-nombres" maxlength="120" placeholder="Ej: JUAN CARLOS" required/></div>'
+    +(esConvenio ? htmlSelectorComisariaPostula(item) : '')
     +'<div class="fi-group"><label>DNI *</label>'
     +'<input type="text" id="fi-dni" maxlength="12" placeholder="Número de DNI" required/></div>'
 
@@ -665,6 +714,7 @@ function enviarInscripcion(e){
   var disponibilidad = v('fi-disponibilidad');
   var dia_franco     = v('fi-dia-franco');
   var email          = v('fi-email');
+  var comisariaPostula = v('fi-comisaria-postula');
   
   var fecha_egreso   = v('fi-fecha-egreso');
   var tsEl = document.getElementById('fi-tiempo-servicio');
@@ -709,6 +759,10 @@ function enviarInscripcion(e){
     alerta.textContent='Ingrese un correo electrónico válido.';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
+  if(ITEM_TIPO==='convenio' && obtenerCuposConVacante(ITEM_DATA).length && !comisariaPostula){
+    alerta.textContent='Seleccione la comisaría a la que postula (solo con vacantes disponibles).';
+    alerta.className='fi-alerta error'; alerta.style.display='block'; return;
+  }
   if(ITEM_TIPO==='convenio' && !disponibilidad){
     alerta.textContent='Indique su disponibilidad (Vacaciones o Franco).';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
@@ -740,6 +794,7 @@ function enviarInscripcion(e){
       modalidad: modalidad||'',
       modalidad_otro: modalidadOtro||'',
       codifin: codifin||'',
+      comisaria_postula: comisariaPostula||'',
       pdf_requisitos: (ITEM_TIPO==='convenio' && !esRepechaje) ? '' : pdfData,
       pdf_nombre: pdfNomb,
       modo_repechaje: !!esRepechaje

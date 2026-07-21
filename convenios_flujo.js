@@ -320,12 +320,14 @@ async function initColumnasFlujoConvenios(pool) {
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS modalidad_otro VARCHAR(120) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS codifin VARCHAR(12) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS region_policial VARCHAR(120) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS comisaria_postula VARCHAR(150) DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS aviso_sorteo_fb TEXT DEFAULT '';
     CREATE INDEX IF NOT EXISTS idx_inscripciones_estado ON inscripciones(estado);
     CREATE INDEX IF NOT EXISTS idx_inscripciones_plazo ON inscripciones(plazo_expediente);
     CREATE INDEX IF NOT EXISTS idx_inscripciones_nro ON inscripciones(nro_registro);
     CREATE INDEX IF NOT EXISTS idx_inscripciones_codifin ON inscripciones(codifin);
     CREATE INDEX IF NOT EXISTS idx_inscripciones_region ON inscripciones(region_policial);
+    CREATE INDEX IF NOT EXISTS idx_inscripciones_cia_postula ON inscripciones(comisaria_postula);
   `);
 
   // Asignar N° de registro a históricos sin número
