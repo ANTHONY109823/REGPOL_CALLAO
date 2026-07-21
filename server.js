@@ -565,6 +565,8 @@ async function initDB() {
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS plantilla_pdf TEXT DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS plantilla_nombre VARCHAR(200) DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS ventana_inscripcion VARCHAR(300) DEFAULT '';
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS aviso_sorteo_fb TEXT DEFAULT '';
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS cupos_unidades JSONB DEFAULT '[]';
 
     CREATE TABLE IF NOT EXISTS sorteos_portal (
       id           SERIAL PRIMARY KEY,
@@ -4609,7 +4611,27 @@ app.get('/admin/stats-gestion', requireAuth, async (req, res) => {
 
 // ── Helpers de permisos para items ────────────────────────────────────────────
 function puedeGestionarItem(admin, tipo) {
-  return admin.rol === 'unitic';
+  if (admin.rol === 'unitic') return true;
+  const perms = normalizarPermisos(admin.permisos);
+  if (tipo === 'convenio') return perms.includes('cms_convenios');
+  if (tipo === 'curso') return perms.includes('cms_cursos');
+  return false;
+}
+
+function normalizarCuposUnidades(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map(function(c) {
+    if (!c || typeof c !== 'object') return null;
+    var nombre = String(c.nombre || c.unidad || c.comisaria || '').trim();
+    if (!nombre) return null;
+    var vacantes = parseInt(c.vacantes, 10);
+    if (isNaN(vacantes) || vacantes < 0) vacantes = 0;
+    var inscritos = parseInt(c.inscritos, 10);
+    if (isNaN(inscritos) || inscritos < 0) inscritos = 0;
+    var disponibles = parseInt(c.disponibles, 10);
+    if (isNaN(disponibles) || disponibles < 0) disponibles = Math.max(0, vacantes - inscritos);
+    return { nombre: nombre, vacantes: vacantes, inscritos: inscritos, disponibles: disponibles };
+  }).filter(Boolean);
 }
 
 function puedePublicarResultadosPdf(admin, tipo) {
@@ -5607,20 +5629,21 @@ app.post('/admin/items', requireAuth, async (req, res) => {
     const { tipo, titulo, descripcion, estado, icono, color, requisitos, horario,
             vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
             formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables,
-            aviso_sorteo_fb } = req.body;
+            aviso_sorteo_fb, cupos_unidades } = req.body;
     if (!puedeGestionarItem(req.admin, tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     if (!titulo) return res.json({ ok: false, error: 'El título es obligatorio.' });
+    const cupos = normalizarCuposUnidades(cupos_unidades);
     const r = await pool.query(
       `INSERT INTO items_portal(tipo,titulo,descripcion,estado,icono,color,requisitos,horario,
-        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden,uniforme,contactos_responsables,aviso_sorteo_fb)
-       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING id`,
+        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden,uniforme,contactos_responsables,aviso_sorteo_fb,cupos_unidades)
+       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22::jsonb) RETURNING id`,
       [tipo, titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
        horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
        lugar||'', observaciones||'', ventana_inscripcion||'', formulario_url||'',
        !!inscripciones_abiertas, visible!==false, parseInt(orden)||0,
-       uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'']);
+       uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'', JSON.stringify(cupos)]);
     invalidarPortalItemsCache();
     res.json({ ok: true, id: r.rows[0].id });
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -5636,18 +5659,20 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
     const { titulo, descripcion, estado, icono, color, requisitos, horario,
             vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
             formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables,
-            aviso_sorteo_fb } = req.body;
+            aviso_sorteo_fb, cupos_unidades } = req.body;
+    const cupos = normalizarCuposUnidades(cupos_unidades);
     await pool.query(
       `UPDATE items_portal SET titulo=$1,descripcion=$2,estado=$3,icono=$4,color=$5,
         requisitos=$6::jsonb,horario=$7,vacantes=$8,fecha_inicio=$9,duracion=$10,
         lugar=$11,observaciones=$12,ventana_inscripcion=$13,formulario_url=$14,inscripciones_abiertas=$15,
-        visible=$16,orden=$17,uniforme=$18,contactos_responsables=$19,aviso_sorteo_fb=$20,actualizado=NOW() WHERE id=$21`,
+        visible=$16,orden=$17,uniforme=$18,contactos_responsables=$19,aviso_sorteo_fb=$20,
+        cupos_unidades=$21::jsonb,actualizado=NOW() WHERE id=$22`,
       [titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
        horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
        lugar||'', observaciones||'', ventana_inscripcion||'', formulario_url||'',
        !!inscripciones_abiertas, visible!==false, parseInt(orden)||0,
-       uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'', req.params.id]);
+       uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'', JSON.stringify(cupos), req.params.id]);
     invalidarPortalItemsCache();
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }
