@@ -2781,95 +2781,57 @@ table.t { min-width: 600px; }
   box-shadow: 0 12px 28px rgba(200, 169, 74, 0.22);
 }
 
-/* Convenios: 2 filas + flechas inferiores */
-.regpol-marquee-wrap {
+/* Convenios: 2 filas fijas (sin duplicar / sin carrusel) */
+.convenios-board {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   width: 100%;
 }
-.regpol-marquee--2rows {
-  -webkit-mask-image: none;
-  mask-image: none;
-}
-.regpol-marquee--scroll {
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-behavior: smooth;
-  scrollbar-width: thin;
-  scrollbar-color: #c8a94a #e8efec;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 6px;
-}
-.regpol-marquee--scroll::-webkit-scrollbar {
-  height: 6px;
-}
-.regpol-marquee--scroll::-webkit-scrollbar-thumb {
-  background: #c8a94a;
-  border-radius: 4px;
-}
-.regpol-marquee-track--2rows {
-  display: grid;
-  grid-template-rows: auto auto;
-  grid-auto-flow: column;
-  grid-auto-columns: 260px;
-  gap: 14px 18px;
-  align-items: stretch;
-  width: max-content;
-  animation: none !important;
-}
-.regpol-marquee-track--2rows > .nov-card,
-.regpol-marquee-track--2rows > a {
-  flex: none;
-  width: 260px;
-  max-width: 260px;
-}
-.regpol-marquee-track--2rows > a .card-modern {
-  min-height: 200px;
-}
-.regpol-marquee-nav {
+.convenios-fila {
   display: flex;
-  align-items: center;
+  flex-wrap: nowrap;
   justify-content: center;
-  gap: 14px;
-  margin-top: 14px;
+  gap: 12px;
+  width: 100%;
 }
-.regpol-marquee-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: 2px solid #004d3d;
-  background: #fff;
-  color: #004d3d;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  box-shadow: 0 2px 8px rgba(0, 77, 61, 0.12);
-  transition: background 0.2s, color 0.2s, transform 0.15s;
+.convenios-fila > a {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 200px;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
 }
-.regpol-marquee-btn:hover {
-  background: #004d3d;
-  color: #fff;
-  transform: scale(1.06);
+.convenios-fila > a .card-modern {
+  width: 100%;
+  min-height: 190px;
+  padding: 14px 12px;
 }
-.regpol-marquee-nav-hint {
-  font-size: 12px;
-  color: #666;
-  text-align: center;
-  max-width: 280px;
+.convenios-fila > a .card-modern h4 {
+  font-size: 13px;
+  line-height: 1.25;
+}
+.convenios-fila > a .card-modern p {
+  font-size: 11.5px;
   line-height: 1.35;
 }
-@media (max-width: 640px) {
-  .regpol-marquee-track--2rows {
-    grid-auto-columns: 220px;
-    gap: 12px 14px;
+@media (max-width: 900px) {
+  .convenios-fila {
+    flex-wrap: wrap;
   }
-  .regpol-marquee-track--2rows > .nov-card,
-  .regpol-marquee-track--2rows > a {
-    width: 220px;
-    max-width: 220px;
+  .convenios-fila > a {
+    flex: 1 1 140px;
+    max-width: 180px;
   }
-  .regpol-marquee-nav-hint {
-    display: none;
+}
+@media (max-width: 560px) {
+  .convenios-fila > a {
+    flex: 1 1 calc(50% - 8px);
+    max-width: none;
+  }
+  .convenios-fila > a .card-modern {
+    min-height: 170px;
   }
 }
 

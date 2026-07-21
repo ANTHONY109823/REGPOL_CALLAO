@@ -110,74 +110,59 @@ function htmlTarjetaPortalItem(item) {
     '</div></a>';
 }
 
+function resetMarqueeContainer(el) {
+  if (!el) return;
+  var wrap = el.closest && el.closest('.regpol-marquee-wrap');
+  if (wrap && wrap.parentNode) {
+    if (typeof wrap._regpolMarqueeStop === 'function') wrap._regpolMarqueeStop();
+    wrap.parentNode.insertBefore(el, wrap);
+    wrap.parentNode.removeChild(wrap);
+  }
+  var board = el.closest && el.closest('.convenios-board-wrap');
+  if (board && board.parentNode) {
+    board.parentNode.insertBefore(el, board);
+    board.parentNode.removeChild(board);
+  }
+  el.className = 'grid-modern';
+  el.removeAttribute('style');
+}
+
+function pintarConveniosEnDosFilas(el, items) {
+  resetMarqueeContainer(el);
+  if (!items || !items.length) {
+    el.innerHTML = '<p class="texto-vacio">No hay convenios publicados actualmente.</p>';
+    return;
+  }
+  // Fila 1: mitad inferior (5 si hay 11). Fila 2: el resto (6 si hay 11). Sin duplicar.
+  var corte = Math.floor(items.length / 2);
+  var fila1 = items.slice(0, corte);
+  var fila2 = items.slice(corte);
+  el.className = 'convenios-board';
+  el.innerHTML =
+    '<div class="convenios-fila">' + fila1.map(htmlTarjetaPortalItem).join('') + '</div>'
+    + '<div class="convenios-fila">' + fila2.map(htmlTarjetaPortalItem).join('') + '</div>';
+}
+
 function activarMarqueeCarrusel(container, opts) {
   if (!container) return;
   opts = opts || {};
   var minItems = opts.minItems != null ? opts.minItems : 1;
   var secsPer = opts.secsPerItem != null ? opts.secsPerItem : 7;
   var minSecs = opts.minSecs != null ? opts.minSecs : 28;
-  var rows = opts.rows != null ? opts.rows : 1;
-  var controls = !!opts.controls;
   var children = Array.prototype.slice.call(container.children).filter(function(n) {
     return n.nodeType === 1 && !n.classList.contains('texto-vacio');
   });
   if (children.length < minItems) return;
   if (container.classList.contains('regpol-marquee') && container.querySelector('.regpol-marquee-track')) return;
   container.classList.add('regpol-marquee');
-  if (rows > 1) container.classList.add('regpol-marquee--2rows');
   var track = document.createElement('div');
-  track.className = 'regpol-marquee-track' + (rows > 1 ? ' regpol-marquee-track--2rows' : '');
+  track.className = 'regpol-marquee-track';
   children.forEach(function(n) { track.appendChild(n); });
-  // Duplicar para bucle infinito (animación CSS) o scroll continuo
   children.forEach(function(n) { track.appendChild(n.cloneNode(true)); });
   container.innerHTML = '';
   container.appendChild(track);
   var secs = Math.max(minSecs, children.length * secsPer);
   track.style.animationDuration = secs + 's';
-
-  if (!controls) return;
-
-  var parent = container.parentNode;
-  if (!parent) return;
-  var wrap = document.createElement('div');
-  wrap.className = 'regpol-marquee-wrap';
-  parent.insertBefore(wrap, container);
-  wrap.appendChild(container);
-
-  var nav = document.createElement('div');
-  nav.className = 'regpol-marquee-nav';
-  nav.innerHTML =
-    '<button type="button" class="regpol-marquee-btn" data-dir="-1" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>'
-    + '<span class="regpol-marquee-nav-hint">Deslice o use las flechas para ver todos los convenios</span>'
-    + '<button type="button" class="regpol-marquee-btn" data-dir="1" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>';
-  wrap.appendChild(nav);
-
-  container.classList.add('regpol-marquee--scroll');
-  track.style.animation = 'none';
-
-  var step = rows > 1 ? 300 : 300;
-  function scrollDir(dir) {
-    var max = Math.max(0, container.scrollWidth - container.clientWidth);
-    var next = container.scrollLeft + (dir * step);
-    if (next > max - 2) next = 0;
-    if (next < 0) next = max;
-    container.scrollTo({ left: next, behavior: 'smooth' });
-  }
-  nav.querySelectorAll('.regpol-marquee-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      scrollDir(parseInt(btn.getAttribute('data-dir'), 10) || 1);
-    });
-  });
-
-  var paused = false;
-  wrap.addEventListener('mouseenter', function() { paused = true; });
-  wrap.addEventListener('mouseleave', function() { paused = false; });
-  wrap.addEventListener('focusin', function() { paused = true; });
-  wrap.addEventListener('focusout', function() { paused = false; });
-  setInterval(function() {
-    if (paused || document.hidden) return;
-    scrollDir(1);
-  }, Math.max(3200, secsPer * 400));
 }
 
 function appendPortalItems(tipo, containerId) {
@@ -187,12 +172,13 @@ function appendPortalItems(tipo, containerId) {
   if (base === null || base === undefined) base = '';
   var cacheKey = 'portal_items_v2_' + tipo;
   function pintar(items) {
-    el.innerHTML = items.map(htmlTarjetaPortalItem).join('');
     if (tipo === 'convenio') {
-      activarMarqueeCarrusel(el, { secsPerItem: 8, minSecs: 30, rows: 2, controls: true });
-    } else {
-      activarMarqueeCarrusel(el, { secsPerItem: 8, minSecs: 30 });
+      pintarConveniosEnDosFilas(el, items);
+      return;
     }
+    resetMarqueeContainer(el);
+    el.innerHTML = items.map(htmlTarjetaPortalItem).join('');
+    activarMarqueeCarrusel(el, { secsPerItem: 8, minSecs: 30 });
   }
   try {
     var raw = sessionStorage.getItem(cacheKey);
