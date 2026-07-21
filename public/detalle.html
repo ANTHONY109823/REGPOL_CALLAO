@@ -299,6 +299,15 @@ function renderFormInscripcion(item){
     +'<input type="text" id="fi-dni" maxlength="12" placeholder="Número de DNI" required/></div>'
 
     +(esConvenio
+      ? ('<div class="fi-group"><label>Teléfono / WhatsApp *</label>'
+        +'<input type="tel" id="fi-telefono" maxlength="30" placeholder="Ej: 987654321" required/>'
+        +'<small class="fi-hint">Para avisos del sorteo y expediente.</small></div>'
+        +'<div class="fi-group"><label>Correo electrónico *</label>'
+        +'<input type="email" id="fi-email" maxlength="100" placeholder="correo@ejemplo.com" required/>'
+        +'<small class="fi-hint">Se enviará el aviso del convenio a este correo.</small></div>')
+      : '')
+
+    +(esConvenio
       ? ('<div class="fi-group"><label>Región Policial *</label>'
         +'<select id="fi-region" required onchange="onCambioRegionInscripcion()"><option value="">— Seleccionar región —</option></select></div>'
         +'<div class="fi-group"><label>Unidad / Dependencia *</label>'
@@ -346,10 +355,6 @@ function renderFormInscripcion(item){
         +'<option value="FRANCO">Día de franco — participa en sorteo</option>'
         +'</select>'
         +'<small class="fi-hint" id="disp-aviso" style="display:none;"></small></div>'
-        +'<div class="fi-group"><label>Teléfono / WhatsApp *</label>'
-        +'<input type="tel" id="fi-telefono" maxlength="30" placeholder="Ej: 987654321" required/></div>'
-        +'<div class="fi-group"><label>Correo electrónico *</label>'
-        +'<input type="email" id="fi-email" maxlength="100" placeholder="correo@ejemplo.com" required/></div>'
         +'<div class="fi-group" id="fi-dia-franco-box" style="display:none;">'
         +'<label>Día de franco *</label>'
         +'<select id="fi-dia-franco">'
