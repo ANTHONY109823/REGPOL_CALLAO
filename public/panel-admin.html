@@ -1521,6 +1521,9 @@
       </div>
       <div style="grid-column:1/-1;" id="mi-cupos-wrap">
         <label><i class="fas fa-building"></i> Cupos por comisaría / unidad (lista lineal en el portal)</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <button type="button" class="btn" style="background:#004d3d;color:#fff;font-size:12px;" onclick="cargarPlantillaCuposComisarias()"><i class="fas fa-list"></i> Cargar 20 comisarías</button>
+        </div>
         <textarea id="mi-cupos-unidades" rows="5" placeholder="CIA LA LEGUA | 20 | 10 | 10&#10;CIA CALLAO | 15 | 5 | 10&#10;CIA VENTANILLA | 30 | 12 | 18"></textarea>
         <small style="color:#666;font-size:11.5px;display:block;margin-top:4px;line-height:1.4;">
           Una línea por unidad: <strong>NOMBRE | vacantes | inscritos | disponibles</strong>.
@@ -2046,6 +2049,7 @@
 
 <script src="api-config.js?v=2"></script>
 <script src="fecha-local.js?v=1"></script>
+<script src="comisarias.js?v=1"></script>
 <script src="portal-data.js?v=10"></script>
 <script src="portal.js?v=80"></script>
 <script src="divisiones-ui.js?v=4"></script>
@@ -4907,6 +4911,21 @@ function serializarCuposUnidades(cupos){
     var d=c&&c.disponibles!=null?c.disponibles:Math.max(0,v-i);
     return n+' | '+v+' | '+i+' | '+d;
   }).join('\n');
+}
+
+function cargarPlantillaCuposComisarias(){
+  var lista = (typeof COMISARIAS_CALLAO !== 'undefined' && COMISARIAS_CALLAO.length)
+    ? COMISARIAS_CALLAO
+    : ['CIA CALLAO','CIA BELLAVISTA','CIA CIUDADELA CHALACA','CIA CIUDAD DEL PESCADOR','CIA RAMON CASTILLA','CIA LA LEGUA','CIA LA PERLA','CIA LA PUNTA','CIA JUAN INGUNZA','CIA BOCANEGRA','CIA MANUEL DULANTO','CIA PLAYA RIMAC','CIA CARMEN DE LA LEGUA','CIA SARITA COLONIA','CIA VENTANILLA','CIA MI PERU','CIA PACHACUTEC','CIA VILLA LOS REYES','CIA MARQUEZ','CIA OQUENDO'];
+  var total = parseInt(document.getElementById('mi-vacantes').value,10)||0;
+  var porCia = lista.length ? Math.floor(total / lista.length) : 0;
+  var resto = lista.length ? total % lista.length : 0;
+  var lineas = lista.map(function(nombre, idx){
+    var vac = porCia + (idx < resto ? 1 : 0);
+    return nombre + ' | ' + vac + ' | 0 | ' + vac;
+  });
+  var el = document.getElementById('mi-cupos-unidades');
+  if(el) el.value = lineas.join('\n');
 }
 
 function parseCuposUnidadesTexto(txt){

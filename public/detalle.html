@@ -5,43 +5,50 @@
     <link rel="icon" href="favicon.ico?v=3" type="image/x-icon">
     <link rel="icon" href="favicon.png?v=3" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Detalle  REGPOL Callao</title>
-  <link rel="stylesheet" href="style.css?v=71">
+  <title>Detalle — REGPOL Callao</title>
+  <link rel="stylesheet" href="style.css?v=72">
   <link rel="stylesheet" href="responsive.css?v=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
-    .grid-detalles{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin:12px 0 20px;}
-    .card-detalle{background:#fff;border-radius:12px;border:1.5px solid #c8e6c9;padding:22px 20px;text-align:center;}
+    .grid-detalles{display:grid;grid-template-columns:1fr;gap:14px;margin:10px 0 16px;}
+    .card-detalle{background:#fff;border-radius:12px;border:1.5px solid #c8e6c9;padding:20px 18px;text-align:left;}
     .card-detalle.highlight-card{border-color:#c8a94a;}
-    .card-detalle.card-detalle--wide{grid-column:1/-1;text-align:left;}
-    .icon-circle{width:56px;height:56px;background:#004d3d;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px;color:#fff;}
-    .card-detalle--wide .icon-circle{margin:0 0 12px;}
+    .card-detalle.card-detalle--wide{grid-column:1/-1;}
+    .detalle-unificado{display:grid;grid-template-columns:1fr 1fr;gap:20px 28px;align-items:start;}
+    @media(max-width:720px){.detalle-unificado{grid-template-columns:1fr;}}
+    .detalle-unificado-bloque h3{color:#004d3d;font-size:13px;font-weight:800;letter-spacing:.5px;margin:0 0 12px;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+    .icon-circle{width:40px;height:40px;background:#004d3d;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:16px;color:#fff;flex-shrink:0;}
     .icon-circle.gold{background:#c8a94a;}
-    .card-detalle h3{color:#004d3d;font-size:13px;font-weight:800;letter-spacing:.5px;margin-bottom:12px;text-transform:uppercase;}
-    .card-detalle ul{list-style:none;padding:0;text-align:left;}
+    .card-detalle h3{color:#004d3d;font-size:13px;font-weight:800;letter-spacing:.5px;margin-bottom:12px;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+    .card-detalle ul{list-style:none;padding:0;text-align:left;margin:0;}
     .card-detalle ul li{padding:6px 0;font-size:13.5px;color:#555;border-bottom:1px solid #f0f0f0;display:flex;align-items:flex-start;gap:8px;}
     .card-detalle ul li:last-child{border:none;}
     .card-detalle ul li i{color:#004d3d;margin-top:2px;flex-shrink:0;}
     .info-item{text-align:left;margin-bottom:10px;}
     .info-item span{font-size:11px;font-weight:800;color:#004d3d;letter-spacing:.5px;display:block;text-transform:uppercase;}
     .info-item p{font-size:14px;color:#444;margin:2px 0 0;}
-    .price{font-size:24px;font-weight:900;color:#c8a94a;margin:4px 0 2px;}
-    .cupos-lineales{display:flex;flex-direction:column;gap:8px;}
-    .cupo-linea{font-size:13.5px;color:#444;line-height:1.45;padding:8px 10px;background:#f7faf7;border-radius:8px;border-left:3px solid #004d3d;}
+    .price{font-size:22px;font-weight:900;color:#c8a94a;margin:4px 0 2px;}
+    .cupos-lineales{display:flex;flex-direction:column;gap:7px;max-height:320px;overflow-y:auto;}
+    .cupo-linea{font-size:13px;color:#444;line-height:1.45;padding:7px 10px;background:#f7faf7;border-radius:8px;border-left:3px solid #004d3d;}
     .cupo-linea strong{color:#004d3d;}
-    .detalle-topbar{display:flex;justify-content:flex-start;align-items:center;margin:0 0 8px;}
-    .page-intro--compact{text-align:center;padding:0 0 8px;margin:0;}
-    .page-intro--compact h2{margin:0 0 8px;font-size:clamp(1.25rem,2.5vw,1.6rem);}
+    .cupos-vacio{font-size:13px;color:#888;padding:8px 0;}
+    .detalle-topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 6px;}
+    .page-intro--compact{text-align:center;padding:0 0 6px;margin:0;}
+    .page-intro--compact h2{margin:0 0 6px;font-size:clamp(1.25rem,2.5vw,1.55rem);}
     .page-intro--compact .estado-badge{margin-top:2px;}
-    .content-area.detalle-compact{padding-top:18px;padding-bottom:32px;}
-    .registro-section{background:#fff;border-radius:12px;border:2px dashed #c8e6c9;padding:28px 24px;text-align:center;margin:20px 0;}
-    .registro-section h2{color:#004d3d;font-size:16px;margin-bottom:8px;}
-    .registro-section p{color:#666;font-size:13.5px;margin-bottom:16px;}
+    .content-area.detalle-compact{padding-top:14px;padding-bottom:28px;}
+    .registro-section{background:#fff;border-radius:12px;border:2px dashed #c8e6c9;padding:20px 18px;text-align:center;margin:14px 0;}
+    .registro-section h2{color:#004d3d;font-size:15px;margin-bottom:6px;}
+    .registro-section p{color:#666;font-size:13px;margin-bottom:10px;}
     .btn-registro-grande{background:#004d3d;color:#fff;padding:14px 28px;border-radius:8px;font-size:14px;font-weight:700;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:none;text-decoration:none;}
     .btn-registro-grande:hover{background:#006b55;}
-    .btn-volver{background:#004d3d;color:#fff;padding:8px 14px;border-radius:7px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:none;text-decoration:none;margin:0;}
+    .btn-volver,.btn-registrarse{padding:8px 14px;border-radius:7px;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:none;text-decoration:none;margin:0;}
+    .btn-volver{background:#004d3d;color:#fff;}
     .btn-volver:hover{background:#006b55;}
-    
+    .btn-registrarse{background:#c8a94a;color:#002d24;}
+    .btn-registrarse:hover{background:#dfc060;color:#002d24;}
+    .btn-registrarse.is-disabled{background:#ccc;color:#666;cursor:not-allowed;pointer-events:none;}
+    .ventana-inscripcion-nota{font-size:12.5px;color:#666;text-align:center;margin:4px 0 10px;}
     .form-inscripcion{background:#f7faf7;border-radius:10px;border:1.5px solid #c8e6c9;padding:24px;margin-top:8px;text-align:left;}
     .form-inscripcion h3{color:#004d3d;font-size:15px;margin:0 0 16px;border-bottom:2px solid #c8a94a;padding-bottom:8px;}
     .fi-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -153,28 +160,24 @@ function renderDetalle(item){
   if(item.vacantes) infoHtml += '<div class="info-item"><span>VACANTES:</span><p>'+escHtmlD(String(item.vacantes))+' efectivos</p></div>';
   if(item.lugar) infoHtml += '<div class="info-item"><span>LUGAR:</span><p>'+escHtmlD(item.lugar)+'</p></div>';
   if(esConvenio && (item.fecha_inicio || item.duracion || item.observaciones)){
-    if(item.fecha_inicio) infoHtml += '<div class="info-item"><span>BENEFICIO ECONÓMICO:</span><p class="price" style="font-size:22px;margin:4px 0;">'+escHtmlD(item.fecha_inicio)+'</p></div>';
+    if(item.fecha_inicio) infoHtml += '<div class="info-item"><span>BENEFICIO ECONÓMICO:</span><p class="price">'+escHtmlD(item.fecha_inicio)+'</p></div>';
     if(item.duracion) infoHtml += '<div class="info-item"><p>'+escHtmlD(item.duracion)+'</p></div>';
     if(item.observaciones) infoHtml += '<div class="info-item"><small>* '+escHtmlD(item.observaciones)+'</small></div>';
   } else if(esCurso && (item.fecha_inicio || item.duracion || item.observaciones)){
-    if(item.fecha_inicio) infoHtml += '<div class="info-item"><span>FECHA DE INICIO:</span><p class="price" style="font-size:20px;margin:4px 0;color:#004d3d;">'+escHtmlD(item.fecha_inicio)+'</p></div>';
+    if(item.fecha_inicio) infoHtml += '<div class="info-item"><span>FECHA DE INICIO:</span><p class="price" style="color:#004d3d;">'+escHtmlD(item.fecha_inicio)+'</p></div>';
     if(item.duracion) infoHtml += '<div class="info-item"><span>DURACIÓN:</span><p>'+escHtmlD(item.duracion)+'</p></div>';
     if(item.observaciones) infoHtml += '<div class="info-item"><small>* '+escHtmlD(item.observaciones)+'</small></div>';
   }
   if(esConvenio && item.aviso_sorteo_fb) {
     infoHtml += '<div class="info-item"><span>SORTEO FACEBOOK:</span><p>'+escHtmlD(item.aviso_sorteo_fb)+'</p></div>';
   }
+  if(!infoHtml) infoHtml = '<p style="color:#888;font-size:13px;margin:0;">Sin horarios ni vacantes publicados.</p>';
 
-  var infoCardTitulo = esConvenio ? 'HORARIOS, VACANTES Y BENEFICIO' : 'HORARIOS, VACANTES E INICIO';
-  var infoCardIcon = esConvenio ? 'fa-clock' : 'fa-calendar-alt';
+  var infoTitulo = esConvenio ? 'HORARIOS, VACANTES Y BENEFICIO' : 'HORARIOS, VACANTES E INICIO';
 
   var cupos = Array.isArray(item.cupos_unidades) ? item.cupos_unidades : [];
-  var cuposHtml = '';
-  if(cupos.length){
-    cuposHtml = '<div class="card-detalle card-detalle--wide">'
-      +'<div class="icon-circle"><i class="fas fa-building"></i></div>'
-      +'<h3>'+(esConvenio?'COMISARÍAS / UNIDADES Y VACANTES':'UNIDADES Y VACANTES')+'</h3>'
-      +'<div class="cupos-lineales">'
+  var cuposBody = cupos.length
+    ? ('<div class="cupos-lineales">'
       +cupos.map(function(c){
         var nom = escHtmlD(c.nombre||'');
         var vac = escHtmlD(String(c.vacantes!=null?c.vacantes:0));
@@ -182,54 +185,53 @@ function renderDetalle(item){
         var disp = escHtmlD(String(c.disponibles!=null?c.disponibles:0));
         return '<div class="cupo-linea"><strong>'+nom+'</strong> — Vacantes '+vac+', Inscritos '+insc+', Disponibles '+disp+'</div>';
       }).join('')
-      +'</div></div>';
-  }
+      +'</div>')
+    : '<p class="cupos-vacio">Aún no se publicaron cupos por comisaría/unidad. El administrador puede cargarlos en Admin convocatorias.</p>';
+
+  var cuposHtml = '<div class="card-detalle card-detalle--wide">'
+    +'<h3><span class="icon-circle"><i class="fas fa-building"></i></span> '
+    +(esConvenio?'COMISARÍAS / UNIDADES Y VACANTES':'UNIDADES Y VACANTES')+'</h3>'
+    +cuposBody
+    +'</div>';
 
   var ventanaTxt = item.ventana_inscripcion || '';
-  var accionHtml = '';
+  var btnRegistrar = '';
+  var formHtml = '';
   if(item.inscripciones_abiertas){
-    accionHtml = '<div class="registro-section">'
-      +'<div class="registro-box">'
-      +'<h2>¿Deseas postular a este '+(esCurso?'curso':'convenio')+'?</h2>'
-      +(ventanaTxt ? '<p>'+escHtmlD(ventanaTxt)+'</p>' : '<p>Complete el formulario de inscripción a continuación.</p>')
-      +'<button type="button" id="btn-mostrar-inscripcion" class="btn-registro-grande" onclick="mostrarFormInscripcion()">'
-      +'<i class="fas fa-edit"></i> REGISTRAR MI INSCRIPCIÓN</button>'
-      +'</div>'
-      +'<div id="form-inscripcion-wrap" style="display:none;margin-top:16px;">'
-      +renderFormInscripcion(item)
-      +'</div></div>';
+    btnRegistrar = '<button type="button" class="btn-registrarse" id="btn-top-registrar" onclick="mostrarFormInscripcion()"><i class="fas fa-edit"></i> REGISTRARSE</button>';
+    formHtml = '<div id="form-inscripcion-wrap" style="display:none;margin-top:8px;">'+renderFormInscripcion(item)+'</div>';
   } else if(item.formulario_url && item.formulario_url !== '#'){
-    accionHtml = '<div class="registro-section"><div class="registro-box">'
-      +'<h2>¿Deseas postular a este '+(esCurso?'curso':'convenio')+'?</h2>'
-      +(ventanaTxt ? '<p>'+escHtmlD(ventanaTxt)+'</p>' : '<p>Puedes registrar tu inscripción mediante el formulario externo.</p>')
-      +'<a href="'+escHtmlD(item.formulario_url)+'" target="_blank" class="btn-registro-grande">'
-      +'<i class="fas fa-edit"></i> REGISTRAR MI INSCRIPCIÓN</a>'
-      +'</div></div>';
+    btnRegistrar = '<a href="'+escHtmlD(item.formulario_url)+'" target="_blank" class="btn-registrarse"><i class="fas fa-edit"></i> REGISTRARSE</a>';
   } else {
-    accionHtml = '<div class="registro-section"><div class="registro-box">'
-      +'<h2>¿Deseas postular a este '+(esCurso?'curso':'convenio')+'?</h2>'
-      +(ventanaTxt ? '<p>'+escHtmlD(ventanaTxt)+'</p>' : '')
-      +'<div class="inscripciones-cerradas" style="margin-top:12px;"><i class="fas fa-lock"></i> Las inscripciones no están habilitadas en este momento.</div>'
-      +'</div></div>';
+    btnRegistrar = '<span class="btn-registrarse is-disabled" title="Inscripciones no habilitadas"><i class="fas fa-lock"></i> REGISTRARSE</span>';
   }
 
   document.title = escHtmlD(item.titulo) + ' — REGPOL Callao';
   document.getElementById('cuerpo-detalle').innerHTML =
     '<div class="detalle-topbar">'
     +'<a href="'+tipoHref+'" class="btn-volver"><i class="fas fa-chevron-left"></i> VOLVER A '+tipoLabel+'</a>'
+    +btnRegistrar
     +'</div>'
     +'<div class="page-intro page-intro--compact">'
     +'<h2>'+escHtmlD(item.titulo)+'</h2>'
     +estadoBadge(item.estado)
     +'</div>'
+    +(ventanaTxt ? '<p class="ventana-inscripcion-nota">'+escHtmlD(ventanaTxt)+'</p>' : '')
     +'<div class="grid-detalles">'
-    +'<div class="card-detalle"><div class="icon-circle"><i class="fas fa-list-ul"></i></div>'
-    +'<h3>REQUISITOS</h3><ul>'+reqHtml+'</ul></div>'
-    +(infoHtml?'<div class="card-detalle'+(esConvenio?' highlight-card':'')+'"><div class="icon-circle'+(esConvenio?' gold':'')+'"><i class="fas '+infoCardIcon+'"></i></div>'
-      +'<h3>'+infoCardTitulo+'</h3>'+infoHtml+'</div>':'')
+    +'<div class="card-detalle card-detalle--wide highlight-card">'
+    +'<div class="detalle-unificado">'
+    +'<div class="detalle-unificado-bloque">'
+    +'<h3><span class="icon-circle"><i class="fas fa-list-ul"></i></span> REQUISITOS</h3>'
+    +'<ul>'+reqHtml+'</ul>'
+    +'</div>'
+    +'<div class="detalle-unificado-bloque">'
+    +'<h3><span class="icon-circle gold"><i class="fas fa-clock"></i></span> '+infoTitulo+'</h3>'
+    +infoHtml
+    +'</div>'
+    +'</div></div>'
     +cuposHtml
     +'</div>'
-    +accionHtml;
+    +formHtml;
 
   cargarDivisionesPublico();
   initCamposInscripcion();
@@ -237,9 +239,7 @@ function renderDetalle(item){
 
 function mostrarFormInscripcion(){
   var wrap = document.getElementById('form-inscripcion-wrap');
-  var btn = document.getElementById('btn-mostrar-inscripcion');
   if(wrap) wrap.style.display = 'block';
-  if(btn) btn.style.display = 'none';
   initCamposInscripcion();
   if(wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
