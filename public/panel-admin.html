@@ -394,7 +394,7 @@
     var tienePsico = esU || rol === 'bienestar' || tieneEval || tieneDesc;
     var tieneGestion = esU || tienePsico || tieneCursos || tieneConvenios || tieneDescansos || tieneFaltos || tieneRRHH;
 
-    var tienePortalCms = esU || tieneConvenios || tieneCursos || tieneDescansos;
+    var tienePortalCms = esU || tieneCursos || tieneDescansos;
     var st = document.getElementById('panel-perm-style');
     if (!st) {
       st = document.createElement('style');
@@ -408,7 +408,7 @@
       esU ? '[data-rol-unitic]{display:block!important}' : '',
       tienePortalCms ? '#sb-sec-portal{display:block!important}' : '',
       !esU ? '[data-cms-only-unitic]{display:none!important}' : '',
-      !esU && !tieneConvenios ? '[data-cms-tab="convenios"]{display:none!important}' : '',
+      !esU ? '[data-cms-tab="convenios"]{display:none!important}' : '',
       !esU && !tieneCursos ? '[data-cms-tab="cursos"]{display:none!important}' : '',
       !esU && !tieneDescansos ? '[data-cms-tab="descansos"]{display:none!important}' : '',
       tieneEval ? '[data-perm-evaluaciones],[data-perm-preguntas]{display:flex!important}' : '',
@@ -498,8 +498,8 @@
           <i class="fas fa-chevron-down"></i>
         </div>
         <div class="sb-group-body">
-          <div class="sb-item" data-page="items-convenio" data-rol-unitic onclick="irGestionItems('convenio',this)">
-            <i class="fas fa-users"></i> 1. CONVOCATORIAS E INSCRITOS
+          <div class="sb-item" data-page="conv-preinscritos" onclick="irConvPreinscritos(this)">
+            <i class="fas fa-users"></i> 1. PREINSCRITOS
           </div>
           <div class="sb-item" data-page="conv-ganadores" onclick="irConvGanadores(this)">
             <i class="fas fa-trophy"></i> 2. GANADORES Y EXPEDIENTES
@@ -507,11 +507,11 @@
           <div class="sb-item" data-page="conv-repechaje" onclick="irConvRepechaje(this)">
             <i class="fas fa-redo"></i> 3. REPECHAJE
           </div>
-          <div class="sb-item" data-page="resultados-pdf" onclick="irResultadosPdf('convenio',this)">
-            <i class="fas fa-file-pdf"></i> RELACIÓN PDF (PUBLICAR)
-          </div>
           <div class="sb-item" data-page="consulta-cip" onclick="ir('consulta-cip',this)">
             <i class="fas fa-search"></i> CONSULTA POR CIP
+          </div>
+          <div class="sb-item" data-page="items-convenio" data-rol-unitic onclick="irGestionItems('convenio',this)">
+            <i class="fas fa-cog"></i> ADMIN CONVOCATORIAS
           </div>
         </div>
       </div>
@@ -601,7 +601,7 @@
       </div>
       <div class="sb-item" data-cms-only-unitic data-cms-tab="carrusel" onclick="irCMS('carrusel',this)"><i class="fas fa-home"></i> INICIO / CARRUSEL</div>
       <div class="sb-item" data-cms-only-unitic data-cms-tab="novedades" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> NOVEDADES</div>
-      <div class="sb-item" data-cms-tab="convenios" onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> CONVENIOS (WEB)</div>
+      <div class="sb-item" data-cms-only-unitic data-cms-tab="convenios" onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> CONVENIOS (WEB)</div>
       <div class="sb-item" data-cms-tab="cursos" onclick="irCMS('cursos',this)"><i class="fas fa-graduation-cap"></i> CURSOS (WEB)</div>
       <div class="sb-item" data-cms-tab="descansos" onclick="irCMS('descansos',this)"><i class="fas fa-notes-medical"></i> DESCANSOS (WEB)</div>
       <div class="sb-item" data-cms-only-unitic data-cms-tab="bienestar" onclick="irCMS('bienestar',this)"><i class="fas fa-heart"></i> BIENESTAR (WEB)</div>
@@ -1114,32 +1114,46 @@
           <button class="btn" style="background:#888;color:#fff;" id="inscritos-btn-volver" onclick="volverDesdeInscritos()"><i class="fas fa-chevron-left"></i> Volver</button>
           <h3 id="inscritos-titulo" style="margin:0;border:none;padding:0;"><i class="fas fa-users"></i> Inscritos</h3>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;" id="inscritos-filtros-bar">
           <input type="text" id="inscritos-buscar" placeholder="CIP, N° registro, CODIFIN o nombre..." oninput="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:240px;"/>
-          <select id="inscritos-filtro-region" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
+          <select id="inscritos-filtro-region" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
             <option value="">Todas las regiones</option>
           </select>
-          <select id="inscritos-filtro-unidad" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
+          <select id="inscritos-filtro-unidad" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
             <option value="">Todas las unidades</option>
           </select>
-          <select id="inscritos-filtro-modalidad" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:180px;">
+          <select id="inscritos-filtro-modalidad" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:180px;">
             <option value="">Todas las modalidades</option>
           </select>
-          <select id="inscritos-filtro-area" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:180px;">
+          <select id="inscritos-filtro-area" class="inscritos-filtro-admin" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:180px;">
             <option value="">Todas las áreas</option>
           </select>
-          <select id="inscritos-filtro-disp" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
+          <select id="inscritos-filtro-disp" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
             <option value="">Disponibilidad</option>
             <option value="VACACIONES">Vacaciones</option>
             <option value="FRANCO">Franco</option>
           </select>
-          <select id="inscritos-filtro-estado" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
+          <select id="inscritos-filtro-estado" class="inscritos-filtro-admin" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
             <option value="">Todos</option>
           </select>
-          <button class="btn btn-v" onclick="exportarInscritos()"><i class="fas fa-download"></i> Exportar CSV</button>
+          <button class="btn btn-v inscritos-filtro-admin" id="inscritos-btn-exportar" onclick="exportarInscritos()"><i class="fas fa-download"></i> Exportar CSV</button>
         </div>
         <div id="inscritos-stats" style="margin-bottom:10px;"></div>
         <div id="inscritos-tabla"><p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">Cargando...</p></div>
+      </div>
+    </div>
+
+    <div id="page-conv-preinscritos" class="page">
+      <div class="card">
+        <h3><i class="fas fa-users"></i> Preinscritos</h3>
+        <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
+          Seleccione el convenio para ver preinscritos y mandar al sorteo.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+          <button class="btn btn-v" type="button" onclick="cargarConvFlujoResumen('preinscritos')"><i class="fas fa-sync"></i> Actualizar</button>
+          <button class="btn btn-o" type="button" data-rol-unitic onclick="irGestionItems('convenio',null)" style="display:none;"><i class="fas fa-cog"></i> Admin convocatorias</button>
+        </div>
+        <div id="conv-preinscritos-cuadros"><p style="color:#bbb;text-align:center;padding:24px;">Cargando...</p></div>
       </div>
     </div>
 
@@ -1147,12 +1161,11 @@
       <div class="card">
         <h3><i class="fas fa-trophy" style="color:#c8a94a;"></i> Ganadores y expedientes</h3>
         <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
-          Seleccione el convenio. Aquí se avisa a ganadores, se reciben expedientes, se observa o aprueba.
+          Seleccione el convenio. Aquí se avisa a ganadores, se reciben expedientes y se observa.
           <strong>Sin edición de datos</strong> del efectivo.
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
           <button class="btn btn-v" type="button" onclick="cargarConvFlujoResumen('ganadores')"><i class="fas fa-sync"></i> Actualizar</button>
-          <button class="btn btn-o" type="button" onclick="irResultadosPdf('convenio', document.querySelector('[data-page=resultados-pdf]'))"><i class="fas fa-file-pdf"></i> Publicar PDF</button>
         </div>
         <div id="conv-ganadores-cuadros"><p style="color:#bbb;text-align:center;padding:24px;">Cargando...</p></div>
       </div>
@@ -1854,7 +1867,7 @@
       </div>
       <div class="perm-box">
         <div class="pb-title">Convenios</div>
-        <label><input type="checkbox" value="cms_convenios" class="perm-chk"> Sorteos, inscritos operativos y PDF de resultados (convenios)</label>
+        <label><input type="checkbox" value="cms_convenios" class="perm-chk"> Sorteos e inscritos operativos (convenios)</label>
         <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Solo operaciones de convenios. No edita el portal web.</p>
       </div>
       <div class="perm-box">
@@ -3521,7 +3534,7 @@ function ir(page, el){
   if(page==='sorteos'&&!puedeGestionarSorteosConvenio()){alert('Sin acceso a sorteos de convenios.');return;}
   if(page==='resultados-pdf'&&!puedePublicarResultadosPdf(RESULTADOS_PDF_TIPO)){alert('Sin acceso a publicación de resultados.');return;}
   if(page==='inscritos'&&!puedeOperarInscritosConvenio()&&!esUnitic()){alert('Sin acceso a inscritos de convenios.');return;}
-  if((page==='conv-ganadores'||page==='conv-repechaje')&&!puedeOperarInscritosConvenio()){alert('Sin acceso al flujo de convenios.');return;}
+  if((page==='conv-ganadores'||page==='conv-repechaje'||page==='conv-preinscritos')&&!puedeOperarInscritosConvenio()){alert('Sin acceso al flujo de convenios.');return;}
   if(page==='consulta-cip'&&!puedeConsultarCip()){alert('Sin acceso a consulta por CIP.');return;}
   if((page==='descansos'||page==='descansos-dash'||page==='descansos-import')&&!puedeGestionDescansos()){alert('Sin acceso a Descansos médicos.');return;}
   if((page==='faltos'||page==='faltos-dash'||page==='faltos-import')&&!puedeGestionFaltos()){alert('Sin acceso a Faltos.');return;}
@@ -3552,6 +3565,7 @@ function ir(page, el){
   if(page==='resultados-pdf' && !ya){ cargarResultadosPdfAdmin(); }
   if(page==='menu-publicacion'){ cargarPaginaMenuPublicacion(); }
   if(page==='sorteos')             { aplicarModoSorteosUI(); cargarItemsSorteo(SORTEOS_TIPO_FILTRO||'convenio'); cargarSorteos(); }
+  if(page==='conv-preinscritos')   { cargarConvFlujoResumen('preinscritos'); }
   if(page==='conv-ganadores')      { cargarConvFlujoResumen('ganadores'); }
   if(page==='conv-repechaje')      { cargarConvFlujoResumen('repechaje'); }
   if(page==='descansos' || page==='descansos-dash' || page==='descansos-import'){
@@ -3572,18 +3586,17 @@ function ir(page, el){
 }
 
 function puedeEditarPortalCMS(){
-  return esUnitic() || tienePermiso('cms_convenios') || tienePermiso('cms_cursos') || tienePermiso('cms_descansos');
+  return esUnitic() || tienePermiso('cms_cursos') || tienePermiso('cms_descansos');
 }
 function puedeEditarCmsTab(tab){
   if (esUnitic()) return true;
-  if (tab === 'convenios') return tienePermiso('cms_convenios');
+  if (tab === 'convenios') return esUnitic();
   if (tab === 'cursos') return tienePermiso('cms_cursos');
   if (tab === 'descansos') return tienePermiso('cms_descansos');
   return false;
 }
 function primerTabCmsPermitido(){
   if (esUnitic()) return 'carrusel';
-  if (tienePermiso('cms_convenios')) return 'convenios';
   if (tienePermiso('cms_cursos')) return 'cursos';
   if (tienePermiso('cms_descansos')) return 'descansos';
   return 'carrusel';
@@ -5151,6 +5164,10 @@ function abrirSorteoDesdeItem(itemId){
   window.open('sorteo-live.html?item_id='+itemId, 'regpol_sorteo_live', 'noopener,noreferrer');
 }
 
+function irConvPreinscritos(el){
+  ir('conv-preinscritos', el);
+}
+
 function irConvGanadores(el){
   ir('conv-ganadores', el);
 }
@@ -5165,12 +5182,27 @@ function volverDesdeInscritos(){
   } else if(INSCRITOS_MODO==='repechaje'){
     ir('conv-repechaje', document.querySelector('[data-page="conv-repechaje"]'));
   } else {
-    ir('items', document.querySelector('[data-page="items-convenio"]') || null);
+    ir('conv-preinscritos', document.querySelector('[data-page="conv-preinscritos"]'));
   }
 }
 
+function aplicarBarraFiltrosInscritos(){
+  var simplificado = INSCRITOS_MODO==='ganadores' || INSCRITOS_MODO==='repechaje';
+  document.querySelectorAll('.inscritos-filtro-admin').forEach(function(el){
+    el.style.display = simplificado ? 'none' : '';
+  });
+  // En ganadores/repechaje también ocultamos área/estado/export; dejamos búsqueda y filtros útiles opcionales
+  var area=document.getElementById('inscritos-filtro-area');
+  var est=document.getElementById('inscritos-filtro-estado');
+  var exp=document.getElementById('inscritos-btn-exportar');
+  if(area){ area.style.display = simplificado ? 'none' : ''; if(simplificado) area.value=''; }
+  if(est){ est.style.display = simplificado ? 'none' : ''; if(simplificado) est.value=''; }
+  if(exp){ exp.style.display = simplificado ? 'none' : ''; }
+}
+
 function cargarConvFlujoResumen(vista){
-  var boxId = vista==='repechaje' ? 'conv-repechaje-cuadros' : 'conv-ganadores-cuadros';
+  var boxId = vista==='repechaje' ? 'conv-repechaje-cuadros'
+    : (vista==='preinscritos' ? 'conv-preinscritos-cuadros' : 'conv-ganadores-cuadros');
   var el = document.getElementById(boxId);
   if(el) el.innerHTML='<p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>';
   fetch(API+'/admin/convenios/flujo-resumen',{headers:hdr()})
@@ -5182,11 +5214,43 @@ function cargarConvFlujoResumen(vista){
       }
       CONV_FLUJO_CACHE = d.convenios || [];
       if(vista==='repechaje') renderConvRepechajeCuadros(CONV_FLUJO_CACHE);
+      else if(vista==='preinscritos') renderConvPreinscritosCuadros(CONV_FLUJO_CACHE);
       else renderConvGanadoresCuadros(CONV_FLUJO_CACHE);
     })
     .catch(function(){
       if(el) el.innerHTML='<p style="color:#c0392b;padding:16px;">Error de conexión</p>';
     });
+}
+
+function renderConvPreinscritosCuadros(list){
+  var el=document.getElementById('conv-preinscritos-cuadros');
+  if(!el) return;
+  if(!list.length){
+    el.innerHTML='<p style="color:#888;text-align:center;padding:24px;">No hay convenios activos.</p>';
+    return;
+  }
+  el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">'
+    +list.map(function(c){
+      return '<div style="background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(0,77,61,.06);">'
+        +'<div style="font-weight:800;color:#004d3d;font-size:14px;margin-bottom:8px;line-height:1.3;">'+escHtml(c.titulo)+'</div>'
+        +'<div style="font-size:12px;color:#666;margin-bottom:10px;line-height:1.45;">'
+        +(c.horario?'<div><b>Horarios:</b> '+escHtml(c.horario)+'</div>':'')
+        +(c.fecha_inicio?'<div><b>Inicio:</b> '+escHtml(c.fecha_inicio)+'</div>':'')
+        +'<div><b>Vacantes:</b> '+c.vacantes+' · Libres: '+c.disponibles+'</div>'
+        +'</div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'
+        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#856404;">'+c.preinscritos+'</div><div class="l">Preinscritos</div></div>'
+        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#004d3d;">'+c.disponibles+'</div><div class="l">Vac. libres</div></div>'
+        +'</div>'
+        +'<div style="display:flex;flex-direction:column;gap:8px;">'
+        +'<button type="button" class="btn btn-v" style="width:100%;justify-content:center;" onclick="abrirConvenioPreinscritos('+c.id+',\''+escJs(c.titulo)+'\')">'
+        +'<i class="fas fa-users"></i> Ver preinscritos</button>'
+        +'<button type="button" class="btn btn-o" style="width:100%;justify-content:center;" onclick="abrirSorteoDesdeItem('+c.id+')" '
+        +(c.preinscritos<1?'disabled':'')+'>'
+        +'<i class="fas fa-random"></i> Mandar a sorteo</button>'
+        +'</div></div>';
+    }).join('')
+    +'</div>';
 }
 
 function renderConvGanadoresCuadros(list){
@@ -5257,6 +5321,10 @@ function renderConvRepechajeCuadros(list){
     +'</div>';
 }
 
+function abrirConvenioPreinscritos(itemId, titulo){
+  verInscritos(itemId, titulo, 'preinscripcion');
+}
+
 function abrirConvenioGanadores(itemId, titulo){
   verInscritos(itemId, titulo, 'ganadores');
 }
@@ -5270,10 +5338,11 @@ function verInscritos(itemId, titulo, modo){
   ITEM_ACTIVO_ID=itemId;
   ir('inscritos',null);
   var icon = INSCRITOS_MODO==='ganadores' ? 'fa-trophy' : (INSCRITOS_MODO==='repechaje' ? 'fa-redo' : 'fa-users');
-  var pref = INSCRITOS_MODO==='ganadores' ? 'Ganadores / expedientes' : (INSCRITOS_MODO==='repechaje' ? 'Repechaje' : 'Inscritos');
+  var pref = INSCRITOS_MODO==='ganadores' ? 'Ganadores / expedientes' : (INSCRITOS_MODO==='repechaje' ? 'Repechaje' : 'Preinscritos');
   document.getElementById('inscritos-titulo').innerHTML='<i class="fas '+icon+'"></i> '+pref+' — '+escHtml(titulo);
   document.getElementById('inscritos-buscar').value='';
   document.getElementById('inscritos-filtro-estado').value='';
+  aplicarBarraFiltrosInscritos();
   var selUni=document.getElementById('inscritos-filtro-unidad');
   if(selUni) selUni.innerHTML='<option value="">Todas las unidades</option>';
   var selArea=document.getElementById('inscritos-filtro-area');
@@ -5301,12 +5370,17 @@ function verInscritos(itemId, titulo, modo){
           return ['caducado','repechaje','ganador'].indexOf(i.estado)>=0
             && (i.estado!=='ganador' || !i.tiene_pdf);
         });
+      } else if(INSCRITOS_MODO==='preinscripcion'){
+        INSCRITOS_CACHE = INSCRITOS_CACHE.filter(function(i){
+          return ['preinscrito','pendiente','aprobado','verificado'].indexOf(i.estado)>=0;
+        });
       }
       poblarFiltroEstadoInscritos(INSCRITOS_TIPO_ACTUAL);
       poblarFiltroUnidadesInscritos();
       poblarFiltroAreasInscritos();
       poblarFiltroRegionInscritos();
       poblarFiltroModalidadInscritos();
+      aplicarBarraFiltrosInscritos();
       renderInscritos(obtenerInscritosFiltrados(), INSCRITOS_TIPO_ACTUAL);
     });
 }
@@ -5469,15 +5543,22 @@ function renderInscritos(list, tipo){
     '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
     +'<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;flex:1;">'
     +'<div class="stat"><div class="n">'+total+'</div><div class="l">Total</div></div>'
-    +(esConvenio
-      ? ('<div class="stat" style="border-color:#ffe082;"><div class="n" style="color:#856404;">'+preins+'</div><div class="l">Preinscritos</div></div>'
+    +(esConvenio && INSCRITOS_MODO==='ganadores'
+      ? ('<div class="stat" style="border-color:#c8a94a;"><div class="n" style="color:#856404;">'+gan+'</div><div class="l">Ganadores/OK</div></div>'
         +'<div class="stat" style="border-color:#2980b9;"><div class="n" style="color:#2980b9;">'+enRev+'</div><div class="l">En revisión</div></div>'
-        +'<div class="stat" style="border-color:#e67e22;"><div class="n" style="color:#e67e22;">'+obs+'</div><div class="l">Observados</div></div>')
-      : ('<div class="stat" style="border-color:#ffe082;"><div class="n" style="color:#856404;">'+pend+'</div><div class="l">Pendientes</div></div>'
-        +'<div class="stat" style="border-color:#a5d6a7;"><div class="n" style="color:#1a7a3a;">'+verif+'</div><div class="l">Verificados</div></div>'))
-    +'<div class="stat" style="border-color:#c8a94a;"><div class="n" style="color:#856404;">'+gan+'</div><div class="l">'+(esConvenio?'Ganadores/OK':'Aprobados')+'</div></div>'
-    +'<div class="stat" style="border-color:#f5c2c7;"><div class="n" style="color:#c0392b;">'+rech+'</div><div class="l">Rech./Caduc.</div></div>'
-    +(vacInfo ? '<div class="stat" style="border-color:#004d3d;"><div class="n" style="color:#004d3d;">'+vacInfo.disponibles+'</div><div class="l">Vac. libres</div></div>' : '')
+        +'<div class="stat" style="border-color:#e67e22;"><div class="n" style="color:#e67e22;">'+obs+'</div><div class="l">Observados</div></div>'
+        +(vacInfo ? '<div class="stat" style="border-color:#004d3d;"><div class="n" style="color:#004d3d;">'+vacInfo.disponibles+'</div><div class="l">Vac. libres</div></div>' : ''))
+      : (esConvenio && INSCRITOS_MODO==='repechaje'
+        ? ('<div class="stat" style="border-color:#888;"><div class="n">'+rech+'</div><div class="l">Caducados</div></div>'
+          +'<div class="stat" style="border-color:#8e44ad;"><div class="n" style="color:#8e44ad;">'+enRev+'</div><div class="l">Repechaje</div></div>'
+          +(vacInfo ? '<div class="stat" style="border-color:#004d3d;"><div class="n" style="color:#004d3d;">'+vacInfo.disponibles+'</div><div class="l">Vac. libres</div></div>' : ''))
+        : (esConvenio
+          ? ('<div class="stat" style="border-color:#ffe082;"><div class="n" style="color:#856404;">'+preins+'</div><div class="l">Preinscritos</div></div>'
+            +(vacInfo ? '<div class="stat" style="border-color:#004d3d;"><div class="n" style="color:#004d3d;">'+vacInfo.disponibles+'</div><div class="l">Vac. libres</div></div>' : ''))
+          : ('<div class="stat" style="border-color:#ffe082;"><div class="n" style="color:#856404;">'+pend+'</div><div class="l">Pendientes</div></div>'
+            +'<div class="stat" style="border-color:#a5d6a7;"><div class="n" style="color:#1a7a3a;">'+verif+'</div><div class="l">Verificados</div></div>'
+            +'<div class="stat" style="border-color:#c8a94a;"><div class="n" style="color:#856404;">'+gan+'</div><div class="l">Aprobados</div></div>'
+            +'<div class="stat" style="border-color:#f5c2c7;"><div class="n" style="color:#c0392b;">'+rech+'</div><div class="l">Rechazados</div></div>'))))
     +'</div>'
     +btnAccion
     +'</div>';
