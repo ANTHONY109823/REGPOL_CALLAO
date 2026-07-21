@@ -10,48 +10,47 @@
   <link rel="stylesheet" href="responsive.css?v=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
-    .grid-detalles-duo{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.15fr);gap:16px;width:100%;max-width:980px;margin:10px auto 16px;align-items:stretch;justify-content:center;}
+    .grid-detalles-duo{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.15fr);gap:14px;width:100%;max-width:980px;margin:8px auto 12px;align-items:stretch;justify-content:center;}
     @media(max-width:800px){.grid-detalles-duo{grid-template-columns:1fr;}}
-    .card-detalle{background:#fff;border-radius:12px;border:1.5px solid #c8e6c9;padding:20px 18px;text-align:left;width:100%;box-sizing:border-box;}
+    .card-detalle{background:#fff;border-radius:12px;border:1.5px solid #c8e6c9;padding:16px 16px 14px;text-align:left;width:100%;box-sizing:border-box;}
     .card-detalle.highlight-card{border-color:#c8a94a;}
-    .bloque-info-conv{margin-top:14px;padding-top:14px;border-top:1.5px solid #e0ebe4;}
-    .icon-circle{width:40px;height:40px;background:#004d3d;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:16px;color:#fff;flex-shrink:0;}
-    .icon-circle.gold{background:#c8a94a;}
-    .card-detalle h3{color:#004d3d;font-size:13px;font-weight:800;letter-spacing:.5px;margin:0 0 12px;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+    .bloque-info-conv{margin-top:12px;padding-top:12px;border-top:1.5px solid #e0ebe4;}
+    .card-detalle h3{color:#004d3d;font-size:13px;font-weight:800;letter-spacing:.5px;margin:0 0 10px;text-transform:uppercase;text-align:center;}
     .card-detalle ul{list-style:none;padding:0;text-align:left;margin:0;}
-    .card-detalle ul li{padding:6px 0;font-size:13.5px;color:#555;border-bottom:1px solid #f0f0f0;display:flex;align-items:flex-start;gap:8px;}
+    .card-detalle ul li{padding:5px 0;font-size:13.5px;color:#555;border-bottom:1px solid #f0f0f0;}
     .card-detalle ul li:last-child{border:none;}
-    .card-detalle ul li i{color:#004d3d;margin-top:2px;flex-shrink:0;}
-    .info-item{text-align:left;margin-bottom:12px;}
+    .info-item{text-align:left;margin-bottom:10px;}
     .info-item span{font-size:11px;font-weight:800;color:#004d3d;letter-spacing:.5px;display:block;text-transform:uppercase;}
     .info-item p{font-size:14px;color:#444;margin:2px 0 0;}
     .price{font-size:22px;font-weight:900;color:#c8a94a;margin:4px 0 2px;}
     .tabla-cupos-wrap{width:100%;overflow-x:auto;}
     .tabla-cupos{width:100%;border-collapse:collapse;font-size:12.5px;}
-    .tabla-cupos th,.tabla-cupos td{border:1px solid #b7d4c0;padding:7px 8px;}
+    .tabla-cupos th,.tabla-cupos td{border:1px solid #b7d4c0;padding:6px 8px;}
     .tabla-cupos th{background:#004d3d;color:#fff;font-weight:700;text-align:center;font-size:11.5px;letter-spacing:.3px;}
     .tabla-cupos th:first-child,.tabla-cupos td:first-child{text-align:left;}
     .tabla-cupos td.num{text-align:center;font-variant-numeric:tabular-nums;font-weight:600;color:#004d3d;}
     .tabla-cupos tbody tr:nth-child(even){background:#f3f8f4;}
     .tabla-cupos tbody tr:hover{background:#e8f5e9;}
     .cupos-vacio{font-size:13px;color:#888;padding:8px 0;}
-    .detalle-topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 6px;}
-    .page-intro--compact{text-align:center;padding:0 0 6px;margin:0;}
-    .page-intro--compact h2{margin:0 0 6px;font-size:clamp(1.25rem,2.5vw,1.55rem);}
-    .page-intro--compact .estado-badge{margin-top:2px;}
-    .content-area.detalle-compact{padding-top:14px;padding-bottom:28px;}
-    .registro-section{background:#fff;border-radius:12px;border:2px dashed #c8e6c9;padding:20px 18px;text-align:center;margin:14px 0;}
-    .registro-section h2{color:#004d3d;font-size:15px;margin-bottom:6px;}
-    .registro-section p{color:#666;font-size:13px;margin-bottom:10px;}
-    .btn-registro-grande{background:#004d3d;color:#fff;padding:14px 28px;border-radius:8px;font-size:14px;font-weight:700;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:none;text-decoration:none;}
-    .btn-registro-grande:hover{background:#006b55;}
+    .detalle-topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px 12px;margin:0 0 6px;}
+    .detalle-topbar .btn-volver{justify-self:start;}
+    .detalle-topbar .btn-registrarse,.detalle-topbar .btn-registrarse.is-disabled{justify-self:end;}
+    .detalle-top-centro{text-align:center;min-width:0;}
+    .detalle-top-centro h2{margin:0 0 3px;font-size:clamp(1.15rem,2.3vw,1.4rem);line-height:1.15;color:#004d3d;font-weight:800;}
+    .detalle-top-centro .estado-badge{margin:0;}
+    .ventana-inscripcion-nota{font-size:12px;color:#666;text-align:center;margin:0 0 6px;line-height:1.3;}
+    @media(max-width:700px){
+      .detalle-topbar{grid-template-columns:1fr 1fr;}
+      .detalle-top-centro{grid-column:1/-1;order:-1;}
+    }
+    .page-intro--compact{display:none;}
+    .content-area.detalle-compact{padding-top:6px;padding-bottom:16px;}
     .btn-volver,.btn-registrarse{padding:8px 14px;border-radius:7px;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:none;text-decoration:none;margin:0;}
     .btn-volver{background:#004d3d;color:#fff;}
     .btn-volver:hover{background:#006b55;}
     .btn-registrarse{background:#c8a94a;color:#002d24;}
     .btn-registrarse:hover{background:#dfc060;color:#002d24;}
     .btn-registrarse.is-disabled{background:#ccc;color:#666;cursor:not-allowed;pointer-events:none;}
-    .ventana-inscripcion-nota{font-size:12.5px;color:#666;text-align:center;margin:4px 0 10px;}
     .form-inscripcion{background:#f7faf7;border-radius:10px;border:1.5px solid #c8e6c9;padding:24px;margin-top:8px;text-align:left;}
     .form-inscripcion h3{color:#004d3d;font-size:15px;margin:0 0 16px;border-bottom:2px solid #c8a94a;padding-bottom:8px;}
     .fi-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -155,8 +154,8 @@ function renderDetalle(item){
   var esCurso = item.tipo === 'curso';
 
   var reqHtml = reqs.length
-    ? reqs.map(function(r){return '<li><i class="fas fa-check-circle"></i>'+escHtmlD(r)+'</li>';}).join('')
-    : '<li><i class="fas fa-info-circle"></i> Sin requisitos especificados.</li>';
+    ? reqs.map(function(r){return '<li>'+escHtmlD(r)+'</li>';}).join('')
+    : '<li>Sin requisitos especificados.</li>';
 
   var infoHtml = '';
   if(item.horario) infoHtml += '<div class="info-item"><span>HORARIO:</span><p>'+escHtmlD(item.horario)+'</p></div>';
@@ -197,8 +196,7 @@ function renderDetalle(item){
   var ciasCard = '';
   if(cupos.length){
     ciasCard = '<div class="card-detalle">'
-      +'<h3><span class="icon-circle"><i class="fas fa-building"></i></span> '
-      +(esConvenio?'COMISARÍAS':'UNIDADES')+'</h3>'
+      +'<h3>'+(esConvenio?'COMISARÍAS':'UNIDADES')+'</h3>'
       +'<div class="tabla-cupos-wrap"><table class="tabla-cupos">'
       +'<thead><tr><th>Comisaría</th><th>Vacantes</th><th>Inscritos</th><th>Disponibles</th></tr></thead><tbody>'
       +cupos.map(function(c){
@@ -209,7 +207,7 @@ function renderDetalle(item){
       }).join('')
       +'</tbody></table></div></div>';
   } else if(esConvenio){
-    ciasCard = '<div class="card-detalle"><h3><span class="icon-circle"><i class="fas fa-building"></i></span> COMISARÍAS</h3>'
+    ciasCard = '<div class="card-detalle"><h3>COMISARÍAS</h3>'
       +'<p class="cupos-vacio">Sin cupos publicados.</p></div>';
   }
 
@@ -229,19 +227,19 @@ function renderDetalle(item){
   document.getElementById('cuerpo-detalle').innerHTML =
     '<div class="detalle-topbar">'
     +'<a href="'+tipoHref+'" class="btn-volver"><i class="fas fa-chevron-left"></i> VOLVER A '+tipoLabel+'</a>'
-    +btnRegistrar
-    +'</div>'
-    +'<div class="page-intro page-intro--compact">'
+    +'<div class="detalle-top-centro">'
     +'<h2>'+escHtmlD(item.titulo)+'</h2>'
     +estadoBadge(item.estado)
+    +'</div>'
+    +btnRegistrar
     +'</div>'
     +(ventanaTxt ? '<p class="ventana-inscripcion-nota">'+escHtmlD(ventanaTxt)+'</p>' : '')
     +'<div class="grid-detalles-duo">'
     +'<div class="card-detalle highlight-card">'
-    +'<h3><span class="icon-circle"><i class="fas fa-list-ul"></i></span> REQUISITOS</h3>'
+    +'<h3>REQUISITOS</h3>'
     +'<ul>'+reqHtml+'</ul>'
     +'<div class="bloque-info-conv">'
-    +'<h3><span class="icon-circle gold"><i class="fas fa-clock"></i></span> '+infoTitulo+'</h3>'
+    +'<h3>'+infoTitulo+'</h3>'
     +infoHtml
     +'</div>'
     +'</div>'
