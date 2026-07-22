@@ -221,6 +221,16 @@
     </div>
   </div>
 
+  <div id="modal-motivos" class="modal-estado" role="dialog" aria-modal="true">
+    <div class="modal-estado-box">
+      <div class="modal-estado-head"><i class="fas fa-exclamation-triangle"></i> Motivos / observaciones</div>
+      <div class="modal-estado-body" id="modal-motivos-body"></div>
+      <div class="modal-estado-foot">
+        <button type="button" class="btn-est-gris" onclick="cerrarModalMotivos()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-verificacion" class="modal-estado" role="dialog" aria-modal="true">
     <div class="modal-estado-box">
       <div class="modal-estado-head"><i class="fas fa-hourglass-half"></i> Documentación recibida</div>
@@ -365,6 +375,7 @@ function labelSituacionConsulta(disp, dia) {
 
 function renderResultados(lista) {
   var wrap = document.getElementById('consulta-resultados');
+  CONSULTA_INS_CACHE = lista || [];
   if (!lista || !lista.length) {
     wrap.innerHTML = '<div class="sin-resultados"><i class="fas fa-inbox" style="font-size:32px;color:#ccc;display:block;margin-bottom:12px;"></i>'
       + 'No se encontraron inscripciones con ese CIP y N° de registro.</div>';
@@ -373,12 +384,12 @@ function renderResultados(lista) {
   wrap.innerHTML = lista.map(function(ins) {
     var chipCls = 'estado-chip estado-' + escC(ins.estado || 'pendiente');
     var nombreParts = splitApellidosNombres(ins.nombres);
-    var html = '<div class="consulta-card' + ((ins.puede_descargar_constancia || ins.puede_subir_expediente) ? ' ganador' : '') + '">'
+    var html = '<div class="consulta-card' + ((ins.puede_descargar_constancia || ins.estado === 'ganador' || ins.puede_ver_motivos) ? ' ganador' : '') + '">'
       + '<div class="tipo">' + escC(ins.tipo === 'curso' ? 'Curso' : 'Convenio') + '</div>'
       + '<h3>' + escC(ins.convocatoria) + '</h3>'
       + '<span class="' + chipCls + '">' + escC(ins.estado_legible) + '</span>';
 
-    if (ins.puede_subir_expediente) {
+    if (ins.estado === 'ganador' && ins.puede_subir_expediente) {
       var plazoIso = ins.plazo_expediente || '';
       if (!plazoIso && ins.fecha_ganador) {
         var dg = new Date(ins.fecha_ganador);
@@ -415,6 +426,54 @@ function renderResultados(lista) {
         + '<button type="button" class="btn-pdf-ver" onclick="subirExpediente(' + ins.id + ')"><i class="fas fa-cloud-upload-alt"></i> SUBIR EXPEDIENTE</button>'
         + '<p id="exp-msg-' + ins.id + '" style="font-size:12px;margin:0;min-height:18px;"></p>'
         + '</div></div>';
+    } else if (ins.puede_ver_motivos || ins.estado === 'observado' || ins.estado === 'rechazado') {
+      var plazoSub = ins.plazo_expediente || '';
+      var puedeSub = !!ins.puede_subir_expediente;
+      html += '<div class="consulta-meta">'
+        + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
+        + '<div><span>Origen</span><strong>' + escC(ins.modo_ingreso_label || '—') + '</strong></div>'
+        + '<div><span>Grado</span><strong>' + escC(ins.grado || '—') + '</strong></div>'
+        + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
+        + '<div><span>Nombres</span><strong>' + escC(nombreParts.nombres) + '</strong></div>'
+        + (ins.comisaria_postula ? '<div><span>Comisaría</span><strong>' + escC(ins.comisaria_postula) + '</strong></div>' : '')
+        + (ins.plazo_expediente
+          ? '<div><span>Plazo de subsanación</span><strong>' + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</strong></div>'
+          : '')
+        + '</div>'
+        + '<div class="obs-box alerta-repechaje" style="margin-top:10px;">'
+        + '<strong>' + (ins.estado === 'rechazado' ? 'Expediente no admitido.' : 'Expediente observado.') + '</strong> '
+        + 'Revise los motivos y, si aún hay plazo, suba su expediente corregido.'
+        + '</div>'
+        + '<div style="margin:12px 0;display:flex;flex-wrap:wrap;gap:8px;">'
+        + '<button type="button" class="btn-pdf-ver" onclick="abrirModalMotivos(' + ins.id + ')">'
+        + '<i class="fas fa-search"></i> VER MOTIVOS / OBSERVACIONES</button>'
+        + '</div>'
+        + '<div class="expediente-box">'
+        + '<div class="expediente-box-top">'
+        + '<p><i class="fas fa-file-upload" style="color:#004d3d;"></i> '
+        + (puedeSub
+          ? 'Subsane y suba su expediente PDF corregido.'
+          : (ins.plazo_vencido
+            ? 'El plazo de subsanación venció; no puede subir un nuevo expediente.'
+            : 'No hay plazo de subsanación activo. Si el admin le otorga un nuevo plazo, podrá reenviar su expediente.'))
+        + '</p>'
+        + '<div class="expediente-dl">'
+        + '<a class="btn-exp-dl btn-exp-dl-word" href="plantillas/modelo-inscripcion-regpol.docx?v=2" download="MODELO-INSCRIPCION-REGPOL.docx">'
+        + '<i class="fas fa-file-word"></i> Plantilla en Word</a>'
+        + '<a class="btn-exp-dl btn-exp-dl-pdf" href="plantillas/modelo-inscripcion-regpol.pdf?v=2" download="MODELO-INSCRIPCION-REGPOL.pdf">'
+        + '<i class="fas fa-file-pdf"></i> Modelo PDF</a>'
+        + '</div></div>'
+        + (plazoSub
+          ? '<div class="plazo-countdown" data-plazo-exp="' + escC(plazoSub) + '">—</div>'
+          : '')
+        + (puedeSub
+          ? ('<div class="expediente-acciones">'
+            + '<input type="file" id="exp-file-' + ins.id + '" accept="application/pdf"/>'
+            + '<button type="button" class="btn-pdf-ver" onclick="subirExpediente(' + ins.id + ')"><i class="fas fa-cloud-upload-alt"></i> SUBIR EXPEDIENTE (SUBSANAR)</button>'
+            + '<p id="exp-msg-' + ins.id + '" style="font-size:12px;margin:0;min-height:18px;"></p>'
+            + '</div>')
+          : '')
+        + '</div>';
     } else {
       html += '<div class="consulta-meta">'
         + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
@@ -554,6 +613,40 @@ function mostrarModalVerificacion(msg) {
 
 function cerrarModalVerificacion() {
   var m = document.getElementById('modal-verificacion');
+  if (m) m.classList.remove('open');
+}
+
+function abrirModalMotivos(id) {
+  var ins = CONSULTA_INS_CACHE.find(function(x) { return String(x.id) === String(id); });
+  var body = document.getElementById('modal-motivos-body');
+  if (!body) return;
+  if (!ins) {
+    body.innerHTML = '<p>No se encontraron detalles.</p>';
+  } else {
+    var motivo = ins.motivo_observacion_label || '';
+    var detalle = ins.observacion || '';
+    var htmlM = '';
+    if (motivo) {
+      htmlM += '<p style="margin:0 0 10px;"><strong>Motivo:</strong> ' + escC(motivo) + '</p>';
+    }
+    if (detalle) {
+      htmlM += '<p style="margin:0;white-space:pre-wrap;"><strong>Detalle:</strong><br>' + escC(detalle) + '</p>';
+    }
+    if (!htmlM) {
+      htmlM = '<p style="margin:0;">No hay observaciones registradas. Consulte con el área de Convenios.</p>';
+    }
+    if (ins.plazo_expediente) {
+      htmlM += '<p style="margin:14px 0 0;font-size:13px;color:#555;">Plazo de subsanación: <strong>'
+        + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</strong></p>';
+    }
+    body.innerHTML = htmlM;
+  }
+  var m = document.getElementById('modal-motivos');
+  if (m) m.classList.add('open');
+}
+
+function cerrarModalMotivos() {
+  var m = document.getElementById('modal-motivos');
   if (m) m.classList.remove('open');
 }
 
@@ -929,6 +1022,9 @@ document.getElementById('modal-rep-det').addEventListener('click', function(e) {
 });
 document.getElementById('modal-verificacion').addEventListener('click', function(e) {
   if (e.target === this) cerrarModalVerificacion();
+});
+document.getElementById('modal-motivos').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModalMotivos();
 });
 document.getElementById('modal-aprobacion').addEventListener('click', function(e) {
   if (e.target === this) cerrarModalAprobacion();

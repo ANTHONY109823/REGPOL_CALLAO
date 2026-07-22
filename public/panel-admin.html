@@ -5684,6 +5684,9 @@ function renderInscritos(list, tipo){
         if(ins.estado==='observado'){
           acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'observado\')" title="Reenviar aviso WA/correo"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Reenviar</button> ';
         }
+        if(ins.estado==='rechazado'){
+          acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'rechazado\')" title="Avisar rechazo por WhatsApp y correo"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Avisar</button> ';
+        }
         if(ins.estado==='expediente_ok'){
           acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'expediente_ok\')" title="Avisar constancia"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Avisar</button> ';
         }

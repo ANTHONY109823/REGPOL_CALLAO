@@ -116,6 +116,18 @@ function mensajeNotificacion(tipo, ins, itemTitulo, item) {
       + (obs ? ('Detalle: ' + obs + '\n') : '')
       + 'Subsanar a la brevedad y volver a subir el PDF corregido desde Consulta por CIP.';
   }
+  if (tipo === 'rechazado') {
+    const motivo = etiquetaObservacion(ins.motivo_observacion) || '';
+    const obs = limpio(ins.observacion, 400);
+    return 'REGPOL Callao — CONVENIOS\n\n'
+      + cabeceraPersona + ':\n\n'
+      + 'Su expediente de «' + conv + '» NO FUE ADMITIDO.\n'
+      + datos
+      + (motivo ? ('\nMotivo: ' + motivo + '\n') : '')
+      + (obs ? ('Detalle: ' + obs + '\n') : '')
+      + '\nSi aún está dentro del plazo de subsanación, corrija su documentación y súbala nuevamente desde Consulta por CIP '
+      + '(use la plantilla Word y el modelo PDF).';
+  }
   if (tipo === 'expediente_ok') {
     return 'REGPOL Callao — CONVENIOS\n\n'
       + cabeceraPersona + ':\n\n'
