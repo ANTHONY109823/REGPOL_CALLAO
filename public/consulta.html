@@ -187,6 +187,36 @@ function consultarCip(e) {
     });
 }
 
+function splitApellidosNombres(nombresCompletos) {
+  var s = String(nombresCompletos || '').trim();
+  if (!s) return { apellidos: '—', nombres: '—' };
+  var idx = s.indexOf(',');
+  if (idx >= 0) {
+    return {
+      apellidos: s.slice(0, idx).trim() || '—',
+      nombres: s.slice(idx + 1).trim() || '—'
+    };
+  }
+  var partes = s.split(/\s+/);
+  if (partes.length >= 2) {
+    var mitad = Math.ceil(partes.length / 2);
+    return {
+      apellidos: partes.slice(0, mitad).join(' '),
+      nombres: partes.slice(mitad).join(' ')
+    };
+  }
+  return { apellidos: s, nombres: '—' };
+}
+
+function resumenConvenioConsulta(ins) {
+  var partes = [];
+  if (ins.horario) partes.push(ins.horario);
+  if (ins.fecha_inicio) partes.push('Beneficio: ' + ins.fecha_inicio);
+  if (ins.comisaria_postula) partes.push('Postula a: ' + ins.comisaria_postula);
+  if (ins.vacantes != null && ins.vacantes !== '') partes.push('Vacantes: ' + ins.vacantes);
+  return partes.length ? partes.join(' · ') : (ins.convocatoria || '—');
+}
+
 function renderResultados(lista) {
   var wrap = document.getElementById('consulta-resultados');
   if (!lista || !lista.length) {
@@ -196,37 +226,32 @@ function renderResultados(lista) {
   }
   wrap.innerHTML = lista.map(function(ins) {
     var chipCls = 'estado-chip estado-' + escC(ins.estado || 'pendiente');
-    var html = '<div class="consulta-card' + (ins.puede_descargar_constancia ? ' ganador' : '') + '">'
+    var nombreParts = splitApellidosNombres(ins.nombres);
+    var html = '<div class="consulta-card' + ((ins.puede_descargar_constancia || ins.puede_subir_expediente) ? ' ganador' : '') + '">'
       + '<div class="tipo">' + escC(ins.tipo === 'curso' ? 'Curso' : 'Convenio') + '</div>'
       + '<h3>' + escC(ins.convocatoria) + '</h3>'
-      + '<span class="' + chipCls + '">' + escC(ins.estado_legible) + '</span>'
-      + '<div class="consulta-meta">'
-      + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
-      + '<div><span>Área gestora</span>' + escC(ins.oficina_gestora) + '</div>'
-      + '<div><span>Ubicación del trámite</span>' + escC(ins.ubicacion_tramite) + '</div>'
-      + '<div><span>Fecha de inscripción</span>' + escC(ins.fecha || '—') + '</div>'
-      + '<div><span>Postulante</span>' + escC(ins.nombres) + '</div>'
-      + (ins.region_policial ? '<div><span>Región policial</span>' + escC(ins.region_policial) + '</div>' : '')
-      + (ins.unidad ? '<div><span>Unidad</span>' + escC(ins.unidad) + '</div>' : '')
-      + (ins.codifin ? '<div><span>CODIFIN</span>' + escC(ins.codifin) + '</div>' : '')
-      + (ins.modalidad ? '<div><span>Modalidad</span>' + escC(ins.modalidad === 'OTROS' ? (ins.modalidad_otro || 'Otros') : ins.modalidad.replace(/_/g,' ')) + '</div>' : '')
-      + (ins.plazo_expediente ? '<div><span>Plazo expediente</span>' + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</div>' : '')
-      + '</div>';
-    if (ins.aviso_sorteo_fb && (ins.estado === 'preinscrito' || ins.estado === 'pendiente' || ins.estado === 'aprobado' || ins.estado === 'verificado' || ins.estado === 'reserva')) {
-      html += '<div class="obs-box" style="background:#e8f5f1;border-color:#c8e6c9;color:#004d3d;"><i class="fab fa-facebook"></i> <strong>Sorteo en vivo:</strong> ' + escC(ins.aviso_sorteo_fb) + '</div>';
-    }
-    if (ins.observacion && (ins.estado === 'rechazado' || ins.estado === 'observado' || ins.estado === 'caducado')) {
-      html += '<div class="obs-box"><strong>Observación:</strong> ' + escC(ins.observacion) + '</div>';
-    }
+      + '<span class="' + chipCls + '">' + escC(ins.estado_legible) + '</span>';
+
     if (ins.puede_subir_expediente) {
       var plazoIso = ins.plazo_expediente || '';
       if (!plazoIso && ins.fecha_ganador) {
         var dg = new Date(ins.fecha_ganador);
         if (!isNaN(dg.getTime())) { dg.setDate(dg.getDate() + 2); plazoIso = dg.toISOString(); }
       }
-      html += '<div class="constancia-box" style="border-color:#c8a94a;">'
-        + '<p><strong><i class="fas fa-upload"></i> Suba su expediente PDF</strong> (plazo desde que fue declarado ganador). '
-        + 'Documentación completa en un solo archivo.</p>'
+      html += '<div class="consulta-meta">'
+        + '<div><span>Grado</span><strong>' + escC(ins.grado || '—') + '</strong></div>'
+        + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
+        + '<div><span>Nombres</span><strong>' + escC(nombreParts.nombres) + '</strong></div>'
+        + '<div style="grid-column:1/-1;"><span>Detalle del convenio</span>' + escC(resumenConvenioConsulta(ins)) + '</div>'
+        + (ins.plazo_expediente
+          ? '<div><span>Plazo para presentarlo</span>' + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</div>'
+          : '')
+        + '</div>'
+        + '<div class="obs-box" style="background:#fdecea;border-color:#f5c2c7;color:#842029;">'
+        + '<strong>Importante:</strong> Si no presenta su documentación dentro del plazo, su vacante pasará a <strong>repechaje</strong>.'
+        + '</div>'
+        + '<div class="constancia-box" style="border-color:#c8a94a;">'
+        + '<p><strong><i class="fas fa-upload"></i> Suba su expediente PDF</strong> — documentación completa en un solo archivo.</p>'
         + (plazoIso
           ? '<div class="plazo-countdown" data-plazo-exp="' + escC(plazoIso) + '">—</div>'
           : '<div class="plazo-countdown vencido">Sin plazo registrado</div>')
@@ -234,15 +259,26 @@ function renderResultados(lista) {
         + '<button type="button" class="btn-pdf-ver" onclick="subirExpediente(' + ins.id + ')"><i class="fas fa-cloud-upload-alt"></i> SUBIR EXPEDIENTE</button>'
         + '<p id="exp-msg-' + ins.id + '" style="font-size:12px;margin-top:8px;"></p>'
         + '</div>';
-    }
-    if (ins.puede_descargar_constancia) {
-      html += '<div class="constancia-box">'
-        + '<p><strong><i class="fas fa-check-circle" style="color:#1a7a3a;"></i> Expediente verificado.</strong> '
-        + 'Descargue su constancia de vacante.</p>'
-        + '<div class="constancia-acciones">'
-        + '<button type="button" class="btn-pdf-ver" onclick="verConstancia(' + ins.id + ')"><i class="fas fa-eye"></i> VER CONSTANCIA</button>'
-        + '<button type="button" class="btn-pdf-desc" onclick="descargarConstancia(' + ins.id + ')"><i class="fas fa-download"></i> DESCARGAR PDF</button>'
-        + '</div></div>';
+    } else {
+      html += '<div class="consulta-meta">'
+        + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
+        + '<div><span>Área gestora</span>' + escC(ins.oficina_gestora) + '</div>'
+        + '<div><span>Ubicación del trámite</span>' + escC(ins.ubicacion_tramite) + '</div>'
+        + '<div><span>Fecha de inscripción</span>' + escC(ins.fecha || '—') + '</div>'
+        + '<div><span>Grado</span>' + escC(ins.grado || '—') + '</div>'
+        + '<div><span>Apellidos</span>' + escC(nombreParts.apellidos) + '</div>'
+        + '<div><span>Nombres</span>' + escC(nombreParts.nombres) + '</div>'
+        + (ins.unidad ? '<div><span>Unidad</span>' + escC(ins.unidad) + '</div>' : '')
+        + '</div>';
+      if (ins.puede_descargar_constancia) {
+        html += '<div class="constancia-box">'
+          + '<p><strong><i class="fas fa-check-circle" style="color:#1a7a3a;"></i> Expediente verificado.</strong> '
+          + 'Descargue su constancia de vacante.</p>'
+          + '<div class="constancia-acciones">'
+          + '<button type="button" class="btn-pdf-ver" onclick="verConstancia(' + ins.id + ')"><i class="fas fa-eye"></i> VER CONSTANCIA</button>'
+          + '<button type="button" class="btn-pdf-desc" onclick="descargarConstancia(' + ins.id + ')"><i class="fas fa-download"></i> DESCARGAR PDF</button>'
+          + '</div></div>';
+      }
     }
     html += '</div>';
     return html;
