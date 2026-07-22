@@ -1187,6 +1187,7 @@ function abrirModalPdfPortal(dataUrl, titulo) {
   var btnDesc = document.getElementById('modal-pdf-portal-desc');
   btnDesc.onclick = function() { descargarDataUrlPdf(dataUrl, (titulo || 'documento') + '.pdf'); };
   modal.classList.add('open');
+  modal.style.zIndex = '10100';
   document.body.style.overflow = 'hidden';
 }
 

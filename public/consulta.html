@@ -9,7 +9,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="style.css?v=75">
+  <link rel="stylesheet" href="style.css?v=76">
   <link rel="stylesheet" href="responsive.css?v=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
@@ -217,8 +217,8 @@
     .sin-resultados{text-align:center;padding:40px 20px;color:#888;font-size:14px;}
     .aviso-verif{background:#e8f4fd;border:1.5px solid #7eb8d4;border-radius:10px;padding:12px 14px;font-size:13px;color:#0c5460;margin:12px 0;line-height:1.45;}
     .aviso-ok{background:#e8f5f1;border:1.5px solid #004d3d;border-radius:10px;padding:12px 14px;font-size:13px;color:#004d3d;margin:12px 0;line-height:1.45;}
-    .modal-estado{position:fixed;inset:0;z-index:10020;background:rgba(0,30,24,.58);display:none;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;}
-    .modal-estado.open{display:flex;}
+    .modal-estado{position:fixed !important;inset:0 !important;z-index:10070 !important;background:rgba(0,30,24,.58);display:none;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;}
+    .modal-estado.open{display:flex !important;}
     .modal-estado-box{background:#fff;border-radius:12px;max-width:520px;width:100%;border:2px solid #c8a94a;box-shadow:0 14px 44px rgba(0,0,0,.28);overflow:hidden;}
     .modal-estado-box.wide{max-width:780px;max-height:94vh;display:flex;flex-direction:column;}
     .modal-estado-head{background:#004d3d;color:#fff;padding:12px 14px;font-size:14px;font-weight:800;}
@@ -376,7 +376,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=7"></script>
-<script src="portal.js?v=41"></script>
+<script src="portal.js?v=42"></script>
 <script>
 var API_PUBLIC = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var CIP_CONSULTA = '';
@@ -775,12 +775,20 @@ function mostrarModalVerificacion(msg) {
       + 'Consulte el avance con <strong>CIP + N° de inscripción</strong>.';
   }
   var m = document.getElementById('modal-verificacion');
-  if (m) m.classList.add('open');
+  if (m) {
+    if (m.parentNode !== document.body) document.body.appendChild(m);
+    m.classList.add('open');
+    m.style.display = 'flex';
+    m.style.zIndex = '10070';
+  }
 }
 
 function cerrarModalVerificacion() {
   var m = document.getElementById('modal-verificacion');
-  if (m) m.classList.remove('open');
+  if (m) {
+    m.classList.remove('open');
+    m.style.display = 'none';
+  }
 }
 
 function fechaCallaoHoy() {
@@ -834,7 +842,12 @@ function abrirModalAprobacion(ins, auto) {
   }
   if (sheet) sheet.innerHTML = htmlConstanciaSheet(ins);
   var m = document.getElementById('modal-aprobacion');
-  if (m) m.classList.add('open');
+  if (m) {
+    if (m.parentNode !== document.body) document.body.appendChild(m);
+    m.classList.add('open');
+    m.style.display = 'flex';
+    m.style.zIndex = '10070';
+  }
   if (auto && ins.id) {
     try { sessionStorage.setItem('constancia_vista_' + ins.id, '1'); } catch (e) {}
   }
@@ -847,7 +860,10 @@ function abrirModalAprobacionDesdeIns(id) {
 
 function cerrarModalAprobacion() {
   var m = document.getElementById('modal-aprobacion');
-  if (m) m.classList.remove('open');
+  if (m) {
+    m.classList.remove('open');
+    m.style.display = 'none';
+  }
 }
 
 function procesarModalesConsulta(lista) {
