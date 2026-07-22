@@ -479,7 +479,7 @@ function cargarListaRepechaje() {
         var ciasTxt = cias.length
           ? cias.map(function(x) { return x.nombre + ' (' + x.disponibles + ')'; }).join(' · ')
           : 'Vacantes generales';
-        var hrefReg = 'detalle.html?id=' + encodeURIComponent(c.id) + '&tipo=convenio&repechaje=1';
+        var hrefReg = 'detalle.html?id=' + encodeURIComponent(c.id) + '&tipo=convenio&repechaje=1#form-inscripcion-wrap';
         return '<div class="repechaje-row" data-item-id="' + escC(String(c.id)) + '">'
           + '<div class="repechaje-row-info">'
           + '<h4>' + escC(c.titulo) + '</h4>'

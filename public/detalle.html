@@ -296,10 +296,14 @@ function renderDetalle(item){
   var ventanaTxt = item.ventana_inscripcion || '';
   var btnRegistrar = '';
   var formHtml = '';
-  if(item.inscripciones_abiertas){
-    btnRegistrar = '<button type="button" class="btn-registrarse" id="btn-top-registrar" onclick="mostrarFormInscripcion()"><i class="fas fa-edit"></i> REGISTRARSE</button>';
-    formHtml = '<div id="form-inscripcion-wrap" style="display:none;margin-top:8px;">'+renderFormInscripcion(item)+'</div>';
-  } else if(item.formulario_url && item.formulario_url !== '#'){
+  var esRepechajeVista = esConvenio && (MODO_REPECHAJE || /[?&]repechaje=1/.test(location.search || ''));
+  var puedeInscribir = !!item.inscripciones_abiertas || esRepechajeVista;
+  if (puedeInscribir) {
+    btnRegistrar = '<button type="button" class="btn-registrarse" id="btn-top-registrar" onclick="mostrarFormInscripcion()"><i class="fas fa-edit"></i> '
+      + (esRepechajeVista ? 'COMPLETAR FORMULARIO' : 'REGISTRARSE') + '</button>';
+    formHtml = '<div id="form-inscripcion-wrap" style="display:' + (esRepechajeVista ? 'block' : 'none') + ';margin-top:8px;">'
+      + renderFormInscripcion(item) + '</div>';
+  } else if (item.formulario_url && item.formulario_url !== '#') {
     btnRegistrar = '<a href="'+escHtmlD(item.formulario_url)+'" target="_blank" class="btn-registrarse"><i class="fas fa-edit"></i> REGISTRARSE</a>';
   } else {
     btnRegistrar = '<span class="btn-registrarse is-disabled" title="Inscripciones no habilitadas"><i class="fas fa-lock"></i> REGISTRARSE</span>';
@@ -336,6 +340,14 @@ function renderDetalle(item){
 
   cargarDivisionesPublico();
   initCamposInscripcion();
+  if (esRepechajeVista) {
+    setTimeout(function() {
+      var wrap = document.getElementById('form-inscripcion-wrap');
+      if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      var cip = document.getElementById('fi-cip');
+      if (cip) try { cip.focus(); } catch (e) {}
+    }, 120);
+  }
 }
 
 function mostrarFormInscripcion(){
