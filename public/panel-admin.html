@@ -1762,16 +1762,11 @@
 
 <div id="modal-observar-exp" class="modal">
   <div class="modal-box" style="width:480px;">
-    <h3><i class="fas fa-clipboard-check" style="color:#004d3d;"></i> Revisar expediente</h3>
+    <h3><i class="fas fa-exclamation-triangle" style="color:#e67e22;"></i> Observar expediente</h3>
     <input type="hidden" id="mobs-id"/>
     <p style="font-size:12.5px;color:#666;margin:-4px 0 12px;line-height:1.45;">
-      Elija una acción. En <strong>Observar</strong> se avisará al efectivo (WhatsApp / correo) para que subsane.
+      Se avisará al efectivo (WhatsApp / correo) para que <strong>subsane</strong> y vuelva a subir el PDF.
     </p>
-    <label>Acción *</label>
-    <select id="mobs-accion" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;margin-bottom:10px;" onchange="onCambioAccionRevision()">
-      <option value="observar">Observar (pedir corrección)</option>
-      <option value="rechazar">Rechazar (cerrar expediente)</option>
-    </select>
     <div id="mobs-motivo-wrap">
       <label>Motivo *</label>
       <select id="mobs-motivo" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;margin-bottom:10px;">
@@ -1782,7 +1777,7 @@
     <textarea id="mobs-detalle" rows="3" placeholder="Observaciones concretas..." style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;"></textarea>
     <div class="modal-footer">
       <button type="button" class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-observar-exp')">Cancelar</button>
-      <button type="button" class="btn btn-o" id="mobs-btn-enviar" onclick="confirmarRevisionExpediente()"><i class="fas fa-paper-plane"></i> Enviar</button>
+      <button type="button" class="btn btn-o" id="mobs-btn-enviar" onclick="confirmarRevisionExpediente()"><i class="fas fa-paper-plane"></i> Enviar observación</button>
     </div>
   </div>
 </div>
@@ -5675,8 +5670,8 @@ function renderInscritos(list, tipo){
       var sinEditar = INSCRITOS_MODO==='ganadores' || INSCRITOS_MODO==='repechaje';
       if(esConvenio){
         if(ins.estado==='en_revision'||ins.estado==='repechaje'){
-          acciones='<button type="button" class="btn-mini btn-mini-ok" onclick="revisarExpedienteConv('+ins.id+',\'aprobar\')" title="Aprobar expediente"><i class="fas fa-check"></i> OK</button> '
-            +'<button type="button" class="btn-mini btn-mini-solid" onclick="abrirRevisionExpediente('+ins.id+')" title="Observar o rechazar"><i class="fas fa-exclamation"></i> Observar / Rechazar</button> ';
+          acciones='<button type="button" class="btn-mini btn-mini-ok" onclick="revisarExpedienteConv('+ins.id+',\'aprobar\')" title="Aprobar expediente"><i class="fas fa-check"></i> APROBAR</button> '
+            +'<button type="button" class="btn-mini btn-mini-solid" onclick="abrirRevisionExpediente('+ins.id+')" title="Observar expediente"><i class="fas fa-exclamation"></i> OBSERVAR</button> ';
         }
         if(ins.estado==='ganador'){
           acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'ganador\')" title="Avisar por WhatsApp y correo"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Avisar</button> ';
@@ -5975,28 +5970,19 @@ function revisarExpedienteConv(id, accion){
 }
 
 function onCambioAccionRevision(){
-  var accion=(document.getElementById('mobs-accion').value||'observar');
   var wrap=document.getElementById('mobs-motivo-wrap');
   var lbl=document.getElementById('mobs-detalle-label');
   var det=document.getElementById('mobs-detalle');
   var btn=document.getElementById('mobs-btn-enviar');
-  if(accion==='rechazar'){
-    if(wrap) wrap.style.display='none';
-    if(lbl) lbl.textContent='Motivo del rechazo *';
-    if(det) det.placeholder='Indique el motivo del rechazo...';
-    if(btn) btn.innerHTML='<i class="fas fa-paper-plane"></i> Enviar rechazo';
-  } else {
-    if(wrap) wrap.style.display='';
-    if(lbl) lbl.textContent='Detalle adicional';
-    if(det) det.placeholder='Observaciones concretas...';
-    if(btn) btn.innerHTML='<i class="fas fa-paper-plane"></i> Enviar observación';
-  }
+  if(wrap) wrap.style.display='';
+  if(lbl) lbl.textContent='Detalle adicional';
+  if(det) det.placeholder='Observaciones concretas...';
+  if(btn) btn.innerHTML='<i class="fas fa-paper-plane"></i> Enviar observación';
 }
 
 function abrirRevisionExpediente(id){
   document.getElementById('mobs-id').value=id;
   document.getElementById('mobs-detalle').value='';
-  document.getElementById('mobs-accion').value='observar';
   var sel=document.getElementById('mobs-motivo');
   var cat=window.CATALOGO_OBS_CONV||[];
   sel.innerHTML='<option value="">— Seleccione —</option>'
@@ -6010,18 +5996,10 @@ function abrirObservarExpediente(id){ abrirRevisionExpediente(id); }
 
 function confirmarRevisionExpediente(){
   var id=parseInt(document.getElementById('mobs-id').value,10);
-  var accion=(document.getElementById('mobs-accion').value||'observar').trim();
   var motivo=(document.getElementById('mobs-motivo').value||'').trim();
   var detalle=(document.getElementById('mobs-detalle').value||'').trim();
-  var body;
-
-  if(accion==='rechazar'){
-    if(!detalle){ alert('Indique el motivo del rechazo.'); return; }
-    body={accion:'rechazar', observacion:detalle};
-  } else {
-    if(!motivo){ alert('Seleccione un motivo de observación.'); return; }
-    body={accion:'observar', motivo_observacion:motivo, observacion:detalle};
-  }
+  if(!motivo){ alert('Seleccione un motivo de observación.'); return; }
+  var body={accion:'observar', motivo_observacion:motivo, observacion:detalle};
 
   var btn=document.getElementById('mobs-btn-enviar');
   if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Enviando...'; }
