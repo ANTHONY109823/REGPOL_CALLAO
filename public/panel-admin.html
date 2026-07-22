@@ -1782,6 +1782,27 @@
   </div>
 </div>
 
+<div id="modal-aprobar-exp" class="modal">
+  <div class="modal-box" style="width:440px;">
+    <h3><i class="fas fa-user-check" style="color:#1a7a3a;"></i> Aprobar expediente</h3>
+    <input type="hidden" id="mapr-id"/>
+    <p style="font-size:12.5px;color:#666;margin:-4px 0 12px;line-height:1.45;">
+      Confirme con <strong>usuario y contraseña</strong> de quien aprueba. Su nombre completo, fecha y hora quedarán registrados en la constancia.
+    </p>
+    <label>Usuario *</label>
+    <input type="text" id="mapr-usuario" autocomplete="username" placeholder="Usuario del aprobador"
+      style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;margin-bottom:10px;"/>
+    <label>Contraseña *</label>
+    <input type="password" id="mapr-password" autocomplete="current-password" placeholder="Contraseña"
+      style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;margin-bottom:10px;"/>
+    <p id="mapr-error" style="display:none;color:#c0392b;font-size:12px;margin:0 0 8px;"></p>
+    <div class="modal-footer">
+      <button type="button" class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-aprobar-exp')">Cancelar</button>
+      <button type="button" class="btn btn-v" id="mapr-btn-enviar" onclick="confirmarAprobarExpediente()"><i class="fas fa-check"></i> Confirmar aprobación</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-division" class="modal">
   <div class="modal-box" style="width:420px;">
     <h3><i class="fas fa-sitemap"></i> <span id="md-titulo">Nueva división</span></h3>
@@ -5670,7 +5691,7 @@ function renderInscritos(list, tipo){
       var sinEditar = INSCRITOS_MODO==='ganadores' || INSCRITOS_MODO==='repechaje';
       if(esConvenio){
         if(ins.estado==='en_revision'||ins.estado==='repechaje'){
-          acciones='<button type="button" class="btn-mini btn-mini-ok" onclick="revisarExpedienteConv('+ins.id+',\'aprobar\')" title="Aprobar expediente"><i class="fas fa-check"></i> APROBAR</button> '
+          acciones='<button type="button" class="btn-mini btn-mini-ok" onclick="abrirModalAprobarExpediente('+ins.id+')" title="Aprobar expediente"><i class="fas fa-check"></i> APROBAR</button> '
             +'<button type="button" class="btn-mini btn-mini-solid" onclick="abrirRevisionExpediente('+ins.id+')" title="Observar expediente"><i class="fas fa-exclamation"></i> OBSERVAR</button> ';
         }
         if(ins.estado==='ganador'){
@@ -5957,15 +5978,54 @@ function notificarInscripcionConv(id, tipo){
 }
 
 function revisarExpedienteConv(id, accion){
-  if(accion!=='aprobar') return;
-  if(!confirm('¿Aprobar expediente? Se habilitará la constancia y se generará aviso WA/correo.')) return;
+  if(accion==='aprobar'){ abrirModalAprobarExpediente(id); return; }
+}
+
+function abrirModalAprobarExpediente(id){
+  document.getElementById('mapr-id').value=id;
+  document.getElementById('mapr-usuario').value=(SESION && SESION.usuario) ? SESION.usuario : '';
+  document.getElementById('mapr-password').value='';
+  var err=document.getElementById('mapr-error');
+  if(err){ err.style.display='none'; err.textContent=''; }
+  var btn=document.getElementById('mapr-btn-enviar');
+  if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-check"></i> Confirmar aprobación'; }
+  document.getElementById('modal-aprobar-exp').classList.add('open');
+  setTimeout(function(){
+    var el=document.getElementById(SESION && SESION.usuario ? 'mapr-password' : 'mapr-usuario');
+    if(el) try{ el.focus(); }catch(e){}
+  }, 50);
+}
+
+function confirmarAprobarExpediente(){
+  var id=parseInt(document.getElementById('mapr-id').value,10);
+  var usuario=(document.getElementById('mapr-usuario').value||'').trim();
+  var password=document.getElementById('mapr-password').value||'';
+  var err=document.getElementById('mapr-error');
+  if(!usuario || !password){
+    if(err){ err.style.display='block'; err.textContent='Ingrese usuario y contraseña del aprobador.'; }
+    return;
+  }
+  var btn=document.getElementById('mapr-btn-enviar');
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Validando...'; }
+  if(err) err.style.display='none';
+
   fetch(API+'/admin/inscripciones/'+id+'/revisar-expediente',{
     method:'POST', headers:hdr(),
-    body:JSON.stringify({accion:'aprobar'})
+    body:JSON.stringify({accion:'aprobar', usuario:usuario, password:password})
   }).then(function(r){return r.json();}).then(function(d){
-    if(!d.ok){ alert(d.error||'Error'); return; }
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-check"></i> Confirmar aprobación'; }
+    if(!d.ok){
+      if(err){ err.style.display='block'; err.textContent=d.error||'No se pudo aprobar'; }
+      return;
+    }
+    cerrarModal('modal-aprobar-exp');
+    document.getElementById('mapr-password').value='';
     if(d.notificacion) mostrarLinksNotificacion(d.notificacion);
+    else alert('Expediente aprobado por '+(d.aprobado_por_nombre||usuario)+'. Constancia habilitada.');
     refrescarInscritosActivos();
+  }).catch(function(){
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-check"></i> Confirmar aprobación'; }
+    if(err){ err.style.display='block'; err.textContent='Error de conexión'; }
   });
 }
 

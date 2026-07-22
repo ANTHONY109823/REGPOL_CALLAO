@@ -360,6 +360,9 @@ async function initColumnasFlujoConvenios(pool) {
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS region_policial VARCHAR(120) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS comisaria_postula VARCHAR(150) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS token_constancia VARCHAR(64) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS aprobado_por_nombre VARCHAR(150) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS aprobado_por_usuario VARCHAR(60) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS fecha_aprobacion TIMESTAMPTZ;
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS aviso_sorteo_fb TEXT DEFAULT '';
     CREATE INDEX IF NOT EXISTS idx_inscripciones_estado ON inscripciones(estado);
     CREATE INDEX IF NOT EXISTS idx_inscripciones_plazo ON inscripciones(plazo_expediente);

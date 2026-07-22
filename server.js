@@ -4934,8 +4934,25 @@ function payloadConstanciaPublica(row) {
     uniforme: row.uniforme || '',
     contactos_responsables: row.contactos_responsables || '',
     estado: row.estado || '',
-    token: row.token_constancia || ''
+    token: row.token_constancia || '',
+    aprobado_por_nombre: row.aprobado_por_nombre || '',
+    aprobado_por_usuario: row.aprobado_por_usuario || '',
+    fecha_aprobacion: row.fecha_aprobacion || null,
+    fecha_aprobacion_legible: formatearFechaAprobacionPe(row.fecha_aprobacion)
   };
+}
+
+function formatearFechaAprobacionPe(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleString('es-PE', {
+      timeZone: 'America/Lima',
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+    });
+  } catch (e) {
+    return String(iso);
+  }
 }
 
 // ── GET /portal/consulta-inscripcion?cip=&nro= — consulta pública CIP + N° registro ─
@@ -4954,6 +4971,7 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
               n.telefono, n.email, n.modo_ingreso, n.motivo_observacion,
               n.plazo_expediente, n.fecha_ganador, n.nro_registro, n.modalidad, n.modalidad_otro,
               n.codifin, n.region_policial, n.comisaria_postula, n.dni, n.token_constancia,
+              n.aprobado_por_nombre, n.aprobado_por_usuario, n.fecha_aprobacion,
               CASE WHEN COALESCE(n.pdf_requisitos,'')<>'' THEN true ELSE false END AS tiene_pdf,
               i.id AS item_id, i.tipo, i.titulo, i.horario, i.lugar, i.fecha_inicio, i.duracion,
               i.descripcion, i.observaciones AS item_observaciones, i.vacantes,
@@ -5047,7 +5065,11 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
         en_verificacion: enVerificacion,
         mostrar_modal_verificacion: enVerificacion,
         mostrar_modal_aprobacion: puedeConstancia,
-        token_constancia: tokenConst
+        token_constancia: tokenConst,
+        aprobado_por_nombre: row.aprobado_por_nombre || '',
+        aprobado_por_usuario: row.aprobado_por_usuario || '',
+        fecha_aprobacion: row.fecha_aprobacion || null,
+        fecha_aprobacion_legible: formatearFechaAprobacionPe(row.fecha_aprobacion)
       });
     }
     if (!inscripciones.length) {
@@ -5898,14 +5920,38 @@ app.post('/admin/inscripciones/:id/revisar-expediente', requireAuth, async (req,
     const observacion = String((req.body && req.body.observacion) || '').trim();
 
     if (accion === 'aprobar') {
+      const usuarioApr = String((req.body && req.body.usuario) || '').trim();
+      const passwordApr = String((req.body && req.body.password) || '');
+      if (!usuarioApr || !passwordApr) {
+        return res.json({ ok: false, error: 'Ingrese usuario y contraseña de quien aprueba el expediente.' });
+      }
+      const authR = await pool.query(
+        'SELECT id, usuario, nombre, unidad FROM admins WHERE usuario=$1 AND passhash=$2',
+        [usuarioApr, sha256(passwordApr)]
+      );
+      if (!authR.rows.length) {
+        return res.json({ ok: false, error: 'Usuario o contraseña incorrectos. No se registró la aprobación.' });
+      }
+      const aprobador = authR.rows[0];
+      const nombreAprob = String(aprobador.nombre || aprobador.usuario || '').trim() || aprobador.usuario;
       await pool.query(
         `UPDATE inscripciones SET estado='expediente_ok', motivo_observacion='',
-           observacion=COALESCE(NULLIF($1,''), 'Expediente verificado — constancia habilitada')
-         WHERE id=$2 AND estado IN ('en_revision','repechaje','observado')`,
-        [observacion, id]);
+           observacion=COALESCE(NULLIF($1,''), 'Expediente verificado — constancia habilitada'),
+           aprobado_por_nombre=$2,
+           aprobado_por_usuario=$3,
+           fecha_aprobacion=NOW()
+         WHERE id=$4 AND estado IN ('en_revision','repechaje','observado')`,
+        [observacion, nombreAprob.slice(0, 150), String(aprobador.usuario).slice(0, 60), id]);
       const token = await asegurarTokenConstancia(id);
       const n = await conveniosFlujo.notificarInscripcion(pool, id, 'expediente_ok');
-      return res.json({ ok: true, estado: 'expediente_ok', token_constancia: token, notificacion: n });
+      return res.json({
+        ok: true,
+        estado: 'expediente_ok',
+        token_constancia: token,
+        notificacion: n,
+        aprobado_por_nombre: nombreAprob,
+        fecha_aprobacion: new Date().toISOString()
+      });
     }
 
     if (accion === 'observar') {
