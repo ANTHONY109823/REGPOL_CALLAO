@@ -4577,7 +4577,9 @@ app.get('/admin/inscripciones/:id/pdf', requireAuth, async (req, res) => {
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     if (!r.rows[0].pdf_requisitos)
       return res.json({ ok: false, error: 'Este inscrito no adjuntó PDF' });
-    res.json({ ok: true, pdf: r.rows[0].pdf_requisitos, nombre: r.rows[0].pdf_nombre || 'requisitos.pdf' });
+    const resuelto = await resolverPdfInscripcion(r.rows[0].pdf_requisitos, r.rows[0].pdf_nombre);
+    if (!resuelto.ok) return res.json({ ok: false, error: resuelto.error || 'PDF no disponible' });
+    res.json({ ok: true, pdf: resuelto.pdf, nombre: resuelto.nombre || 'requisitos.pdf' });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -4963,7 +4965,10 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
          AND i.visible = TRUE
        ORDER BY n.fecha DESC`,
       [cip, nro]);
-    await conveniosFlujo.caducarExpedientesVencidos(pool);
+    // No bloquear la consulta con caducidad masiva
+    setImmediate(function() {
+      conveniosFlujo.caducarExpedientesVencidos(pool).catch(function() {});
+    });
     const inscripciones = [];
     for (const row of r.rows) {
       let estado = row.estado;
@@ -5659,19 +5664,45 @@ app.get('/portal/convenios/catalogos', function(req, res) {
   });
 });
 
-app.post('/portal/inscripciones/:id/expediente', async (req, res) => {
+app.post('/portal/inscripciones/:id/expediente',
+  express.raw({
+    limit: '6mb',
+    type: function(req) {
+      var ct = String(req.headers['content-type'] || '');
+      return ct.indexOf('application/pdf') === 0 || ct.indexOf('application/octet-stream') === 0;
+    }
+  }),
+  async (req, res) => {
   try {
-    await conveniosFlujo.caducarExpedientesVencidos(pool);
     const id = parseInt(req.params.id, 10);
-    const cip = normalizarCipDigits(req.body && req.body.cip);
-    const pdf = (req.body && req.body.pdf_requisitos) || '';
-    const pdfNombre = (req.body && req.body.pdf_nombre) || 'expediente.pdf';
+    let cip = '';
+    let pdfNombre = 'expediente.pdf';
+    let pdfBuf = null;
+
+    if (Buffer.isBuffer(req.body) && req.body.length) {
+      pdfBuf = req.body;
+      cip = normalizarCipDigits(req.query.cip || req.headers['x-cip'] || '');
+      pdfNombre = String(req.query.nombre || req.headers['x-filename'] || 'expediente.pdf').trim() || 'expediente.pdf';
+    } else if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
+      cip = normalizarCipDigits(req.body.cip);
+      pdfNombre = String(req.body.pdf_nombre || 'expediente.pdf').trim() || 'expediente.pdf';
+      const pdfLegacy = String(req.body.pdf_requisitos || '');
+      if (pdfLegacy) {
+        const raw = pdfLegacy.indexOf('base64,') >= 0 ? pdfLegacy.split('base64,').pop() : pdfLegacy;
+        try { pdfBuf = Buffer.from(String(raw).replace(/\s/g, ''), 'base64'); } catch (e) { pdfBuf = null; }
+      }
+    }
+
     if (!id || !cip) return res.json({ ok: false, error: 'CIP e inscripción requeridos' });
-    if (!pdf) return res.json({ ok: false, error: 'Adjunte el PDF del expediente' });
-    if (pdf.length > 7 * 1024 * 1024) return res.json({ ok: false, error: 'El PDF no debe superar 5 MB' });
+    if (!pdfBuf || !pdfBuf.length) return res.json({ ok: false, error: 'Adjunte el PDF del expediente' });
+    if (pdfBuf.length > 5 * 1024 * 1024) return res.json({ ok: false, error: 'El PDF no debe superar 5 MB' });
+    if (pdfBuf.length < 5 || pdfBuf.slice(0, 4).toString('latin1') !== '%PDF') {
+      return res.json({ ok: false, error: 'El archivo no es un PDF válido' });
+    }
 
     const r = await pool.query(
-      `SELECT n.*, i.tipo, i.titulo FROM inscripciones n
+      `SELECT n.id, n.estado, n.plazo_expediente, n.observacion, i.tipo, i.titulo
+       FROM inscripciones n
        JOIN items_portal i ON i.id=n.item_id
        WHERE n.id=$1 AND ${sqlCipIgual('n.cip')}=$2`,
       [id, cip]);
@@ -5692,10 +5723,19 @@ app.post('/portal/inscripciones/:id/expediente', async (req, res) => {
       }
       return res.json({ ok: false, error: 'No puede subir expediente en el estado actual (' + row.estado + ')' });
     }
-    if (row.estado === 'ganador' && plazoVencido) {
-      await pool.query(`UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente' WHERE id=$1`, [id]);
-      return res.json({ ok: false, error: 'El plazo de 2 días ya venció. La vacante pasó a repechaje.' });
-    }
+
+    const clave = ('inscripcion-pdf-' + id).slice(0, 64);
+    const ref = 'ref:' + clave;
+    await pool.query(
+      `INSERT INTO portal_archivos (clave, mime, nombre, data, updated_at)
+       VALUES ($1, 'application/pdf', $2, $3, NOW())
+       ON CONFLICT (clave) DO UPDATE SET
+         mime = EXCLUDED.mime,
+         nombre = EXCLUDED.nombre,
+         data = EXCLUDED.data,
+         updated_at = NOW()`,
+      [clave, pdfNombre.slice(0, 255), pdfBuf]
+    );
 
     await pool.query(
       `UPDATE inscripciones SET
@@ -5706,7 +5746,7 @@ app.post('/portal/inscripciones/:id/expediente', async (req, res) => {
            ELSE observacion
          END
        WHERE id=$3`,
-      [pdf, pdfNombre, id]);
+      [ref, pdfNombre.slice(0, 255), id]);
 
     res.json({
       ok: true,
@@ -5714,8 +5754,30 @@ app.post('/portal/inscripciones/:id/expediente', async (req, res) => {
       estado: 'en_revision',
       mostrar_modal_verificacion: true
     });
+    setImmediate(function() {
+      conveniosFlujo.caducarExpedientesVencidos(pool).catch(function() {});
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
+
+async function resolverPdfInscripcion(pdfRef, pdfNombre) {
+  const ref = String(pdfRef || '');
+  const nombre = pdfNombre || 'requisitos.pdf';
+  if (!ref) return { ok: false, error: 'Sin PDF' };
+  if (ref.indexOf('ref:') === 0) {
+    const clave = ref.slice(4).slice(0, 64);
+    const a = await pool.query('SELECT data, mime, nombre FROM portal_archivos WHERE clave=$1', [clave]);
+    if (!a.rows.length || !a.rows[0].data) return { ok: false, error: 'Archivo no encontrado' };
+    const b64 = Buffer.from(a.rows[0].data).toString('base64');
+    return {
+      ok: true,
+      pdf: 'data:application/pdf;base64,' + b64,
+      nombre: a.rows[0].nombre || nombre
+    };
+  }
+  return { ok: true, pdf: ref, nombre: nombre };
+}
+
 
 app.get('/portal/verificar-constancia', async (req, res) => {
   try {

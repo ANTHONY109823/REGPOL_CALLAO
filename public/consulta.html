@@ -710,21 +710,35 @@ function fileToDataUrl(file) {
 async function subirExpediente(id) {
   var inp = document.getElementById('exp-file-' + id);
   var msg = document.getElementById('exp-msg-' + id);
+  var btn = document.querySelector('button[onclick="subirExpediente(' + id + ')"]');
   if (!inp || !inp.files || !inp.files[0]) {
     if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Seleccione un PDF'; }
     return;
   }
-  if (msg) { msg.style.color = '#666'; msg.textContent = 'Subiendo...'; }
+  var file = inp.files[0];
+  if (file.type && file.type !== 'application/pdf') {
+    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Solo se acepta PDF'; }
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'El PDF no debe superar 5 MB'; }
+    return;
+  }
+  if (msg) { msg.style.color = '#666'; msg.textContent = 'Subiendo PDF (' + Math.max(1, Math.round(file.size / 1024)) + ' KB)...'; }
+  if (btn) btn.disabled = true;
   try {
-    var dataUrl = await fileToDataUrl(inp.files[0]);
-    var r = await fetch(API_PUBLIC + '/portal/inscripciones/' + id + '/expediente', {
+    // Subida binaria (sin base64): ~33% menos datos y sin FileReader
+    var url = API_PUBLIC + '/portal/inscripciones/' + id + '/expediente'
+      + '?cip=' + encodeURIComponent(CIP_CONSULTA)
+      + '&nombre=' + encodeURIComponent(file.name || 'expediente.pdf');
+    var r = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cip: CIP_CONSULTA,
-        pdf_requisitos: dataUrl,
-        pdf_nombre: inp.files[0].name
-      })
+      headers: {
+        'Content-Type': 'application/pdf',
+        'X-Filename': file.name || 'expediente.pdf',
+        'X-CIP': CIP_CONSULTA || ''
+      },
+      body: file
     });
     var d = await r.json();
     if (!d.ok) {
@@ -733,9 +747,12 @@ async function subirExpediente(id) {
     }
     if (msg) { msg.style.color = '#1a7a3a'; msg.textContent = d.mensaje || 'Enviado'; }
     mostrarModalVerificacion(d.mensaje);
-    consultarCip();
+    // Refrescar consulta en segundo plano (no bloquea el modal de éxito)
+    setTimeout(function() { try { consultarCip(); } catch (e) {} }, 80);
   } catch (e) {
     if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Error de conexión'; }
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
