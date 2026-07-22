@@ -4676,6 +4676,79 @@ function normalizarCipDigits(cip) {
   return d;
 }
 
+function normalizarDniDigits(dni) {
+  const d = String(dni || '').replace(/\D/g, '');
+  return d.length >= 8 ? d : '';
+}
+
+/** Nombre comparable para anti-fraude en inscripciones (ignora comas/acentos/espacios). */
+function normalizarNombreInscripcion(nombres) {
+  return String(nombres || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function sqlNombreInscripcion(campo) {
+  return `regexp_replace(upper(trim(translate(${campo}, 'áéíóúàèìòùäëïöüñÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÑ', 'aeiouaeiouaeiouaeiouaeiounAEIOUAEIOUAEIOUAEIOUN'))), '[^A-Z0-9]+', ' ', 'g')`;
+}
+
+/**
+ * Evita re-inscripción / fraude: mismo CIP, mismo DNI o mismos nombres
+ * en la convocatoria (nuevo o repechaje).
+ */
+async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
+  const dniNorm = normalizarDniDigits(dni);
+  const nombreNorm = normalizarNombreInscripcion(nombres);
+
+  const byCip = await pool.query(
+    `SELECT id, cip, dni, nombres, estado, nro_registro
+     FROM inscripciones
+     WHERE item_id=$1 AND ${sqlCipIgual('cip')}=$2
+     ORDER BY id ASC LIMIT 1`,
+    [itemId, cipNorm]
+  );
+  if (byCip.rows.length) return { row: byCip.rows[0], motivo: 'cip' };
+
+  if (dniNorm) {
+    const byDni = await pool.query(
+      `SELECT id, cip, dni, nombres, estado, nro_registro
+       FROM inscripciones
+       WHERE item_id=$1
+         AND regexp_replace(COALESCE(dni,''), '[^0-9]', '', 'g') = $2
+       ORDER BY id ASC LIMIT 1`,
+      [itemId, dniNorm]
+    );
+    if (byDni.rows.length) return { row: byDni.rows[0], motivo: 'dni' };
+  }
+
+  if (nombreNorm.length >= 8) {
+    const byNom = await pool.query(
+      `SELECT id, cip, dni, nombres, estado, nro_registro
+       FROM inscripciones
+       WHERE item_id=$1 AND ${sqlNombreInscripcion('nombres')} = $2
+       ORDER BY id ASC LIMIT 1`,
+      [itemId, nombreNorm]
+    );
+    if (byNom.rows.length) return { row: byNom.rows[0], motivo: 'nombres' };
+  }
+
+  return null;
+}
+
+function mensajeDuplicadoInscripcion(motivo) {
+  if (motivo === 'dni') {
+    return 'Ya existe una inscripción con ese DNI en esta convocatoria. No puede volver a inscribirse (ni en repechaje). Consulte con su CIP y N° de registro.';
+  }
+  if (motivo === 'nombres') {
+    return 'Ya existe una inscripción con esos apellidos y nombres en esta convocatoria. No puede volver a inscribirse (ni en repechaje). Consulte con su CIP y N° de registro.';
+  }
+  return 'Ya existe una inscripción con ese CIP en esta convocatoria. No puede volver a inscribirse (ni en repechaje). Consulte con su CIP y N° de registro.';
+}
+
 function normalizarCipConsulta(cip) {
   return normalizarCipDigits(cip);
 }
@@ -5246,6 +5319,11 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
     if (!area || !String(area).trim()) return res.json({ ok: false, error: 'El área es obligatoria.' });
     if (!cargo || !String(cargo).trim()) return res.json({ ok: false, error: 'El cargo es obligatorio.' });
 
+    const dniNorm = normalizarDniDigits(dni);
+    if (esConvenio && !dniNorm) {
+      return res.json({ ok: false, error: 'DNI obligatorio (mínimo 8 dígitos).' });
+    }
+
     const regionNorm = conveniosFlujo.limpio(region_policial, 120);
     const unidadNorm = conveniosFlujo.limpio(unidad, 150);
     const modalidadNorm = conveniosFlujo.limpio(modalidad, 40).toUpperCase();
@@ -5302,11 +5380,14 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       }
     }
 
-    const dup = await pool.query(
-      `SELECT id, estado FROM inscripciones WHERE item_id=$1 AND ${sqlCipIgual('cip')}=$2`,
-      [req.params.id, cipNorm]);
-    if (dup.rows.length) {
-      return res.json({ ok: false, error: 'Ya existe una inscripción con ese CIP para esta convocatoria.' });
+    const dup = await buscarInscripcionDuplicadaPortal(req.params.id, cipNorm, dniNorm || dni, nombres);
+    if (dup) {
+      return res.json({
+        ok: false,
+        error: mensajeDuplicadoInscripcion(dup.motivo),
+        codigo: 'duplicado_' + dup.motivo,
+        nro_registro: dup.row.nro_registro || ''
+      });
     }
 
     const pdfBase64 = pdf_requisitos || '';
@@ -5354,7 +5435,7 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
        RETURNING id`,
       [req.params.id, cipNorm, nombres, unidadNorm || unidad || '', cargo||'', telefono||'', email||'',
        pdfSave, pdfNom,
-       dni||'', grado||'', area||'', arma||'', disponibilidad||'', dia_franco||'',
+       dniNorm || dni || '', grado||'', area||'', arma||'', disponibilidad||'', dia_franco||'',
        feNorm, tiempo_servicio||'', estado, modo,
        modalidadNorm || '', modalidadOtroNorm || '',
        esConvenio ? codifinNorm : (codifinNorm || ''),

@@ -354,6 +354,8 @@ async function initColumnasFlujoConvenios(pool) {
     CREATE INDEX IF NOT EXISTS idx_inscripciones_codifin ON inscripciones(codifin);
     CREATE INDEX IF NOT EXISTS idx_inscripciones_region ON inscripciones(region_policial);
     CREATE INDEX IF NOT EXISTS idx_inscripciones_cia_postula ON inscripciones(comisaria_postula);
+    CREATE INDEX IF NOT EXISTS idx_inscripciones_dni ON inscripciones(dni);
+    CREATE INDEX IF NOT EXISTS idx_inscripciones_item_cip ON inscripciones(item_id, cip);
   `);
 
   // Asignar N° de registro a históricos sin número (formato compacto: C202600003)

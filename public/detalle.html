@@ -894,7 +894,16 @@ function enviarInscripcion(e){
       onCambioModalidadTrabajo();
       toggleAreaOtroInscripcion();
     } else {
-      alerta.textContent=d.error||'Error al procesar la inscripción.';
+      var errMsg = d.error || 'Error al procesar la inscripción.';
+      if (d.codigo && String(d.codigo).indexOf('duplicado_') === 0) {
+        var nroDup = d.nro_registro || '';
+        errMsg = errMsg
+          + (nroDup ? (' N° registrado: ' + nroDup + '.') : '')
+          + ' <a href="consulta.html" style="color:#842029;font-weight:700;">Ir a consulta CIP</a>';
+        alerta.innerHTML = errMsg;
+      } else {
+        alerta.textContent = errMsg;
+      }
       alerta.className='fi-alerta error'; alerta.style.display='block';
     }
   }).catch(function(){
