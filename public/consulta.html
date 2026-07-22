@@ -471,7 +471,9 @@ function cargarListaRepechaje() {
         el.innerHTML = '<p style="color:#c0392b;font-size:13px;">' + escC(d.error || 'No se pudo cargar.') + '</p>';
         return;
       }
-      var list = d.convenios || [];
+      var list = (d.convenios || []).filter(function(c) {
+        return (parseInt(c.disponibles, 10) || 0) > 0;
+      });
       REPECHAJE_CACHE = list;
       if (!list.length) {
         el.innerHTML = '<p style="color:#856404;font-size:13px;">Por ahora no hay vacantes liberadas para repechaje.</p>';
@@ -479,8 +481,9 @@ function cargarListaRepechaje() {
       }
       el.innerHTML = list.map(function(c) {
         var disp = parseInt(c.disponibles, 10) || 0;
-        var sinCupo = disp < 1;
-        var cias = Array.isArray(c.comisarias) ? c.comisarias : [];
+        var cias = (Array.isArray(c.comisarias) ? c.comisarias : []).filter(function(x) {
+          return (parseInt(x.disponibles, 10) || 0) > 0;
+        });
         var ciasTxt = cias.length
           ? cias.map(function(x) { return x.nombre + ' (' + x.disponibles + ')'; }).join(' · ')
           : 'Vacantes generales';
@@ -497,11 +500,8 @@ function cargarListaRepechaje() {
           + '</div>'
           + '<div class="repechaje-row-acciones">'
           + '<span class="badge-vacantes"><span class="rep-vac-disp">' + escC(String(disp)) + '</span> libres</span>'
-          + (sinCupo
-            ? '<button type="button" class="btn-rep btn-rep-reg" disabled>Sin vacantes</button>'
-            : '<a class="btn-rep btn-rep-reg" href="' + hrefReg + '"><i class="fas fa-user-plus"></i> REGISTRARSE</a>')
-          + '<button type="button" class="btn-rep btn-rep-exp" ' + (sinCupo ? 'disabled' : '')
-          + ' onclick="abrirModalRepExpediente(' + c.id + ')">'
+          + '<a class="btn-rep btn-rep-reg" href="' + hrefReg + '"><i class="fas fa-user-plus"></i> REGISTRARSE</a>'
+          + '<button type="button" class="btn-rep btn-rep-exp" onclick="abrirModalRepExpediente(' + c.id + ')">'
           + '<i class="fas fa-file-upload"></i> SUBIR EXPEDIENTE</button>'
           + '</div></div>';
       }).join('');
