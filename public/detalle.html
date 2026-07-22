@@ -96,18 +96,18 @@
     .btn-enviar-solicitud{display:inline-block;margin-top:8px;background:#004d3d;color:#fff;padding:13px 36px;border-radius:8px;border:none;font-size:14px;font-weight:800;letter-spacing:.4px;cursor:pointer;font-family:inherit;transition:background .2s;}
     .btn-enviar-solicitud:hover{background:#006b55;}
     .btn-enviar-solicitud:disabled{opacity:.65;cursor:wait;}
-    .pdf-upload-box{border:2px dashed #c8a94a;border-radius:9px;padding:16px;background:#fffdf5;grid-column:1/-1;}
-    .pdf-upload-box .pdf-titulo{font-size:13px;font-weight:800;color:#c8a94a;margin-bottom:6px;display:flex;align-items:center;gap:7px;}
-    .pdf-upload-box .pdf-aviso{font-size:11.5px;color:#666;margin-bottom:10px;line-height:1.5;}
-    .pdf-upload-box .pdf-aviso strong{color:#c0392b;}
-    .pdf-upload-box input[type="file"]{width:100%;padding:7px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;}
-    .pdf-preview-bar{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:#555;}
+    .pdf-upload-box{border:2px dashed #c8a94a;border-radius:9px;padding:14px;background:#fffdf5;grid-column:1/-1;}
+    .pdf-upload-box.pdf-upload-compact{padding:12px;}
+    .pdf-exp-acciones{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;}
+    .btn-exp-accion{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:none;border-radius:8px;padding:11px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;text-decoration:none;white-space:nowrap;line-height:1.2;}
+    .btn-exp-word{background:#2b579a;color:#fff;}
+    .btn-exp-word:hover{background:#3b6cb5;color:#fff;}
+    .btn-exp-pdf{background:#c8a94a;color:#002d24;}
+    .btn-exp-pdf:hover{background:#e4c76b;color:#002d24;}
+    .btn-exp-subir{background:#004d3d;color:#fff;}
+    .btn-exp-subir:hover{background:#006b55;color:#fff;}
+    .pdf-preview-bar{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:#555;width:100%;justify-content:center;}
     .pdf-preview-bar i{color:#e74c3c;font-size:18px;}
-    .plantilla-banner{background:linear-gradient(135deg,#004d3d,#006b55);border-radius:10px;padding:16px 20px;margin:16px 0;display:flex;align-items:center;gap:14px;color:#fff;flex-wrap:wrap;}
-    .plantilla-banner i.fa-file-pdf{font-size:32px;color:#c8a94a;flex-shrink:0;}
-    .plantilla-banner .pb-texto{flex:1;}
-    .plantilla-banner .pb-texto strong{display:block;font-size:13px;font-weight:800;margin-bottom:2px;}
-    .plantilla-banner .pb-texto span{font-size:11.5px;opacity:.85;}
     .btn-desc-plantilla{background:#c8a94a;color:#002d24;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:none;text-decoration:none;white-space:nowrap;flex-shrink:0;}
     .btn-desc-plantilla:hover{background:#dfc060;}
     .estado-badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:12px;font-weight:700;}
@@ -579,21 +579,23 @@ function renderFormInscripcion(item){
 
     
     +((!esConvenio || esRepechaje)
-    ? ('<div class="pdf-upload-box">'
-    +'<div class="pdf-titulo"><i class="fas fa-file-pdf"></i> EXPEDIENTE DE REQUISITOS (PDF)</div>'
-    +'<div class="pdf-aviso">'
-    +(esRepechaje
-      ? 'En repechaje debe adjuntar <strong>todos sus documentos en un único PDF</strong>.<br/>'
-      : 'Escanee y adjunte <strong>todos sus documentos en un único archivo PDF</strong>.<br/>')
-    +'<span style="color:#004d3d;font-weight:700;">Tamaño máximo: 5 MB.</span>'
+    ? ('<div class="pdf-upload-box pdf-upload-compact">'
+    +'<div class="pdf-exp-acciones">'
+    +'<a class="btn-exp-accion btn-exp-word" href="plantillas/modelo-inscripcion-regpol.docx" download="MODELO-INSCRIPCION-REGPOL.docx">'
+    +'<i class="fas fa-file-word"></i> PLANTILLA WORD</a>'
+    +(item.plantilla_pdf
+      ? ('<button type="button" class="btn-exp-accion btn-exp-pdf" onclick="descargarPlantilla('+item.id+')">'
+        +'<i class="fas fa-file-pdf"></i> MODELO PDF</button>')
+      : ('<a class="btn-exp-accion btn-exp-pdf" href="plantillas/modelo-inscripcion-regpol.pdf" download="MODELO-INSCRIPCION-REGPOL.pdf">'
+        +'<i class="fas fa-file-pdf"></i> MODELO PDF</a>'))
+    +'<button type="button" class="btn-exp-accion btn-exp-subir" onclick="document.getElementById(\'fi-pdf-file\').click()">'
+    +'<i class="fas fa-cloud-upload-alt"></i> SUBIR EXPEDIENTE</button>'
     +'</div>'
-    +renderBannerPlantilla(item)
-    +'<label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:4px;">Seleccione su PDF *</label>'
-    +'<input type="file" id="fi-pdf-file" accept="application/pdf" onchange="cargarPdfInscripcion(this)" required/>'
+    +'<input type="file" id="fi-pdf-file" accept="application/pdf" onchange="cargarPdfInscripcion(this)" required style="display:none;"/>'
     +'<div id="fi-pdf-preview" class="pdf-preview-bar" style="display:none;">'
     +'<i class="fas fa-file-pdf"></i><span id="fi-pdf-nombre"></span>'
     +'<button type="button" onclick="quitarPdfInscripcion()" '
-    +'style="background:#c0392b;color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;margin-left:auto;">Quitar</button>'
+    +'style="background:#c0392b;color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;margin-left:8px;">Quitar</button>'
     +'</div>'
     +'<input type="hidden" id="fi-pdf-data"/>'
     +'</div>')
@@ -645,25 +647,6 @@ function calcularTiempoServicio(val){
   if(mes < 0){ anios--; mes += 12; }
   el.value = anios+' años '+mes+' meses de servicio';
   document.getElementById('fi-tiempo-servicio').setAttribute('data-val', anios+' años '+mes+' meses');
-}
-
-function renderBannerPlantilla(item){
-  var tituloConv = escHtmlD(item.titulo || 'CONVOCATORIA');
-  var btnOficial = item.plantilla_pdf
-    ? '<button type="button" class="btn-desc-plantilla" onclick="descargarPlantilla('+item.id+')" style="margin-left:8px;">'
-      +'<i class="fas fa-download"></i> PLANTILLA DE LA CONVOCATORIA</button>'
-    : '';
-  return '<div class="plantilla-banner">'
-    +'<i class="fas fa-file-pdf"></i>'
-    +'<div class="pb-texto">'
-    +'<strong>MODELO OFICIAL DE INSCRIPCIÓN</strong>'
-    +'<span>Descargue el formulario modelo, complételo (incluya «'+tituloConv+'»), fírmelo y adjúntelo con todos sus documentos en un solo PDF.</span>'
-    +'</div>'
-    +'<div style="display:flex;flex-wrap:wrap;gap:8px;flex-shrink:0;">'
-    +'<a href="plantillas/modelo-inscripcion-regpol.pdf" download="MODELO-INSCRIPCION-REGPOL.pdf" class="btn-desc-plantilla">'
-    +'<i class="fas fa-download"></i> DESCARGAR MODELO PDF</a>'
-    + btnOficial
-    +'</div></div>';
 }
 
 function descargarPlantilla(itemId){
