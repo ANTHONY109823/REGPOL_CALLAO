@@ -95,13 +95,16 @@
     .obs-box{background:#fff8e1;border:1.5px solid #c8a94a;border-radius:10px;padding:12px 14px;font-size:13px;color:#6b5420;margin:4px 0 18px;line-height:1.45;}
     .obs-box.alerta-repechaje{background:#fff5f5;border-color:#e8b4b4;color:#842029;}
     .repechaje-lista-wrap{margin-top:10px;}
-    .repechaje-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1.5px solid #dde8e5;border-radius:8px;margin-bottom:8px;background:#fff;flex-wrap:wrap;}
-    .repechaje-row-info{flex:1 1 280px;min-width:0;}
-    .repechaje-row-info h4{margin:0 0 4px;color:#004d3d;font-size:14px;font-weight:800;line-height:1.25;}
-    .repechaje-row-det{font-size:12px;color:#555;line-height:1.4;}
-    .repechaje-row-det strong{color:#004d3d;}
-    .repechaje-row-cias{font-size:11.5px;color:#666;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
-    .repechaje-row-acciones{display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex-shrink:0;}
+    .repechaje-row{display:flex;align-items:center;justify-content:center;gap:14px;padding:12px 16px;border:1.5px solid #dde8e5;border-radius:8px;margin-bottom:8px;background:#fff;flex-wrap:wrap;}
+    .repechaje-row-info{flex:0 1 auto;min-width:0;text-align:center;}
+    .repechaje-row-info h4{margin:0;color:#004d3d;font-size:15px;font-weight:800;line-height:1.25;letter-spacing:.2px;}
+    .repechaje-row-det,.repechaje-row-cias{display:none!important;}
+    .repechaje-row-acciones{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;flex-shrink:0;}
+    @media(max-width:600px){
+      .repechaje-row{flex-direction:column;gap:10px;}
+      .repechaje-row-acciones{width:100%;}
+      .btn-rep{flex:1;justify-content:center;}
+    }
     .badge-vacantes{display:inline-block;background:#fff8e1;border:1px solid #c8a94a;color:#6b5420;border-radius:16px;padding:4px 9px;font-size:11.5px;font-weight:800;white-space:nowrap;}
     .btn-rep{border:none;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:inherit;white-space:nowrap;}
     .btn-rep-reg{background:#004d3d;color:#fff;}
@@ -929,22 +932,9 @@ function cargarListaRepechaje() {
       }
       el.innerHTML = list.map(function(c) {
         var disp = parseInt(c.disponibles, 10) || 0;
-        var cias = Array.isArray(c.comisarias) ? c.comisarias : [];
-        var ciasLibres = cias.filter(function(x) { return (parseInt(x.disponibles, 10) || 0) > 0; });
-        var ciasTxt = ciasLibres.length
-          ? ciasLibres.map(function(x) { return x.nombre + ' (' + x.disponibles + ')'; }).join(' · ')
-          : (cias.length
-            ? cias.map(function(x) { return x.nombre; }).join(' · ')
-            : 'Vacantes generales — ver más detalles');
         return '<div class="repechaje-row" data-item-id="' + escC(String(c.id)) + '">'
           + '<div class="repechaje-row-info">'
           + '<h4>' + escC(c.titulo) + '</h4>'
-          + '<div class="repechaje-row-det">'
-          + '<strong>Vacantes:</strong> <span class="rep-vac-disp">' + escC(String(disp)) + '</span>/' + escC(String(c.vacantes || 0))
-          + ' &nbsp;|&nbsp; <strong>Horario:</strong> ' + escC(c.horario || '—')
-          + (c.fecha_inicio ? (' &nbsp;|&nbsp; <strong>Beneficio:</strong> ' + escC(c.fecha_inicio)) : '')
-          + '</div>'
-          + '<div class="repechaje-row-cias" title="' + escC(ciasTxt) + '"><strong>Comisarías:</strong> ' + escC(ciasTxt) + '</div>'
           + '</div>'
           + '<div class="repechaje-row-acciones">'
           + '<span class="badge-vacantes"><span class="rep-vac-disp">' + escC(String(disp)) + '</span> libres</span>'
