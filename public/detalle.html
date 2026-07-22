@@ -109,10 +109,32 @@
     .pdf-preview-bar{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:#555;width:100%;justify-content:center;}
     .pdf-preview-bar i{color:#e74c3c;font-size:16px;}
     body.embed-form .fi-intro{display:none!important;}
-    body.embed-form .form-inscripcion{padding:14px 12px!important;}
-    body.embed-form .form-inscripcion h3{font-size:14px;margin:0 0 10px;padding-bottom:6px;}
-    body.embed-form .pdf-upload-box{border-style:solid;padding:6px;}
+    body.embed-form .form-inscripcion{padding:8px 10px 10px!important;border:none!important;background:#fff!important;}
+    body.embed-form .form-inscripcion h3{display:none!important;}
+    body.embed-form .pdf-upload-box{border-style:solid;padding:6px;margin-top:4px!important;}
     body.embed-form .btn-enviar-solicitud{padding:10px 22px;font-size:13px;margin-top:4px;}
+    body.embed-form .header-social-portal,
+    body.embed-form .main-header,
+    body.embed-form .nav-main{display:none!important;}
+    body.embed-form{background:#fff!important;min-height:0!important;overflow:hidden;}
+    body.embed-form .content-area.detalle-compact{padding:4px 8px 8px!important;margin:0!important;max-width:100%!important;min-height:0!important;}
+    body.embed-form .form-inscripcion{margin:0;max-width:100%;box-shadow:none;border-radius:0;}
+    body.embed-form .detalle-bloque{padding:0;max-width:100%;}
+    body.embed-form .fi-grid{gap:6px 10px!important;}
+    body.embed-form .fi-group label{font-size:10.5px!important;margin-bottom:2px!important;}
+    body.embed-form .fi-group input,
+    body.embed-form .fi-group select{padding:7px 8px!important;font-size:12.5px!important;border-radius:6px!important;}
+    body.embed-form .fi-alerta{margin:4px 0!important;padding:6px 8px!important;font-size:12px!important;}
+    body.embed-form .btn-exp-accion{padding:7px 9px;font-size:10.5px;}
+    body.embed-form .pdf-exp-acciones{gap:5px;margin-top:2px;}
+    body.embed-form .pdf-preview-bar{margin-top:4px;font-size:10.5px;}
+    @media (max-height:780px){
+      body.embed-form .fi-grid{gap:4px 8px!important;}
+      body.embed-form .fi-group input,
+      body.embed-form .fi-group select{padding:5px 7px!important;font-size:12px!important;}
+      body.embed-form .form-inscripcion{padding:4px 8px 6px!important;}
+      body.embed-form .content-area.detalle-compact{padding:2px 6px 4px!important;}
+    }
     .btn-desc-plantilla{background:#c8a94a;color:#002d24;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:none;text-decoration:none;white-space:nowrap;flex-shrink:0;}
     .btn-desc-plantilla:hover{background:#dfc060;}
     .estado-badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:12px;font-weight:700;}
@@ -121,13 +143,6 @@
     .estado-CERRADO{background:#f8d7da;color:#842029;}
     .inscripciones-cerradas{background:#fff3cd;border:1.5px solid #ffe082;border-radius:8px;padding:14px 18px;color:#856404;font-size:13.5px;font-weight:600;text-align:center;margin-top:8px;}
     .loading-msg{text-align:center;padding:48px;color:#bbb;font-size:14px;}
-    body.embed-form .header-social-portal,
-    body.embed-form .main-header,
-    body.embed-form .nav-main{display:none!important;}
-    body.embed-form{background:#fff!important;min-height:0!important;}
-    body.embed-form .content-area.detalle-compact{padding:8px 10px 16px!important;margin:0!important;max-width:100%!important;min-height:0!important;}
-    body.embed-form .form-inscripcion{margin:0;max-width:100%;box-shadow:none;border-radius:10px;}
-    body.embed-form .detalle-bloque{padding:0;max-width:100%;}
     .modal-pre{position:fixed;inset:0;z-index:9999;background:rgba(0,30,24,.55);display:none;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;}
     .modal-pre.open{display:flex;}
     .modal-pre-box{background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.28);border:2px solid #c8a94a;}
@@ -491,7 +506,7 @@ function renderFormInscripcion(item){
       : '<p class="fi-intro" style="color:#856404;background:#fff8e1;padding:8px 10px;border-radius:8px;font-size:12px;">Repechaje: complete y suba su PDF.</p>')
     : '';
   return '<form class="form-inscripcion" id="form-inscripcion" onsubmit="enviarInscripcion(event)">'
-    +'<h3>'+tituloForm+'</h3>'
+    + (EMBED_FORM ? '' : ('<h3>' + tituloForm + '</h3>'))
     + introRep
     +(esConvenio && item.aviso_sorteo_fb && !EMBED_FORM
       ? '<p class="fi-intro" style="color:#004d3d;background:#e8f5f1;padding:10px 12px;border-radius:8px;border:1px solid #c8e6c9;"><strong>Sorteo en vivo:</strong> '+escHtmlD(item.aviso_sorteo_fb)+'</p>'
