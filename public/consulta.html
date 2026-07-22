@@ -626,7 +626,7 @@ function abrirModalRepForm(itemId) {
   var iframe = document.getElementById('modal-rep-form-iframe');
   if (tit) tit.innerHTML = '<i class="fas fa-redo-alt"></i> Repechaje — ' + escC(titulo);
   if (iframe) {
-    iframe.src = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1';
+    iframe.src = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=76';
   }
   if (modal) modal.classList.add('open');
   document.body.classList.add('modal-rep-open');

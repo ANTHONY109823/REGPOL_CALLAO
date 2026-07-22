@@ -96,18 +96,23 @@
     .btn-enviar-solicitud{display:inline-block;margin-top:8px;background:#004d3d;color:#fff;padding:13px 36px;border-radius:8px;border:none;font-size:14px;font-weight:800;letter-spacing:.4px;cursor:pointer;font-family:inherit;transition:background .2s;}
     .btn-enviar-solicitud:hover{background:#006b55;}
     .btn-enviar-solicitud:disabled{opacity:.65;cursor:wait;}
-    .pdf-upload-box{border:2px dashed #c8a94a;border-radius:9px;padding:14px;background:#fffdf5;grid-column:1/-1;}
-    .pdf-upload-box.pdf-upload-compact{padding:12px;}
-    .pdf-exp-acciones{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;}
-    .btn-exp-accion{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:none;border-radius:8px;padding:11px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;text-decoration:none;white-space:nowrap;line-height:1.2;}
+    .pdf-upload-box{border:1.5px dashed #c8a94a;border-radius:8px;padding:8px;background:#fffdf5;grid-column:1/-1;}
+    .pdf-upload-box.pdf-upload-compact{padding:8px;margin-top:4px;}
+    .pdf-exp-acciones{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;}
+    .btn-exp-accion{display:inline-flex;align-items:center;justify-content:center;gap:5px;border:none;border-radius:6px;padding:8px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;text-decoration:none;white-space:nowrap;line-height:1.1;}
     .btn-exp-word{background:#2b579a;color:#fff;}
     .btn-exp-word:hover{background:#3b6cb5;color:#fff;}
     .btn-exp-pdf{background:#c8a94a;color:#002d24;}
     .btn-exp-pdf:hover{background:#e4c76b;color:#002d24;}
     .btn-exp-subir{background:#004d3d;color:#fff;}
     .btn-exp-subir:hover{background:#006b55;color:#fff;}
-    .pdf-preview-bar{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:#555;width:100%;justify-content:center;}
-    .pdf-preview-bar i{color:#e74c3c;font-size:18px;}
+    .pdf-preview-bar{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:#555;width:100%;justify-content:center;}
+    .pdf-preview-bar i{color:#e74c3c;font-size:16px;}
+    body.embed-form .fi-intro{display:none!important;}
+    body.embed-form .form-inscripcion{padding:14px 12px!important;}
+    body.embed-form .form-inscripcion h3{font-size:14px;margin:0 0 10px;padding-bottom:6px;}
+    body.embed-form .pdf-upload-box{border-style:solid;padding:6px;}
+    body.embed-form .btn-enviar-solicitud{padding:10px 22px;font-size:13px;margin-top:4px;}
     .btn-desc-plantilla{background:#c8a94a;color:#002d24;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:none;text-decoration:none;white-space:nowrap;flex-shrink:0;}
     .btn-desc-plantilla:hover{background:#dfc060;}
     .estado-badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:12px;font-weight:700;}
@@ -479,13 +484,16 @@ function renderFormInscripcion(item){
   var esConvenio = item.tipo === 'convenio';
   var esCurso    = item.tipo === 'curso';
   var esRepechaje = esConvenio && (MODO_REPECHAJE || /[?&]repechaje=1/.test(location.search||''));
-  var tituloForm = esRepechaje ? 'Repechaje - Convenio' : (esConvenio ? 'Preinscripción - Convenio' : 'Inscripción - Curso');
+  var tituloForm = esRepechaje ? 'Repechaje' : (esConvenio ? 'Preinscripción' : 'Inscripción');
+  var introRep = esRepechaje
+    ? (EMBED_FORM
+      ? ''
+      : '<p class="fi-intro" style="color:#856404;background:#fff8e1;padding:8px 10px;border-radius:8px;font-size:12px;">Repechaje: complete y suba su PDF.</p>')
+    : '';
   return '<form class="form-inscripcion" id="form-inscripcion" onsubmit="enviarInscripcion(event)">'
     +'<h3>'+tituloForm+'</h3>'
-    +(esRepechaje
-      ? '<p class="fi-intro" style="color:#856404;background:#fff8e1;padding:10px 12px;border-radius:8px;">Repechaje: se registra completo y <strong>sube todos sus expedientes ahora</strong>. No entra al sorteo. Sujeto a vacantes liberadas.</p>'
-      : '')
-    +(esConvenio && item.aviso_sorteo_fb
+    + introRep
+    +(esConvenio && item.aviso_sorteo_fb && !EMBED_FORM
       ? '<p class="fi-intro" style="color:#004d3d;background:#e8f5f1;padding:10px 12px;border-radius:8px;border:1px solid #c8e6c9;"><strong>Sorteo en vivo:</strong> '+escHtmlD(item.aviso_sorteo_fb)+'</p>'
       : '')
     +'<div id="fi-alerta" class="fi-alerta"></div>'
@@ -581,15 +589,16 @@ function renderFormInscripcion(item){
     +((!esConvenio || esRepechaje)
     ? ('<div class="pdf-upload-box pdf-upload-compact">'
     +'<div class="pdf-exp-acciones">'
-    +'<a class="btn-exp-accion btn-exp-word" href="plantillas/modelo-inscripcion-regpol.docx" download="MODELO-INSCRIPCION-REGPOL.docx">'
-    +'<i class="fas fa-file-word"></i> PLANTILLA WORD</a>'
-    +(item.plantilla_pdf
+    +'<a class="btn-exp-accion btn-exp-word" href="plantillas/modelo-inscripcion-regpol.docx?v=2" download="MODELO-INSCRIPCION-REGPOL.docx">'
+    +'<i class="fas fa-file-word"></i> Word</a>'
+    +'<a class="btn-exp-accion btn-exp-pdf" href="plantillas/modelo-inscripcion-regpol.pdf?v=2" download="MODELO-INSCRIPCION-REGPOL.pdf">'
+    +'<i class="fas fa-file-pdf"></i> Modelo PDF</a>'
+    +(item.plantilla_pdf || item.plantilla_nombre
       ? ('<button type="button" class="btn-exp-accion btn-exp-pdf" onclick="descargarPlantilla('+item.id+')">'
-        +'<i class="fas fa-file-pdf"></i> MODELO PDF</button>')
-      : ('<a class="btn-exp-accion btn-exp-pdf" href="plantillas/modelo-inscripcion-regpol.pdf" download="MODELO-INSCRIPCION-REGPOL.pdf">'
-        +'<i class="fas fa-file-pdf"></i> MODELO PDF</a>'))
+        +'<i class="fas fa-file-pdf"></i> Plantilla PDF</button>')
+      : '')
     +'<button type="button" class="btn-exp-accion btn-exp-subir" onclick="document.getElementById(\'fi-pdf-file\').click()">'
-    +'<i class="fas fa-cloud-upload-alt"></i> SUBIR EXPEDIENTE</button>'
+    +'<i class="fas fa-upload"></i> Subir PDF</button>'
     +'</div>'
     +'<input type="file" id="fi-pdf-file" accept="application/pdf" onchange="cargarPdfInscripcion(this)" required style="display:none;"/>'
     +'<div id="fi-pdf-preview" class="pdf-preview-bar" style="display:none;">'

@@ -5289,7 +5289,12 @@ app.get('/portal/items/:id', async (req, res) => {
     const r = await pool.query(
       'SELECT * FROM items_portal WHERE id=$1 AND visible=TRUE', [req.params.id]);
     if (!r.rows.length) return res.status(404).json({ ok: false, error: 'No encontrado' });
-    res.json({ ok: true, item: r.rows[0] });
+    const item = Object.assign({}, r.rows[0]);
+    const tienePlantilla = !!(item.plantilla_pdf && String(item.plantilla_pdf).length > 20);
+    delete item.plantilla_pdf;
+    item.plantilla_pdf = tienePlantilla;
+    item.tiene_plantilla = tienePlantilla;
+    res.json({ ok: true, item: item });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
