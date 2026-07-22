@@ -593,10 +593,6 @@ function renderFormInscripcion(item){
     +'<i class="fas fa-file-word"></i> Word</a>'
     +'<a class="btn-exp-accion btn-exp-pdf" href="plantillas/modelo-inscripcion-regpol.pdf?v=2" download="MODELO-INSCRIPCION-REGPOL.pdf">'
     +'<i class="fas fa-file-pdf"></i> Modelo PDF</a>'
-    +(item.plantilla_pdf || item.plantilla_nombre
-      ? ('<button type="button" class="btn-exp-accion btn-exp-pdf" onclick="descargarPlantilla('+item.id+')">'
-        +'<i class="fas fa-file-pdf"></i> Plantilla PDF</button>')
-      : '')
     +'<button type="button" class="btn-exp-accion btn-exp-subir" onclick="document.getElementById(\'fi-pdf-file\').click()">'
     +'<i class="fas fa-upload"></i> Subir PDF</button>'
     +'</div>'

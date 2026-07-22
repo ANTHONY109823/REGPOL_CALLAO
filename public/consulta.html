@@ -87,6 +87,14 @@
     body.modal-rep-open{overflow:hidden;}
     .expediente-box{background:#f7faf7;border:1.5px solid #c8a94a;border-radius:12px;padding:20px 22px;margin-top:4px;}
     .expediente-box > p{font-size:13.5px;color:#333;margin:0 0 16px;line-height:1.5;font-weight:600;}
+    .expediente-box-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+    .expediente-box-top > p{margin:0;flex:1;min-width:180px;font-size:13.5px;color:#333;line-height:1.45;font-weight:600;}
+    .expediente-dl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end;flex-shrink:0;}
+    .btn-exp-dl{display:inline-flex;align-items:center;justify-content:center;gap:5px;border:none;border-radius:6px;padding:8px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;text-decoration:none;white-space:nowrap;line-height:1.1;}
+    .btn-exp-dl-word{background:#2b579a;color:#fff;}
+    .btn-exp-dl-word:hover{background:#3b6cb5;color:#fff;}
+    .btn-exp-dl-pdf{background:#c8a94a;color:#002d24;}
+    .btn-exp-dl-pdf:hover{background:#e4c76b;color:#002d24;}
     .expediente-box .plazo-countdown{display:block;width:fit-content;max-width:100%;margin:0 0 18px;font-size:16px;font-weight:800;font-family:ui-monospace,Consolas,monospace;letter-spacing:.5px;padding:10px 16px;border-radius:8px;}
     .plazo-countdown.ok{background:#e8f5f1;color:#004d3d;border:1.5px solid #004d3d;}
     .plazo-countdown.warn{background:#fff8e1;color:#856404;border:1.5px solid #c8a94a;}
@@ -338,7 +346,14 @@ function renderResultados(lista) {
         + '<strong>Importante:</strong> Si no presenta su documentación dentro del plazo, su vacante pasará a <strong>repechaje</strong>.'
         + '</div>'
         + '<div class="expediente-box">'
+        + '<div class="expediente-box-top">'
         + '<p><i class="fas fa-cloud-upload-alt" style="color:#004d3d;"></i> Suba su expediente PDF — documentación completa en un solo archivo.</p>'
+        + '<div class="expediente-dl">'
+        + '<a class="btn-exp-dl btn-exp-dl-word" href="plantillas/modelo-inscripcion-regpol.docx?v=2" download="MODELO-INSCRIPCION-REGPOL.docx">'
+        + '<i class="fas fa-file-word"></i> Word</a>'
+        + '<a class="btn-exp-dl btn-exp-dl-pdf" href="plantillas/modelo-inscripcion-regpol.pdf?v=2" download="MODELO-INSCRIPCION-REGPOL.pdf">'
+        + '<i class="fas fa-file-pdf"></i> Modelo PDF</a>'
+        + '</div></div>'
         + (plazoIso
           ? '<div class="plazo-countdown" data-plazo-exp="' + escC(plazoIso) + '">—</div>'
           : '<div class="plazo-countdown vencido">Sin plazo registrado</div>')
@@ -626,7 +641,7 @@ function abrirModalRepForm(itemId) {
   var iframe = document.getElementById('modal-rep-form-iframe');
   if (tit) tit.innerHTML = '<i class="fas fa-redo-alt"></i> Repechaje — ' + escC(titulo);
   if (iframe) {
-    iframe.src = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=76';
+    iframe.src = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=77';
   }
   if (modal) modal.classList.add('open');
   document.body.classList.add('modal-rep-open');
