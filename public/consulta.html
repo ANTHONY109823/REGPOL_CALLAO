@@ -159,18 +159,10 @@
       box-sizing:border-box;
     }
     .repechaje-box-titulo{
-      margin:0 0 6px;
+      margin:0 0 10px;
       color:#004d3d;
       font-size:16px;
       font-weight:800;
-      text-align:center;
-    }
-    .repechaje-box-intro{
-      font-size:13px;
-      color:#555;
-      margin:0 auto 12px;
-      line-height:1.4;
-      max-width:480px;
       text-align:center;
     }
     .repechaje-lista-wrap{margin-top:0;}
@@ -284,9 +276,6 @@
 
   <div id="repechaje-box" class="consulta-form repechaje-box" style="display:none;border-color:#c8a94a;">
     <h3 class="repechaje-box-titulo"><i class="fas fa-redo-alt"></i> Repechaje de convenios</h3>
-    <p class="repechaje-box-intro">
-      Vacantes liberadas. Pulse <strong>REGISTRARSE</strong> para completar el formulario y subir su expediente PDF.
-    </p>
     <div id="repechaje-lista" class="repechaje-lista-wrap"><p style="color:#888;font-size:13px;">Cargando convocatorias...</p></div>
   </div>
 
@@ -1090,7 +1079,7 @@ function abrirModalRepForm(itemId) {
       setTimeout(ajustarAlturaIframeRep, 120);
       setTimeout(ajustarAlturaIframeRep, 400);
     };
-    iframe.src = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=80';
+    iframe.src = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=81';
   }
   if (modal) modal.classList.add('open');
   document.body.classList.add('modal-rep-open');
@@ -1118,8 +1107,8 @@ function ajustarAlturaIframeRep(alturaMsg) {
       }
     } catch (err) { h = 0; }
   }
-  if (h < 180) h = 180;
-  iframe.style.height = Math.min(h + 8, max) + 'px';
+  if (h < 220) h = 220;
+  iframe.style.height = Math.min(h + 4, max) + 'px';
 }
 
 function cerrarModalRepForm() {
