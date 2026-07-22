@@ -116,8 +116,10 @@
     body.embed-form .header-social-portal,
     body.embed-form .main-header,
     body.embed-form .nav-main{display:none!important;}
-    body.embed-form{background:#fff!important;min-height:0!important;overflow:hidden;}
-    body.embed-form .content-area.detalle-compact{padding:4px 8px 8px!important;margin:0!important;max-width:100%!important;min-height:0!important;}
+    body.embed-form{background:#fff!important;min-height:0!important;overflow:visible!important;height:auto!important;}
+    body.embed-form .content-area.detalle-compact{padding:4px 8px 8px!important;margin:0!important;max-width:100%!important;min-height:0!important;height:auto!important;}
+    body.embed-form html{height:auto!important;}
+    html.embed-form-root, html.embed-form-root body{height:auto!important;min-height:0!important;}
     body.embed-form .form-inscripcion{margin:0;max-width:100%;box-shadow:none;border-radius:0;}
     body.embed-form .detalle-bloque{padding:0;max-width:100%;}
     body.embed-form .fi-grid{gap:6px 10px!important;}
@@ -325,6 +327,7 @@ function renderDetalle(item){
   var puedeInscribir = !!item.inscripciones_abiertas || esRepechajeVista;
 
   if (EMBED_FORM && esRepechajeVista && puedeInscribir) {
+    document.documentElement.classList.add('embed-form-root');
     document.body.classList.add('embed-form');
     document.title = 'Repechaje — ' + (item.titulo || 'Convenio');
     document.getElementById('cuerpo-detalle').innerHTML =
@@ -334,7 +337,10 @@ function renderDetalle(item){
     setTimeout(function() {
       var cip = document.getElementById('fi-cip');
       if (cip) try { cip.focus(); } catch (e) {}
+      notificarAlturaEmbed();
     }, 80);
+    setTimeout(notificarAlturaEmbed, 250);
+    setTimeout(notificarAlturaEmbed, 600);
     return;
   }
 
@@ -1145,8 +1151,29 @@ function cargarDetalle(){
 }
 
 initPortalPagina({ activeNav: ITEM_TIPO || 'cursos', showPageHero: false });
-if (EMBED_FORM) document.body.classList.add('embed-form');
+if (EMBED_FORM) {
+  document.documentElement.classList.add('embed-form-root');
+  document.body.classList.add('embed-form');
+}
 cargarDetalle();
+
+function notificarAlturaEmbed() {
+  if (!EMBED_FORM || !window.parent || window.parent === window) return;
+  try {
+    var h = Math.max(
+      document.body.scrollHeight || 0,
+      document.body.offsetHeight || 0,
+      document.documentElement.scrollHeight || 0,
+      document.documentElement.offsetHeight || 0
+    );
+    var wrap = document.getElementById('form-inscripcion-wrap') || document.getElementById('form-inscripcion');
+    if (wrap) h = Math.max(h, wrap.scrollHeight || 0, wrap.offsetHeight || 0);
+    window.parent.postMessage({ type: 'regpol-rep-form-height', height: h }, '*');
+  } catch (e) {}
+}
+window.addEventListener('resize', function() {
+  if (EMBED_FORM) notificarAlturaEmbed();
+});
 </script>
 </body>
 </html>

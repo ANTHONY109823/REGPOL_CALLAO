@@ -114,13 +114,13 @@
     .btn-rep:disabled,.btn-rep.is-disabled{opacity:.45;pointer-events:none;cursor:not-allowed;}
     .modal-rep-form,.modal-rep-det{position:fixed;inset:0;z-index:10000;background:rgba(0,30,24,.6);display:none;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;}
     .modal-rep-form.open,.modal-rep-det.open{display:flex;}
-    .modal-rep-form-box{background:#fff;border-radius:12px;width:100%;max-width:960px;height:min(94vh,880px);display:flex;flex-direction:column;border:2px solid #c8a94a;box-shadow:0 16px 48px rgba(0,0,0,.3);overflow:hidden;}
+    .modal-rep-form-box{background:#fff;border-radius:12px;width:100%;max-width:960px;max-height:94vh;height:auto;display:flex;flex-direction:column;border:2px solid #c8a94a;box-shadow:0 16px 48px rgba(0,0,0,.3);overflow:hidden;}
     .modal-rep-det-box{background:#fff;border-radius:12px;width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column;border:2px solid #c8a94a;box-shadow:0 16px 48px rgba(0,0,0,.3);overflow:hidden;}
     .modal-rep-form-head,.modal-rep-det-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#004d3d;color:#fff;flex-shrink:0;}
     .modal-rep-form-head h3,.modal-rep-det-head h3{margin:0;font-size:13.5px;font-weight:800;line-height:1.3;flex:1;min-width:0;}
     .modal-rep-form-cerrar,.modal-rep-det-cerrar{background:#c8a94a;color:#002d24;border:none;border-radius:7px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;line-height:1;flex-shrink:0;}
     .modal-rep-form-cerrar:hover,.modal-rep-det-cerrar:hover{background:#e4c76b;}
-    .modal-rep-form-iframe{flex:1;width:100%;border:0;background:#fff;min-height:0;}
+    .modal-rep-form-iframe{flex:0 0 auto;width:100%;border:0;background:#fff;height:420px;min-height:180px;max-height:calc(94vh - 52px);}
     .modal-rep-det-body{padding:16px 18px;overflow:auto;flex:1;min-height:0;background:#f7faf7;}
     .modal-rep-det-foot{padding:12px 14px;border-top:1px solid #e0ebe4;background:#fff;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;flex-shrink:0;}
     .rd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-bottom:14px;}
@@ -1048,10 +1048,42 @@ function abrirModalRepForm(itemId) {
   var iframe = document.getElementById('modal-rep-form-iframe');
   if (tit) tit.innerHTML = '<i class="fas fa-redo-alt"></i> Repechaje — ' + escC(titulo);
   if (iframe) {
-    iframe.src = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=79';
+    iframe.style.height = '420px';
+    iframe.onload = function() {
+      ajustarAlturaIframeRep();
+      setTimeout(ajustarAlturaIframeRep, 120);
+      setTimeout(ajustarAlturaIframeRep, 400);
+    };
+    iframe.src = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=80';
   }
   if (modal) modal.classList.add('open');
   document.body.classList.add('modal-rep-open');
+}
+
+function ajustarAlturaIframeRep(alturaMsg) {
+  var iframe = document.getElementById('modal-rep-form-iframe');
+  if (!iframe) return;
+  var max = Math.floor(window.innerHeight * 0.88);
+  var h = 0;
+  if (alturaMsg && alturaMsg > 80) {
+    h = alturaMsg;
+  } else {
+    try {
+      var doc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document);
+      if (doc) {
+        var b = doc.body;
+        var e = doc.documentElement;
+        h = Math.max(
+          (b && b.scrollHeight) || 0,
+          (b && b.offsetHeight) || 0,
+          (e && e.scrollHeight) || 0,
+          (e && e.offsetHeight) || 0
+        );
+      }
+    } catch (err) { h = 0; }
+  }
+  if (h < 180) h = 180;
+  iframe.style.height = Math.min(h + 8, max) + 'px';
 }
 
 function cerrarModalRepForm() {
@@ -1104,7 +1136,12 @@ window.addEventListener('hashchange', function() {
 });
 window.addEventListener('message', function(ev) {
   var data = ev && ev.data;
-  if (!data || data.type !== 'regpol-repechaje-ok') return;
+  if (!data) return;
+  if (data.type === 'regpol-rep-form-height') {
+    ajustarAlturaIframeRep(parseInt(data.height, 10) || 0);
+    return;
+  }
+  if (data.type !== 'regpol-repechaje-ok') return;
   cerrarModalRepForm();
   cargarListaRepechaje();
   if (data.mostrar_modal_verificacion || data.estado === 'repechaje') {
