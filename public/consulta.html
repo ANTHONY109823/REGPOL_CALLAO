@@ -23,20 +23,53 @@
     .consulta-alerta{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none;}
     .consulta-alerta.error{background:#f8d7da;color:#842029;display:block;}
     .consulta-alerta.info{background:#e8f4fd;color:#0c5460;display:block;}
-    .modal-consulta-res{position:fixed;inset:0;z-index:10010;background:rgba(0,30,24,.58);display:none;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;}
+    .modal-consulta-res{position:fixed;inset:0;z-index:10010;background:rgba(0,30,24,.45);display:none;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;}
     .modal-consulta-res.open{display:flex;}
-    .modal-consulta-res-box{background:#fff;border-radius:12px;width:100%;max-width:780px;max-height:92vh;display:flex;flex-direction:column;border:2px solid #c8a94a;box-shadow:0 16px 48px rgba(0,0,0,.3);overflow:hidden;}
-    .modal-consulta-res-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:#004d3d;color:#fff;flex-shrink:0;}
-    .modal-consulta-res-head h3{margin:0;font-size:14px;font-weight:800;line-height:1.3;}
-    .modal-consulta-res-cerrar{background:#c8a94a;color:#002d24;border:none;border-radius:7px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;line-height:1;flex-shrink:0;}
+    .modal-consulta-res-box{background:#fff;border-radius:10px;width:100%;max-width:700px;max-height:96vh;display:flex;flex-direction:column;border:2px solid #c8a94a;box-shadow:0 8px 28px rgba(0,0,0,.22);overflow:hidden;}
+    .modal-consulta-res-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#004d3d;color:#fff;flex-shrink:0;}
+    .modal-consulta-res-head h3{margin:0;font-size:13.5px;font-weight:800;line-height:1.3;}
+    .modal-consulta-res-cerrar{background:#c8a94a;color:#002d24;border:none;border-radius:7px;width:34px;height:34px;font-size:18px;font-weight:800;cursor:pointer;line-height:1;flex-shrink:0;}
     .modal-consulta-res-cerrar:hover{background:#e4c76b;}
-    .modal-consulta-res-body{padding:16px 18px;overflow:auto;flex:1;min-height:0;background:#f7faf7;}
-    .modal-consulta-res-body .consulta-card{margin-bottom:0;box-shadow:none;}
-    .modal-consulta-res-body .consulta-alerta{margin-bottom:12px;}
-    .modal-consulta-res-foot{padding:12px 14px;border-top:1px solid #e0ebe4;background:#f7faf7;display:flex;justify-content:flex-end;flex-shrink:0;}
-    .modal-consulta-res-foot button{border:none;border-radius:8px;padding:10px 18px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:8px;}
-    .modal-consulta-res-foot .btn-est-ok:hover{background:#006b55;}
-    .modal-consulta-res-foot .btn-est-gris:hover{background:#d8e0dc;}
+    .modal-consulta-res-body{padding:10px 12px;overflow:auto;flex:1;min-height:0;background:#fff;}
+    .modal-consulta-res-body .consulta-card{margin-bottom:0;box-shadow:none;padding:10px 12px;border-radius:8px;border-width:1.5px;}
+    .modal-consulta-res-body .consulta-card.ganador{border-top-width:3px;}
+    .modal-consulta-res-body .consulta-card h3{font-size:15px;margin:2px 0 6px;}
+    .modal-consulta-res-body .consulta-card .tipo{font-size:10px;}
+    .modal-consulta-res-body .consulta-alerta{margin-bottom:8px;padding:8px 10px;font-size:12px;border-radius:6px;}
+    .modal-consulta-res-body .consulta-meta{gap:6px 10px;margin:8px 0;padding:8px 10px;font-size:12px;border-radius:8px;background:#f7faf7;}
+    .modal-consulta-res-body .consulta-meta span{font-size:9px;margin-bottom:2px;}
+    .modal-consulta-res-body .estado-chip{padding:4px 10px;font-size:11px;margin-top:2px;}
+    .modal-consulta-res-body .expediente-box{padding:10px 12px;margin-top:6px;border-radius:8px;}
+    .modal-consulta-res-body .expediente-box-top{margin-bottom:8px;gap:8px;}
+    .modal-consulta-res-body .expediente-box-top > p{font-size:12px;line-height:1.35;}
+    .modal-consulta-res-body .btn-exp-dl{padding:6px 8px;font-size:10.5px;}
+    .modal-consulta-res-body .expediente-box .plazo-countdown{font-size:13px;padding:6px 10px;margin:0 0 8px;}
+    .modal-consulta-res-body .expediente-acciones{gap:8px;}
+    .modal-consulta-res-body .expediente-acciones input[type="file"]{padding:6px 8px;font-size:12px;max-width:100%;}
+    .modal-consulta-res-body .btn-pdf-ver,.modal-consulta-res-body .btn-pdf-desc{padding:8px 14px;font-size:12px;}
+    .modal-consulta-res-body .aviso-verif,.modal-consulta-res-body .aviso-ok,.modal-consulta-res-body .obs-box{padding:8px 10px;margin:6px 0;font-size:12px;border-radius:8px;}
+    .modal-consulta-res-body .motivo-directo{background:#fff8e1;border:1.5px solid #c8a94a;border-radius:8px;padding:8px 10px;margin:6px 0 8px;font-size:12.5px;color:#5c4818;line-height:1.35;}
+    .modal-consulta-res-body .motivo-directo > span{display:block;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:#004d3d;margin-bottom:4px;}
+    .modal-consulta-res-body .motivo-directo strong{display:block;color:#1a1a1a;font-size:13px;margin-bottom:2px;}
+    .modal-consulta-res-body .motivo-directo p{margin:0;white-space:pre-wrap;color:#444;}
+    .modal-consulta-res-foot{padding:8px 12px;border-top:1px solid #e0ebe4;background:#fff;display:flex;justify-content:flex-end;flex-shrink:0;}
+    .modal-consulta-res-foot button,
+    .modal-consulta-res-foot .btn-est-ok{
+      border:none !important;
+      border-radius:8px !important;
+      padding:9px 16px !important;
+      font-size:12.5px !important;
+      font-weight:800 !important;
+      cursor:pointer;
+      font-family:inherit;
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      background:#004d3d !important;
+      color:#fff !important;
+      box-shadow:none !important;
+    }
+    .modal-consulta-res-foot .btn-est-ok:hover{background:#006b55 !important;}
     body.modal-consulta-open{overflow:hidden;}
     .consulta-card{background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:22px 24px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,77,61,.06);}
     .consulta-card.ganador{border-color:#c8a94a;border-top:4px solid #c8a94a;background:#fff;}
@@ -494,6 +527,9 @@ function renderResultados(lista) {
     } else if (ins.puede_ver_motivos || ins.estado === 'observado' || ins.estado === 'rechazado') {
       var plazoSub = ins.plazo_expediente || '';
       var puedeSub = !!ins.puede_subir_expediente;
+      var motivoTxt = (ins.observacion || '').trim();
+      var motivoTitulo = (ins.motivo_observacion_label || '').trim();
+      if (!motivoTxt && motivoTitulo) motivoTxt = motivoTitulo;
       html += '<div class="consulta-meta">'
         + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
         + '<div><span>Origen</span><strong>' + escC(ins.modo_ingreso_label || '—') + '</strong></div>'
@@ -505,26 +541,25 @@ function renderResultados(lista) {
           ? '<div><span>Plazo de subsanación</span><strong>' + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</strong></div>'
           : '')
         + '</div>'
-        + '<div class="obs-box alerta-repechaje" style="margin-top:10px;">'
-        + '<strong>' + (ins.estado === 'rechazado' ? 'Expediente no admitido.' : 'Expediente observado.') + '</strong> '
-        + 'Revise los motivos y, si aún hay plazo, suba su expediente corregido.'
-        + '</div>'
-        + '<div style="margin:12px 0;display:flex;flex-wrap:wrap;gap:8px;">'
-        + '<button type="button" class="btn-pdf-ver" onclick="abrirModalMotivos(' + ins.id + ')">'
-        + '<i class="fas fa-search"></i> VER MOTIVOS / OBSERVACIONES</button>'
+        + '<div class="motivo-directo">'
+        + '<span>Motivo / observaciones</span>'
+        + (motivoTitulo && motivoTxt !== motivoTitulo
+          ? '<strong>' + escC(motivoTitulo) + '</strong>'
+          : '')
+        + '<p>' + escC(motivoTxt || 'Sin detalle registrado. Consulte con Convenios.') + '</p>'
         + '</div>'
         + '<div class="expediente-box">'
         + '<div class="expediente-box-top">'
         + '<p><i class="fas fa-file-upload" style="color:#004d3d;"></i> '
         + (puedeSub
-          ? 'Subsane y suba su expediente PDF corregido.'
+          ? 'Subsane y suba el PDF corregido.'
           : (ins.plazo_vencido
-            ? 'El plazo de subsanación venció; no puede subir un nuevo expediente.'
-            : 'No hay plazo de subsanación activo. Si el admin le otorga un nuevo plazo, podrá reenviar su expediente.'))
+            ? 'Plazo vencido — no puede subir expediente.'
+            : 'Sin plazo de subsanación activo.'))
         + '</p>'
         + '<div class="expediente-dl">'
         + '<a class="btn-exp-dl btn-exp-dl-word" href="plantillas/modelo-inscripcion-regpol.docx?v=2" download="MODELO-INSCRIPCION-REGPOL.docx">'
-        + '<i class="fas fa-file-word"></i> Plantilla en Word</a>'
+        + '<i class="fas fa-file-word"></i> Plantilla Word</a>'
         + '<a class="btn-exp-dl btn-exp-dl-pdf" href="plantillas/modelo-inscripcion-regpol.pdf?v=2" download="MODELO-INSCRIPCION-REGPOL.pdf">'
         + '<i class="fas fa-file-pdf"></i> Modelo PDF</a>'
         + '</div></div>'
@@ -534,8 +569,8 @@ function renderResultados(lista) {
         + (puedeSub
           ? ('<div class="expediente-acciones">'
             + '<input type="file" id="exp-file-' + ins.id + '" accept="application/pdf"/>'
-            + '<button type="button" class="btn-pdf-ver" onclick="subirExpediente(' + ins.id + ')"><i class="fas fa-cloud-upload-alt"></i> SUBIR EXPEDIENTE (SUBSANAR)</button>'
-            + '<p id="exp-msg-' + ins.id + '" style="font-size:12px;margin:0;min-height:18px;"></p>'
+            + '<button type="button" class="btn-pdf-ver" onclick="subirExpediente(' + ins.id + ')"><i class="fas fa-cloud-upload-alt"></i> SUBIR EXPEDIENTE</button>'
+            + '<p id="exp-msg-' + ins.id + '" style="font-size:11px;margin:0;min-height:14px;"></p>'
             + '</div>')
           : '')
         + '</div>';
