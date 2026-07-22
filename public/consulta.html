@@ -350,7 +350,7 @@ function renderResultados(lista) {
         + '<p><i class="fas fa-cloud-upload-alt" style="color:#004d3d;"></i> Suba su expediente PDF — documentación completa en un solo archivo.</p>'
         + '<div class="expediente-dl">'
         + '<a class="btn-exp-dl btn-exp-dl-word" href="plantillas/modelo-inscripcion-regpol.docx?v=2" download="MODELO-INSCRIPCION-REGPOL.docx">'
-        + '<i class="fas fa-file-word"></i> Word</a>'
+        + '<i class="fas fa-file-word"></i> Plantilla en Word</a>'
         + '<a class="btn-exp-dl btn-exp-dl-pdf" href="plantillas/modelo-inscripcion-regpol.pdf?v=2" download="MODELO-INSCRIPCION-REGPOL.pdf">'
         + '<i class="fas fa-file-pdf"></i> Modelo PDF</a>'
         + '</div></div>'
@@ -641,7 +641,7 @@ function abrirModalRepForm(itemId) {
   var iframe = document.getElementById('modal-rep-form-iframe');
   if (tit) tit.innerHTML = '<i class="fas fa-redo-alt"></i> Repechaje — ' + escC(titulo);
   if (iframe) {
-    iframe.src = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=77';
+    iframe.src = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=78';
   }
   if (modal) modal.classList.add('open');
   document.body.classList.add('modal-rep-open');
