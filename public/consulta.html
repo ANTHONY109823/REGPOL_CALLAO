@@ -51,15 +51,35 @@
     .btn-rep{border:none;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:inherit;white-space:nowrap;}
     .btn-rep-reg{background:#004d3d;color:#fff;}
     .btn-rep-reg:hover{background:#006b55;color:#fff;}
+    .btn-rep-det{background:#fff;color:#004d3d;border:1.5px solid #004d3d;}
+    .btn-rep-det:hover{background:#e8f5f1;color:#004d3d;}
     .btn-rep:disabled,.btn-rep.is-disabled{opacity:.45;pointer-events:none;cursor:not-allowed;}
-    .modal-rep-form{position:fixed;inset:0;z-index:10000;background:rgba(0,30,24,.6);display:none;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;}
-    .modal-rep-form.open{display:flex;}
+    .modal-rep-form,.modal-rep-det{position:fixed;inset:0;z-index:10000;background:rgba(0,30,24,.6);display:none;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;}
+    .modal-rep-form.open,.modal-rep-det.open{display:flex;}
     .modal-rep-form-box{background:#fff;border-radius:12px;width:100%;max-width:960px;height:min(92vh,920px);display:flex;flex-direction:column;border:2px solid #c8a94a;box-shadow:0 16px 48px rgba(0,0,0,.3);overflow:hidden;}
-    .modal-rep-form-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:#004d3d;color:#fff;flex-shrink:0;}
-    .modal-rep-form-head h3{margin:0;font-size:14px;font-weight:800;line-height:1.3;flex:1;min-width:0;}
-    .modal-rep-form-cerrar{background:#c8a94a;color:#002d24;border:none;border-radius:7px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;line-height:1;flex-shrink:0;}
-    .modal-rep-form-cerrar:hover{background:#e4c76b;}
+    .modal-rep-det-box{background:#fff;border-radius:12px;width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column;border:2px solid #c8a94a;box-shadow:0 16px 48px rgba(0,0,0,.3);overflow:hidden;}
+    .modal-rep-form-head,.modal-rep-det-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:#004d3d;color:#fff;flex-shrink:0;}
+    .modal-rep-form-head h3,.modal-rep-det-head h3{margin:0;font-size:14px;font-weight:800;line-height:1.3;flex:1;min-width:0;}
+    .modal-rep-form-cerrar,.modal-rep-det-cerrar{background:#c8a94a;color:#002d24;border:none;border-radius:7px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;line-height:1;flex-shrink:0;}
+    .modal-rep-form-cerrar:hover,.modal-rep-det-cerrar:hover{background:#e4c76b;}
     .modal-rep-form-iframe{flex:1;width:100%;border:0;background:#fff;min-height:0;}
+    .modal-rep-det-body{padding:16px 18px;overflow:auto;flex:1;min-height:0;background:#f7faf7;}
+    .modal-rep-det-foot{padding:12px 14px;border-top:1px solid #e0ebe4;background:#fff;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;flex-shrink:0;}
+    .rd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-bottom:14px;}
+    .rd-item span{display:block;font-size:10px;font-weight:800;color:#004d3d;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px;}
+    .rd-item strong{font-size:13.5px;color:#222;font-weight:700;line-height:1.35;}
+    .rd-item.full{grid-column:1/-1;}
+    .rd-block{background:#fff;border:1.5px solid #c8e6c9;border-radius:10px;padding:12px 14px;margin-bottom:12px;}
+    .rd-block h4{margin:0 0 8px;color:#004d3d;font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;}
+    .rd-block ul{margin:0;padding-left:18px;font-size:13px;color:#444;line-height:1.45;}
+    .rd-block p{margin:0;font-size:13px;color:#444;line-height:1.45;}
+    .rd-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+    .rd-table th,.rd-table td{border:1px solid #b7d4c0;padding:6px 8px;}
+    .rd-table th{background:#004d3d;color:#fff;font-weight:700;text-align:center;font-size:11px;}
+    .rd-table th:first-child,.rd-table td:first-child{text-align:left;}
+    .rd-table td.num{text-align:center;font-weight:600;color:#004d3d;}
+    .rd-table tbody tr:nth-child(even){background:#f3f8f4;}
+    @media(max-width:600px){.rd-grid{grid-template-columns:1fr;}}
     body.modo-repechaje .consulta-top,
     body.modo-repechaje #consulta-alerta,
     body.modo-repechaje #consulta-resultados{display:none !important;}
@@ -153,6 +173,20 @@
         <button type="button" class="modal-rep-form-cerrar" onclick="cerrarModalRepForm()" title="Cerrar" aria-label="Cerrar">&times;</button>
       </div>
       <iframe id="modal-rep-form-iframe" class="modal-rep-form-iframe" title="Formulario de repechaje" src="about:blank"></iframe>
+    </div>
+  </div>
+
+  <div id="modal-rep-det" class="modal-rep-det" role="dialog" aria-modal="true" aria-labelledby="modal-rep-det-titulo">
+    <div class="modal-rep-det-box">
+      <div class="modal-rep-det-head">
+        <h3 id="modal-rep-det-titulo"><i class="fas fa-info-circle"></i> Detalle del convenio</h3>
+        <button type="button" class="modal-rep-det-cerrar" onclick="cerrarModalRepDetalle()" title="Cerrar" aria-label="Cerrar">&times;</button>
+      </div>
+      <div id="modal-rep-det-body" class="modal-rep-det-body"><p style="color:#888;font-size:13px;">Cargando...</p></div>
+      <div class="modal-rep-det-foot">
+        <button type="button" class="btn-rep" style="background:#888;color:#fff;" onclick="cerrarModalRepDetalle()">Cerrar</button>
+        <button type="button" class="btn-rep btn-rep-reg" id="modal-rep-det-reg" onclick=""><i class="fas fa-user-plus"></i> REGISTRARSE</button>
+      </div>
     </div>
   </div>
 
@@ -463,12 +497,13 @@ function cargarListaRepechaje() {
       }
       el.innerHTML = list.map(function(c) {
         var disp = parseInt(c.disponibles, 10) || 0;
-        var cias = (Array.isArray(c.comisarias) ? c.comisarias : []).filter(function(x) {
-          return (parseInt(x.disponibles, 10) || 0) > 0;
-        });
-        var ciasTxt = cias.length
-          ? cias.map(function(x) { return x.nombre + ' (' + x.disponibles + ')'; }).join(' · ')
-          : 'Vacantes generales';
+        var cias = Array.isArray(c.comisarias) ? c.comisarias : [];
+        var ciasLibres = cias.filter(function(x) { return (parseInt(x.disponibles, 10) || 0) > 0; });
+        var ciasTxt = ciasLibres.length
+          ? ciasLibres.map(function(x) { return x.nombre + ' (' + x.disponibles + ')'; }).join(' · ')
+          : (cias.length
+            ? cias.map(function(x) { return x.nombre; }).join(' · ')
+            : 'Vacantes generales — ver más detalles');
         return '<div class="repechaje-row" data-item-id="' + escC(String(c.id)) + '">'
           + '<div class="repechaje-row-info">'
           + '<h4>' + escC(c.titulo) + '</h4>'
@@ -481,6 +516,8 @@ function cargarListaRepechaje() {
           + '</div>'
           + '<div class="repechaje-row-acciones">'
           + '<span class="badge-vacantes"><span class="rep-vac-disp">' + escC(String(disp)) + '</span> libres</span>'
+          + '<button type="button" class="btn-rep btn-rep-det" onclick="abrirModalRepDetalle(' + c.id + ')">'
+          + '<i class="fas fa-info-circle"></i> MÁS DETALLES</button>'
           + '<button type="button" class="btn-rep btn-rep-reg" onclick="abrirModalRepForm(' + c.id + ')">'
           + '<i class="fas fa-user-plus"></i> REGISTRARSE</button>'
           + '</div></div>';
@@ -491,6 +528,94 @@ function cargarListaRepechaje() {
         el.innerHTML = '<p style="color:#c0392b;font-size:13px;">No se pudo cargar.</p>';
       }
     });
+}
+
+function abrirModalRepDetalle(itemId) {
+  var conv = REPECHAJE_CACHE.find(function(x) { return String(x.id) === String(itemId); });
+  var modal = document.getElementById('modal-rep-det');
+  var tit = document.getElementById('modal-rep-det-titulo');
+  var body = document.getElementById('modal-rep-det-body');
+  var btnReg = document.getElementById('modal-rep-det-reg');
+  if (tit) tit.innerHTML = '<i class="fas fa-info-circle"></i> ' + escC((conv && conv.titulo) || 'Detalle del convenio');
+  if (btnReg) btnReg.onclick = function() { cerrarModalRepDetalle(); abrirModalRepForm(itemId); };
+  if (body) body.innerHTML = '<p style="color:#888;font-size:13px;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i> Cargando detalles...</p>';
+  if (modal) modal.classList.add('open');
+  document.body.classList.add('modal-rep-open');
+
+  fetch(API_PUBLIC + '/portal/items/' + encodeURIComponent(itemId) + '?t=' + Date.now())
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok || !d.item) {
+        if (body) body.innerHTML = '<p style="color:#c0392b;">' + escC((d && d.error) || 'No se pudo cargar el convenio.') + '</p>';
+        return;
+      }
+      if (body) body.innerHTML = renderHtmlDetalleRepechaje(d.item, conv);
+    })
+    .catch(function() {
+      if (body) body.innerHTML = '<p style="color:#c0392b;">Error de conexión.</p>';
+    });
+}
+
+function renderHtmlDetalleRepechaje(item, cache) {
+  var reqs = Array.isArray(item.requisitos) ? item.requisitos : [];
+  var cupos = Array.isArray(item.cupos_unidades) ? item.cupos_unidades : [];
+  if (!cupos.length && cache && Array.isArray(cache.comisarias)) cupos = cache.comisarias;
+  var disp = cache && cache.disponibles != null ? cache.disponibles : (item.vacantes || 0);
+  var vac = cache && cache.vacantes != null ? cache.vacantes : (item.vacantes || 0);
+
+  var html = '<div class="rd-grid">'
+    + '<div class="rd-item"><span>Estado</span><strong>' + escC(item.estado || '—') + '</strong></div>'
+    + '<div class="rd-item"><span>Vacantes libres</span><strong>' + escC(String(disp)) + ' / ' + escC(String(vac)) + '</strong></div>'
+    + '<div class="rd-item"><span>Horario</span><strong>' + escC(item.horario || '—') + '</strong></div>'
+    + '<div class="rd-item"><span>Beneficio</span><strong>' + escC(item.fecha_inicio || '—') + '</strong></div>'
+    + (item.duracion ? ('<div class="rd-item"><span>Detalle beneficio</span><strong>' + escC(item.duracion) + '</strong></div>') : '')
+    + (item.lugar ? ('<div class="rd-item"><span>Lugar</span><strong>' + escC(item.lugar) + '</strong></div>') : '')
+    + (item.uniforme ? ('<div class="rd-item full"><span>Uniforme</span><strong>' + escC(item.uniforme) + '</strong></div>') : '')
+    + '</div>';
+
+  if (item.descripcion) {
+    html += '<div class="rd-block"><h4>Descripción</h4><p>' + escC(item.descripcion) + '</p></div>';
+  }
+  html += '<div class="rd-block"><h4>Requisitos</h4>';
+  if (reqs.length) {
+    html += '<ul>' + reqs.map(function(r) { return '<li>' + escC(r) + '</li>'; }).join('') + '</ul>';
+  } else {
+    html += '<p>Sin requisitos publicados.</p>';
+  }
+  html += '</div>';
+
+  html += '<div class="rd-block"><h4>Comisarías / cupos</h4>';
+  if (cupos.length) {
+    html += '<div style="overflow-x:auto;"><table class="rd-table"><thead><tr>'
+      + '<th>Comisaría</th><th>Vacantes</th><th>Inscritos</th><th>Disponibles</th>'
+      + '</tr></thead><tbody>'
+      + cupos.map(function(c) {
+        return '<tr><td>' + escC(c.nombre || '') + '</td>'
+          + '<td class="num">' + escC(String(c.vacantes != null ? c.vacantes : 0)) + '</td>'
+          + '<td class="num">' + escC(String(c.inscritos != null ? c.inscritos : 0)) + '</td>'
+          + '<td class="num">' + escC(String(c.disponibles != null ? c.disponibles : 0)) + '</td></tr>';
+      }).join('')
+      + '</tbody></table></div>';
+  } else {
+    html += '<p>Vacantes generales de la convocatoria (sin cupo por comisaría publicado).</p>';
+  }
+  html += '</div>';
+
+  if (item.observaciones) {
+    html += '<div class="rd-block"><h4>Observaciones</h4><p>' + escC(item.observaciones) + '</p></div>';
+  }
+  if (item.aviso_sorteo_fb) {
+    html += '<div class="rd-block"><h4>Aviso / sorteo</h4><p>' + escC(item.aviso_sorteo_fb) + '</p></div>';
+  }
+  return html;
+}
+
+function cerrarModalRepDetalle() {
+  var modal = document.getElementById('modal-rep-det');
+  if (modal) modal.classList.remove('open');
+  if (!document.getElementById('modal-rep-form') || !document.getElementById('modal-rep-form').classList.contains('open')) {
+    document.body.classList.remove('modal-rep-open');
+  }
 }
 
 function abrirModalRepForm(itemId) {
@@ -569,6 +694,9 @@ window.addEventListener('message', function(ev) {
 });
 document.getElementById('modal-rep-form').addEventListener('click', function(e) {
   if (e.target === this) cerrarModalRepForm();
+});
+document.getElementById('modal-rep-det').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModalRepDetalle();
 });
 </script>
 </body>

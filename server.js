@@ -5486,7 +5486,7 @@ app.get('/portal/convenios/repechaje', async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT id, titulo, descripcion, horario, vacantes, fecha_inicio, duracion, lugar,
-              cupos_unidades, estado, icono, color
+              cupos_unidades, estado, icono, color, requisitos, observaciones, uniforme, aviso_sorteo_fb
        FROM items_portal
        WHERE visible = TRUE AND tipo = 'convenio'
        ORDER BY orden, id`
@@ -5495,15 +5495,20 @@ app.get('/portal/convenios/repechaje', async (req, res) => {
     for (const it of r.rows) {
       const vac = await conveniosFlujo.vacantesDisponibles(pool, it.id);
       if (!vac.ok || (vac.disponibles || 0) < 1) continue;
-      const cupos = normalizarCuposUnidades(it.cupos_unidades)
-        .filter(function(c) { return (c.disponibles || 0) > 0; })
-        .map(function(c) {
-          return {
-            nombre: c.nombre,
-            disponibles: c.disponibles,
-            vacantes: c.vacantes
-          };
-        });
+      const cuposAll = normalizarCuposUnidades(it.cupos_unidades);
+      const cupos = cuposAll.map(function(c) {
+        return {
+          nombre: c.nombre,
+          disponibles: c.disponibles || 0,
+          vacantes: c.vacantes || 0,
+          inscritos: c.inscritos || 0
+        };
+      });
+      let requisitos = it.requisitos;
+      if (typeof requisitos === 'string') {
+        try { requisitos = JSON.parse(requisitos); } catch (e) { requisitos = []; }
+      }
+      if (!Array.isArray(requisitos)) requisitos = [];
       convenios.push({
         id: it.id,
         titulo: it.titulo || '',
@@ -5518,7 +5523,11 @@ app.get('/portal/convenios/repechaje', async (req, res) => {
         vacantes: vac.vacantes || 0,
         ocupadas: vac.ocupadas || 0,
         disponibles: vac.disponibles || 0,
-        comisarias: cupos
+        comisarias: cupos,
+        requisitos: requisitos,
+        observaciones: it.observaciones || '',
+        uniforme: it.uniforme || '',
+        aviso_sorteo_fb: it.aviso_sorteo_fb || ''
       });
     }
     res.json({ ok: true, total: convenios.length, convenios: convenios });
