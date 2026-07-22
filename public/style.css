@@ -2790,41 +2790,71 @@ table.t { min-width: 600px; }
   padding-bottom: 12px;
 }
 .section-header--con-accion {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  position: relative;
+  display: block;
+  text-align: center;
 }
 .section-header--con-accion h3 {
-  flex: 1 1 auto;
-  min-width: 220px;
+  display: inline-block;
+  margin-left: auto;
+  margin-right: auto;
 }
 .btn-repechaje-destaque {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-  color: #fff;
-  padding: 11px 16px;
-  border-radius: 10px;
-  font-size: 12.5px;
+  justify-content: center;
+  gap: 1px;
+  background: linear-gradient(180deg, #e4c76b 0%, #c8a94a 55%, #9a7b2f 100%);
+  color: #002d24;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 10.5px;
   font-weight: 800;
   text-decoration: none;
-  letter-spacing: 0.3px;
-  box-shadow: 0 4px 14px rgba(230, 126, 34, 0.35);
-  border: 2px solid #fff3cd;
+  letter-spacing: 0.2px;
+  line-height: 1.15;
+  text-align: center;
+  border: 1.5px solid #fff8e1;
+  box-shadow: 0 3px 10px rgba(200, 169, 74, 0.4);
   white-space: nowrap;
-  animation: pulse-repechaje 2.2s ease-in-out infinite;
+  animation: alerta-repechaje 1s steps(2, end) infinite;
+}
+.btn-repechaje-destaque span {
+  display: block;
 }
 .btn-repechaje-destaque:hover {
-  background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
-  color: #fff;
-  transform: translateY(-1px);
+  background: linear-gradient(180deg, #f0d978 0%, #d4b652 55%, #a88735 100%);
+  color: #002d24;
 }
-@keyframes pulse-repechaje {
-  0%, 100% { box-shadow: 0 4px 14px rgba(230, 126, 34, 0.35); }
-  50% { box-shadow: 0 6px 20px rgba(230, 126, 34, 0.55); }
+@keyframes alerta-repechaje {
+  0%, 49% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.7), 0 3px 10px rgba(200, 169, 74, 0.4);
+    filter: brightness(1.05);
+  }
+  50%, 100% {
+    opacity: 0.55;
+    box-shadow: 0 0 0 6px rgba(243, 156, 18, 0), 0 3px 10px rgba(200, 169, 74, 0.2);
+    filter: brightness(1.25);
+  }
+}
+@media (max-width: 700px) {
+  .section-header--con-accion {
+    padding-bottom: 52px;
+  }
+  .btn-repechaje-destaque {
+    top: auto;
+    bottom: 0;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    animation: alerta-repechaje 1s steps(2, end) infinite;
+  }
 }
 .convenios-consulta-bar {
   background: linear-gradient(135deg, #004d3d, #006b55);
@@ -2866,18 +2896,6 @@ table.t { min-width: 600px; }
 .btn-consulta-cip:hover {
   background: #e4c76b;
   color: #002d24;
-}
-@media (max-width: 700px) {
-  .section-header--con-accion {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .btn-repechaje-destaque {
-    justify-content: center;
-    white-space: normal;
-    text-align: center;
-    animation: none;
-  }
 }
 #convenios .section-header p {
   display: none !important;

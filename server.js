@@ -5227,10 +5227,11 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       'SELECT id,titulo,tipo,inscripciones_abiertas,vacantes,cupos_unidades FROM items_portal WHERE id=$1 AND visible=TRUE',
       [req.params.id]);
     if (!item.rows.length) return res.json({ ok: false, error: 'Item no encontrado' });
-    if (!item.rows[0].inscripciones_abiertas)
-      return res.json({ ok: false, error: 'Las inscripciones no están abiertas para esta convocatoria.' });
     const esConvenio = item.rows[0].tipo === 'convenio';
     const modoRepechaje = !!(req.body && req.body.modo_repechaje);
+    // Preinscripción normal requiere ventana abierta; repechaje solo necesita vacantes liberadas
+    if (!item.rows[0].inscripciones_abiertas && !modoRepechaje)
+      return res.json({ ok: false, error: 'Las inscripciones no están abiertas para esta convocatoria.' });
     const {
       cip, nombres, unidad, cargo, telefono, email,
       pdf_requisitos, pdf_nombre,
@@ -5396,6 +5397,50 @@ app.get('/portal/convenios/vacantes/:itemId', async (req, res) => {
     const vac = await conveniosFlujo.vacantesDisponibles(pool, req.params.itemId);
     if (!vac.ok) return res.json(vac);
     res.json(vac);
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+/** Lista pública de convenios con vacantes liberadas para repechaje */
+app.get('/portal/convenios/repechaje', async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT id, titulo, descripcion, horario, vacantes, fecha_inicio, duracion, lugar,
+              cupos_unidades, estado, icono, color
+       FROM items_portal
+       WHERE visible = TRUE AND tipo = 'convenio'
+       ORDER BY orden, id`
+    );
+    const convenios = [];
+    for (const it of r.rows) {
+      const vac = await conveniosFlujo.vacantesDisponibles(pool, it.id);
+      if (!vac.ok || (vac.disponibles || 0) < 1) continue;
+      const cupos = normalizarCuposUnidades(it.cupos_unidades)
+        .filter(function(c) { return (c.disponibles || 0) > 0; })
+        .map(function(c) {
+          return {
+            nombre: c.nombre,
+            disponibles: c.disponibles,
+            vacantes: c.vacantes
+          };
+        });
+      convenios.push({
+        id: it.id,
+        titulo: it.titulo || '',
+        descripcion: it.descripcion || '',
+        horario: it.horario || '',
+        fecha_inicio: it.fecha_inicio || '',
+        duracion: it.duracion || '',
+        lugar: it.lugar || '',
+        icono: it.icono || 'fa-shield-alt',
+        color: it.color || '#004d3d',
+        estado: it.estado || '',
+        vacantes: vac.vacantes || 0,
+        ocupadas: vac.ocupadas || 0,
+        disponibles: vac.disponibles || 0,
+        comisarias: cupos
+      });
+    }
+    res.json({ ok: true, total: convenios.length, convenios: convenios });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
