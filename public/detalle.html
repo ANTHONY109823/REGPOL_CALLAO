@@ -117,6 +117,33 @@
     .estado-CERRADO{background:#f8d7da;color:#842029;}
     .inscripciones-cerradas{background:#fff3cd;border:1.5px solid #ffe082;border-radius:8px;padding:14px 18px;color:#856404;font-size:13.5px;font-weight:600;text-align:center;margin-top:8px;}
     .loading-msg{text-align:center;padding:48px;color:#bbb;font-size:14px;}
+    .modal-pre{position:fixed;inset:0;z-index:9999;background:rgba(0,30,24,.55);display:none;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;}
+    .modal-pre.open{display:flex;}
+    .modal-pre-box{background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.28);border:2px solid #c8a94a;}
+    .modal-pre-acciones{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:12px 16px 16px;border-top:1px solid #e8eee9;background:#f7faf7;position:sticky;bottom:0;}
+    .modal-pre-acciones button{border:none;border-radius:8px;padding:10px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;}
+    .btn-pre-pdf{background:#004d3d;color:#fff;}
+    .btn-pre-jpg{background:#c8a94a;color:#002d24;}
+    .btn-pre-cerrar{background:#e8eee9;color:#333;}
+    .btn-pre-copiar{background:#004d3d;color:#fff;}
+    #preinscripcion-constancia{padding:20px 22px;background:#fff;color:#222;}
+    .pre-head{text-align:center;border-bottom:2px solid #c8a94a;padding-bottom:12px;margin-bottom:14px;}
+    .pre-head h3{margin:0 0 4px;color:#004d3d;font-size:16px;font-weight:800;letter-spacing:.3px;}
+    .pre-head p{margin:0;font-size:11.5px;color:#666;}
+    .pre-nro{display:inline-block;margin-top:8px;background:#e8f5f1;border:1.5px solid #004d3d;border-radius:8px;padding:8px 14px;font-size:15px;font-weight:900;color:#004d3d;letter-spacing:.5px;}
+    .pre-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:12.5px;}
+    .pre-grid .full{grid-column:1/-1;}
+    .pre-item span{display:block;font-size:10px;font-weight:800;color:#004d3d;text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px;}
+    .pre-item strong{font-weight:700;color:#222;word-break:break-word;}
+    .pre-bloque{margin-top:14px;padding-top:12px;border-top:1.5px solid #e0ebe4;}
+    .pre-bloque h4{margin:0 0 8px;color:#004d3d;font-size:12.5px;font-weight:800;text-transform:uppercase;}
+    .pre-sorteo{background:#e8f5f1;border:1px solid #c8e6c9;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#004d3d;line-height:1.45;}
+    .pre-aviso{margin-top:12px;font-size:11px;color:#856404;background:#fff8e1;border-radius:7px;padding:8px 10px;line-height:1.4;}
+    .modal-alerta-pre .modal-pre-box{max-width:420px;}
+    .alerta-pre-body{padding:20px 22px;text-align:center;}
+    .alerta-pre-body h3{margin:0 0 10px;color:#004d3d;font-size:15px;}
+    .alerta-pre-body p{margin:0 0 10px;font-size:13px;color:#444;line-height:1.45;}
+    .alerta-pre-dato{background:#f0f7f4;border-radius:8px;padding:10px;margin:8px 0;font-size:14px;font-weight:800;color:#004d3d;}
   </style>
 </head>
 <body class="body-cursos">
@@ -149,6 +176,35 @@
   <div id="cuerpo-detalle"><p class="loading-msg"><i class="fas fa-spinner fa-spin"></i> Cargando información...</p></div>
 </main>
 
+<div id="modal-preinscripcion" class="modal-pre" role="dialog" aria-modal="true" aria-labelledby="pre-titulo">
+  <div class="modal-pre-box">
+    <div id="preinscripcion-constancia"></div>
+    <div class="modal-pre-acciones">
+      <button type="button" class="btn-pre-pdf" onclick="descargarPreinscripcionPdf()">Descargar PDF</button>
+      <button type="button" class="btn-pre-jpg" onclick="descargarPreinscripcionJpg()">Descargar JPG</button>
+      <button type="button" class="btn-pre-cerrar" onclick="cerrarModalPreinscripcion()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-alerta-pre" class="modal-pre modal-alerta-pre" role="dialog" aria-modal="true">
+  <div class="modal-pre-box">
+    <div class="alerta-pre-body">
+      <h3>Guarde su N° de registro</h3>
+      <p>Es importante para consultas y futuros accesos. Anote o copie estos datos antes de salir:</p>
+      <div class="alerta-pre-dato" id="alerta-pre-cip">CIP: —</div>
+      <div class="alerta-pre-dato" id="alerta-pre-nro">N° registro: —</div>
+      <p style="font-size:12px;color:#666;">Consulte en el portal con <strong>CIP + N° de inscripción</strong>.</p>
+    </div>
+    <div class="modal-pre-acciones">
+      <button type="button" class="btn-pre-copiar" onclick="copiarDatosPreinscripcion()">Copiar datos</button>
+      <button type="button" class="btn-pre-cerrar" onclick="confirmarCierreAlertaPre()">Entendido</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=6"></script>
 <script src="portal.js?v=40"></script>
@@ -160,6 +216,8 @@ var ITEM_TIPO = null;
 var ITEM_DATA = null;
 var DIVISIONES_PUBL = [];
 var MODO_REPECHAJE = /[?&]repechaje=1/.test(location.search || '');
+var PREINSCRIPCION_DESCARGADA = false;
+var PREINSCRIPCION_DATOS = null;
 
 function escHtmlD(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -795,13 +853,37 @@ function enviarInscripcion(e){
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok){
       var nro = d.nro_registro || '';
-      var aviso = d.aviso_sorteo_fb || '';
-      var msg = '<strong>Registro correcto.</strong> '
-        +(nro ? ('Su N° de inscripción es <strong style="font-size:16px;color:#004d3d;">'+escHtmlD(nro)+'</strong>. Consérvelo.<br/>') : '')
-        +(aviso ? ('<span style="display:block;margin:8px 0;padding:8px;background:#e8f5f1;border-radius:6px;"><i class="fab fa-facebook"></i> '+escHtmlD(aviso)+'</span>') : '')
-        +'<a href="consulta.html?cip='+encodeURIComponent(cip)+(nro?'&nro='+encodeURIComponent(nro):'')+'" style="color:#004d3d;font-weight:700;">Consultar con CIP + N° de inscripción</a>.';
-      alerta.innerHTML=msg;
-      alerta.className='fi-alerta ok'; alerta.style.display='block';
+      var aviso = d.aviso_sorteo_fb || (ITEM_DATA && ITEM_DATA.aviso_sorteo_fb) || '';
+      if(ITEM_TIPO==='convenio' && !esRepechaje){
+        mostrarModalPreinscripcion({
+          cip: cip,
+          nro: nro,
+          grado: grado,
+          nombres: nombres,
+          dni: dni,
+          telefono: tel,
+          email: email||'',
+          unidad: unidad,
+          region: region||'',
+          codifin: codifin||'',
+          comisaria_postula: comisariaPostula||'',
+          cargo: cargo,
+          area: area,
+          modalidad: modalidad||'',
+          modalidad_otro: modalidadOtro||'',
+          arma: arma||'',
+          disponibilidad: disponibilidad||'',
+          dia_franco: dia_franco||'',
+          aviso_sorteo: aviso
+        });
+      } else {
+        var msg = '<strong>Registro correcto.</strong> '
+          +(nro ? ('Su N° de inscripción es <strong style="font-size:16px;color:#004d3d;">'+escHtmlD(nro)+'</strong>. Consérvelo.<br/>') : '')
+          +(aviso ? ('<span style="display:block;margin:8px 0;padding:8px;background:#e8f5f1;border-radius:6px;"><i class="fab fa-facebook"></i> '+escHtmlD(aviso)+'</span>') : '')
+          +'<a href="consulta.html?cip='+encodeURIComponent(cip)+(nro?'&nro='+encodeURIComponent(nro):'')+'" style="color:#004d3d;font-weight:700;">Consultar con CIP + N° de inscripción</a>.';
+        alerta.innerHTML=msg;
+        alerta.className='fi-alerta ok'; alerta.style.display='block';
+      }
       document.getElementById('form-inscripcion').reset();
       initCamposInscripcion();
       if(pdfEl) pdfEl.value='';
@@ -825,6 +907,161 @@ function enviarInscripcion(e){
       btn.textContent=textoBtnEnviar();
     }
   });
+}
+
+function fechaHoyPe(){
+  try{
+    return new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
+  }catch(e){
+    return new Date().toISOString().slice(0,10);
+  }
+}
+
+function labelModalidadPre(mod, otro){
+  if(!mod) return '—';
+  if(mod==='OTROS') return otro || 'Otros';
+  if(mod==='SERVICIO_FRANCO_RETEN') return 'Servicio / Franco / Retén';
+  if(mod==='ADMINISTRATIVO') return 'Administrativo';
+  return mod;
+}
+
+function labelDisponibilidadPre(disp, dia){
+  if(disp==='VACACIONES') return 'Vacaciones (vacante automática)';
+  if(disp==='FRANCO') return 'Día de franco'+(dia?(' — '+dia):'')+' (participa en sorteo)';
+  return disp || '—';
+}
+
+function mostrarModalPreinscripcion(datos){
+  PREINSCRIPCION_DATOS = datos || {};
+  PREINSCRIPCION_DESCARGADA = false;
+  var item = ITEM_DATA || {};
+  var el = document.getElementById('preinscripcion-constancia');
+  if(!el) return;
+  el.innerHTML =
+    '<div class="pre-head">'
+    +'<h3 id="pre-titulo">CONSTANCIA DE PREINSCRIPCIÓN</h3>'
+    +'<p>REGIÓN POLICIAL CALLAO — UNITIC</p>'
+    +'<div class="pre-nro">N° '+escHtmlD(datos.nro || '—')+'</div>'
+    +'</div>'
+    +'<div class="pre-grid">'
+    +'<div class="pre-item"><span>CIP</span><strong>'+escHtmlD(datos.cip||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Grado</span><strong>'+escHtmlD(datos.grado||'—')+'</strong></div>'
+    +'<div class="pre-item full"><span>Apellidos y nombres</span><strong>'+escHtmlD(datos.nombres||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>DNI</span><strong>'+escHtmlD(datos.dni||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>CODIFIN</span><strong>'+escHtmlD(datos.codifin||'—')+'</strong></div>'
+    +'</div>'
+    +'<div class="pre-bloque">'
+    +'<h4>Convenio registrado</h4>'
+    +'<div class="pre-grid">'
+    +'<div class="pre-item full"><span>Convocatoria</span><strong>'+escHtmlD(item.titulo||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Horario</span><strong>'+escHtmlD(item.horario||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Vacantes</span><strong>'+escHtmlD(item.vacantes!=null?String(item.vacantes):'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Beneficio económico</span><strong>'+escHtmlD(item.fecha_inicio||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Comisaría a la que postula</span><strong>'+escHtmlD(datos.comisaria_postula||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Unidad / Dependencia</span><strong>'+escHtmlD(datos.unidad||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Región policial</span><strong>'+escHtmlD(datos.region||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Cargo / Área</span><strong>'+escHtmlD((datos.cargo||'—')+' / '+(datos.area||'—'))+'</strong></div>'
+    +'<div class="pre-item"><span>Modalidad</span><strong>'+escHtmlD(labelModalidadPre(datos.modalidad, datos.modalidad_otro))+'</strong></div>'
+    +'<div class="pre-item"><span>Situación</span><strong>'+escHtmlD(labelDisponibilidadPre(datos.disponibilidad, datos.dia_franco))+'</strong></div>'
+    +'<div class="pre-item"><span>Fecha de registro</span><strong>'+escHtmlD(fechaHoyPe())+'</strong></div>'
+    +'</div></div>'
+    +'<div class="pre-bloque">'
+    +'<h4>Sorteo</h4>'
+    +'<div class="pre-sorteo">'
+    +(datos.aviso_sorteo
+      ? ('<strong>Fecha / aviso:</strong> '+escHtmlD(datos.aviso_sorteo)+'<br/>')
+      : '<strong>Fecha:</strong> Se publicará por el área de Convenios.<br/>')
+    +'<strong>Plataforma:</strong> Facebook en vivo — página Región Policial Callao'
+    +'</div>'
+    +'<div class="pre-aviso">Conserve este documento. Para consultar su estado use CIP + N° de inscripción.</div>'
+    +'</div>';
+  var modal = document.getElementById('modal-preinscripcion');
+  if(modal) modal.classList.add('open');
+}
+
+function capturarConstanciaCanvas(){
+  var nodo = document.getElementById('preinscripcion-constancia');
+  if(!nodo || typeof html2canvas !== 'function'){
+    return Promise.reject(new Error('No se puede generar la imagen'));
+  }
+  return html2canvas(nodo, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+}
+
+function descargarPreinscripcionJpg(){
+  capturarConstanciaCanvas().then(function(canvas){
+    var a = document.createElement('a');
+    a.href = canvas.toDataURL('image/jpeg', 0.92);
+    a.download = 'preinscripcion_'+(PREINSCRIPCION_DATOS && PREINSCRIPCION_DATOS.nro ? PREINSCRIPCION_DATOS.nro : 'regpol')+'.jpg';
+    a.click();
+    PREINSCRIPCION_DESCARGADA = true;
+  }).catch(function(){
+    alert('No se pudo generar el JPG. Intente nuevamente.');
+  });
+}
+
+function descargarPreinscripcionPdf(){
+  capturarConstanciaCanvas().then(function(canvas){
+    var jsPDF = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : null;
+    if(!jsPDF){
+      // Fallback: abrir imagen para imprimir / guardar como PDF
+      var w = window.open('');
+      if(w){
+        w.document.write('<img src="'+canvas.toDataURL('image/png')+'" style="width:100%;"/>');
+        w.document.close();
+        w.focus();
+        setTimeout(function(){ try{ w.print(); }catch(e){} }, 300);
+      }
+      PREINSCRIPCION_DESCARGADA = true;
+      return;
+    }
+    var pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    var pageW = pdf.internal.pageSize.getWidth();
+    var margin = 12;
+    var imgW = pageW - margin * 2;
+    var imgH = canvas.height * imgW / canvas.width;
+    var pageH = pdf.internal.pageSize.getHeight() - margin * 2;
+    if(imgH > pageH){
+      imgH = pageH;
+      imgW = canvas.width * imgH / canvas.height;
+    }
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', margin, margin, imgW, imgH);
+    pdf.save('preinscripcion_'+(PREINSCRIPCION_DATOS && PREINSCRIPCION_DATOS.nro ? PREINSCRIPCION_DATOS.nro : 'regpol')+'.pdf');
+    PREINSCRIPCION_DESCARGADA = true;
+  }).catch(function(){
+    alert('No se pudo generar el PDF. Intente nuevamente.');
+  });
+}
+
+function cerrarModalPreinscripcion(){
+  var modal = document.getElementById('modal-preinscripcion');
+  if(modal) modal.classList.remove('open');
+  if(!PREINSCRIPCION_DESCARGADA && PREINSCRIPCION_DATOS){
+    var cipEl = document.getElementById('alerta-pre-cip');
+    var nroEl = document.getElementById('alerta-pre-nro');
+    if(cipEl) cipEl.textContent = 'CIP: '+(PREINSCRIPCION_DATOS.cip||'—');
+    if(nroEl) nroEl.textContent = 'N° registro: '+(PREINSCRIPCION_DATOS.nro||'—');
+    var alerta = document.getElementById('modal-alerta-pre');
+    if(alerta) alerta.classList.add('open');
+  }
+}
+
+function copiarDatosPreinscripcion(){
+  var d = PREINSCRIPCION_DATOS || {};
+  var texto = 'CIP: '+(d.cip||'')+'\nN° registro: '+(d.nro||'')+'\nUse CIP + N° de inscripción para consultar su registro.';
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(texto).then(function(){
+      alert('Datos copiados al portapapeles.');
+    }).catch(function(){
+      prompt('Copie estos datos:', texto);
+    });
+  } else {
+    prompt('Copie estos datos:', texto);
+  }
+}
+
+function confirmarCierreAlertaPre(){
+  var alerta = document.getElementById('modal-alerta-pre');
+  if(alerta) alerta.classList.remove('open');
 }
 
 function cargarDetalle(){
