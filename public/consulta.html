@@ -223,13 +223,6 @@ function labelSituacionConsulta(disp, dia) {
   return disp || '—';
 }
 
-function labelTurnoConsulta(mod, otro) {
-  if (!mod) return '—';
-  if (mod === 'OTROS') return otro || 'Otros';
-  if (mod === 'SERVICIO_FRANCO_RETEN') return 'Servicio / Franco / Retén';
-  return String(mod).replace(/_/g, ' ');
-}
-
 function renderResultados(lista) {
   var wrap = document.getElementById('consulta-resultados');
   if (!lista || !lista.length) {
@@ -255,7 +248,6 @@ function renderResultados(lista) {
         + '<div><span>Grado</span><strong>' + escC(ins.grado || '—') + '</strong></div>'
         + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
         + '<div><span>Nombres</span><strong>' + escC(nombreParts.nombres) + '</strong></div>'
-        + '<div><span>Turno que postuló y ganó</span><strong>' + escC(labelTurnoConsulta(ins.modalidad, ins.modalidad_otro)) + '</strong></div>'
         + '<div><span>Comisaría a la que postuló</span><strong>' + escC(ins.comisaria_postula || '—') + '</strong></div>'
         + '<div><span>Horario en el que laborará</span><strong>' + escC(ins.horario || '—') + '</strong></div>'
         + '<div><span>Situación</span><strong>' + escC(labelSituacionConsulta(ins.disponibilidad, ins.dia_franco)) + '</strong></div>'
