@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="favicon.ico?v=3" type="image/x-icon">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificar constancia — REGPOL Callao</title>
+  <link rel="stylesheet" href="style.css?v=74">
+  <style>
+    body{background:#f0f4f2;margin:0;font-family:system-ui,Segoe UI,sans-serif;}
+    .wrap{max-width:720px;margin:24px auto;padding:0 14px 40px;}
+    .card{background:#fff;border:2px solid #c8a94a;border-radius:12px;padding:18px;box-shadow:0 8px 28px rgba(0,0,0,.08);}
+    .ok{background:#e8f5f1;border:1.5px solid #004d3d;color:#004d3d;padding:12px 14px;border-radius:8px;font-weight:700;margin-bottom:14px;}
+    .err{background:#fdecea;border:1.5px solid #e74c3c;color:#c0392b;padding:12px 14px;border-radius:8px;font-weight:700;}
+    h1{margin:0 0 8px;font-size:16px;color:#004d3d;}
+    .muted{font-size:12.5px;color:#666;margin:0 0 14px;}
+    #doc{border:1px solid #dde8e5;border-radius:8px;padding:14px;background:#fafcfb;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Verificación de constancia</h1>
+      <p class="muted">Región Policial Callao — UNITIC. Escaneo de QR de autenticidad.</p>
+      <div id="estado"><p class="muted">Validando...</p></div>
+      <div id="doc" style="display:none;"></div>
+    </div>
+  </div>
+  <script src="api-config.js?v=2"></script>
+  <script>
+    var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
+    function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+    function getTok(){return new URLSearchParams(location.search).get('t')||new URLSearchParams(location.search).get('token')||'';}
+    function render(c){
+      document.getElementById('doc').style.display='block';
+      document.getElementById('doc').innerHTML =
+        '<p style="font-size:11px;color:#004d3d;font-weight:800;margin:0 0 8px;">DOCUMENTO ORIGINAL VERIFICADO</p>'
+        + '<p style="margin:0 0 6px;"><strong>'+esc(c.convocatoria)+'</strong></p>'
+        + '<p style="margin:0 0 4px;font-size:13px;">'+esc(c.grado)+' '+esc(c.nombres)+'</p>'
+        + '<p style="margin:0 0 4px;font-size:12.5px;">CIP: <strong>'+esc(c.cip)+'</strong> &nbsp; DNI: <strong>'+esc(c.dni)+'</strong> &nbsp; N°: <strong>'+esc(c.nro_registro)+'</strong></p>'
+        + '<p style="margin:0 0 4px;font-size:12.5px;">Ingreso: <strong>'+esc(c.modo_ingreso_label)+'</strong></p>'
+        + '<p style="margin:0 0 4px;font-size:12.5px;">Comisaría: <strong>'+esc(c.comisaria_postula||'—')+'</strong></p>'
+        + '<p style="margin:0;font-size:12.5px;">Horario: <strong>'+esc(c.horario||'—')+'</strong></p>';
+    }
+    var tok = getTok();
+    var box = document.getElementById('estado');
+    if(!tok){ box.innerHTML='<div class="err">Falta el código de verificación.</div>'; }
+    else {
+      fetch(API+'/portal/verificar-constancia?t='+encodeURIComponent(tok))
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if(!d.ok){ box.innerHTML='<div class="err">'+esc(d.error||'No válido')+'</div>'; return; }
+          box.innerHTML='<div class="ok"><i class="fas fa-shield-alt"></i> '+esc(d.mensaje||'Constancia válida')+'</div>';
+          render(d.constancia||{});
+        })
+        .catch(function(){ box.innerHTML='<div class="err">Error de conexión.</div>'; });
+    }
+  </script>
+</body>
+</html>

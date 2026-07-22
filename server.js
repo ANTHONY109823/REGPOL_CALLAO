@@ -4816,13 +4816,13 @@ function etiquetaEstadoPublico(estado, tipo) {
       verificado: 'Preinscrito — a la espera del sorteo',
       aprobado: 'Preinscrito — a la espera del sorteo',
       ganador: 'GANADOR — debe subir expediente (plazo 2 días)',
-      en_revision: 'Expediente en revisión por Convenios',
+      en_revision: 'Documentación en verificación por Convenios',
       observado: 'Expediente OBSERVADO — subsanar a la brevedad',
-      expediente_ok: 'Expediente OK — constancia disponible',
+      expediente_ok: 'Documentación APROBADA — vacante ocupada',
       reserva: 'Lista de reserva — no ocupó vacante en el sorteo',
       rechazado: 'Expediente no admitido — revise observaciones',
       caducado: 'Plazo vencido — vacante liberada para repechaje',
-      repechaje: 'Repechaje — expediente en revisión'
+      repechaje: 'Repechaje — documentación en verificación'
     };
     return mapaConv[estado] || estado;
   }
@@ -4860,6 +4860,69 @@ function puedeDescargarConstanciaEstado(estado, tipo) {
   return estado === 'ganador';
 }
 
+function labelModoIngreso(modo) {
+  const m = String(modo || '').toLowerCase();
+  if (m === 'repechaje') return 'Por repechaje';
+  if (m === 'sorteo') return 'Por sorteo';
+  return '';
+}
+
+function generarTokenConstancia() {
+  return crypto.randomBytes(24).toString('hex');
+}
+
+async function asegurarTokenConstancia(inscripcionId) {
+  const cur = await pool.query(
+    'SELECT token_constancia FROM inscripciones WHERE id=$1',
+    [inscripcionId]
+  );
+  if (!cur.rows.length) return '';
+  if (cur.rows[0].token_constancia) return cur.rows[0].token_constancia;
+  const tok = generarTokenConstancia();
+  await pool.query(
+    `UPDATE inscripciones SET token_constancia=$1
+     WHERE id=$2 AND COALESCE(token_constancia,'')=''`,
+    [tok, inscripcionId]
+  );
+  const again = await pool.query(
+    'SELECT token_constancia FROM inscripciones WHERE id=$1',
+    [inscripcionId]
+  );
+  return (again.rows[0] && again.rows[0].token_constancia) || tok;
+}
+
+function payloadConstanciaPublica(row) {
+  const modo = row.modo_ingreso || '';
+  return {
+    id: row.id,
+    nro_registro: row.nro_registro || '',
+    cip: row.cip || '',
+    dni: row.dni || '',
+    nombres: row.nombres || '',
+    grado: row.grado || '',
+    codifin: row.codifin || '',
+    telefono: row.telefono || '',
+    unidad: row.unidad || '',
+    region_policial: row.region_policial || '',
+    comisaria_postula: row.comisaria_postula || '',
+    disponibilidad: row.disponibilidad || '',
+    dia_franco: row.dia_franco || '',
+    modalidad: row.modalidad || '',
+    modalidad_otro: row.modalidad_otro || '',
+    modo_ingreso: modo,
+    modo_ingreso_label: labelModoIngreso(modo) || 'Por sorteo',
+    convocatoria: row.titulo || '',
+    horario: row.horario || '',
+    lugar: row.lugar || '',
+    fecha_inicio: row.fecha_inicio || '',
+    duracion: row.duracion || '',
+    uniforme: row.uniforme || '',
+    contactos_responsables: row.contactos_responsables || '',
+    estado: row.estado || '',
+    token: row.token_constancia || ''
+  };
+}
+
 // ── GET /portal/consulta-inscripcion?cip=&nro= — consulta pública CIP + N° registro ─
 app.get('/portal/consulta-inscripcion', async (req, res) => {
   try {
@@ -4875,7 +4938,7 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
               n.area AS area_postulante, n.disponibilidad, n.dia_franco,
               n.telefono, n.email, n.modo_ingreso, n.motivo_observacion,
               n.plazo_expediente, n.fecha_ganador, n.nro_registro, n.modalidad, n.modalidad_otro,
-              n.codifin, n.region_policial, n.comisaria_postula,
+              n.codifin, n.region_policial, n.comisaria_postula, n.dni, n.token_constancia,
               CASE WHEN COALESCE(n.pdf_requisitos,'')<>'' THEN true ELSE false END AS tiene_pdf,
               i.id AS item_id, i.tipo, i.titulo, i.horario, i.lugar, i.fecha_inicio, i.duracion,
               i.descripcion, i.observaciones AS item_observaciones, i.vacantes,
@@ -4903,11 +4966,18 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
       }
       const puedeSubir = row.tipo === 'convenio' && (estado === 'ganador' || estado === 'observado');
       const puedeConstancia = puedeDescargarConstanciaEstado(estado, row.tipo);
+      const enVerificacion = row.tipo === 'convenio' && (estado === 'en_revision' || estado === 'repechaje');
+      let tokenConst = '';
+      if (puedeConstancia) {
+        tokenConst = row.token_constancia || await asegurarTokenConstancia(row.id);
+      }
+      const modoLabel = labelModoIngreso(row.modo_ingreso);
       inscripciones.push({
         id: row.id,
         cip: row.cip,
         nro_registro: row.nro_registro || '',
         nombres: row.nombres,
+        dni: row.dni || '',
         unidad: row.unidad,
         region_policial: row.region_policial || '',
         cargo: row.cargo,
@@ -4915,6 +4985,8 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
         modalidad: row.modalidad || '',
         modalidad_otro: row.modalidad_otro || '',
         codifin: row.codifin || '',
+        telefono: row.telefono || '',
+        email: row.email || '',
         comisaria_postula: row.comisaria_postula || '',
         estado: estado,
         estado_legible: etiquetaEstadoPublico(estado, row.tipo),
@@ -4939,12 +5011,17 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
         contactos_responsables: row.contactos_responsables || '',
         aviso_sorteo_fb: row.aviso_sorteo_fb || '',
         modo_ingreso: row.modo_ingreso || '',
+        modo_ingreso_label: modoLabel,
         tiene_pdf: !!row.tiene_pdf,
         plazo_expediente: row.plazo_expediente || null,
         fecha_ganador: row.fecha_ganador || null,
         es_ganador: estado === 'ganador' || estado === 'expediente_ok' || estado === 'en_revision' || estado === 'observado',
         puede_subir_expediente: puedeSubir,
-        puede_descargar_constancia: puedeConstancia
+        puede_descargar_constancia: puedeConstancia,
+        en_verificacion: enVerificacion,
+        mostrar_modal_verificacion: enVerificacion,
+        mostrar_modal_aprobacion: puedeConstancia,
+        token_constancia: tokenConst
       });
     }
     if (!inscripciones.length) {
@@ -5461,8 +5538,11 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       estado: estado,
       nro_registro: nroRegistro,
       aviso_sorteo_fb: avisoFb,
+      modo_ingreso: modo || '',
+      modo_ingreso_label: labelModoIngreso(modo),
+      mostrar_modal_verificacion: !!(esConvenio && modoRepechaje),
       mensaje: modoRepechaje
-        ? ('Repechaje registrado. N° de registro: ' + nroRegistro + '. Su expediente quedó en revisión.')
+        ? ('Repechaje registrado. N° de registro: ' + nroRegistro + '. Su expediente quedó en verificación por Convenios.')
         : (esConvenio
           ? ('Preinscripción registrada. Su N° de registro es ' + nroRegistro
             + '. Consérvelo: consultará con CIP + N° de inscripción.'
@@ -5591,7 +5671,43 @@ app.post('/portal/inscripciones/:id/expediente', async (req, res) => {
        WHERE id=$3`,
       [pdf, pdfNombre, id]);
 
-    res.json({ ok: true, mensaje: 'Expediente recibido. Quedó en revisión por Convenios.', estado: 'en_revision' });
+    res.json({
+      ok: true,
+      mensaje: 'Expediente recibido. Quedó en verificación por Convenios.',
+      estado: 'en_revision',
+      mostrar_modal_verificacion: true
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.get('/portal/verificar-constancia', async (req, res) => {
+  try {
+    const token = String(req.query.token || req.query.t || '').trim();
+    if (!token || token.length < 16) {
+      return res.json({ ok: false, error: 'Código de verificación inválido.' });
+    }
+    const r = await pool.query(
+      `SELECT n.*, i.tipo, i.titulo, i.horario, i.lugar, i.fecha_inicio, i.duracion,
+              i.uniforme, i.contactos_responsables, i.visible
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE n.token_constancia = $1 AND i.visible = TRUE
+       LIMIT 1`,
+      [token]
+    );
+    if (!r.rows.length) {
+      return res.json({ ok: false, error: 'Constancia no encontrada o no válida.' });
+    }
+    const row = r.rows[0];
+    if (row.tipo !== 'convenio' || row.estado !== 'expediente_ok') {
+      return res.json({ ok: false, error: 'Esta constancia aún no está vigente.' });
+    }
+    res.json({
+      ok: true,
+      valido: true,
+      mensaje: 'Documento original verificado en el sistema REGPOL Callao.',
+      constancia: payloadConstanciaPublica(row)
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -5688,8 +5804,9 @@ app.post('/admin/inscripciones/:id/revisar-expediente', requireAuth, async (req,
            observacion=COALESCE(NULLIF($1,''), 'Expediente verificado — constancia habilitada')
          WHERE id=$2 AND estado IN ('en_revision','repechaje','observado')`,
         [observacion, id]);
+      const token = await asegurarTokenConstancia(id);
       const n = await conveniosFlujo.notificarInscripcion(pool, id, 'expediente_ok');
-      return res.json({ ok: true, estado: 'expediente_ok', notificacion: n });
+      return res.json({ ok: true, estado: 'expediente_ok', token_constancia: token, notificacion: n });
     }
 
     if (accion === 'observar') {

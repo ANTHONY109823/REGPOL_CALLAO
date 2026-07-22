@@ -110,6 +110,29 @@
     .constancia-box p{font-size:13px;color:#444;margin:0 0 14px;line-height:1.5;}
     .constancia-acciones{display:flex;flex-wrap:wrap;gap:12px;}
     .sin-resultados{text-align:center;padding:40px 20px;color:#888;font-size:14px;}
+    .aviso-verif{background:#e8f4fd;border:1.5px solid #7eb8d4;border-radius:10px;padding:12px 14px;font-size:13px;color:#0c5460;margin:12px 0;line-height:1.45;}
+    .aviso-ok{background:#e8f5f1;border:1.5px solid #004d3d;border-radius:10px;padding:12px 14px;font-size:13px;color:#004d3d;margin:12px 0;line-height:1.45;}
+    .modal-estado{position:fixed;inset:0;z-index:10020;background:rgba(0,30,24,.58);display:none;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;}
+    .modal-estado.open{display:flex;}
+    .modal-estado-box{background:#fff;border-radius:12px;max-width:520px;width:100%;border:2px solid #c8a94a;box-shadow:0 14px 44px rgba(0,0,0,.28);overflow:hidden;}
+    .modal-estado-box.wide{max-width:780px;max-height:94vh;display:flex;flex-direction:column;}
+    .modal-estado-head{background:#004d3d;color:#fff;padding:12px 14px;font-size:14px;font-weight:800;}
+    .modal-estado-body{padding:16px 18px;font-size:13.5px;color:#333;line-height:1.5;overflow:auto;}
+    .modal-estado-foot{padding:12px 14px;border-top:1px solid #e8eee9;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;background:#f7faf7;}
+    .modal-estado-foot button{border:none;border-radius:8px;padding:10px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;}
+    .btn-est-ok{background:#004d3d;color:#fff;}
+    .btn-est-sec{background:#c8a94a;color:#002d24;}
+    .btn-est-gris{background:#e8eee9;color:#333;}
+    .constancia-sheet{background:#fff;color:#111;padding:18px 16px;border:1px solid #ccc;position:relative;}
+    .constancia-sheet .c-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px;}
+    .constancia-sheet .c-inst{font-size:10px;line-height:1.35;color:#333;text-transform:uppercase;font-weight:700;}
+    .constancia-sheet .c-qr{width:88px;height:88px;flex-shrink:0;border:1px solid #ddd;padding:3px;background:#fff;}
+    .constancia-sheet .c-qr img{width:100%;height:100%;display:block;}
+    .constancia-sheet h2{margin:0 0 12px;font-size:13px;text-align:center;text-decoration:underline;color:#004d3d;line-height:1.35;}
+    .constancia-sheet .c-body{font-size:12px;line-height:1.55;text-align:justify;}
+    .constancia-sheet .c-body strong{font-weight:800;}
+    .constancia-sheet .c-fecha{text-align:right;margin-top:16px;font-size:12px;}
+    .constancia-sheet .c-pie{margin-top:18px;font-size:11px;color:#444;text-align:center;border-top:1px solid #ddd;padding-top:10px;}
     @media (max-width:600px){
       .consulta-fields{max-width:100%;}
       .consulta-meta{grid-template-columns:1fr 1fr;gap:12px;}
@@ -198,6 +221,34 @@
     </div>
   </div>
 
+  <div id="modal-verificacion" class="modal-estado" role="dialog" aria-modal="true">
+    <div class="modal-estado-box">
+      <div class="modal-estado-head"><i class="fas fa-hourglass-half"></i> Documentación recibida</div>
+      <div class="modal-estado-body" id="modal-verificacion-body">
+        Su expediente fue enviado correctamente y se encuentra <strong>en verificación y aprobación</strong> a cargo del área de Convenios.
+        Puede consultar el avance con <strong>CIP + N° de inscripción</strong>.
+      </div>
+      <div class="modal-estado-foot">
+        <button type="button" class="btn-est-ok" onclick="cerrarModalVerificacion()">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-aprobacion" class="modal-estado" role="dialog" aria-modal="true">
+    <div class="modal-estado-box wide">
+      <div class="modal-estado-head"><i class="fas fa-check-circle"></i> Documentación aprobada</div>
+      <div class="modal-estado-body">
+        <p id="modal-aprobacion-msg" style="margin:0 0 12px;"></p>
+        <div id="constancia-sheet" class="constancia-sheet"></div>
+      </div>
+      <div class="modal-estado-foot">
+        <button type="button" class="btn-est-sec" onclick="descargarConstanciaJpg()"><i class="fas fa-image"></i> Descargar imagen</button>
+        <button type="button" class="btn-est-ok" onclick="descargarConstanciaPdfHtml()"><i class="fas fa-file-pdf"></i> Descargar PDF</button>
+        <button type="button" class="btn-est-gris" onclick="cerrarModalAprobacion()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="consulta-alerta" class="consulta-alerta"></div>
   <div id="consulta-resultados"></div>
 
@@ -206,6 +257,8 @@
   </div>
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=7"></script>
 <script src="portal.js?v=41"></script>
@@ -365,21 +418,30 @@ function renderResultados(lista) {
     } else {
       html += '<div class="consulta-meta">'
         + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
+        + '<div><span>Origen</span><strong>' + escC(ins.modo_ingreso_label || (ins.modo_ingreso === 'repechaje' ? 'Por repechaje' : (ins.modo_ingreso === 'sorteo' ? 'Por sorteo' : '—'))) + '</strong></div>'
         + '<div><span>Área gestora</span>' + escC(ins.oficina_gestora) + '</div>'
         + '<div><span>Ubicación del trámite</span>' + escC(ins.ubicacion_tramite) + '</div>'
         + '<div><span>Fecha de inscripción</span>' + escC(ins.fecha || '—') + '</div>'
         + '<div><span>Grado</span><strong>' + escC(ins.grado || '—') + '</strong></div>'
         + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
         + '<div><span>Nombres</span><strong>' + escC(nombreParts.nombres) + '</strong></div>'
+        + (ins.comisaria_postula ? '<div><span>Comisaría</span><strong>' + escC(ins.comisaria_postula) + '</strong></div>' : '')
+        + (ins.horario ? '<div><span>Horario</span><strong>' + escC(ins.horario) + '</strong></div>' : '')
         + (ins.unidad ? '<div><span>Unidad</span>' + escC(ins.unidad) + '</div>' : '')
         + '</div>';
+      if (ins.en_verificacion || ins.mostrar_modal_verificacion) {
+        html += '<div class="aviso-verif"><strong>Documentación en verificación.</strong> '
+          + 'Su expediente está siendo revisado por el encargado de Convenios. Espere la aprobación.</div>';
+      }
       if (ins.puede_descargar_constancia) {
-        html += '<div class="constancia-box">'
-          + '<p><strong><i class="fas fa-check-circle" style="color:#1a7a3a;"></i> Expediente verificado.</strong> '
-          + 'Descargue su constancia de vacante.</p>'
+        html += '<div class="aviso-ok"><strong>Documentación aprobada.</strong> '
+          + 'Ya ocupa una vacante'
+          + (ins.modo_ingreso_label ? (' (' + escC(ins.modo_ingreso_label) + ')') : '')
+          + '. Presente su constancia en la comisaría o en la formación.</div>'
+          + '<div class="constancia-box">'
           + '<div class="constancia-acciones">'
-          + '<button type="button" class="btn-pdf-ver" onclick="verConstancia(' + ins.id + ')"><i class="fas fa-eye"></i> VER CONSTANCIA</button>'
-          + '<button type="button" class="btn-pdf-desc" onclick="descargarConstancia(' + ins.id + ')"><i class="fas fa-download"></i> DESCARGAR PDF</button>'
+          + '<button type="button" class="btn-pdf-ver" onclick="abrirModalAprobacionDesdeIns(' + ins.id + ')"><i class="fas fa-file-alt"></i> VER CONSTANCIA</button>'
+          + '<button type="button" class="btn-pdf-desc" onclick="abrirModalAprobacionDesdeIns(' + ins.id + ')"><i class="fas fa-download"></i> DESCARGAR</button>'
           + '</div></div>';
       }
     }
@@ -387,6 +449,7 @@ function renderResultados(lista) {
     return html;
   }).join('');
   iniciarTickPlazosConsulta();
+  setTimeout(function() { procesarModalesConsulta(lista); }, 200);
 }
 
 function formatearPlazoRestanteConsulta(ms) {
@@ -460,10 +523,157 @@ async function subirExpediente(id) {
       return;
     }
     if (msg) { msg.style.color = '#1a7a3a'; msg.textContent = d.mensaje || 'Enviado'; }
+    mostrarModalVerificacion(d.mensaje);
     consultarCip();
   } catch (e) {
     if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Error de conexión'; }
   }
+}
+
+var CONSULTA_INS_CACHE = [];
+var CONSTANCIA_ACTUAL = null;
+
+function urlVerificarConstancia(token) {
+  return location.origin + location.pathname.replace(/[^/]*$/, '') + 'verificar-constancia.html?t=' + encodeURIComponent(token || '');
+}
+
+function qrUrl(data) {
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(data);
+}
+
+function mostrarModalVerificacion(msg) {
+  var body = document.getElementById('modal-verificacion-body');
+  if (body) {
+    body.innerHTML = (msg ? (escC(msg) + '<br><br>') : '')
+      + 'Su expediente se encuentra <strong>en verificación y aprobación</strong> a cargo del área de Convenios. '
+      + 'Consulte el avance con <strong>CIP + N° de inscripción</strong>.';
+  }
+  var m = document.getElementById('modal-verificacion');
+  if (m) m.classList.add('open');
+}
+
+function cerrarModalVerificacion() {
+  var m = document.getElementById('modal-verificacion');
+  if (m) m.classList.remove('open');
+}
+
+function fechaCallaoHoy() {
+  try {
+    return new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+  } catch (e) {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
+function htmlConstanciaSheet(ins) {
+  var token = ins.token_constancia || '';
+  var verify = urlVerificarConstancia(token);
+  var modo = ins.modo_ingreso_label || (ins.modo_ingreso === 'repechaje' ? 'Por repechaje' : 'Por sorteo');
+  var mesTitulo = (ins.fecha_inicio || '').trim() || 'EL PERIODO CORRESPONDIENTE';
+  return '<div class="c-head">'
+    + '<div class="c-inst">MINISTERIO DEL INTERIOR<br>POLICÍA NACIONAL DEL PERÚ<br>REGIÓN POLICIAL CALLAO<br>SEC-OFIADM - OFIBAP</div>'
+    + (token
+      ? ('<div class="c-qr"><img alt="QR" src="' + qrUrl(verify) + '"/></div>')
+      : '')
+    + '</div>'
+    + '<h2>CONSTANCIA DE NOMBRAMIENTO PARA EL SERVICIO POLICIAL EXTRAORDINARIO COMPLEMENTARIO A LA FUNCIÓN POLICIAL</h2>'
+    + '<div class="c-body">'
+    + '<p>Por la presente, se deja constancia que el (la) <strong>' + escC(ins.grado || '') + ' '
+    + escC(ins.nombres || '') + '</strong>, CIP <strong>' + escC(ins.cip || '') + '</strong>, DNI <strong>'
+    + escC(ins.dni || '') + '</strong>'
+    + (ins.codifin ? (', CODIFIN <strong>' + escC(ins.codifin) + '</strong>') : '')
+    + (ins.telefono ? (', celular <strong>' + escC(ins.telefono) + '</strong>') : '')
+    + ', obtuvo vacante en el convenio <strong>' + escC(ins.convocatoria || '') + '</strong> '
+    + '(ingreso <strong>' + escC(modo) + '</strong>). '
+    + 'Deberá presentarse en la comisaría <strong>' + escC(ins.comisaria_postula || 'asignada') + '</strong>, '
+    + 'horario <strong>' + escC(ins.horario || 'por confirmar') + '</strong>'
+    + (ins.fecha_inicio ? (', beneficio <strong>' + escC(ins.fecha_inicio) + '</strong>') : '')
+    + '. N° de registro: <strong>' + escC(ins.nro_registro || '') + '</strong>.</p>'
+    + '<p>La inasistencia injustificada o el incumplimiento del uniforme y disposiciones vigentes dará lugar a la desactivación inmediata y reemplazo.</p>'
+    + '</div>'
+    + '<div class="c-fecha">Callao, ' + escC(fechaCallaoHoy()) + '</div>'
+    + '<div class="c-pie">Oficina de Bienestar / Convenios — REGPOL Callao<br>'
+    + 'Documento verificable por QR · ' + escC(modo) + '</div>';
+}
+
+function abrirModalAprobacion(ins, auto) {
+  CONSTANCIA_ACTUAL = ins;
+  var msg = document.getElementById('modal-aprobacion-msg');
+  var sheet = document.getElementById('constancia-sheet');
+  var modo = ins.modo_ingreso_label || (ins.modo_ingreso === 'repechaje' ? 'Por repechaje' : 'Por sorteo');
+  if (msg) {
+    msg.innerHTML = 'Su documentación fue <strong>aprobada</strong>. <strong>Ya ocupa una vacante</strong> '
+      + '(ingreso <strong>' + escC(modo) + '</strong>). '
+      + 'Descargue su constancia y preséntese en la comisaría o en la fecha de formación según lo indicado.';
+  }
+  if (sheet) sheet.innerHTML = htmlConstanciaSheet(ins);
+  var m = document.getElementById('modal-aprobacion');
+  if (m) m.classList.add('open');
+  if (auto && ins.id) {
+    try { sessionStorage.setItem('constancia_vista_' + ins.id, '1'); } catch (e) {}
+  }
+}
+
+function abrirModalAprobacionDesdeIns(id) {
+  var ins = CONSULTA_INS_CACHE.find(function(x) { return String(x.id) === String(id); });
+  if (ins) abrirModalAprobacion(ins, false);
+}
+
+function cerrarModalAprobacion() {
+  var m = document.getElementById('modal-aprobacion');
+  if (m) m.classList.remove('open');
+}
+
+function procesarModalesConsulta(lista) {
+  CONSULTA_INS_CACHE = lista || [];
+  var ver = lista.filter(function(i) { return i.mostrar_modal_verificacion || i.en_verificacion; })[0];
+  var apr = lista.filter(function(i) { return i.mostrar_modal_aprobacion || i.puede_descargar_constancia; })[0];
+  if (apr) {
+    var key = 'constancia_vista_' + apr.id;
+    var ya = false;
+    try { ya = sessionStorage.getItem(key) === '1'; } catch (e) {}
+    if (!ya) abrirModalAprobacion(apr, true);
+  } else if (ver) {
+    var keyV = 'verif_vista_' + ver.id;
+    var yaV = false;
+    try { yaV = sessionStorage.getItem(keyV) === '1'; } catch (e) {}
+    if (!yaV) {
+      mostrarModalVerificacion('');
+      try { sessionStorage.setItem(keyV, '1'); } catch (e) {}
+    }
+  }
+}
+
+function descargarConstanciaJpg() {
+  var el = document.getElementById('constancia-sheet');
+  if (!el || typeof html2canvas !== 'function') { alert('No se pudo generar la imagen.'); return; }
+  html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(function(canvas) {
+    var a = document.createElement('a');
+    a.href = canvas.toDataURL('image/jpeg', 0.92);
+    a.download = 'constancia-' + ((CONSTANCIA_ACTUAL && CONSTANCIA_ACTUAL.nro_registro) || 'vacante') + '.jpg';
+    a.click();
+  }).catch(function() { alert('No se pudo generar la imagen.'); });
+}
+
+function descargarConstanciaPdfHtml() {
+  var el = document.getElementById('constancia-sheet');
+  if (!el || typeof html2canvas !== 'function' || !window.jspdf) { alert('No se pudo generar el PDF.'); return; }
+  html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(function(canvas) {
+    var img = canvas.toDataURL('image/jpeg', 0.92);
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    var pageW = doc.internal.pageSize.getWidth();
+    var pageH = doc.internal.pageSize.getHeight();
+    var margin = 10;
+    var w = pageW - margin * 2;
+    var h = canvas.height * w / canvas.width;
+    if (h > pageH - margin * 2) {
+      h = pageH - margin * 2;
+      w = canvas.width * h / canvas.height;
+    }
+    doc.addImage(img, 'JPEG', margin, margin, w, h);
+    doc.save('constancia-' + ((CONSTANCIA_ACTUAL && CONSTANCIA_ACTUAL.nro_registro) || 'vacante') + '.pdf');
+  }).catch(function() { alert('No se pudo generar el PDF.'); });
 }
 
 var REPECHAJE_TIMER = null;
@@ -700,18 +910,28 @@ window.addEventListener('message', function(ev) {
   if (!data || data.type !== 'regpol-repechaje-ok') return;
   cerrarModalRepForm();
   cargarListaRepechaje();
-  var nro = data.nro || '';
-  var cip = data.cip || '';
-  alert((data.mensaje || 'Repechaje registrado correctamente.')
-    + (nro ? ('\nN° de registro: ' + nro) : '')
-    + (cip ? ('\nCIP: ' + cip) : '')
-    + '\nConsulte con CIP + N° de inscripción.');
+  if (data.mostrar_modal_verificacion || data.estado === 'repechaje') {
+    mostrarModalVerificacion(data.mensaje || '');
+  } else {
+    var nro = data.nro || '';
+    var cip = data.cip || '';
+    alert((data.mensaje || 'Repechaje registrado correctamente.')
+      + (nro ? ('\nN° de registro: ' + nro) : '')
+      + (cip ? ('\nCIP: ' + cip) : '')
+      + '\nConsulte con CIP + N° de inscripción.');
+  }
 });
 document.getElementById('modal-rep-form').addEventListener('click', function(e) {
   if (e.target === this) cerrarModalRepForm();
 });
 document.getElementById('modal-rep-det').addEventListener('click', function(e) {
   if (e.target === this) cerrarModalRepDetalle();
+});
+document.getElementById('modal-verificacion').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModalVerificacion();
+});
+document.getElementById('modal-aprobacion').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModalAprobacion();
 });
 </script>
 </body>

@@ -882,7 +882,9 @@ function enviarInscripcion(e){
             type: 'regpol-repechaje-ok',
             nro: nro,
             cip: cip,
-            mensaje: d.mensaje || ''
+            mensaje: d.mensaje || '',
+            estado: d.estado || 'repechaje',
+            mostrar_modal_verificacion: true
           }, '*');
         } catch (e) {}
       }

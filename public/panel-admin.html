@@ -1163,6 +1163,11 @@
             <option value="VACACIONES">Vacaciones</option>
             <option value="FRANCO">Franco</option>
           </select>
+          <select id="inscritos-filtro-modo" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
+            <option value="">Origen (sorteo/repechaje)</option>
+            <option value="sorteo">Por sorteo</option>
+            <option value="repechaje">Por repechaje</option>
+          </select>
         </div>
         <div id="inscritos-stats" style="margin-bottom:10px;"></div>
         <div id="inscritos-tabla"><p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">Cargando...</p></div>
@@ -5562,6 +5567,8 @@ function obtenerInscritosFiltrados(){
   var modF=modEl?modEl.value:'';
   var dispEl=document.getElementById('inscritos-filtro-disp');
   var dispF=dispEl?dispEl.value:'';
+  var modoEl=document.getElementById('inscritos-filtro-modo');
+  var modoF=modoEl?modoEl.value:'';
   return INSCRITOS_CACHE.filter(function(i){
     var blob=((i.cip||'')+' '+(i.nombres||'')+' '+(i.dni||'')+' '+(i.nro_registro||'')+' '+(i.codifin||'')+' '+(i.unidad||'')).toLowerCase();
     var matchTxt=!txt||blob.indexOf(txt)>=0;
@@ -5569,7 +5576,8 @@ function obtenerInscritosFiltrados(){
     var matchReg=!regF||(i.region_policial||'')===regF;
     var matchMod=!modF||(i.modalidad||'')===modF;
     var matchDisp=!dispF||(i.disponibilidad||'')===dispF;
-    return matchTxt&&matchUni&&matchReg&&matchMod&&matchDisp;
+    var matchModo=!modoF||String(i.modo_ingreso||'').toLowerCase()===modoF;
+    return matchTxt&&matchUni&&matchReg&&matchMod&&matchDisp&&matchModo;
   });
 }
 
@@ -5644,12 +5652,17 @@ function renderInscritos(list, tipo){
     +(esConvenio?'<th>Región</th>':'')
     +'<th>Unidad</th>'+(esConvenio?'<th>Postula a</th>':'')+'<th>Área</th>'
     +(esConvenio?'<th>Modalidad</th><th>Disponib.</th>':'<th>T. Servicio</th>')
-    +'<th>PDF</th><th>Estado</th><th>Fecha</th>'+colAccion
+    +'<th>PDF</th><th>Origen</th><th>Estado</th><th>Fecha</th>'+colAccion
     +'</tr></thead><tbody>'
     +list.map(function(ins,idx){
       var c=colorEst[ins.estado]||'#1a1a1a';
       var bg=bgEst[ins.estado]||'#fff';
       var fecha=ins.fecha?new Date(ins.fecha).toLocaleDateString('es-PE'):'—';
+      var origenLbl = (String(ins.modo_ingreso||'').toLowerCase()==='repechaje')
+        ? '<span class="badge" style="background:#f5eef8;color:#8e44ad;">Repechaje</span>'
+        : (String(ins.modo_ingreso||'').toLowerCase()==='sorteo'
+          ? '<span class="badge" style="background:#eaf2fb;color:#2980b9;">Sorteo</span>'
+          : '—');
       var dispBadge='';
       if(esConvenio){
         if(ins.disponibilidad==='VACACIONES') dispBadge='<span class="badge ok" style="background:#d4edda;color:#1a7a3a;font-size:11.5px;">VAC</span>';
@@ -5705,6 +5718,7 @@ function renderInscritos(list, tipo){
         +'<td style="text-align:center;">'+(ins.tiene_pdf
           ?'<button type="button" class="btn-mini btn-mini-pdf" title="Ver PDF del expediente" onclick="verPdfInscripcion('+ins.id+')"><i class="fas fa-file-pdf"></i> PDF</button>'
           :'<span style="color:#888;font-size:12px;">—</span>')+'</td>'
+        +'<td style="text-align:center;">'+origenLbl+'</td>'
         +'<td><span class="badge badge-estado" style="background:'+bg+';color:'+c+';">'+escHtml(etiquetaEstadoInscripcion(ins.estado, esConvenio))+'</span>'
         +htmlPlazoCountdownInscripcion(ins, esConvenio)
         +'</td>'
