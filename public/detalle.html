@@ -116,6 +116,13 @@
     .estado-CERRADO{background:#f8d7da;color:#842029;}
     .inscripciones-cerradas{background:#fff3cd;border:1.5px solid #ffe082;border-radius:8px;padding:14px 18px;color:#856404;font-size:13.5px;font-weight:600;text-align:center;margin-top:8px;}
     .loading-msg{text-align:center;padding:48px;color:#bbb;font-size:14px;}
+    body.embed-form .header-social-portal,
+    body.embed-form .main-header,
+    body.embed-form .nav-main{display:none!important;}
+    body.embed-form{background:#fff!important;min-height:0!important;}
+    body.embed-form .content-area.detalle-compact{padding:8px 10px 16px!important;margin:0!important;max-width:100%!important;min-height:0!important;}
+    body.embed-form .form-inscripcion{margin:0;max-width:100%;box-shadow:none;border-radius:10px;}
+    body.embed-form .detalle-bloque{padding:0;max-width:100%;}
     .modal-pre{position:fixed;inset:0;z-index:9999;background:rgba(0,30,24,.55);display:none;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;}
     .modal-pre.open{display:flex;}
     .modal-pre-box{background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.28);border:2px solid #c8a94a;}
@@ -215,6 +222,7 @@ var ITEM_TIPO = null;
 var ITEM_DATA = null;
 var DIVISIONES_PUBL = [];
 var MODO_REPECHAJE = /[?&]repechaje=1/.test(location.search || '');
+var EMBED_FORM = /[?&]embed=1/.test(location.search || '');
 var PREINSCRIPCION_DESCARGADA = false;
 var PREINSCRIPCION_DATOS = null;
 
@@ -293,11 +301,26 @@ function renderDetalle(item){
       +'<p class="cupos-vacio">Sin cupos publicados.</p></div>';
   }
 
+  var esRepechajeVista = esConvenio && (MODO_REPECHAJE || /[?&]repechaje=1/.test(location.search || ''));
+  var puedeInscribir = !!item.inscripciones_abiertas || esRepechajeVista;
+
+  if (EMBED_FORM && esRepechajeVista && puedeInscribir) {
+    document.body.classList.add('embed-form');
+    document.title = 'Repechaje — ' + (item.titulo || 'Convenio');
+    document.getElementById('cuerpo-detalle').innerHTML =
+      '<div id="form-inscripcion-wrap" style="display:block;margin:0;">' + renderFormInscripcion(item) + '</div>';
+    cargarDivisionesPublico();
+    initCamposInscripcion();
+    setTimeout(function() {
+      var cip = document.getElementById('fi-cip');
+      if (cip) try { cip.focus(); } catch (e) {}
+    }, 80);
+    return;
+  }
+
   var ventanaTxt = item.ventana_inscripcion || '';
   var btnRegistrar = '';
   var formHtml = '';
-  var esRepechajeVista = esConvenio && (MODO_REPECHAJE || /[?&]repechaje=1/.test(location.search || ''));
-  var puedeInscribir = !!item.inscripciones_abiertas || esRepechajeVista;
   if (puedeInscribir) {
     btnRegistrar = '<button type="button" class="btn-registrarse" id="btn-top-registrar" onclick="mostrarFormInscripcion()"><i class="fas fa-edit"></i> '
       + (esRepechajeVista ? 'COMPLETAR FORMULARIO' : 'REGISTRARSE') + '</button>';
@@ -865,6 +888,16 @@ function enviarInscripcion(e){
     if(d.ok){
       var nro = d.nro_registro || '';
       var aviso = d.aviso_sorteo_fb || (ITEM_DATA && ITEM_DATA.aviso_sorteo_fb) || '';
+      if (EMBED_FORM && esRepechaje && window.parent && window.parent !== window) {
+        try {
+          window.parent.postMessage({
+            type: 'regpol-repechaje-ok',
+            nro: nro,
+            cip: cip,
+            mensaje: d.mensaje || ''
+          }, '*');
+        } catch (e) {}
+      }
       if(ITEM_TIPO==='convenio' && !esRepechaje){
         mostrarModalPreinscripcion({
           cip: cip,
@@ -1107,6 +1140,7 @@ function cargarDetalle(){
 }
 
 initPortalPagina({ activeNav: ITEM_TIPO || 'cursos', showPageHero: false });
+if (EMBED_FORM) document.body.classList.add('embed-form');
 cargarDetalle();
 </script>
 </body>
