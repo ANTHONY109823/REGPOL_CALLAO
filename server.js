@@ -5808,6 +5808,11 @@ app.put('/admin/inscripciones/:id', requireAuth, async (req, res) => {
     const sets = ['estado=$1', 'observacion=$2'];
     const params = [estado || 'pendiente', observacion || ''];
     let i = 3;
+    // Al pasar a ganador en convenio, iniciar plazo de expediente si aún no existe
+    if (cur.rows[0].tipo === 'convenio' && estado === 'ganador') {
+      sets.push('fecha_ganador=COALESCE(fecha_ganador, NOW())');
+      sets.push('plazo_expediente=COALESCE(plazo_expediente, NOW() + (\'' + conveniosFlujo.PLAZO_EXPEDIENTE_DIAS + ' days\')::interval)');
+    }
     if (telefono != null) {
       sets.push('telefono=$' + i);
       params.push(String(telefono).trim().slice(0, 30));
