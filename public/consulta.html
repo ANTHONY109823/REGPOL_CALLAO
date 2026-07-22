@@ -5,8 +5,11 @@
     <link rel="icon" href="favicon.ico?v=3" type="image/x-icon">
     <link rel="icon" href="favicon.png?v=3" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Consulta de inscripción  REGPOL Callao</title>
-  <link rel="stylesheet" href="style.css?v=74">
+  <title>Consulta de inscripción — REGPOL Callao</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="stylesheet" href="style.css?v=75">
   <link rel="stylesheet" href="responsive.css?v=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
@@ -23,8 +26,12 @@
     .consulta-alerta{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none;}
     .consulta-alerta.error{background:#f8d7da;color:#842029;display:block;}
     .consulta-alerta.info{background:#e8f4fd;color:#0c5460;display:block;}
-    .modal-consulta-res{position:fixed;inset:0;z-index:10010;background:rgba(0,30,24,.45);display:none;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;}
-    .modal-consulta-res.open{display:flex;}
+    .modal-consulta-res{position:fixed !important;inset:0 !important;z-index:10050 !important;background:rgba(0,30,24,.5) !important;display:none;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;}
+    .modal-consulta-res.open{display:flex !important;}
+    body.modo-repechaje .consulta-top,
+    body.modo-repechaje #consulta-alerta-form{display:none !important;}
+    body.modo-repechaje #modal-consulta-res:not(.open){display:none !important;}
+    body.modo-repechaje #modal-consulta-res.open{display:flex !important;}
     .modal-consulta-res-box{background:#fff;border-radius:10px;width:100%;max-width:700px;max-height:96vh;display:flex;flex-direction:column;border:2px solid #c8a94a;box-shadow:0 8px 28px rgba(0,0,0,.22);overflow:hidden;}
     .modal-consulta-res-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#004d3d;color:#fff;flex-shrink:0;}
     .modal-consulta-res-head h3{margin:0;font-size:13.5px;font-weight:800;line-height:1.3;}
@@ -129,8 +136,7 @@
     .rd-table tbody tr:nth-child(even){background:#f3f8f4;}
     @media(max-width:600px){.rd-grid{grid-template-columns:1fr;}}
     body.modo-repechaje .consulta-top,
-    body.modo-repechaje #consulta-alerta-form,
-    body.modo-repechaje #modal-consulta-res{display:none !important;}
+    body.modo-repechaje #consulta-alerta-form{display:none !important;}
     body.modo-repechaje #repechaje-box{display:block !important;}
     body.modal-rep-open{overflow:hidden;}
     .expediente-box{background:#f7faf7;border:1.5px solid #c8a94a;border-radius:12px;padding:20px 22px;margin-top:4px;}
@@ -378,13 +384,19 @@ function mostrarAlerta(msg, tipo) {
 
 function abrirModalConsultaRes() {
   var m = document.getElementById('modal-consulta-res');
-  if (m) m.classList.add('open');
+  if (!m) return;
+  if (m.parentNode !== document.body) document.body.appendChild(m);
+  m.classList.add('open');
+  m.style.display = 'flex';
   document.body.classList.add('modal-consulta-open');
 }
 
 function cerrarModalConsultaRes() {
   var m = document.getElementById('modal-consulta-res');
-  if (m) m.classList.remove('open');
+  if (m) {
+    m.classList.remove('open');
+    m.style.display = 'none';
+  }
   document.body.classList.remove('modal-consulta-open');
 }
 
@@ -487,7 +499,58 @@ function renderResultados(lista) {
       + '<h3>' + escC(ins.convocatoria) + '</h3>'
       + '<span class="' + chipCls + '">' + escC(ins.estado_legible) + '</span>';
 
-    if (ins.estado === 'ganador' && ins.puede_subir_expediente) {
+    // Observado / rechazado primero: mostrar motivo y subsanación (nunca UI de ganador)
+    if (ins.puede_ver_motivos || ins.estado === 'observado' || ins.estado === 'rechazado') {
+      var plazoSub = ins.plazo_expediente || '';
+      var puedeSub = !!ins.puede_subir_expediente;
+      var motivoTxt = (ins.observacion || '').trim();
+      var motivoTitulo = (ins.motivo_observacion_label || '').trim();
+      if (!motivoTxt && motivoTitulo) motivoTxt = motivoTitulo;
+      html += '<div class="consulta-meta">'
+        + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
+        + '<div><span>Origen</span><strong>' + escC(ins.modo_ingreso_label || '—') + '</strong></div>'
+        + '<div><span>Grado</span><strong>' + escC(ins.grado || '—') + '</strong></div>'
+        + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
+        + '<div><span>Nombres</span><strong>' + escC(nombreParts.nombres) + '</strong></div>'
+        + (ins.comisaria_postula ? '<div><span>Comisaría</span><strong>' + escC(ins.comisaria_postula) + '</strong></div>' : '')
+        + (ins.plazo_expediente
+          ? '<div><span>Plazo de subsanación</span><strong>' + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</strong></div>'
+          : '')
+        + '</div>'
+        + '<div class="motivo-directo">'
+        + '<span>Motivo / observaciones</span>'
+        + (motivoTitulo && motivoTxt.indexOf(motivoTitulo) !== 0
+          ? '<strong>' + escC(motivoTitulo) + '</strong>'
+          : '')
+        + '<p>' + escC(motivoTxt || 'Sin detalle registrado. Consulte con Convenios.') + '</p>'
+        + '</div>'
+        + '<div class="expediente-box">'
+        + '<div class="expediente-box-top">'
+        + '<p><i class="fas fa-file-upload" style="color:#004d3d;"></i> '
+        + (puedeSub
+          ? 'Subsane y suba el PDF corregido.'
+          : (ins.plazo_vencido
+            ? 'Plazo vencido — no puede subir expediente.'
+            : 'Sin plazo de subsanación activo.'))
+        + '</p>'
+        + '<div class="expediente-dl">'
+        + '<a class="btn-exp-dl btn-exp-dl-word" href="plantillas/modelo-inscripcion-regpol.docx?v=2" download="MODELO-INSCRIPCION-REGPOL.docx">'
+        + '<i class="fas fa-file-word"></i> Plantilla Word</a>'
+        + '<a class="btn-exp-dl btn-exp-dl-pdf" href="plantillas/modelo-inscripcion-regpol.pdf?v=2" download="MODELO-INSCRIPCION-REGPOL.pdf">'
+        + '<i class="fas fa-file-pdf"></i> Modelo PDF</a>'
+        + '</div></div>'
+        + (plazoSub
+          ? '<div class="plazo-countdown" data-plazo-exp="' + escC(plazoSub) + '">—</div>'
+          : '')
+        + (puedeSub
+          ? ('<div class="expediente-acciones">'
+            + '<input type="file" id="exp-file-' + ins.id + '" accept="application/pdf"/>'
+            + '<button type="button" class="btn-pdf-ver" onclick="subirExpediente(' + ins.id + ')"><i class="fas fa-cloud-upload-alt"></i> SUBIR EXPEDIENTE</button>'
+            + '<p id="exp-msg-' + ins.id + '" style="font-size:11px;margin:0;min-height:14px;"></p>'
+            + '</div>')
+          : '')
+        + '</div>';
+    } else if (ins.estado === 'ganador' && ins.puede_subir_expediente) {
       var plazoIso = ins.plazo_expediente || '';
       if (!plazoIso && ins.fecha_ganador) {
         var dg = new Date(ins.fecha_ganador);
@@ -524,56 +587,6 @@ function renderResultados(lista) {
         + '<button type="button" class="btn-pdf-ver" onclick="subirExpediente(' + ins.id + ')"><i class="fas fa-cloud-upload-alt"></i> SUBIR EXPEDIENTE</button>'
         + '<p id="exp-msg-' + ins.id + '" style="font-size:12px;margin:0;min-height:18px;"></p>'
         + '</div></div>';
-    } else if (ins.puede_ver_motivos || ins.estado === 'observado' || ins.estado === 'rechazado') {
-      var plazoSub = ins.plazo_expediente || '';
-      var puedeSub = !!ins.puede_subir_expediente;
-      var motivoTxt = (ins.observacion || '').trim();
-      var motivoTitulo = (ins.motivo_observacion_label || '').trim();
-      if (!motivoTxt && motivoTitulo) motivoTxt = motivoTitulo;
-      html += '<div class="consulta-meta">'
-        + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
-        + '<div><span>Origen</span><strong>' + escC(ins.modo_ingreso_label || '—') + '</strong></div>'
-        + '<div><span>Grado</span><strong>' + escC(ins.grado || '—') + '</strong></div>'
-        + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
-        + '<div><span>Nombres</span><strong>' + escC(nombreParts.nombres) + '</strong></div>'
-        + (ins.comisaria_postula ? '<div><span>Comisaría</span><strong>' + escC(ins.comisaria_postula) + '</strong></div>' : '')
-        + (ins.plazo_expediente
-          ? '<div><span>Plazo de subsanación</span><strong>' + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</strong></div>'
-          : '')
-        + '</div>'
-        + '<div class="motivo-directo">'
-        + '<span>Motivo / observaciones</span>'
-        + (motivoTitulo && motivoTxt !== motivoTitulo
-          ? '<strong>' + escC(motivoTitulo) + '</strong>'
-          : '')
-        + '<p>' + escC(motivoTxt || 'Sin detalle registrado. Consulte con Convenios.') + '</p>'
-        + '</div>'
-        + '<div class="expediente-box">'
-        + '<div class="expediente-box-top">'
-        + '<p><i class="fas fa-file-upload" style="color:#004d3d;"></i> '
-        + (puedeSub
-          ? 'Subsane y suba el PDF corregido.'
-          : (ins.plazo_vencido
-            ? 'Plazo vencido — no puede subir expediente.'
-            : 'Sin plazo de subsanación activo.'))
-        + '</p>'
-        + '<div class="expediente-dl">'
-        + '<a class="btn-exp-dl btn-exp-dl-word" href="plantillas/modelo-inscripcion-regpol.docx?v=2" download="MODELO-INSCRIPCION-REGPOL.docx">'
-        + '<i class="fas fa-file-word"></i> Plantilla Word</a>'
-        + '<a class="btn-exp-dl btn-exp-dl-pdf" href="plantillas/modelo-inscripcion-regpol.pdf?v=2" download="MODELO-INSCRIPCION-REGPOL.pdf">'
-        + '<i class="fas fa-file-pdf"></i> Modelo PDF</a>'
-        + '</div></div>'
-        + (plazoSub
-          ? '<div class="plazo-countdown" data-plazo-exp="' + escC(plazoSub) + '">—</div>'
-          : '')
-        + (puedeSub
-          ? ('<div class="expediente-acciones">'
-            + '<input type="file" id="exp-file-' + ins.id + '" accept="application/pdf"/>'
-            + '<button type="button" class="btn-pdf-ver" onclick="subirExpediente(' + ins.id + ')"><i class="fas fa-cloud-upload-alt"></i> SUBIR EXPEDIENTE</button>'
-            + '<p id="exp-msg-' + ins.id + '" style="font-size:11px;margin:0;min-height:14px;"></p>'
-            + '</div>')
-          : '')
-        + '</div>';
     } else {
       html += '<div class="consulta-meta">'
         + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
@@ -608,6 +621,7 @@ function renderResultados(lista) {
     return html;
   }).join('');
   iniciarTickPlazosConsulta();
+  abrirModalConsultaRes();
   setTimeout(function() { procesarModalesConsulta(lista); }, 200);
 }
 

@@ -1202,7 +1202,14 @@ function enviarEstatico(res, entry, method) {
   res.status(200);
   res.setHeader('Content-Type', MIME_TYPES[entry.ext] || 'application/octet-stream');
   res.setHeader('Content-Length', String(entry.data.length));
-  res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+  // HTML/CSS/JS no deben cachearse 24h: si no, el portal muestra pantallas viejas tras cada deploy
+  if (entry.ext === '.html' || entry.ext === '.css' || entry.ext === '.js' || entry.ext === '.json') {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  } else {
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+  }
   if (method === 'HEAD') return res.end();
   res.end(entry.data);
 }
