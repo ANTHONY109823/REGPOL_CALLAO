@@ -120,7 +120,10 @@
     .modal-rep-form-head h3,.modal-rep-det-head h3{margin:0;font-size:13.5px;font-weight:800;line-height:1.3;flex:1;min-width:0;}
     .modal-rep-form-cerrar,.modal-rep-det-cerrar{background:#c8a94a;color:#002d24;border:none;border-radius:7px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;line-height:1;flex-shrink:0;}
     .modal-rep-form-cerrar:hover,.modal-rep-det-cerrar:hover{background:#e4c76b;}
-    .modal-rep-form-iframe{flex:0 0 auto;width:100%;border:0;background:#fff;height:420px;min-height:180px;max-height:calc(94vh - 52px);}
+    .modal-rep-form-iframe{flex:0 0 auto;width:100%;border:0;background:#fff;height:280px;min-height:120px;max-height:calc(94vh - 48px);}
+    .modal-rep-form-loading{display:none;padding:28px 16px;text-align:center;color:#004d3d;font-size:13px;font-weight:700;}
+    .modal-rep-form.loading .modal-rep-form-loading{display:block;}
+    .modal-rep-form.loading .modal-rep-form-iframe{height:1px!important;min-height:0!important;opacity:0;pointer-events:none;}
     .modal-rep-det-body{padding:16px 18px;overflow:auto;flex:1;min-height:0;background:#f7faf7;}
     .modal-rep-det-foot{padding:12px 14px;border-top:1px solid #e0ebe4;background:#fff;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;flex-shrink:0;}
     .rd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-bottom:14px;}
@@ -285,6 +288,7 @@
         <h3 id="modal-rep-form-titulo"><i class="fas fa-redo-alt"></i> Repechaje — formulario</h3>
         <button type="button" class="modal-rep-form-cerrar" onclick="cerrarModalRepForm()" title="Cerrar" aria-label="Cerrar">&times;</button>
       </div>
+      <div id="modal-rep-form-loading" class="modal-rep-form-loading"><i class="fas fa-spinner fa-spin"></i> Cargando formulario...</div>
       <iframe id="modal-rep-form-iframe" class="modal-rep-form-iframe" title="Formulario de repechaje" src="about:blank"></iframe>
     </div>
   </div>
@@ -1072,23 +1076,28 @@ function abrirModalRepForm(itemId) {
   var tit = document.getElementById('modal-rep-form-titulo');
   var iframe = document.getElementById('modal-rep-form-iframe');
   if (tit) tit.innerHTML = '<i class="fas fa-redo-alt"></i> Repechaje — ' + escC(titulo);
-  if (iframe) {
-    iframe.style.height = '420px';
-    iframe.onload = function() {
-      ajustarAlturaIframeRep();
-      setTimeout(ajustarAlturaIframeRep, 120);
-      setTimeout(ajustarAlturaIframeRep, 400);
-    };
-    iframe.src = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=81';
+  if (modal) {
+    modal.classList.add('open');
+    modal.classList.add('loading');
   }
-  if (modal) modal.classList.add('open');
   document.body.classList.add('modal-rep-open');
+  if (iframe) {
+    iframe.style.height = '1px';
+    iframe.onload = function() {
+      if (modal) modal.classList.remove('loading');
+      ajustarAlturaIframeRep();
+      setTimeout(ajustarAlturaIframeRep, 80);
+      setTimeout(ajustarAlturaIframeRep, 250);
+    };
+    iframe.src = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=82';
+  }
 }
 
 function ajustarAlturaIframeRep(alturaMsg) {
   var iframe = document.getElementById('modal-rep-form-iframe');
+  var modal = document.getElementById('modal-rep-form');
   if (!iframe) return;
-  var max = Math.floor(window.innerHeight * 0.88);
+  var max = Math.floor(window.innerHeight * 0.9) - 48;
   var h = 0;
   if (alturaMsg && alturaMsg > 80) {
     h = alturaMsg;
@@ -1096,27 +1105,35 @@ function ajustarAlturaIframeRep(alturaMsg) {
     try {
       var doc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document);
       if (doc) {
-        var b = doc.body;
-        var e = doc.documentElement;
-        h = Math.max(
-          (b && b.scrollHeight) || 0,
-          (b && b.offsetHeight) || 0,
-          (e && e.scrollHeight) || 0,
-          (e && e.offsetHeight) || 0
-        );
+        var form = doc.getElementById('form-inscripcion');
+        var btn = form && form.querySelector('.btn-enviar-solicitud');
+        if (btn) {
+          var bodyTop = doc.body.getBoundingClientRect().top;
+          h = Math.ceil(btn.getBoundingClientRect().bottom - bodyTop) + 6;
+        } else if (form) {
+          h = form.offsetHeight + 12;
+        }
       }
     } catch (err) { h = 0; }
   }
-  if (h < 220) h = 220;
-  iframe.style.height = Math.min(h + 4, max) + 'px';
+  if (h < 200) return;
+  iframe.style.height = Math.min(h, max) + 'px';
+  if (modal) modal.classList.remove('loading');
 }
 
 function cerrarModalRepForm() {
   var modal = document.getElementById('modal-rep-form');
   var iframe = document.getElementById('modal-rep-form-iframe');
-  if (modal) modal.classList.remove('open');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.classList.remove('loading');
+  }
   document.body.classList.remove('modal-rep-open');
-  if (iframe) iframe.src = 'about:blank';
+  if (iframe) {
+    iframe.onload = null;
+    iframe.src = 'about:blank';
+    iframe.style.height = '280px';
+  }
 }
 
 function verConstancia(id) {
