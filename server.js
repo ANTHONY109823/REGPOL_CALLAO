@@ -1198,15 +1198,19 @@ function precalentarEstaticos() {
   });
 }
 
-function enviarEstatico(res, entry, method) {
+function enviarEstatico(req, res, entry, method) {
+  var etag = '"' + crypto.createHash('sha1').update(entry.data).digest('hex').slice(0, 16) + '"';
+  res.setHeader('ETag', etag);
+  if (req && req.headers && req.headers['if-none-match'] === etag) {
+    res.status(304);
+    return res.end();
+  }
   res.status(200);
   res.setHeader('Content-Type', MIME_TYPES[entry.ext] || 'application/octet-stream');
   res.setHeader('Content-Length', String(entry.data.length));
-  // HTML/CSS/JS no deben cachearse 24h: si no, el portal muestra pantallas viejas tras cada deploy
+  // no-cache (no no-store): permite 304 con ETag y evita HTML/JS viejos 24h
   if (entry.ext === '.html' || entry.ext === '.css' || entry.ext === '.js' || entry.ext === '.json') {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+    res.setHeader('Cache-Control', 'no-cache');
   } else {
     res.setHeader('Cache-Control', 'public, max-age=86400');
   }
@@ -1221,10 +1225,10 @@ function staticBufferado(req, res, next) {
   if (urlPath === '/') urlPath = '/index.html';
   var rel = urlPath.replace(/^\//, '').replace(/\.\./g, '');
   var entry = staticCache.get(rel) || staticCache.get(rel.toLowerCase());
-  if (entry) return enviarEstatico(res, entry, req.method);
+  if (entry) return enviarEstatico(req, res, entry, req.method);
   leerEstaticoAsync(rel, function(err, loaded) {
     if (err || !loaded) return next();
-    enviarEstatico(res, loaded, req.method);
+    enviarEstatico(req, res, loaded, req.method);
   });
 }
 
@@ -1245,19 +1249,19 @@ app.use(function(req, res, next) {
 app.use(express.json({ limit: '32mb' }));
 app.use(staticBufferado);
 app.use(express.static(PUBLIC_DIR, {
-  maxAge: 0, etag: false, fallthrough: true,
+  maxAge: 0, etag: true, fallthrough: true,
   setHeaders: function(res, filePath) {
     if (/\.html$/i.test(filePath)) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Cache-Control', 'no-cache');
     }
     if (/\.css$/i.test(filePath)) {
       res.setHeader('Content-Type', 'text/css; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Cache-Control', 'no-cache');
     }
     if (/\.(js|json)$/.test(filePath)) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Cache-Control', 'no-cache');
     }
     if (/\.json$/.test(filePath)) {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -1554,6 +1558,7 @@ app.get('/config', async (req, res) => {
   try {
     const sinCache = req.query._ != null || req.query.nocache === '1';
     if (!sinCache && configCache && configCacheExp > Date.now()) {
+      res.set('Cache-Control', 'public, max-age=60');
       return res.json(configCache);
     }
     const unidadesActivas = await leerUnidadesActivas();
@@ -1565,6 +1570,7 @@ app.get('/config', async (req, res) => {
       divisiones
     };
     configCacheExp = Date.now() + CONFIG_CACHE_MS;
+    res.set('Cache-Control', 'public, max-age=60');
     res.json(configCache);
   } catch (e) {
     res.json({ ok: false, error: e.message });
@@ -5386,6 +5392,7 @@ app.get('/portal/items/:id', async (req, res) => {
     delete item.plantilla_pdf;
     item.plantilla_pdf = tienePlantilla;
     item.tiene_plantilla = tienePlantilla;
+    res.set('Cache-Control', 'public, max-age=30');
     res.json({ ok: true, item: item });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });

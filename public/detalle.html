@@ -280,7 +280,12 @@ if (!window.__REGPOL_EMBED__) {
   function load(src) {
     document.write('<script src="' + src + '"><\/script>');
   }
-  load('api-config.js?v=2');
+  if (embed) {
+    // Inline API base: evita RTT extra en el iframe de repechaje
+    document.write('<script>(function(){var P="https://regpolcallao-production.up.railway.app";var h=location.hostname;var L=h==="localhost"||h==="127.0.0.1";window.REGPOL_API_PRODUCTION=P;window.REGPOL_API_BASE=L?"http://localhost:3000":P;window.regpolApiBase=function(){return window.REGPOL_API_BASE||P;};})();<\/script>');
+  } else {
+    load('api-config.js?v=2');
+  }
   load('areas-labor.js?v=3');
   if (!embed) {
     load('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
@@ -300,6 +305,7 @@ var MODO_REPECHAJE = /[?&]repechaje=1/.test(location.search || '');
 var EMBED_FORM = /[?&]embed=1/.test(location.search || '');
 var PREINSCRIPCION_DESCARGADA = false;
 var PREINSCRIPCION_DATOS = null;
+var DETALLE_APLICADO = false;
 
 function escHtmlD(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -311,6 +317,8 @@ function estadoBadge(estado){
 }
 
 function renderDetalle(item){
+  if (!item) return;
+  DETALLE_APLICADO = true;
   ITEM_DATA = item;
   var reqs = Array.isArray(item.requisitos) ? item.requisitos : [];
   var tipoLabel = item.tipo==='curso' ? 'CURSOS' : 'CONVENIOS';
@@ -1208,9 +1216,12 @@ function cargarDetalle(){
     document.getElementById('cuerpo-detalle').innerHTML='<p class="loading-msg">No se especificó el item. <a href="cursos.html">Volver a cursos</a></p>';
     return;
   }
+  // Si el padre ya envió el item (seed), no esperamos otro round-trip
+  if (DETALLE_APLICADO) return;
   fetch(API_PUBLIC + '/portal/items/'+ITEM_ID)
     .then(function(r){return r.json();})
     .then(function(d){
+      if (DETALLE_APLICADO) return;
       if(!d.ok||!d.item){
         document.getElementById('cuerpo-detalle').innerHTML='<p class="loading-msg">Convocatoria no encontrada. <a href="cursos.html">Volver</a></p>';
         return;
@@ -1218,6 +1229,7 @@ function cargarDetalle(){
       renderDetalle(d.item);
     })
     .catch(function(){
+      if (DETALLE_APLICADO) return;
       document.getElementById('cuerpo-detalle').innerHTML='<p class="loading-msg">Error de conexión.</p>';
     });
 }
@@ -1230,6 +1242,15 @@ if (EMBED_FORM) {
   document.body.classList.add('embed-form');
   // Arranca /config en paralelo con el item (acelera el iframe)
   cargarDivisionesPublico();
+  window.addEventListener('message', function(ev) {
+    if (!ev || !ev.data) return;
+    if (ev.data.type === 'regpol-rep-seed' && ev.data.item && !DETALLE_APLICADO) {
+      ITEM_ID = getParam('id') || ITEM_ID;
+      ITEM_TIPO = getParam('tipo') || 'convenio';
+      renderDetalle(ev.data.item);
+    }
+    if (ev.data.type === 'regpol-rep-ask-height') notificarAlturaEmbed();
+  });
 }
 cargarDetalle();
 
@@ -1253,10 +1274,6 @@ function notificarAlturaEmbed() {
 }
 window.addEventListener('resize', function() {
   if (EMBED_FORM) notificarAlturaEmbed();
-});
-window.addEventListener('message', function(ev) {
-  if (!EMBED_FORM || !ev || !ev.data) return;
-  if (ev.data.type === 'regpol-rep-ask-height') notificarAlturaEmbed();
 });
 </script>
 </body>

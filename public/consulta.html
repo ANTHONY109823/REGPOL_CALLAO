@@ -113,17 +113,31 @@
     .btn-rep-det:hover{background:#e8f5f1;color:#004d3d;}
     .btn-rep:disabled,.btn-rep.is-disabled{opacity:.45;pointer-events:none;cursor:not-allowed;}
     .modal-rep-form,.modal-rep-det{position:fixed;inset:0;z-index:10000;background:rgba(0,30,24,.6);display:none;align-items:center;justify-content:center;padding:8px;box-sizing:border-box;}
-    .modal-rep-form.open,.modal-rep-det.open{display:flex;}
+    /* El modal de formulario permanece en DOM (invisible) para precargar el iframe sin latencia al clic */
+    .modal-rep-form{
+      display:flex!important;
+      opacity:0;
+      visibility:hidden;
+      pointer-events:none;
+      z-index:-1;
+    }
+    .modal-rep-form.open{
+      opacity:1;
+      visibility:visible;
+      pointer-events:auto;
+      z-index:10000;
+    }
+    .modal-rep-det.open{display:flex;}
     .modal-rep-form-box{background:#fff;border-radius:12px;width:100%;max-width:1080px;max-height:97vh;height:auto;display:flex;flex-direction:column;border:2px solid #c8a94a;box-shadow:0 16px 48px rgba(0,0,0,.3);overflow:hidden;}
     .modal-rep-det-box{background:#fff;border-radius:12px;width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column;border:2px solid #c8a94a;box-shadow:0 16px 48px rgba(0,0,0,.3);overflow:hidden;}
     .modal-rep-form-head,.modal-rep-det-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:#004d3d;color:#fff;flex-shrink:0;}
     .modal-rep-form-head h3,.modal-rep-det-head h3{margin:0;font-size:15px;font-weight:800;line-height:1.3;flex:1;min-width:0;}
     .modal-rep-form-cerrar,.modal-rep-det-cerrar{background:#c8a94a;color:#002d24;border:none;border-radius:7px;width:38px;height:38px;font-size:20px;font-weight:800;cursor:pointer;line-height:1;flex-shrink:0;}
     .modal-rep-form-cerrar:hover,.modal-rep-det-cerrar:hover{background:#e4c76b;}
-    .modal-rep-form-iframe{flex:0 0 auto;width:100%;border:0;background:#fff;height:320px;min-height:120px;max-height:calc(97vh - 54px);display:block;vertical-align:top;}
+    .modal-rep-form-iframe{flex:0 0 auto;width:100%;border:0;background:#fff;height:320px;min-height:120px;max-height:calc(97vh - 54px);display:block;}
     .modal-rep-form-loading{display:none;padding:28px 16px;text-align:center;color:#004d3d;font-size:14px;font-weight:700;}
-    .modal-rep-form.loading .modal-rep-form-loading{display:block;}
-    .modal-rep-form.loading .modal-rep-form-iframe{height:1px!important;min-height:0!important;opacity:0;pointer-events:none;}
+    .modal-rep-form.open.loading .modal-rep-form-loading{display:block;}
+    .modal-rep-form.open.loading .modal-rep-form-iframe{height:1px!important;min-height:0!important;opacity:0;pointer-events:none;}
     .modal-rep-det-body{padding:16px 18px;overflow:auto;flex:1;min-height:0;background:#f7faf7;}
     .modal-rep-det-foot{padding:12px 14px;border-top:1px solid #e0ebe4;background:#fff;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;flex-shrink:0;}
     .rd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-bottom:14px;}
@@ -925,15 +939,13 @@ function cargarListaRepechaje() {
           + '<span class="badge-vacantes"><span class="rep-vac-disp">' + escC(String(disp)) + '</span> libres</span>'
           + '<button type="button" class="btn-rep btn-rep-det" onclick="abrirModalRepDetalle(' + c.id + ')">'
           + '<i class="fas fa-info-circle"></i> MÁS DETALLES</button>'
-          + '<button type="button" class="btn-rep btn-rep-reg" onclick="abrirModalRepForm(' + c.id + ')">'
+          + '<button type="button" class="btn-rep btn-rep-reg" onclick="abrirModalRepForm(' + c.id + ')"'
+          + ' onmouseenter="precargarIframeRepForm(' + c.id + ')" ontouchstart="precargarIframeRepForm(' + c.id + ')">'
           + '<i class="fas fa-user-plus"></i> REGISTRARSE</button>'
           + '</div></div>';
       }).join('');
       if (list[0] && list[0].id) {
-        var pre = document.createElement('link');
-        pre.rel = 'prefetch';
-        pre.href = 'detalle.html?id=' + encodeURIComponent(list[0].id) + '&tipo=convenio&repechaje=1&embed=1&v=85';
-        document.head.appendChild(pre);
+        precargarIframeRepForm(list[0].id);
       }
     })
     .catch(function() {
@@ -950,7 +962,10 @@ function abrirModalRepDetalle(itemId) {
   var body = document.getElementById('modal-rep-det-body');
   var btnReg = document.getElementById('modal-rep-det-reg');
   if (tit) tit.innerHTML = '<i class="fas fa-info-circle"></i> ' + escC((conv && conv.titulo) || 'Detalle del convenio');
-  if (btnReg) btnReg.onclick = function() { cerrarModalRepDetalle(); abrirModalRepForm(itemId); };
+  if (btnReg) {
+    btnReg.onclick = function() { cerrarModalRepDetalle(); abrirModalRepForm(itemId); };
+    btnReg.onmouseenter = function() { precargarIframeRepForm(itemId); };
+  }
   if (body) body.innerHTML = '<p style="color:#888;font-size:13px;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i> Cargando detalles...</p>';
   if (modal) modal.classList.add('open');
   document.body.classList.add('modal-rep-open');
@@ -1031,6 +1046,81 @@ function cerrarModalRepDetalle() {
   }
 }
 
+var REP_ITEM_CACHE = {};
+var REP_FORM_V = '86';
+
+function urlRepFormEmbed(itemId) {
+  return 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=' + REP_FORM_V;
+}
+
+function iframeRepFormListo(itemId) {
+  var iframe = document.getElementById('modal-rep-form-iframe');
+  if (!iframe || iframe.dataset.loadedItem !== String(itemId)) return false;
+  try {
+    var doc = iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document);
+    return !!(doc && doc.getElementById('form-inscripcion'));
+  } catch (e) {
+    return false;
+  }
+}
+
+function enviarSeedAlIframe(itemId) {
+  var iframe = document.getElementById('modal-rep-form-iframe');
+  var item = REP_ITEM_CACHE[String(itemId)];
+  if (!iframe || !item || !iframe.contentWindow) return;
+  if (iframe.dataset.loadedItem !== String(itemId)) return;
+  try {
+    iframe.contentWindow.postMessage({ type: 'regpol-rep-seed', item: item }, '*');
+  } catch (e) {}
+}
+
+function warmRepApis(itemId) {
+  if (!API_PUBLIC || !itemId) return;
+  fetch(API_PUBLIC + '/config').catch(function() {});
+  if (REP_ITEM_CACHE[String(itemId)]) {
+    enviarSeedAlIframe(itemId);
+    return;
+  }
+  fetch(API_PUBLIC + '/portal/items/' + encodeURIComponent(itemId))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.ok && d.item) {
+        REP_ITEM_CACHE[String(itemId)] = d.item;
+        enviarSeedAlIframe(itemId);
+      }
+    })
+    .catch(function() {});
+}
+
+function precargarIframeRepForm(itemId) {
+  if (!itemId) return;
+  var iframe = document.getElementById('modal-rep-form-iframe');
+  if (!iframe) return;
+  warmRepApis(itemId);
+  if (iframe.dataset.loadedItem === String(itemId) && iframe.src && iframe.src.indexOf('detalle.html') >= 0) {
+    enviarSeedAlIframe(itemId);
+    return;
+  }
+  var modal = document.getElementById('modal-rep-form');
+  if (modal && modal.classList.contains('open') && modal.classList.contains('loading')
+      && iframe.dataset.loadedItem && iframe.dataset.loadedItem !== String(itemId)) {
+    return;
+  }
+  iframe.dataset.loadedItem = String(itemId);
+  iframe.onload = function() {
+    enviarSeedAlIframe(itemId);
+    if (modal && modal.classList.contains('open')) {
+      modal.classList.remove('loading');
+      ajustarAlturaIframeRep();
+      setTimeout(ajustarAlturaIframeRep, 60);
+    }
+    try {
+      iframe.contentWindow.postMessage({ type: 'regpol-rep-ask-height' }, '*');
+    } catch (e) {}
+  };
+  iframe.src = urlRepFormEmbed(itemId);
+}
+
 function abrirModalRepForm(itemId) {
   var conv = REPECHAJE_CACHE.find(function(x) { return String(x.id) === String(itemId); });
   var titulo = conv ? (conv.titulo || 'Convenio') : 'Convenio';
@@ -1042,15 +1132,11 @@ function abrirModalRepForm(itemId) {
   document.body.classList.add('modal-rep-open');
   if (!iframe) return;
 
-  var nextSrc = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=85';
-  var sameLoaded = iframe.dataset.loadedItem === String(itemId)
-    && iframe.src
-    && iframe.src.indexOf('detalle.html') >= 0
-    && iframe.contentDocument
-    && iframe.contentDocument.getElementById('form-inscripcion');
+  warmRepApis(itemId);
 
-  if (sameLoaded) {
+  if (iframeRepFormListo(itemId)) {
     if (modal) modal.classList.remove('loading');
+    enviarSeedAlIframe(itemId);
     ajustarAlturaIframeRep();
     try {
       iframe.contentWindow.postMessage({ type: 'regpol-rep-ask-height' }, '*');
@@ -1058,16 +1144,15 @@ function abrirModalRepForm(itemId) {
     return;
   }
 
+  if (iframe.dataset.loadedItem === String(itemId) && iframe.src && iframe.src.indexOf('detalle.html') >= 0) {
+    if (modal) modal.classList.add('loading');
+    enviarSeedAlIframe(itemId);
+    return;
+  }
+
   if (modal) modal.classList.add('loading');
   iframe.style.height = '1px';
-  iframe.dataset.loadedItem = String(itemId);
-  iframe.onload = function() {
-    if (modal) modal.classList.remove('loading');
-    ajustarAlturaIframeRep();
-    setTimeout(ajustarAlturaIframeRep, 80);
-    setTimeout(ajustarAlturaIframeRep, 250);
-  };
-  iframe.src = nextSrc;
+  precargarIframeRepForm(itemId);
 }
 
 function ajustarAlturaIframeRep(alturaMsg) {
