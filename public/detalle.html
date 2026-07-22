@@ -2,13 +2,25 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-    <link rel="icon" href="favicon.ico?v=3" type="image/x-icon">
-    <link rel="icon" href="favicon.png?v=3" type="image/png">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Detalle — REGPOL Callao</title>
-  <link rel="stylesheet" href="style.css?v=74">
-  <link rel="stylesheet" href="responsive.css?v=1">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script>
+  (function () {
+    var embed = /[?&]embed=1/.test(location.search || '');
+    window.__REGPOL_EMBED__ = embed;
+    if (embed) document.documentElement.classList.add('embed-form-root');
+    function css(href) {
+      document.write('<link rel="stylesheet" href="' + href + '">');
+    }
+    if (!embed) {
+      document.write('<link rel="icon" href="favicon.ico?v=3" type="image/x-icon">');
+      document.write('<link rel="icon" href="favicon.png?v=3" type="image/png">');
+      css('style.css?v=75');
+      css('responsive.css?v=1');
+      css('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+    }
+  })();
+  </script>
   <style>
     .detalle-bloque{max-width:980px;margin:0 auto;padding-top:0;}
     .detalle-icono-wrap{display:flex;justify-content:center;margin:0 0 6px;}
@@ -176,7 +188,8 @@
     .inscripciones-cerradas{background:#fff3cd;border:1.5px solid #ffe082;border-radius:8px;padding:14px 18px;color:#856404;font-size:13.5px;font-weight:600;text-align:center;margin-top:8px;}
     .loading-msg{text-align:center;padding:48px;color:#bbb;font-size:14px;}
     .modal-pre{position:fixed;inset:0;z-index:9999;background:rgba(0,30,24,.55);display:none;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;}
-    .modal-pre.open{display:flex;}
+    .modal-pre.open{display:flex!important;}
+    html.embed-form-root .modal-pre{display:none!important;}
     .modal-pre-box{background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.28);border:2px solid #c8a94a;}
     .modal-pre-acciones{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:12px 16px 16px;border-top:1px solid #e8eee9;background:#f7faf7;position:sticky;bottom:0;}
     .modal-pre-acciones button{border:none;border-radius:8px;padding:10px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;}
@@ -205,78 +218,76 @@
   </style>
 </head>
 <body class="body-cursos">
-
-<div class="header-social-portal">
-  <div class="container portal-flex">
-            <div class="social-buttons-group">
-      <a href="https://www.facebook.com/region.policial.callao.2025" target="_blank" class="btn-pnp-social fb"><i class="fab fa-facebook"></i> Facebook</a>
-      <a href="https://www.tiktok.com/@regionpolicialcallao" target="_blank" class="btn-pnp-social tk"><i class="fab fa-tiktok"></i> TikTok</a>
-      <a href="https://wa.me/51980122452" target="_blank" class="btn-pnp-social wa"><i class="fab fa-whatsapp"></i> WhatsApp</a>
-    </div>
-  </div>
-</div>
-
-<header class="main-header">
-  <div class="container header-flex">
-    <div class="logo-container">
-      <img src="img/regpol-callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90">
-    </div>
-    <div class="title-text">
-      <h1 class="portal-eslogan">REGI&#211;N POLICIAL CALLAO</h1>
-      <p class="portal-subtitulo">UNIDAD DE TECNOLOG&#205;AS DE LA INFORMACI&#211;N Y COMUNICACIONES</p>
-    </div>
-  </div>
-</header>
-
-<nav class="nav-main"><div class="container"><ul></ul></div></nav>
-
-<main class="container content-area detalle-compact">
-  <div id="cuerpo-detalle"><p class="loading-msg"><i class="fas fa-spinner fa-spin"></i> Cargando información...</p></div>
-</main>
-
-<div id="modal-preinscripcion" class="modal-pre" role="dialog" aria-modal="true" aria-labelledby="pre-titulo">
-  <div class="modal-pre-box">
-    <div id="preinscripcion-constancia"></div>
-    <div class="modal-pre-acciones">
-      <button type="button" class="btn-pre-pdf" onclick="descargarPreinscripcionPdf()">Descargar PDF</button>
-      <button type="button" class="btn-pre-jpg" onclick="descargarPreinscripcionJpg()">Descargar JPG</button>
-      <button type="button" class="btn-pre-cerrar" onclick="cerrarModalPreinscripcion()">Cerrar</button>
-    </div>
-  </div>
-</div>
-
-<div id="modal-alerta-pre" class="modal-pre modal-alerta-pre" role="dialog" aria-modal="true">
-  <div class="modal-pre-box">
-    <div class="alerta-pre-body">
-      <h3>Guarde su N° de registro</h3>
-      <p>Es importante para consultas y futuros accesos. Anote o copie estos datos antes de salir:</p>
-      <div class="alerta-pre-dato" id="alerta-pre-cip">CIP: —</div>
-      <div class="alerta-pre-dato" id="alerta-pre-nro">N° registro: —</div>
-      <p style="font-size:12px;color:#666;">Consulte en el portal con <strong>CIP + N° de inscripción</strong>.</p>
-    </div>
-    <div class="modal-pre-acciones">
-      <button type="button" class="btn-pre-copiar" onclick="copiarDatosPreinscripcion()">Copiar datos</button>
-      <button type="button" class="btn-pre-cerrar" onclick="confirmarCierreAlertaPre()">Entendido</button>
-    </div>
-  </div>
-</div>
+<script>
+(function () {
+  if (!window.__REGPOL_EMBED__) return;
+  document.body.className = 'embed-form';
+  document.write(
+    '<main class="container content-area detalle-compact">'
+    + '<div id="cuerpo-detalle"><p class="loading-msg">Cargando formulario...</p></div>'
+    + '</main>'
+  );
+})();
+</script>
+<script>
+if (!window.__REGPOL_EMBED__) {
+  document.write(
+    '<div class="header-social-portal"><div class="container portal-flex"><div class="social-buttons-group">'
+    + '<a href="https://www.facebook.com/region.policial.callao.2025" target="_blank" class="btn-pnp-social fb">Facebook</a> '
+    + '<a href="https://www.tiktok.com/@regionpolicialcallao" target="_blank" class="btn-pnp-social tk">TikTok</a> '
+    + '<a href="https://wa.me/51980122452" target="_blank" class="btn-pnp-social wa">WhatsApp</a>'
+    + '</div></div></div>'
+    + '<header class="main-header"><div class="container header-flex">'
+    + '<div class="logo-container"><img src="img/regpol-callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90"></div>'
+    + '<div class="title-text"><h1 class="portal-eslogan">REGIÓN POLICIAL CALLAO</h1>'
+    + '<p class="portal-subtitulo">UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p></div>'
+    + '</div></header>'
+    + '<nav class="nav-main"><div class="container"><ul></ul></div></nav>'
+    + '<main class="container content-area detalle-compact"><div id="cuerpo-detalle"><p class="loading-msg">Cargando información...</p></div></main>'
+  );
+}
+</script>
 
 <script>
-(function(){
-  var embed = /[?&]embed=1/.test(location.search || '');
-  if (embed) document.documentElement.classList.add('embed-form-root');
-  window.__REGPOL_EMBED__ = embed;
+(function () {
+  if (window.__REGPOL_EMBED__) return;
+  document.write(
+    '<div id="modal-preinscripcion" class="modal-pre" role="dialog" aria-modal="true" aria-labelledby="pre-titulo">'
+    + '<div class="modal-pre-box"><div id="preinscripcion-constancia"></div>'
+    + '<div class="modal-pre-acciones">'
+    + '<button type="button" class="btn-pre-pdf" onclick="descargarPreinscripcionPdf()">Descargar PDF</button>'
+    + '<button type="button" class="btn-pre-jpg" onclick="descargarPreinscripcionJpg()">Descargar JPG</button>'
+    + '<button type="button" class="btn-pre-cerrar" onclick="cerrarModalPreinscripcion()">Cerrar</button>'
+    + '</div></div></div>'
+    + '<div id="modal-alerta-pre" class="modal-pre modal-alerta-pre" role="dialog" aria-modal="true">'
+    + '<div class="modal-pre-box"><div class="alerta-pre-body">'
+    + '<h3>Guarde su N° de registro</h3>'
+    + '<p>Es importante para consultas y futuros accesos. Anote o copie estos datos antes de salir:</p>'
+    + '<div class="alerta-pre-dato" id="alerta-pre-cip">CIP: —</div>'
+    + '<div class="alerta-pre-dato" id="alerta-pre-nro">N° registro: —</div>'
+    + '<p style="font-size:12px;color:#666;">Consulte en el portal con <strong>CIP + N° de inscripción</strong>.</p>'
+    + '</div><div class="modal-pre-acciones">'
+    + '<button type="button" class="btn-pre-copiar" onclick="copiarDatosPreinscripcion()">Copiar datos</button>'
+    + '<button type="button" class="btn-pre-cerrar" onclick="confirmarCierreAlertaPre()">Entendido</button>'
+    + '</div></div></div>'
+  );
+})();
+</script>
+
+<script>
+(function () {
+  var embed = !!window.__REGPOL_EMBED__;
   function load(src) {
     document.write('<script src="' + src + '"><\/script>');
   }
+  load('api-config.js?v=2');
+  load('areas-labor.js?v=3');
   if (!embed) {
     load('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
     load('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-    load('portal-data.js?v=6');
+    load('portal-data.js?v=7');
+    load('portal.js?v=41');
   }
-  load('api-config.js?v=2');
-  load('portal.js?v=41');
-  load('areas-labor.js?v=2');
 })();
 </script>
 <script>
@@ -374,15 +385,14 @@ function renderDetalle(item){
     document.title = 'Repechaje — ' + (item.titulo || 'Convenio');
     document.getElementById('cuerpo-detalle').innerHTML =
       '<div id="form-inscripcion-wrap" style="display:block;margin:0;">' + renderFormInscripcion(item) + '</div>';
-    cargarDivisionesPublico();
     initCamposInscripcion();
     setTimeout(function() {
       var cip = document.getElementById('fi-cip');
       if (cip) try { cip.focus(); } catch (e) {}
       notificarAlturaEmbed();
     }, 40);
-    setTimeout(notificarAlturaEmbed, 150);
-    setTimeout(notificarAlturaEmbed, 350);
+    setTimeout(notificarAlturaEmbed, 120);
+    setTimeout(notificarAlturaEmbed, 280);
     return;
   }
 
@@ -429,7 +439,6 @@ function renderDetalle(item){
     +'</div>'
     +formHtml;
 
-  cargarDivisionesPublico();
   initCamposInscripcion();
   if (esRepechajeVista) {
     setTimeout(function() {
@@ -655,16 +664,13 @@ function renderFormInscripcion(item){
     +((!esConvenio || esRepechaje)
     ? ('<div class="pdf-upload-box pdf-upload-compact">'
     +'<div class="pdf-exp-acciones">'
-    +'<a class="btn-exp-accion btn-exp-word" href="plantillas/modelo-inscripcion-regpol.docx?v=2" download="MODELO-INSCRIPCION-REGPOL.docx">'
-    +'<i class="fas fa-file-word"></i> Plantilla en Word</a>'
-    +'<a class="btn-exp-accion btn-exp-pdf" href="plantillas/modelo-inscripcion-regpol.pdf?v=2" download="MODELO-INSCRIPCION-REGPOL.pdf">'
-    +'<i class="fas fa-file-pdf"></i> Modelo PDF</a>'
-    +'<button type="button" class="btn-exp-accion btn-exp-subir" onclick="document.getElementById(\'fi-pdf-file\').click()">'
-    +'<i class="fas fa-upload"></i> Subir PDF</button>'
+    +'<a class="btn-exp-accion btn-exp-word" href="plantillas/modelo-inscripcion-regpol.docx?v=2" download="MODELO-INSCRIPCION-REGPOL.docx">Plantilla Word</a>'
+    +'<a class="btn-exp-accion btn-exp-pdf" href="plantillas/modelo-inscripcion-regpol.pdf?v=2" download="MODELO-INSCRIPCION-REGPOL.pdf">Modelo PDF</a>'
+    +'<button type="button" class="btn-exp-accion btn-exp-subir" onclick="document.getElementById(\'fi-pdf-file\').click()">Subir PDF</button>'
     +'</div>'
     +'<input type="file" id="fi-pdf-file" accept="application/pdf" onchange="cargarPdfInscripcion(this)" required style="display:none;"/>'
     +'<div id="fi-pdf-preview" class="pdf-preview-bar" style="display:none;">'
-    +'<i class="fas fa-file-pdf"></i><span id="fi-pdf-nombre"></span>'
+    +'<span id="fi-pdf-nombre"></span>'
     +'<button type="button" onclick="quitarPdfInscripcion()" '
     +'style="background:#c0392b;color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;margin-left:8px;">Quitar</button>'
     +'</div>'
@@ -673,7 +679,7 @@ function renderFormInscripcion(item){
     : '')
 
     +'</div>'
-    +'<div style="margin-top:20px;text-align:center;">'
+    +'<div style="margin-top:' + (EMBED_FORM ? '10' : '20') + 'px;text-align:center;">'
     +'<button type="submit" class="btn-enviar-solicitud">'+textoBtnEnviar()+'</button>'
     +'</div>'
     +'</form>';
@@ -788,17 +794,41 @@ function onCambioRegionInscripcion(){
   }
 }
 
+var _divCargaPromise = null;
 function cargarDivisionesPublico(){
-  fetch(API_PUBLIC + '/config').then(function(r){return r.json();}).then(function(d){
-    if(!d.ok||!d.divisiones) return;
-    DIVISIONES_PUBL = d.divisiones;
+  if (_divCargaPromise) {
+    return _divCargaPromise.then(function() {
+      aplicarDivisionesAlForm();
+      if (EMBED_FORM) setTimeout(notificarAlturaEmbed, 20);
+    });
+  }
+  // Regiones vienen embebidas (sin round-trip a /catalogos)
+  if (window.REGPOL_REGIONES_POLICIALES && window.REGPOL_REGIONES_POLICIALES.length) {
+    window.__REGPOL_CAT_REGIONES__ = window.REGPOL_REGIONES_POLICIALES;
+  }
+  _divCargaPromise = fetch(API_PUBLIC + '/config')
+    .then(function(r){ return r.json(); })
+    .catch(function(){ return {}; })
+    .then(function(d) {
+      if (d && d.ok && d.divisiones) DIVISIONES_PUBL = d.divisiones;
+      aplicarDivisionesAlForm();
+      if (EMBED_FORM) setTimeout(notificarAlturaEmbed, 20);
+    })
+    .catch(function() {
+      _divCargaPromise = null;
+    });
+  return _divCargaPromise;
+}
+
+function aplicarDivisionesAlForm() {
+  if (DIVISIONES_PUBL && DIVISIONES_PUBL.length) {
     var sel = document.getElementById('fi-unidad');
-    if(sel && sel.tagName === 'SELECT'){
+    if (sel && sel.tagName === 'SELECT') {
       sel.innerHTML = '<option value="">Seleccionar unidad</option>';
-      (d.divisiones||[]).forEach(function(div){
+      DIVISIONES_PUBL.forEach(function(div) {
         var og = document.createElement('optgroup');
         og.label = div.nombre;
-        (div.unidades||[]).forEach(function(u){
+        (div.unidades || []).forEach(function(u) {
           var o = document.createElement('option');
           o.value = u.nombre;
           o.textContent = u.nombre;
@@ -808,22 +838,19 @@ function cargarDivisionesPublico(){
       });
     }
     onCambioRegionInscripcion();
-  });
-  if(ITEM_TIPO === 'convenio'){
-    fetch(API_PUBLIC + '/portal/convenios/catalogos').then(function(r){return r.json();}).then(function(d){
-      if(!d.ok) return;
-      var selR = document.getElementById('fi-region');
-      if(selR && d.regiones){
-        var cur = selR.value;
-        selR.innerHTML = '<option value="">Seleccionar región</option>';
-        d.regiones.forEach(function(r){
-          var o = document.createElement('option');
-          o.value = r; o.textContent = r;
-          selR.appendChild(o);
-        });
-        if(cur) selR.value = cur;
-      }
-    }).catch(function(){});
+  }
+  var regiones = window.__REGPOL_CAT_REGIONES__ || window.REGPOL_REGIONES_POLICIALES;
+  var selR = document.getElementById('fi-region');
+  if (selR && regiones && regiones.length) {
+    var cur = selR.value;
+    selR.innerHTML = '<option value="">Seleccionar región</option>';
+    regiones.forEach(function(r) {
+      var o = document.createElement('option');
+      o.value = r;
+      o.textContent = r;
+      selR.appendChild(o);
+    });
+    if (cur) selR.value = cur;
   }
 }
 
@@ -1201,6 +1228,8 @@ if (!EMBED_FORM && typeof initPortalPagina === 'function') {
 if (EMBED_FORM) {
   document.documentElement.classList.add('embed-form-root');
   document.body.classList.add('embed-form');
+  // Arranca /config en paralelo con el item (acelera el iframe)
+  cargarDivisionesPublico();
 }
 cargarDetalle();
 
@@ -1223,6 +1252,10 @@ function notificarAlturaEmbed() {
 }
 window.addEventListener('resize', function() {
   if (EMBED_FORM) notificarAlturaEmbed();
+});
+window.addEventListener('message', function(ev) {
+  if (!EMBED_FORM || !ev || !ev.data) return;
+  if (ev.data.type === 'regpol-rep-ask-height') notificarAlturaEmbed();
 });
 </script>
 </body>

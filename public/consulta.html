@@ -307,16 +307,6 @@
     </div>
   </div>
 
-  <div id="modal-motivos" class="modal-estado" role="dialog" aria-modal="true">
-    <div class="modal-estado-box">
-      <div class="modal-estado-head"><i class="fas fa-exclamation-triangle"></i> Motivos / observaciones</div>
-      <div class="modal-estado-body" id="modal-motivos-body"></div>
-      <div class="modal-estado-foot">
-        <button type="button" class="btn-est-gris" onclick="cerrarModalMotivos()">Cerrar</button>
-      </div>
-    </div>
-  </div>
-
   <div id="modal-verificacion" class="modal-estado" role="dialog" aria-modal="true">
     <div class="modal-estado-box">
       <div class="modal-estado-head"><i class="fas fa-hourglass-half"></i> Documentación recibida</div>
@@ -762,40 +752,6 @@ function cerrarModalVerificacion() {
   if (m) m.classList.remove('open');
 }
 
-function abrirModalMotivos(id) {
-  var ins = CONSULTA_INS_CACHE.find(function(x) { return String(x.id) === String(id); });
-  var body = document.getElementById('modal-motivos-body');
-  if (!body) return;
-  if (!ins) {
-    body.innerHTML = '<p>No se encontraron detalles.</p>';
-  } else {
-    var motivo = ins.motivo_observacion_label || '';
-    var detalle = ins.observacion || '';
-    var htmlM = '';
-    if (motivo) {
-      htmlM += '<p style="margin:0 0 10px;"><strong>Motivo:</strong> ' + escC(motivo) + '</p>';
-    }
-    if (detalle) {
-      htmlM += '<p style="margin:0;white-space:pre-wrap;"><strong>Detalle:</strong><br>' + escC(detalle) + '</p>';
-    }
-    if (!htmlM) {
-      htmlM = '<p style="margin:0;">No hay observaciones registradas. Consulte con el área de Convenios.</p>';
-    }
-    if (ins.plazo_expediente) {
-      htmlM += '<p style="margin:14px 0 0;font-size:13px;color:#555;">Plazo de subsanación: <strong>'
-        + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</strong></p>';
-    }
-    body.innerHTML = htmlM;
-  }
-  var m = document.getElementById('modal-motivos');
-  if (m) m.classList.add('open');
-}
-
-function cerrarModalMotivos() {
-  var m = document.getElementById('modal-motivos');
-  if (m) m.classList.remove('open');
-}
-
 function fechaCallaoHoy() {
   try {
     return new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -973,6 +929,12 @@ function cargarListaRepechaje() {
           + '<i class="fas fa-user-plus"></i> REGISTRARSE</button>'
           + '</div></div>';
       }).join('');
+      if (list[0] && list[0].id) {
+        var pre = document.createElement('link');
+        pre.rel = 'prefetch';
+        pre.href = 'detalle.html?id=' + encodeURIComponent(list[0].id) + '&tipo=convenio&repechaje=1&embed=1&v=84';
+        document.head.appendChild(pre);
+      }
     })
     .catch(function() {
       if (!REPECHAJE_CACHE.length) {
@@ -1076,21 +1038,36 @@ function abrirModalRepForm(itemId) {
   var tit = document.getElementById('modal-rep-form-titulo');
   var iframe = document.getElementById('modal-rep-form-iframe');
   if (tit) tit.innerHTML = '<i class="fas fa-redo-alt"></i> Repechaje — ' + escC(titulo);
-  if (modal) {
-    modal.classList.add('open');
-    modal.classList.add('loading');
-  }
+  if (modal) modal.classList.add('open');
   document.body.classList.add('modal-rep-open');
-  if (iframe) {
-    iframe.style.height = '1px';
-    iframe.onload = function() {
-      if (modal) modal.classList.remove('loading');
-      ajustarAlturaIframeRep();
-      setTimeout(ajustarAlturaIframeRep, 80);
-      setTimeout(ajustarAlturaIframeRep, 250);
-    };
-    iframe.src = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=82';
+  if (!iframe) return;
+
+  var nextSrc = 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=84';
+  var sameLoaded = iframe.dataset.loadedItem === String(itemId)
+    && iframe.src
+    && iframe.src.indexOf('detalle.html') >= 0
+    && iframe.contentDocument
+    && iframe.contentDocument.getElementById('form-inscripcion');
+
+  if (sameLoaded) {
+    if (modal) modal.classList.remove('loading');
+    ajustarAlturaIframeRep();
+    try {
+      iframe.contentWindow.postMessage({ type: 'regpol-rep-ask-height' }, '*');
+    } catch (e) {}
+    return;
   }
+
+  if (modal) modal.classList.add('loading');
+  iframe.style.height = '1px';
+  iframe.dataset.loadedItem = String(itemId);
+  iframe.onload = function() {
+    if (modal) modal.classList.remove('loading');
+    ajustarAlturaIframeRep();
+    setTimeout(ajustarAlturaIframeRep, 80);
+    setTimeout(ajustarAlturaIframeRep, 250);
+  };
+  iframe.src = nextSrc;
 }
 
 function ajustarAlturaIframeRep(alturaMsg) {
@@ -1123,17 +1100,21 @@ function ajustarAlturaIframeRep(alturaMsg) {
 
 function cerrarModalRepForm() {
   var modal = document.getElementById('modal-rep-form');
-  var iframe = document.getElementById('modal-rep-form-iframe');
   if (modal) {
     modal.classList.remove('open');
     modal.classList.remove('loading');
   }
   document.body.classList.remove('modal-rep-open');
-  if (iframe) {
-    iframe.onload = null;
-    iframe.src = 'about:blank';
-    iframe.style.height = '280px';
-  }
+  // Mantener iframe en memoria para reabrir rápido el mismo convenio
+}
+
+function invalidarIframeRepForm() {
+  var iframe = document.getElementById('modal-rep-form-iframe');
+  if (!iframe) return;
+  iframe.onload = null;
+  iframe.dataset.loadedItem = '';
+  iframe.src = 'about:blank';
+  iframe.style.height = '280px';
 }
 
 function verConstancia(id) {
@@ -1185,6 +1166,7 @@ window.addEventListener('message', function(ev) {
   }
   if (data.type !== 'regpol-repechaje-ok') return;
   cerrarModalRepForm();
+  invalidarIframeRepForm();
   cargarListaRepechaje();
   if (data.mostrar_modal_verificacion || data.estado === 'repechaje') {
     mostrarModalVerificacion(data.mensaje || '');
@@ -1208,9 +1190,6 @@ document.getElementById('modal-consulta-res').addEventListener('click', function
 });
 document.getElementById('modal-verificacion').addEventListener('click', function(e) {
   if (e.target === this) cerrarModalVerificacion();
-});
-document.getElementById('modal-motivos').addEventListener('click', function(e) {
-  if (e.target === this) cerrarModalMotivos();
 });
 document.getElementById('modal-aprobacion').addEventListener('click', function(e) {
   if (e.target === this) cerrarModalAprobacion();
