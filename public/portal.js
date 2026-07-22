@@ -494,8 +494,12 @@ function aplicarPortalConfig(config, data) {
     aplicarHeroMarca(data.heroTexto);
   }
   if (data.navOcultos) portalNavOcultosCache = data.navOcultos;
-  initPortalNav((config && config.activeNav) || portalActiveNavId, data.navOcultos || []);
-  if (data.navOcultos && data.navOcultos.length) aplicarNavOcultos(data.navOcultos);
+  else if (!Array.isArray(portalNavOcultosCache)) portalNavOcultosCache = [];
+  var ocultosNav = Array.isArray(data.navOcultos) ? data.navOcultos : portalNavOcultosCache;
+  portalNavOcultosCache = ocultosNav;
+  initPortalNav((config && config.activeNav) || portalActiveNavId, ocultosNav);
+  // Siempre reaplicar (también con lista vacía) para mostrar secciones al publicar todo.
+  aplicarNavOcultos(ocultosNav);
 }
 
 function refrescarSiteDataEnFondo(config) {

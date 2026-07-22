@@ -126,6 +126,7 @@ function initCMS() {
       visible: true
     };
     if (!cmsDataActual.descansosPortal) cmsDataActual.descansosPortal = descansosPortalDefault();
+    cmsDataActual.navOcultos = normalizarNavOcultosLista(cmsDataActual.navOcultos);
     poblarFormulariosCMS();
     renderListasCMS();
     actualizarMetaPublicacionCMS();
@@ -138,7 +139,9 @@ function initCMS() {
     fetchCms
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(server) {
-        if (server && (server.novedades || server.fotosEncabezado || server.carrusel) && server.ok !== false) {
+        if (server && typeof server === 'object' && server.ok !== false
+          && (server.novedades || server.fotosEncabezado || server.carrusel || server.heroTexto
+            || server.resenaHistorica || server.navOcultos || server.bienestarPolicial || server.nuestraLabor)) {
           iniciar(server);
           saveSiteDataToStorage(server);
           return;
@@ -618,10 +621,18 @@ function listaNavPortalCMS() {
 function contenedorMenuPublicacionActivo() {
   var pageMenu = document.getElementById('page-menu-publicacion');
   if (pageMenu && pageMenu.classList.contains('on')) {
-    return document.getElementById('menu-publicacion-editor');
+    var ed = document.getElementById('menu-publicacion-editor');
+    if (ed && ed.querySelector('input[data-nav-id]')) return ed;
   }
-  var editorMenu = document.getElementById('editor-menu');
-  if (editorMenu && editorMenu.querySelector('input[data-nav-id]')) return editorMenu;
+  // Solo leer el editor embebido en CMS si esa página está visible (evitar sobreescribir
+  // navOcultos al guardar otras secciones con un formulario oculto/desactualizado).
+  var pageCms = document.getElementById('page-cms');
+  if (pageCms && pageCms.classList.contains('on')) {
+    var editorMenu = document.getElementById('editor-menu');
+    if (editorMenu && editorMenu.querySelector('input[data-nav-id]') && editorMenu.offsetParent !== null) {
+      return editorMenu;
+    }
+  }
   return null;
 }
 
@@ -638,9 +649,14 @@ function recolectarNavOcultosDesdeFormulario() {
   return ocultos;
 }
 
+function normalizarNavOcultosLista(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map(function(id) { return String(id || '').trim(); }).filter(Boolean);
+}
+
 function htmlEditorMenuPublicacion(containerPrefix) {
   var prefix = containerPrefix || 'menu-pub';
-  var ocultos = (cmsDataActual && cmsDataActual.navOcultos) ? cmsDataActual.navOcultos : [];
+  var ocultos = normalizarNavOcultosLista(cmsDataActual && cmsDataActual.navOcultos);
   var nav = listaNavPortalCMS().filter(function(item) { return item.id !== 'consulta'; });
 
   var html = '<p style="font-size:13px;color:#444;margin-bottom:16px;line-height:1.55;">'
@@ -709,7 +725,16 @@ function renderMenuPublicacionPagina() {
 
 function guardarMenuPublicacionWeb() {
   if (!cmsDataActual) cmsDataActual = {};
-  cmsDataActual.navOcultos = recolectarNavOcultosDesdeFormulario();
+  var root = document.getElementById('menu-publicacion-editor');
+  var ocultos = [];
+  if (root) {
+    root.querySelectorAll('input[type="checkbox"][data-nav-id]').forEach(function(chk) {
+      if (!chk.checked) ocultos.push(chk.getAttribute('data-nav-id'));
+    });
+  } else {
+    ocultos = recolectarNavOcultosDesdeFormulario();
+  }
+  cmsDataActual.navOcultos = normalizarNavOcultosLista(ocultos);
   var accesos = [];
   var i = 0;
   while (document.getElementById('cms-acceso-titulo-' + i)) {
@@ -722,28 +747,75 @@ function guardarMenuPublicacionWeb() {
   if (accesos.length) cmsDataActual.accesosRapidos = accesos;
   guardarSitioWeb(function(ok) {
     if (ok) {
-      renderMenuPublicacionPagina();
-      renderEditorMenu();
+      recargarCmsDesdeServidor(function() {
+        renderMenuPublicacionPagina();
+        renderEditorMenu();
+        mostrarAlertaCMS('Menú publicado. Estado sincronizado con el servidor.', 'ok');
+      });
     }
   });
 }
 
+function recargarCmsDesdeServidor(done) {
+  var base = apiBaseCMS();
+  if (!base) {
+    if (typeof done === 'function') done(false);
+    return;
+  }
+  var urlCms = base + '/portal/configuracion?t=' + Date.now();
+  var fetchCms = (typeof fetchConTimeout === 'function')
+    ? fetchConTimeout(urlCms, 30000)
+    : fetch(urlCms, { cache: 'no-store' });
+  fetchCms
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(server) {
+      if (server && typeof server === 'object' && server.ok !== false) {
+        cmsDataActual = server;
+        cmsDataActual.navOcultos = normalizarNavOcultosLista(cmsDataActual.navOcultos);
+        if (!cmsDataActual.carrusel) cmsDataActual.carrusel = [];
+        if (!cmsDataActual.fotosEncabezado) cmsDataActual.fotosEncabezado = [];
+        if (!cmsDataActual.novedades) cmsDataActual.novedades = [];
+        saveSiteDataToStorage(cmsDataActual);
+        if (typeof done === 'function') done(true);
+        return;
+      }
+      if (typeof done === 'function') done(false);
+    })
+    .catch(function() {
+      if (typeof done === 'function') done(false);
+    });
+}
+
 function cargarPaginaMenuPublicacion() {
   if (!esUnitic()) { alert('Solo el Super Admin puede publicar el menú del portal.'); return; }
+  var el = document.getElementById('menu-publicacion-editor');
+  if (el) el.innerHTML = '<p style="color:#888;font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Cargando menú desde el servidor...</p>';
+
   var pintar = function() {
+    if (cmsDataActual) cmsDataActual.navOcultos = normalizarNavOcultosLista(cmsDataActual.navOcultos);
     renderMenuPublicacionPagina();
   };
-  if (cmsDataActual) {
+
+  recargarCmsDesdeServidor(function(ok) {
+    if (ok) {
+      pintar();
+      return;
+    }
+    if (!CMS_INICIADO) {
+      CMS_INICIADO = true;
+      initCMS();
+      var intentos = 0;
+      var wait = setInterval(function() {
+        intentos++;
+        if (cmsDataActual || intentos >= 25) {
+          clearInterval(wait);
+          pintar();
+        }
+      }, 200);
+      return;
+    }
     pintar();
-    return;
-  }
-  if (!CMS_INICIADO) {
-    CMS_INICIADO = true;
-    initCMS();
-    setTimeout(pintar, 400);
-    return;
-  }
-  pintar();
+  });
 }
 
 function publicarCmsTrasEdicion(mensajeBorrador) {
@@ -1365,7 +1437,9 @@ function recolectarDatosCMS() {
   } else if (cmsDataActual.fotosEncabezado) {
     data.fotosEncabezado = cmsDataActual.fotosEncabezado.filter(function(f) { return !!(f && String(f).trim()); });
   }
-  data.navOcultos = recolectarNavOcultosDesdeFormulario();
+  data.navOcultos = contenedorMenuPublicacionActivo()
+    ? normalizarNavOcultosLista(recolectarNavOcultosDesdeFormulario())
+    : normalizarNavOcultosLista(cmsDataActual && cmsDataActual.navOcultos);
   if (document.getElementById('cms-acceso-titulo-0')) {
     var accesos = [];
     var ai = 0;
@@ -1387,11 +1461,14 @@ function recolectarDatosCMS() {
 
 function guardarSitioWeb(onComplete) {
   if (!cmsDataActual) cmsDataActual = {};
-  var navPrevio = Array.isArray(cmsDataActual.navOcultos) ? cmsDataActual.navOcultos.slice() : [];
+  var navPrevio = normalizarNavOcultosLista(cmsDataActual.navOcultos);
   prepararImagenesResenaParaPublicar(function() {
+    var menuActivo = !!contenedorMenuPublicacionActivo();
     cmsDataActual = recolectarDatosCMS();
-    if (!contenedorMenuPublicacionActivo()) {
+    if (!menuActivo) {
       cmsDataActual.navOcultos = navPrevio;
+    } else {
+      cmsDataActual.navOcultos = normalizarNavOcultosLista(cmsDataActual.navOcultos);
     }
     cmsDataActual.actualizacion = fechaActualizacionHoy();
     cmsDataActual.cmsPublicadoEn = new Date().toISOString();

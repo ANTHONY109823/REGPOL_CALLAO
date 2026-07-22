@@ -4024,6 +4024,7 @@ app.get('/portal/configuracion', async (req, res) => {
         );
       }
       if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezadoList(data.fotosEncabezado);
+      if (!Array.isArray(data.navOcultos)) data.navOcultos = [];
       if (!data.descansosPortal) {
         data.descansosPortal = {
           tituloSeccion: 'DESCANSOS MÉDICOS',
@@ -4371,6 +4372,8 @@ app.post('/admin/configuracion', requireAuth, async (req, res) => {
     data.actualizacion = data.actualizacion || (hoy.getDate() + ' DE ' + meses[hoy.getMonth()] + ' ' + hoy.getFullYear());
     data.cmsPublicadoEn = new Date().toISOString();
     if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezadoList(data.fotosEncabezado);
+    if (!Array.isArray(data.navOcultos)) data.navOcultos = [];
+    else data.navOcultos = data.navOcultos.map(function(id) { return String(id || '').trim(); }).filter(Boolean);
     limpiarClavesLegacyPortalConfig(data);
     const norm = await normalizarImagenesPortalEnConfig(data);
     const dataFinal = norm.data;
