@@ -288,22 +288,48 @@ const REGIONES_POLICIALES = [
   'OTRA DEPENDENCIA NACIONAL'
 ];
 
-function formatearNroRegistro(id, anio) {
+function prefijoNroRegistro(titulo, tipo) {
+  const t = String(titulo || '')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  if (t.indexOf('CELADOR') !== -1) return 'C';
+  if (t.indexOf('ATU') !== -1) return 'U';
+  if (/\bAMP\b/.test(t) || t.indexOf('APOYO AL MANTENIMIENTO') !== -1) return 'A';
+  if (tipo === 'curso' || t.indexOf('CURSO') !== -1) return 'E';
+  const words = t.split(/[^A-Z0-9]+/).filter(function(w) {
+    return w && ['PLAN', 'CONVENIO', 'CONVENIOS', 'CURSO', 'CURSOS', 'DE', 'DEL', 'LA', 'EL', 'LOS', 'LAS'].indexOf(w) === -1;
+  });
+  if (words.length && /^[A-Z]/.test(words[0])) return words[0].charAt(0);
+  return tipo === 'curso' ? 'E' : 'P';
+}
+
+/** Ej: Celador → C202600003 (letra + año + correlativo, sin guiones). */
+function formatearNroRegistro(id, anio, prefijo) {
   const y = anio || new Date().getFullYear();
-  const n = String(parseInt(id, 10) || 0).padStart(6, '0');
-  return 'PRE-' + y + '-' + n;
+  const n = String(parseInt(id, 10) || 0).padStart(5, '0');
+  const p = String(prefijo || 'P').charAt(0).toUpperCase() || 'P';
+  return p + y + n;
 }
 
 async function asegurarNroRegistro(pool, inscripcionId) {
   const r = await pool.query(
-    `SELECT id, nro_registro, EXTRACT(YEAR FROM COALESCE(fecha, NOW()))::int AS anio
-     FROM inscripciones WHERE id=$1`,
+    `SELECT n.id, n.nro_registro, n.item_id,
+            EXTRACT(YEAR FROM COALESCE(n.fecha, NOW()))::int AS anio,
+            i.titulo, i.tipo
+     FROM inscripciones n
+     LEFT JOIN items_portal i ON i.id = n.item_id
+     WHERE n.id=$1`,
     [inscripcionId]
   );
   if (!r.rows.length) return null;
   if (r.rows[0].nro_registro) return r.rows[0].nro_registro;
-  const nro = formatearNroRegistro(r.rows[0].id, r.rows[0].anio);
-  await pool.query('UPDATE inscripciones SET nro_registro=$1 WHERE id=$2 AND COALESCE(nro_registro,\'\')=\'\'', [nro, inscripcionId]);
+  const prefijo = prefijoNroRegistro(r.rows[0].titulo, r.rows[0].tipo);
+  const nro = formatearNroRegistro(r.rows[0].id, r.rows[0].anio, prefijo);
+  await pool.query(
+    'UPDATE inscripciones SET nro_registro=$1 WHERE id=$2 AND COALESCE(nro_registro,\'\')=\'\'',
+    [nro, inscripcionId]
+  );
   return nro;
 }
 
@@ -330,15 +356,24 @@ async function initColumnasFlujoConvenios(pool) {
     CREATE INDEX IF NOT EXISTS idx_inscripciones_cia_postula ON inscripciones(comisaria_postula);
   `);
 
-  // Asignar N° de registro a históricos sin número
+  // Asignar N° de registro a históricos sin número (formato compacto: C202600003)
   await pool.query(`
-    UPDATE inscripciones
-    SET nro_registro = 'PRE-' || EXTRACT(YEAR FROM COALESCE(fecha, NOW()))::int
-      || '-' || LPAD(id::text, 6, '0')
-    WHERE COALESCE(nro_registro, '') = ''
+    UPDATE inscripciones n
+    SET nro_registro =
+      CASE
+        WHEN UPPER(COALESCE(i.titulo,'')) LIKE '%CELADOR%' THEN 'C'
+        WHEN UPPER(COALESCE(i.titulo,'')) LIKE '%ATU%' THEN 'U'
+        WHEN UPPER(COALESCE(i.titulo,'')) ~ '(^|[^A-Z])AMP([^A-Z]|$)' THEN 'A'
+        WHEN i.tipo = 'curso' OR UPPER(COALESCE(i.titulo,'')) LIKE '%CURSO%' THEN 'E'
+        ELSE 'P'
+      END
+      || EXTRACT(YEAR FROM COALESCE(n.fecha, NOW()))::int::text
+      || LPAD(n.id::text, 5, '0')
+    FROM items_portal i
+    WHERE n.item_id = i.id
+      AND COALESCE(n.nro_registro, '') = ''
   `);
 }
-
 async function migrarEstadosConvenios(pool) {
   // Preinscripción unificada (ya no verifican/aprueban antes del sorteo)
   await pool.query(`
@@ -444,6 +479,7 @@ module.exports = {
   vacantesDisponibles,
   plazoDesdeAhora,
   formatearNroRegistro,
+  prefijoNroRegistro,
   asegurarNroRegistro,
   limpio,
   soloDigitos,

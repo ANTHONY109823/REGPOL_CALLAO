@@ -258,6 +258,31 @@
     table.t-inscritos .badge-estado{padding:5px 11px;font-size:11.5px;font-weight:700;border-radius:12px;display:inline-block;}
     table.t-inscritos td.col-acciones{min-width:220px;white-space:nowrap;}
     table.t-inscritos td.col-acciones .btn-mini{margin:2px 3px 2px 0;}
+    .modal-pre{position:fixed;inset:0;z-index:9999;background:rgba(0,30,24,.55);display:none;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;}
+    .modal-pre.open{display:flex;}
+    .modal-pre-box{background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.28);border:2px solid #c8a94a;}
+    .modal-pre-acciones{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:12px 16px 16px;border-top:1px solid #e8eee9;background:#f7faf7;position:sticky;bottom:0;}
+    .modal-pre-acciones button{border:none;border-radius:8px;padding:10px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;}
+    .btn-pre-pdf{background:#004d3d;color:#fff;}
+    .btn-pre-jpg{background:#c8a94a;color:#002d24;}
+    .btn-pre-cerrar{background:#e8eee9;color:#333;}
+    .btn-pre-copiar{background:#2980b9;color:#fff;}
+    .btn-pre-wa{background:#25D366;color:#fff;}
+    .btn-pre-wa:disabled{opacity:.45;cursor:not-allowed;}
+    .modal-pre-acciones a.btn-pre-wa{display:inline-flex;align-items:center;gap:6px;text-decoration:none;border:none;border-radius:8px;padding:10px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;}
+    #admin-pre-constancia{padding:20px 22px;background:#fff;color:#222;}
+    .pre-head{text-align:center;border-bottom:2px solid #c8a94a;padding-bottom:12px;margin-bottom:14px;}
+    .pre-head h3{margin:0 0 4px;color:#004d3d;font-size:16px;font-weight:800;letter-spacing:.3px;}
+    .pre-head p{margin:0;font-size:11.5px;color:#666;}
+    .pre-nro{display:inline-block;margin-top:8px;background:#e8f5f1;border:1.5px solid #004d3d;border-radius:8px;padding:10px 18px;font-size:22px;font-weight:900;color:#004d3d;letter-spacing:1px;user-select:all;-webkit-user-select:all;font-family:ui-monospace,Consolas,monospace;}
+    .pre-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:12.5px;}
+    .pre-grid .full{grid-column:1/-1;}
+    .pre-item span{display:block;font-size:10px;font-weight:800;color:#004d3d;text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px;}
+    .pre-item strong{font-weight:700;color:#222;word-break:break-word;}
+    .pre-bloque{margin-top:14px;padding-top:12px;border-top:1.5px solid #e0ebe4;}
+    .pre-bloque h4{margin:0 0 8px;color:#004d3d;font-size:12.5px;font-weight:800;text-transform:uppercase;}
+    .pre-sorteo{background:#e8f5f1;border:1px solid #c8e6c9;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#004d3d;line-height:1.45;}
+    .pre-aviso{margin-top:12px;font-size:11px;color:#856404;background:#fff8e1;border-radius:7px;padding:8px 10px;line-height:1.4;}
     .cms-parrafo-item{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px;}
     .cms-parrafo-num{font-size:11px;font-weight:800;color:#004d3d;min-width:22px;padding-top:10px;}
     .cms-textarea{width:100%;padding:8px;border:1.5px solid #ccc;border-radius:6px;
@@ -1691,34 +1716,36 @@
 
 <div id="modal-inscripcion" class="modal">
   <div class="modal-box" style="width:420px;">
-    <h3><i class="fas fa-user-check"></i> Gestionar inscripción</h3>
+    <h3 id="mins-titulo"><i class="fas fa-user-check"></i> Gestionar inscripción</h3>
     <input type="hidden" id="mins-id"/>
     <div id="mins-info" style="background:#f0f7f0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;"></div>
-    <label>Estado</label>
-    <select id="mins-estado">
-      <option value="pendiente">Pendiente (revisión)</option>
-      <option value="verificado">Verificado (expediente OK, sin aprobar)</option>
-      <option value="aprobado" id="mins-opt-aprobado">Aprobado para sorteo</option>
-      <option value="ganador">Ganador (sorteo)</option>
-      <option value="reserva">Reserva</option>
-      <option value="rechazado">✗ Rechazado (expediente inválido)</option>
-    </select>
-    <label>Observación</label>
-    <textarea id="mins-observacion" rows="3" placeholder="Motivo de aceptación o rechazo..."></textarea>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
-      <div>
-        <label>Teléfono / WhatsApp</label>
-        <input type="tel" id="mins-telefono" maxlength="30" placeholder="987654321"/>
-      </div>
-      <div>
-        <label>Correo electrónico</label>
-        <input type="email" id="mins-email" maxlength="100" placeholder="correo@ejemplo.com"/>
+    <div id="mins-editar-wrap">
+      <label>Estado</label>
+      <select id="mins-estado">
+        <option value="pendiente">Pendiente (revisión)</option>
+        <option value="verificado">Verificado (expediente OK, sin aprobar)</option>
+        <option value="aprobado" id="mins-opt-aprobado">Aprobado para sorteo</option>
+        <option value="ganador">Ganador (sorteo)</option>
+        <option value="reserva">Reserva</option>
+        <option value="rechazado">✗ Rechazado (expediente inválido)</option>
+      </select>
+      <label>Observación</label>
+      <textarea id="mins-observacion" rows="3" placeholder="Motivo de aceptación o rechazo..."></textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+        <div>
+          <label>Teléfono / WhatsApp</label>
+          <input type="tel" id="mins-telefono" maxlength="30" placeholder="987654321"/>
+        </div>
+        <div>
+          <label>Correo electrónico</label>
+          <input type="email" id="mins-email" maxlength="100" placeholder="correo@ejemplo.com"/>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-r" onclick="eliminarInscripcion()"><i class="fas fa-trash"></i> Eliminar</button>
-      <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-inscripcion')">Cancelar</button>
-      <button class="btn btn-v" onclick="guardarEstadoInscripcion()"><i class="fas fa-save"></i> Guardar</button>
+      <button type="button" class="btn btn-r" id="mins-btn-eliminar" onclick="eliminarInscripcion()"><i class="fas fa-trash"></i> Eliminar</button>
+      <button type="button" class="btn" id="mins-btn-cerrar" style="background:#999;color:#fff;" onclick="cerrarModal('modal-inscripcion')">Cancelar</button>
+      <button type="button" class="btn btn-v" id="mins-btn-guardar" onclick="guardarEstadoInscripcion()"><i class="fas fa-save"></i> Guardar</button>
     </div>
   </div>
 </div>
@@ -2048,6 +2075,21 @@
   </div>
 </div>
 
+<div id="modal-admin-constancia" class="modal-pre" role="dialog" aria-modal="true">
+  <div class="modal-pre-box">
+    <div id="admin-pre-constancia"></div>
+    <div class="modal-pre-acciones">
+      <button type="button" class="btn-pre-wa" id="btn-admin-pre-wa" onclick="enviarConstanciaAdminWhatsApp()"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+      <button type="button" class="btn-pre-copiar" onclick="copiarConstanciaAdmin()"><i class="fas fa-copy"></i> Copiar CIP + N°</button>
+      <button type="button" class="btn-pre-pdf" onclick="descargarConstanciaAdminPdf()">Descargar PDF</button>
+      <button type="button" class="btn-pre-jpg" onclick="descargarConstanciaAdminJpg()">Descargar JPG</button>
+      <button type="button" class="btn-pre-cerrar" onclick="cerrarModalAdminConstancia()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
 <script src="api-config.js?v=2"></script>
 <script src="fecha-local.js?v=1"></script>
 <script src="comisarias.js?v=1"></script>
@@ -5382,6 +5424,7 @@ function verInscritos(itemId, titulo, modo){
       if(!d.ok){document.getElementById('inscritos-tabla').innerHTML='<p style="color:#c00;padding:16px;">'+escHtml(d.error||'Error')+'</p>';return;}
       INSCRITOS_CACHE=d.inscritos||[];
       window.INSCRITOS_VACANTES_INFO=d.vacantes_info||null;
+      window.INSCRITOS_ITEM_INFO=d.item||{titulo:titulo||''};
       window.CATALOGO_OBS_CONV=d.catalogo_observaciones||[];
       INSCRITOS_TIPO_ACTUAL=d.tipo||'convenio';
       if(INSCRITOS_MODO==='ganadores'){
@@ -5586,13 +5629,17 @@ function renderInscritos(list, tipo){
   var colorEst={pendiente:'#856404',preinscrito:'#856404',verificado:'#1a7a3a',ganador:'#c8a94a',aprobado:'#c8a94a',rechazado:'#c0392b',reserva:'#6c757d',en_revision:'#2980b9',observado:'#e67e22',expediente_ok:'#1a7a3a',caducado:'#888',repechaje:'#8e44ad'};
   var bgEst   ={pendiente:'#fff3cd',preinscrito:'#fff3cd',verificado:'#d4edda',ganador:'#fff8e1',aprobado:'#fff8e1',rechazado:'#f8d7da',reserva:'#e9ecef',en_revision:'#eaf2fb',observado:'#fef5e7',expediente_ok:'#d4edda',caducado:'#eee',repechaje:'#f5eef8'};
 
+  var colAccion = (esConvenio && INSCRITOS_MODO==='preinscripcion')
+    ? '<th class="col-acciones">Ver completo</th>'
+    : '<th class="col-acciones">Acciones</th>';
+
   document.getElementById('inscritos-tabla').innerHTML=
     '<div style="overflow-x:auto;"><table class="t t-inscritos" style="min-width:1100px;"><thead><tr>'
     +'<th>#</th><th>N° Reg.</th><th>Grado</th><th>CIP</th><th>CODIFIN</th><th>Apellidos y Nombres</th>'
     +(esConvenio?'<th>Región</th>':'')
     +'<th>Unidad</th>'+(esConvenio?'<th>Postula a</th>':'')+'<th>Área</th>'
     +(esConvenio?'<th>Modalidad</th><th>Disponib.</th>':'<th>T. Servicio</th>')
-    +'<th>PDF</th><th>Estado</th><th>Fecha</th><th class="col-acciones">Acciones</th>'
+    +'<th>PDF</th><th>Estado</th><th>Fecha</th>'+colAccion
     +'</tr></thead><tbody>'
     +list.map(function(ins,idx){
       var c=colorEst[ins.estado]||'#1a1a1a';
@@ -5622,7 +5669,9 @@ function renderInscritos(list, tipo){
         if(ins.estado==='expediente_ok'){
           acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'expediente_ok\')" title="Avisar constancia"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Avisar</button> ';
         }
-        if(!sinEditar){
+        if(INSCRITOS_MODO==='preinscripcion'){
+          acciones='<button type="button" class="btn-mini btn-mini-solid" title="Ver constancia completa" onclick="abrirConstanciaAdmin('+ins.id+')"><i class="fas fa-file-alt"></i> Ver completo</button>';
+        } else if(!sinEditar){
           acciones+='<button type="button" class="btn-mini btn-mini-solid" title="Editar inscripción" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i></button>';
         }
       } else {
@@ -5995,7 +6044,221 @@ function cambiarEstadoAprobado(id, nuevoEstado){
   });
 }
 
-function abrirModalInscripcion(id){
+var ADMIN_CONSTANCIA_DATOS = null;
+
+function labelModalidadAdmin(mod, otro){
+  if(!mod) return '—';
+  if(mod==='OTROS') return otro||'Otros';
+  if(mod==='SERVICIO_FRANCO_RETEN') return 'Servicio / Franco / Retén';
+  return mod;
+}
+
+function labelDisponibilidadAdmin(disp, dia){
+  if(disp==='VACACIONES') return 'Vacaciones (participa en sorteo)';
+  if(disp==='FRANCO') return 'Día de franco'+(dia?(' — '+dia):'')+' (participa en sorteo)';
+  return disp || '—';
+}
+
+function telefonoPe9(tel){
+  var d=String(tel||'').replace(/\D/g,'');
+  if(d.indexOf('51')===0 && d.length>=11) d=d.slice(2);
+  if(d.length===9) return d;
+  return '';
+}
+
+function mensajeWhatsAppConstanciaAdmin(d, item){
+  var lineas=[
+    'REGPOL CALLAO — UNITIC',
+    'CONSTANCIA DE PREINSCRIPCIÓN',
+    '',
+    'N° registro: '+(d.nro||'—'),
+    'CIP: '+(d.cip||'—'),
+    'Grado: '+(d.grado||'—'),
+    'Apellidos y nombres: '+(d.nombres||'—'),
+    'DNI: '+(d.dni||'—'),
+    'CODIFIN: '+(d.codifin||'—'),
+    '',
+    'Convocatoria: '+(item.titulo||'—'),
+    'Comisaría a la que postula: '+(d.comisaria_postula||'—'),
+    'Unidad: '+(d.unidad||'—'),
+    'Región: '+(d.region||'—'),
+    'Cargo / Área: '+(d.cargo||'—')+' / '+(d.area||'—'),
+    'Modalidad: '+labelModalidadAdmin(d.modalidad, d.modalidad_otro),
+    'Situación: '+labelDisponibilidadAdmin(d.disponibilidad, d.dia_franco),
+    '',
+    'Conserve estos datos. Consulte en el portal con CIP + N° de inscripción.'
+  ];
+  return lineas.join('\n');
+}
+
+function abrirConstanciaAdmin(id){
+  var ins=INSCRITOS_CACHE.find(function(i){return i.id===id;});
+  if(!ins) return;
+  var item=window.INSCRITOS_ITEM_INFO||{};
+  var fechaReg=ins.fecha?new Date(ins.fecha).toLocaleDateString('es-PE'):'—';
+  ADMIN_CONSTANCIA_DATOS={
+    id:ins.id,
+    cip:ins.cip||'',
+    nro:ins.nro_registro||'',
+    grado:ins.grado||'',
+    nombres:ins.nombres||'',
+    dni:ins.dni||'',
+    codifin:ins.codifin||'',
+    telefono:ins.telefono||'',
+    email:ins.email||'',
+    unidad:ins.unidad||'',
+    region:ins.region_policial||'',
+    comisaria_postula:ins.comisaria_postula||'',
+    cargo:ins.cargo||'',
+    area:ins.area||'',
+    modalidad:ins.modalidad||'',
+    modalidad_otro:ins.modalidad_otro||'',
+    disponibilidad:ins.disponibilidad||'',
+    dia_franco:ins.dia_franco||'',
+    fecha:fechaReg,
+    aviso_sorteo:item.aviso_sorteo_fb||''
+  };
+  var el=document.getElementById('admin-pre-constancia');
+  if(!el) return;
+  el.innerHTML=
+    '<div class="pre-head">'
+    +'<h3>CONSTANCIA DE PREINSCRIPCIÓN</h3>'
+    +'<p>REGIÓN POLICIAL CALLAO — UNITIC</p>'
+    +'<div class="pre-nro" title="Seleccione para copiar">'+escHtml(ADMIN_CONSTANCIA_DATOS.nro||'—')+'</div>'
+    +'<p style="margin:6px 0 0;font-size:11px;color:#666;">N° de registro (cópielo completo)</p>'
+    +'</div>'
+    +'<div class="pre-grid">'
+    +'<div class="pre-item"><span>CIP</span><strong>'+escHtml(ADMIN_CONSTANCIA_DATOS.cip||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Grado</span><strong>'+escHtml(ADMIN_CONSTANCIA_DATOS.grado||'—')+'</strong></div>'
+    +'<div class="pre-item full"><span>Apellidos y nombres</span><strong>'+escHtml(ADMIN_CONSTANCIA_DATOS.nombres||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>DNI</span><strong>'+escHtml(ADMIN_CONSTANCIA_DATOS.dni||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>CODIFIN</span><strong>'+escHtml(ADMIN_CONSTANCIA_DATOS.codifin||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Teléfono</span><strong>'+escHtml(ADMIN_CONSTANCIA_DATOS.telefono||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Correo</span><strong>'+escHtml(ADMIN_CONSTANCIA_DATOS.email||'—')+'</strong></div>'
+    +'</div>'
+    +'<div class="pre-bloque">'
+    +'<h4>Convenio registrado</h4>'
+    +'<div class="pre-grid">'
+    +'<div class="pre-item full"><span>Convocatoria</span><strong>'+escHtml(item.titulo||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Horario</span><strong>'+escHtml(item.horario||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Vacantes</span><strong>'+escHtml(item.vacantes!=null?String(item.vacantes):'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Beneficio económico</span><strong>'+escHtml(item.fecha_inicio||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Comisaría a la que postula</span><strong>'+escHtml(ADMIN_CONSTANCIA_DATOS.comisaria_postula||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Unidad / Dependencia</span><strong>'+escHtml(ADMIN_CONSTANCIA_DATOS.unidad||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Región policial</span><strong>'+escHtml(ADMIN_CONSTANCIA_DATOS.region||'—')+'</strong></div>'
+    +'<div class="pre-item"><span>Cargo / Área</span><strong>'+escHtml((ADMIN_CONSTANCIA_DATOS.cargo||'—')+' / '+(ADMIN_CONSTANCIA_DATOS.area||'—'))+'</strong></div>'
+    +'<div class="pre-item"><span>Modalidad</span><strong>'+escHtml(labelModalidadAdmin(ADMIN_CONSTANCIA_DATOS.modalidad, ADMIN_CONSTANCIA_DATOS.modalidad_otro))+'</strong></div>'
+    +'<div class="pre-item"><span>Situación</span><strong>'+escHtml(labelDisponibilidadAdmin(ADMIN_CONSTANCIA_DATOS.disponibilidad, ADMIN_CONSTANCIA_DATOS.dia_franco))+'</strong></div>'
+    +'<div class="pre-item"><span>Fecha de registro</span><strong>'+escHtml(ADMIN_CONSTANCIA_DATOS.fecha||'—')+'</strong></div>'
+    +'</div></div>'
+    +'<div class="pre-bloque">'
+    +'<h4>Sorteo</h4>'
+    +'<div class="pre-sorteo">'
+    +(ADMIN_CONSTANCIA_DATOS.aviso_sorteo
+      ? ('<strong>Fecha / aviso:</strong> '+escHtml(ADMIN_CONSTANCIA_DATOS.aviso_sorteo)+'<br/>')
+      : '<strong>Fecha:</strong> Se publicará por el área de Convenios.<br/>')
+    +'<strong>Plataforma:</strong> Facebook en vivo — página Región Policial Callao'
+    +'</div>'
+    +'<div class="pre-aviso">Conserve este documento. Para consultar su estado use CIP + N° de inscripción.</div>'
+    +'</div>';
+
+  var btnWa=document.getElementById('btn-admin-pre-wa');
+  var tel=telefonoPe9(ADMIN_CONSTANCIA_DATOS.telefono);
+  if(btnWa){
+    btnWa.disabled=!tel;
+    btnWa.title=tel?('Enviar al '+tel):'Sin teléfono registrado válido';
+  }
+  var modal=document.getElementById('modal-admin-constancia');
+  if(modal) modal.classList.add('open');
+}
+
+function cerrarModalAdminConstancia(){
+  var modal=document.getElementById('modal-admin-constancia');
+  if(modal) modal.classList.remove('open');
+}
+
+function enviarConstanciaAdminWhatsApp(){
+  var d=ADMIN_CONSTANCIA_DATOS;
+  if(!d) return;
+  var tel=telefonoPe9(d.telefono);
+  if(!tel){
+    alert('Este preinscrito no tiene un teléfono válido registrado.');
+    return;
+  }
+  var item=window.INSCRITOS_ITEM_INFO||{};
+  var msg=mensajeWhatsAppConstanciaAdmin(d, item);
+  var url='https://wa.me/51'+tel+'?text='+encodeURIComponent(msg);
+  window.open(url, '_blank', 'noopener');
+}
+
+function copiarConstanciaAdmin(){
+  var d=ADMIN_CONSTANCIA_DATOS||{};
+  var texto='CIP: '+(d.cip||'')+'\n'+(d.nro||'');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(texto).then(function(){
+      alert('Copiado:\n'+texto);
+    }).catch(function(){
+      prompt('Copie estos datos:', texto);
+    });
+  } else {
+    prompt('Copie estos datos:', texto);
+  }
+}
+
+function capturarConstanciaAdminCanvas(){
+  var nodo=document.getElementById('admin-pre-constancia');
+  if(!nodo || typeof html2canvas!=='function'){
+    return Promise.reject(new Error('No se puede generar la imagen'));
+  }
+  return html2canvas(nodo,{scale:2,backgroundColor:'#ffffff',useCORS:true});
+}
+
+function descargarConstanciaAdminJpg(){
+  capturarConstanciaAdminCanvas().then(function(canvas){
+    var a=document.createElement('a');
+    a.href=canvas.toDataURL('image/jpeg',0.92);
+    a.download='preinscripcion_'+(ADMIN_CONSTANCIA_DATOS && ADMIN_CONSTANCIA_DATOS.nro ? ADMIN_CONSTANCIA_DATOS.nro : 'regpol')+'.jpg';
+    a.click();
+  }).catch(function(){
+    alert('No se pudo generar el JPG. Intente nuevamente.');
+  });
+}
+
+function descargarConstanciaAdminPdf(){
+  capturarConstanciaAdminCanvas().then(function(canvas){
+    var jsPDF=(window.jspdf && window.jspdf.jsPDF)?window.jspdf.jsPDF:null;
+    if(!jsPDF){
+      var w=window.open('');
+      if(w){
+        w.document.write('<img src="'+canvas.toDataURL('image/png')+'" style="width:100%;"/>');
+        w.document.close();
+        w.focus();
+        setTimeout(function(){try{w.print();}catch(e){}},300);
+      }
+      return;
+    }
+    var pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    var pageW=pdf.internal.pageSize.getWidth();
+    var margin=12;
+    var imgW=pageW-margin*2;
+    var imgH=canvas.height*imgW/canvas.width;
+    var pageH=pdf.internal.pageSize.getHeight()-margin*2;
+    if(imgH>pageH){
+      imgH=pageH;
+      imgW=canvas.width*imgH/canvas.height;
+    }
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.92),'JPEG',margin,margin,imgW,imgH);
+    pdf.save('preinscripcion_'+(ADMIN_CONSTANCIA_DATOS && ADMIN_CONSTANCIA_DATOS.nro ? ADMIN_CONSTANCIA_DATOS.nro : 'regpol')+'.pdf');
+  }).catch(function(){
+    alert('No se pudo generar el PDF. Intente nuevamente.');
+  });
+}
+
+function esEstadoPreinscritoConvenio(estado){
+  return ['preinscrito','pendiente','aprobado','verificado'].indexOf(estado)>=0;
+}
+
+function abrirModalInscripcion(id, soloVer){
   if(INSCRITOS_MODO==='ganadores' || INSCRITOS_MODO==='repechaje'){
     alert('En esta etapa no se editan datos. Solo recepción, aviso y observación del expediente.');
     return;
@@ -6004,12 +6267,16 @@ function abrirModalInscripcion(id){
   if(!ins)return;
   document.getElementById('mins-id').value=id;
 
+  var soloLectura = !!soloVer
+    || (INSCRITOS_TIPO_ACTUAL==='convenio' && (INSCRITOS_MODO==='preinscripcion' || esEstadoPreinscritoConvenio(ins.estado)));
+
   var filas=[
     ['N° Registro',ins.nro_registro],['Grado',ins.grado],['CIP',ins.cip],['DNI',ins.dni],['CODIFIN',ins.codifin],
     ['Nombres',ins.nombres],['Región',ins.region_policial],['Unidad',ins.unidad],['Postula a',ins.comisaria_postula],['Área',ins.area],['Cargo',ins.cargo],
     ['Modalidad',ins.modalidad],['Modalidad (otro)',ins.modalidad_otro],
     ['Arma/Condición',ins.arma],['Disponibilidad',ins.disponibilidad],['Día Franco',ins.dia_franco],
     ['T. Servicio',ins.tiempo_servicio],['Teléfono',ins.telefono],['Email',ins.email],
+    ['Estado',etiquetaEstadoInscripcion(ins.estado, INSCRITOS_TIPO_ACTUAL==='convenio')],
     ['Modo',ins.modo_ingreso],['Motivo obs.',ins.motivo_observacion]
   ].filter(function(f){return f[1];});
 
@@ -6026,31 +6293,46 @@ function abrirModalInscripcion(id){
        +'<i class="fas fa-file-pdf"></i> Ver PDF adjunto ('+escHtml(ins.pdf_nombre||'')+')</button></div>'
       :'<div style="margin-top:8px;font-size:11.5px;color:#888;"><i class="fas fa-info-circle"></i> Sin PDF (normal en preinscritos)</div>');
 
-  var selEst=document.getElementById('mins-estado');
-  if(INSCRITOS_TIPO_ACTUAL==='convenio'){
-    selEst.innerHTML=
-      '<option value="preinscrito">Preinscrito (sorteo)</option>'
-      +'<option value="ganador">Ganador — espera PDF</option>'
-      +'<option value="en_revision">En revisión</option>'
-      +'<option value="observado">Observado</option>'
-      +'<option value="expediente_ok">Expediente OK</option>'
-      +'<option value="reserva">Reserva</option>'
-      +'<option value="repechaje">Repechaje</option>'
-      +'<option value="caducado">Caducado</option>'
-      +'<option value="rechazado">Rechazado</option>';
-  } else {
-    selEst.innerHTML=
-      '<option value="pendiente">Pendiente (revisión)</option>'
-      +'<option value="verificado">Verificado</option>'
-      +'<option value="aprobado" id="mins-opt-aprobado">Aprobado (méritos)</option>'
-      +'<option value="rechazado">Rechazado</option>';
+  var titEl=document.getElementById('mins-titulo');
+  var editWrap=document.getElementById('mins-editar-wrap');
+  var btnElim=document.getElementById('mins-btn-eliminar');
+  var btnGuardar=document.getElementById('mins-btn-guardar');
+  var btnCerrar=document.getElementById('mins-btn-cerrar');
+  if(titEl) titEl.innerHTML=soloLectura
+    ? '<i class="fas fa-eye"></i> Datos del preinscrito'
+    : '<i class="fas fa-user-check"></i> Gestionar inscripción';
+  if(editWrap) editWrap.style.display=soloLectura?'none':'block';
+  if(btnElim) btnElim.style.display=soloLectura?'none':'inline-flex';
+  if(btnGuardar) btnGuardar.style.display=soloLectura?'none':'inline-flex';
+  if(btnCerrar) btnCerrar.textContent=soloLectura?'Cerrar':'Cancelar';
+
+  if(!soloLectura){
+    var selEst=document.getElementById('mins-estado');
+    if(INSCRITOS_TIPO_ACTUAL==='convenio'){
+      selEst.innerHTML=
+        '<option value="preinscrito">Preinscrito (sorteo)</option>'
+        +'<option value="ganador">Ganador — espera PDF</option>'
+        +'<option value="en_revision">En revisión</option>'
+        +'<option value="observado">Observado</option>'
+        +'<option value="expediente_ok">Expediente OK</option>'
+        +'<option value="reserva">Reserva</option>'
+        +'<option value="repechaje">Repechaje</option>'
+        +'<option value="caducado">Caducado</option>'
+        +'<option value="rechazado">Rechazado</option>';
+    } else {
+      selEst.innerHTML=
+        '<option value="pendiente">Pendiente (revisión)</option>'
+        +'<option value="verificado">Verificado</option>'
+        +'<option value="aprobado" id="mins-opt-aprobado">Aprobado (méritos)</option>'
+        +'<option value="rechazado">Rechazado</option>';
+    }
+    selEst.value=ins.estado||(INSCRITOS_TIPO_ACTUAL==='convenio'?'preinscrito':'pendiente');
+    document.getElementById('mins-observacion').value=ins.observacion||'';
+    var telEl=document.getElementById('mins-telefono');
+    var emailEl=document.getElementById('mins-email');
+    if(telEl) telEl.value=ins.telefono||'';
+    if(emailEl) emailEl.value=ins.email||'';
   }
-  selEst.value=ins.estado||(INSCRITOS_TIPO_ACTUAL==='convenio'?'preinscrito':'pendiente');
-  document.getElementById('mins-observacion').value=ins.observacion||'';
-  var telEl=document.getElementById('mins-telefono');
-  var emailEl=document.getElementById('mins-email');
-  if(telEl) telEl.value=ins.telefono||'';
-  if(emailEl) emailEl.value=ins.email||'';
   document.getElementById('modal-inscripcion').classList.add('open');
 }
 
@@ -6069,6 +6351,11 @@ function verPdfInscripcion(id){
 
 function guardarEstadoInscripcion(){
   var id=val('mins-id');
+  var ins=INSCRITOS_CACHE.find(function(i){return String(i.id)===String(id);});
+  if(ins && INSCRITOS_TIPO_ACTUAL==='convenio' && esEstadoPreinscritoConvenio(ins.estado)){
+    alert('Los preinscritos no se editan. Solo se visualizan y se envían al sorteo.');
+    return;
+  }
   var body={
     estado:val('mins-estado'),
     observacion:val('mins-observacion'),
@@ -6085,8 +6372,13 @@ function guardarEstadoInscripcion(){
 }
 
 function eliminarInscripcion(){
-  if(!confirm('¿Eliminar esta inscripción permanentemente?')) return;
   var id=val('mins-id');
+  var ins=INSCRITOS_CACHE.find(function(i){return String(i.id)===String(id);});
+  if(ins && INSCRITOS_TIPO_ACTUAL==='convenio' && esEstadoPreinscritoConvenio(ins.estado)){
+    alert('No se puede eliminar un preinscrito. Por transparencia solo se envían al sorteo.');
+    return;
+  }
+  if(!confirm('¿Eliminar esta inscripción permanentemente?')) return;
   fetch(API+'/admin/inscripciones/'+id,{method:'DELETE',headers:hdr()})
     .then(function(r){return r.json();}).then(function(d){
       if(d.ok){

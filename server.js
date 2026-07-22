@@ -4794,7 +4794,7 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
     const nro = String(req.query.nro || req.query.nro_registro || '').trim().toUpperCase().replace(/\s+/g, '');
     if (!cip) return res.json({ ok: false, error: 'Ingrese un CIP válido (solo números, 6 a 12 dígitos).' });
     if (!nro || nro.length < 6) {
-      return res.json({ ok: false, error: 'Ingrese su N° de inscripción / registro (ej: PRE-2026-000123).' });
+      return res.json({ ok: false, error: 'Ingrese su N° de inscripción / registro (ej: C202600003).' });
     }
     const r = await pool.query(
       `SELECT n.id, n.cip, n.nombres, n.unidad, n.cargo, n.grado, n.estado, n.observacion,
@@ -5713,7 +5713,10 @@ app.delete('/admin/items/:id', requireAuth, async (req, res) => {
 // ── GET /admin/items/:id/inscritos ─────────────────────────────────────────────
 app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
   try {
-    const cur = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [req.params.id]);
+    const cur = await pool.query(
+      `SELECT tipo, titulo, vacantes, horario, duracion, lugar, fecha_inicio, aviso_sorteo_fb
+       FROM items_portal WHERE id=$1`,
+      [req.params.id]);
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
@@ -5730,10 +5733,22 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
     const vac = cur.rows[0].tipo === 'convenio'
       ? await conveniosFlujo.vacantesDisponibles(pool, req.params.id)
       : null;
+    const itemInfo = {
+      id: parseInt(req.params.id, 10),
+      tipo: cur.rows[0].tipo,
+      titulo: cur.rows[0].titulo || '',
+      vacantes: cur.rows[0].vacantes,
+      horario: cur.rows[0].horario || '',
+      duracion: cur.rows[0].duracion || '',
+      lugar: cur.rows[0].lugar || '',
+      fecha_inicio: cur.rows[0].fecha_inicio || '',
+      aviso_sorteo_fb: cur.rows[0].aviso_sorteo_fb || ''
+    };
     res.json({
       ok: true,
       inscritos: r.rows,
       tipo: cur.rows[0].tipo,
+      item: itemInfo,
       vacantes_info: vac,
       catalogo_observaciones: conveniosFlujo.CATALOGO_OBSERVACIONES,
       modalidades: conveniosFlujo.MODALIDADES_TRABAJO,
@@ -5776,11 +5791,19 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
 app.put('/admin/inscripciones/:id', requireAuth, async (req, res) => {
   try {
     const cur = await pool.query(
-      'SELECT n.item_id, i.tipo FROM inscripciones n JOIN items_portal i ON i.id=n.item_id WHERE n.id=$1',
+      'SELECT n.item_id, n.estado, i.tipo FROM inscripciones n JOIN items_portal i ON i.id=n.item_id WHERE n.id=$1',
       [req.params.id]);
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    // Transparencia: preinscritos de convenio no se editan ni observan; solo van a sorteo
+    const estPre = ['preinscrito', 'pendiente', 'aprobado', 'verificado'];
+    if (cur.rows[0].tipo === 'convenio' && estPre.indexOf(cur.rows[0].estado) >= 0) {
+      return res.status(403).json({
+        ok: false,
+        error: 'Los preinscritos no se editan ni observan. Solo se visualizan y se envían al sorteo (transparencia).'
+      });
+    }
     const { estado, observacion, telefono, email } = req.body;
     const sets = ['estado=$1', 'observacion=$2'];
     const params = [estado || 'pendiente', observacion || ''];
@@ -5807,11 +5830,18 @@ app.put('/admin/inscripciones/:id', requireAuth, async (req, res) => {
 app.delete('/admin/inscripciones/:id', requireAuth, async (req, res) => {
   try {
     const cur = await pool.query(
-      'SELECT n.item_id, i.tipo FROM inscripciones n JOIN items_portal i ON i.id=n.item_id WHERE n.id=$1',
+      'SELECT n.item_id, n.estado, i.tipo FROM inscripciones n JOIN items_portal i ON i.id=n.item_id WHERE n.id=$1',
       [req.params.id]);
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const estPre = ['preinscrito', 'pendiente', 'aprobado', 'verificado'];
+    if (cur.rows[0].tipo === 'convenio' && estPre.indexOf(cur.rows[0].estado) >= 0) {
+      return res.status(403).json({
+        ok: false,
+        error: 'No se puede eliminar un preinscrito. Por transparencia solo se envían al sorteo.'
+      });
+    }
     await pool.query('DELETE FROM inscripciones WHERE id=$1', [req.params.id]);
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }

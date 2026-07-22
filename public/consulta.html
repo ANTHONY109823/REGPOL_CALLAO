@@ -85,7 +85,7 @@
         </div>
         <div>
           <label for="input-nro">N° de inscripción / registro</label>
-          <input type="text" id="input-nro" maxlength="30" placeholder="Ej: PRE-2026-000123" required autocomplete="off" style="letter-spacing:0.5px;text-transform:uppercase;">
+          <input type="text" id="input-nro" maxlength="30" placeholder="Ej: C202600003" required autocomplete="off" style="letter-spacing:0.5px;text-transform:uppercase;">
         </div>
         <button type="submit" class="btn-consultar" id="btn-consultar"><i class="fas fa-search"></i> CONSULTAR</button>
         <a href="#repechaje" class="btn-consultar" style="background:#004d3d;text-decoration:none;" onclick="mostrarRepechaje();return false;">
@@ -148,7 +148,7 @@ function consultarCip(e) {
     return;
   }
   if (!nro || nro.length < 6) {
-    mostrarAlerta('Ingrese su N° de inscripción (ej: PRE-2026-000123).', 'error');
+    mostrarAlerta('Ingrese su N° de inscripción (ej: C202600003).', 'error');
     return;
   }
   CIP_CONSULTA = cip;
