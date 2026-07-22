@@ -40,19 +40,33 @@
     .estado-expediente_ok,.estado-en_revision{background:#d4edda;color:#1a5c32;}
     .obs-box{background:#fff8e1;border:1.5px solid #c8a94a;border-radius:10px;padding:12px 14px;font-size:13px;color:#6b5420;margin:4px 0 18px;line-height:1.45;}
     .obs-box.alerta-repechaje{background:#fff5f5;border-color:#e8b4b4;color:#842029;}
-    .repechaje-card{background:#fff;border:1.5px solid #c8a94a;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,77,61,.06);}
-    .repechaje-card h4{margin:0 0 6px;color:#004d3d;font-size:16px;font-weight:800;}
-    .repechaje-card .rep-desc{font-size:13px;color:#555;margin:0 0 12px;line-height:1.4;}
-    .repechaje-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px 14px;margin-bottom:12px;padding:12px 14px;background:#f7faf7;border:1px solid #e0ebe4;border-radius:10px;}
-    .repechaje-meta span{display:block;font-size:10px;font-weight:800;color:#004d3d;text-transform:uppercase;letter-spacing:.35px;margin-bottom:3px;}
-    .repechaje-meta strong{font-size:13px;color:#222;font-weight:700;line-height:1.35;}
-    .repechaje-cias{margin:0 0 14px;}
-    .repechaje-cias h5{margin:0 0 8px;font-size:12px;font-weight:800;color:#004d3d;text-transform:uppercase;}
-    .repechaje-cias ul{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px;}
-    .repechaje-cias li{background:#e8f5f1;border:1px solid #a5d6a7;color:#004d3d;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;}
-    .repechaje-cias li em{font-style:normal;color:#1a7a3a;margin-left:4px;}
-    .repechaje-acciones{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
-    .badge-vacantes{display:inline-block;background:#fff8e1;border:1px solid #c8a94a;color:#6b5420;border-radius:20px;padding:4px 10px;font-size:12px;font-weight:800;}
+    .repechaje-lista-wrap{margin-top:10px;}
+    .repechaje-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1.5px solid #dde8e5;border-radius:8px;margin-bottom:8px;background:#fff;flex-wrap:wrap;}
+    .repechaje-row-info{flex:1 1 280px;min-width:0;}
+    .repechaje-row-info h4{margin:0 0 4px;color:#004d3d;font-size:14px;font-weight:800;line-height:1.25;}
+    .repechaje-row-det{font-size:12px;color:#555;line-height:1.4;}
+    .repechaje-row-det strong{color:#004d3d;}
+    .repechaje-row-cias{font-size:11.5px;color:#666;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+    .repechaje-row-acciones{display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex-shrink:0;}
+    .badge-vacantes{display:inline-block;background:#fff8e1;border:1px solid #c8a94a;color:#6b5420;border-radius:16px;padding:4px 9px;font-size:11.5px;font-weight:800;white-space:nowrap;}
+    .btn-rep{border:none;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:inherit;white-space:nowrap;}
+    .btn-rep-reg{background:#004d3d;color:#fff;}
+    .btn-rep-reg:hover{background:#006b55;color:#fff;}
+    .btn-rep-exp{background:#c8a94a;color:#002d24;}
+    .btn-rep-exp:hover{background:#e4c76b;color:#002d24;}
+    .btn-rep:disabled,.btn-rep.is-disabled{opacity:.45;pointer-events:none;cursor:not-allowed;}
+    .modal-rep-exp{position:fixed;inset:0;z-index:9999;background:rgba(0,30,24,.55);display:none;align-items:center;justify-content:center;padding:16px;}
+    .modal-rep-exp.open{display:flex;}
+    .modal-rep-exp-box{background:#fff;border-radius:12px;max-width:420px;width:100%;padding:20px;border:2px solid #c8a94a;box-shadow:0 12px 40px rgba(0,0,0,.25);}
+    .modal-rep-exp-box h3{margin:0 0 8px;color:#004d3d;font-size:15px;}
+    .modal-rep-exp-box p{margin:0 0 12px;font-size:12.5px;color:#555;line-height:1.4;}
+    .modal-rep-exp-box label{font-size:12px;font-weight:700;color:#004d3d;display:block;margin:10px 0 5px;}
+    .modal-rep-exp-box input[type="text"],.modal-rep-exp-box input[type="file"]{width:100%;padding:10px 11px;border:1.5px solid #ccc;border-radius:8px;font-size:14px;box-sizing:border-box;}
+    .modal-rep-exp-acciones{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap;}
+    body.modo-repechaje .consulta-top,
+    body.modo-repechaje #consulta-alerta,
+    body.modo-repechaje #consulta-resultados{display:none !important;}
+    body.modo-repechaje #repechaje-box{display:block !important;}
     .expediente-box{background:#f7faf7;border:1.5px solid #c8a94a;border-radius:12px;padding:20px 22px;margin-top:4px;}
     .expediente-box > p{font-size:13.5px;color:#333;margin:0 0 16px;line-height:1.5;font-weight:600;}
     .expediente-box .plazo-countdown{display:block;width:fit-content;max-width:100%;margin:0 0 18px;font-size:16px;font-weight:800;font-family:ui-monospace,Consolas,monospace;letter-spacing:.5px;padding:10px 16px;border-radius:8px;}
@@ -77,6 +91,8 @@
       .consulta-meta{grid-template-columns:1fr 1fr;gap:12px;}
       .expediente-box{padding:16px;}
       .btn-pdf-ver,.btn-pdf-desc{width:100%;}
+      .repechaje-row-acciones{width:100%;}
+      .btn-rep{flex:1;justify-content:center;}
     }
   </style>
 </head>
@@ -127,12 +143,33 @@
   </div>
 
   <div id="repechaje-box" class="consulta-form" style="display:none;border-color:#c8a94a;">
-    <h3 style="margin:0 0 8px;color:#004d3d;font-size:16px;"><i class="fas fa-redo-alt"></i> Repechaje de convenios</h3>
-    <p style="font-size:13px;color:#555;margin:0 0 14px;line-height:1.5;">
-      Convenios con <strong>vacantes liberadas</strong>. Puede registrarse, elegir comisaría y
-      <strong>subir su expediente PDF completo</strong> (no entra al sorteo).
+    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
+      <h3 style="margin:0;color:#004d3d;font-size:16px;"><i class="fas fa-redo-alt"></i> Repechaje de convenios</h3>
+      <button type="button" class="btn-rep btn-rep-reg" onclick="salirModoRepechaje()" style="background:#888;"><i class="fas fa-search"></i> Ir a consulta CIP</button>
+    </div>
+    <p style="font-size:13px;color:#555;margin:0 0 12px;line-height:1.45;">
+      Vacantes liberadas. <strong>Registrarse</strong> para postular con expediente, o <strong>Subir expediente</strong> si ya tiene N° de registro.
     </p>
-    <div id="repechaje-lista"><p style="color:#888;font-size:13px;">Cargando convocatorias...</p></div>
+    <div id="repechaje-lista" class="repechaje-lista-wrap"><p style="color:#888;font-size:13px;">Cargando convocatorias...</p></div>
+  </div>
+
+  <div id="modal-rep-expediente" class="modal-rep-exp" role="dialog" aria-modal="true">
+    <div class="modal-rep-exp-box">
+      <h3><i class="fas fa-file-upload"></i> Subir expediente</h3>
+      <p id="modal-rep-titulo">Ingrese su CIP, N° de registro y el PDF completo.</p>
+      <input type="hidden" id="modal-rep-item-id"/>
+      <label for="modal-rep-cip">CIP</label>
+      <input type="text" id="modal-rep-cip" inputmode="numeric" maxlength="12" placeholder="Ej: 31590992" autocomplete="off"/>
+      <label for="modal-rep-nro">N° de inscripción</label>
+      <input type="text" id="modal-rep-nro" maxlength="30" placeholder="Ej: C202600003" style="text-transform:uppercase;" autocomplete="off"/>
+      <label for="modal-rep-pdf">Expediente PDF</label>
+      <input type="file" id="modal-rep-pdf" accept="application/pdf"/>
+      <p id="modal-rep-msg" style="margin:10px 0 0;font-size:12px;min-height:16px;"></p>
+      <div class="modal-rep-exp-acciones">
+        <button type="button" class="btn-rep" style="background:#999;color:#fff;" onclick="cerrarModalRepExpediente()">Cancelar</button>
+        <button type="button" class="btn-rep btn-rep-exp" id="btn-modal-rep-enviar" onclick="enviarExpedienteDesdeRepechaje()"><i class="fas fa-cloud-upload-alt"></i> Enviar PDF</button>
+      </div>
+    </div>
   </div>
 
   <div id="consulta-alerta" class="consulta-alerta"></div>
@@ -398,19 +435,36 @@ async function subirExpediente(id) {
   }
 }
 
+var REPECHAJE_TIMER = null;
+var REPECHAJE_CACHE = [];
+
 function mostrarRepechaje() {
+  document.body.classList.add('modo-repechaje');
   var box = document.getElementById('repechaje-box');
   if (box) box.style.display = '';
   if (location.hash !== '#repechaje') location.hash = 'repechaje';
   cargarListaRepechaje();
-  if (box) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (REPECHAJE_TIMER) clearInterval(REPECHAJE_TIMER);
+  REPECHAJE_TIMER = setInterval(cargarListaRepechaje, 20000);
+}
+
+function salirModoRepechaje() {
+  document.body.classList.remove('modo-repechaje');
+  var box = document.getElementById('repechaje-box');
+  if (box) box.style.display = 'none';
+  if (REPECHAJE_TIMER) { clearInterval(REPECHAJE_TIMER); REPECHAJE_TIMER = null; }
+  if (location.hash === '#repechaje') {
+    history.replaceState(null, '', location.pathname + location.search);
+  }
 }
 
 function cargarListaRepechaje() {
   var el = document.getElementById('repechaje-lista');
   if (!el) return;
-  el.innerHTML = '<p style="color:#888;font-size:13px;">Cargando...</p>';
-  fetch(API_PUBLIC + '/portal/convenios/repechaje')
+  if (!REPECHAJE_CACHE.length) {
+    el.innerHTML = '<p style="color:#888;font-size:13px;">Cargando...</p>';
+  }
+  fetch(API_PUBLIC + '/portal/convenios/repechaje?t=' + Date.now())
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.ok) {
@@ -418,39 +472,134 @@ function cargarListaRepechaje() {
         return;
       }
       var list = d.convenios || [];
+      REPECHAJE_CACHE = list;
       if (!list.length) {
         el.innerHTML = '<p style="color:#856404;font-size:13px;">Por ahora no hay vacantes liberadas para repechaje.</p>';
         return;
       }
       el.innerHTML = list.map(function(c) {
+        var disp = parseInt(c.disponibles, 10) || 0;
+        var sinCupo = disp < 1;
         var cias = Array.isArray(c.comisarias) ? c.comisarias : [];
-        var ciasHtml = cias.length
-          ? ('<div class="repechaje-cias"><h5>Comisarías con vacante</h5><ul>'
-            + cias.map(function(x) {
-              return '<li>' + escC(x.nombre) + '<em>(' + escC(String(x.disponibles)) + ')</em></li>';
-            }).join('')
-            + '</ul></div>')
-          : '<div class="repechaje-cias"><h5>Comisarías</h5><p style="margin:0;font-size:12.5px;color:#666;">Vacantes generales disponibles — se asigna al registrar.</p></div>';
-        return '<div class="repechaje-card">'
-          + '<h4><i class="fas ' + escC(c.icono || 'fa-shield-alt') + '" style="margin-right:6px;color:#c8a94a;"></i>' + escC(c.titulo) + '</h4>'
-          + (c.descripcion ? '<p class="rep-desc">' + escC(c.descripcion) + '</p>' : '')
-          + '<div class="repechaje-meta">'
-          + '<div><span>Vacantes disponibles</span><strong>' + escC(String(c.disponibles)) + ' de ' + escC(String(c.vacantes)) + '</strong></div>'
-          + '<div><span>Horario</span><strong>' + escC(c.horario || '—') + '</strong></div>'
-          + (c.fecha_inicio ? '<div><span>Beneficio / inicio</span><strong>' + escC(c.fecha_inicio) + '</strong></div>' : '')
-          + (c.lugar ? '<div><span>Lugar</span><strong>' + escC(c.lugar) + '</strong></div>' : '')
+        var ciasTxt = cias.length
+          ? cias.map(function(x) { return x.nombre + ' (' + x.disponibles + ')'; }).join(' · ')
+          : 'Vacantes generales';
+        var hrefReg = 'detalle.html?id=' + encodeURIComponent(c.id) + '&tipo=convenio&repechaje=1';
+        return '<div class="repechaje-row" data-item-id="' + escC(String(c.id)) + '">'
+          + '<div class="repechaje-row-info">'
+          + '<h4>' + escC(c.titulo) + '</h4>'
+          + '<div class="repechaje-row-det">'
+          + '<strong>Vacantes:</strong> <span class="rep-vac-disp">' + escC(String(disp)) + '</span>/' + escC(String(c.vacantes || 0))
+          + ' &nbsp;|&nbsp; <strong>Horario:</strong> ' + escC(c.horario || '—')
+          + (c.fecha_inicio ? (' &nbsp;|&nbsp; <strong>Beneficio:</strong> ' + escC(c.fecha_inicio)) : '')
           + '</div>'
-          + ciasHtml
-          + '<div class="repechaje-acciones">'
-          + '<span class="badge-vacantes"><i class="fas fa-door-open"></i> ' + escC(String(c.disponibles)) + ' vacante(s) libre(s)</span>'
-          + '<a class="btn-consultar" style="text-decoration:none;width:auto;" href="detalle.html?id=' + encodeURIComponent(c.id) + '&tipo=convenio&repechaje=1">'
-          + '<i class="fas fa-file-upload"></i> REGISTRAR Y SUBIR EXPEDIENTE</a>'
+          + '<div class="repechaje-row-cias" title="' + escC(ciasTxt) + '"><strong>Comisarías:</strong> ' + escC(ciasTxt) + '</div>'
+          + '</div>'
+          + '<div class="repechaje-row-acciones">'
+          + '<span class="badge-vacantes"><span class="rep-vac-disp">' + escC(String(disp)) + '</span> libres</span>'
+          + (sinCupo
+            ? '<button type="button" class="btn-rep btn-rep-reg" disabled>Sin vacantes</button>'
+            : '<a class="btn-rep btn-rep-reg" href="' + hrefReg + '"><i class="fas fa-user-plus"></i> REGISTRARSE</a>')
+          + '<button type="button" class="btn-rep btn-rep-exp" ' + (sinCupo ? 'disabled' : '')
+          + ' onclick="abrirModalRepExpediente(' + c.id + ')">'
+          + '<i class="fas fa-file-upload"></i> SUBIR EXPEDIENTE</button>'
           + '</div></div>';
       }).join('');
     })
     .catch(function() {
-      el.innerHTML = '<p style="color:#c0392b;font-size:13px;">No se pudo cargar.</p>';
+      if (!REPECHAJE_CACHE.length) {
+        el.innerHTML = '<p style="color:#c0392b;font-size:13px;">No se pudo cargar.</p>';
+      }
     });
+}
+
+function abrirModalRepExpediente(itemId) {
+  var conv = REPECHAJE_CACHE.find(function(x) { return String(x.id) === String(itemId); });
+  var titulo = conv ? (conv.titulo || '') : '';
+  var modal = document.getElementById('modal-rep-expediente');
+  var tit = document.getElementById('modal-rep-titulo');
+  var msg = document.getElementById('modal-rep-msg');
+  document.getElementById('modal-rep-item-id').value = itemId;
+  document.getElementById('modal-rep-cip').value = '';
+  document.getElementById('modal-rep-nro').value = '';
+  document.getElementById('modal-rep-pdf').value = '';
+  if (tit) tit.textContent = (titulo ? ('Convenio: ' + titulo + '. ') : '') + 'Ingrese CIP, N° de registro y el PDF.';
+  if (msg) { msg.textContent = ''; msg.style.color = '#666'; }
+  if (modal) modal.classList.add('open');
+}
+
+function cerrarModalRepExpediente() {
+  var modal = document.getElementById('modal-rep-expediente');
+  if (modal) modal.classList.remove('open');
+}
+
+async function enviarExpedienteDesdeRepechaje() {
+  var itemId = document.getElementById('modal-rep-item-id').value;
+  var cip = (document.getElementById('modal-rep-cip').value || '').replace(/\D/g, '');
+  var nro = (document.getElementById('modal-rep-nro').value || '').trim().toUpperCase().replace(/\s+/g, '');
+  var inp = document.getElementById('modal-rep-pdf');
+  var msg = document.getElementById('modal-rep-msg');
+  var btn = document.getElementById('btn-modal-rep-enviar');
+  if (!cip || cip.length < 6) {
+    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Ingrese un CIP válido.'; }
+    return;
+  }
+  if (!nro || nro.length < 6) {
+    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Ingrese su N° de inscripción.'; }
+    return;
+  }
+  if (!inp || !inp.files || !inp.files[0]) {
+    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Seleccione el PDF del expediente.'; }
+    return;
+  }
+  if (msg) { msg.style.color = '#666'; msg.textContent = 'Validando y subiendo...'; }
+  if (btn) btn.disabled = true;
+  try {
+    var rCons = await fetch(API_PUBLIC + '/portal/consulta-inscripcion?cip=' + encodeURIComponent(cip) + '&nro=' + encodeURIComponent(nro));
+    var dCons = await rCons.json();
+    if (!dCons.ok || !(dCons.inscripciones || []).length) {
+      if (msg) { msg.style.color = '#c0392b'; msg.textContent = dCons.error || 'No se encontró su inscripción.'; }
+      if (btn) btn.disabled = false;
+      return;
+    }
+    var ins = (dCons.inscripciones || []).find(function(x) {
+      return String(x.item_id) === String(itemId);
+    }) || dCons.inscripciones[0];
+    if (String(ins.item_id) !== String(itemId)) {
+      if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Ese N° no corresponde a este convenio.'; }
+      if (btn) btn.disabled = false;
+      return;
+    }
+    if (!ins.puede_subir_expediente) {
+      if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'En este momento no puede subir expediente (' + (ins.estado_legible || ins.estado) + ').'; }
+      if (btn) btn.disabled = false;
+      return;
+    }
+    var dataUrl = await fileToDataUrl(inp.files[0]);
+    var r = await fetch(API_PUBLIC + '/portal/inscripciones/' + ins.id + '/expediente', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cip: cip,
+        pdf_requisitos: dataUrl,
+        pdf_nombre: inp.files[0].name
+      })
+    });
+    var d = await r.json();
+    if (!d.ok) {
+      if (msg) { msg.style.color = '#c0392b'; msg.textContent = d.error || 'No se pudo subir.'; }
+      if (btn) btn.disabled = false;
+      return;
+    }
+    if (msg) { msg.style.color = '#1a7a3a'; msg.textContent = d.mensaje || 'Expediente enviado.'; }
+    setTimeout(function() {
+      cerrarModalRepExpediente();
+      cargarListaRepechaje();
+    }, 900);
+  } catch (e) {
+    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Error de conexión.'; }
+  }
+  if (btn) btn.disabled = false;
 }
 
 function verConstancia(id) {
@@ -487,10 +636,11 @@ var cipIni = getParamCip();
 var nroIni = getParamNro();
 if (cipIni) document.getElementById('input-cip').value = cipIni;
 if (nroIni) document.getElementById('input-nro').value = nroIni;
-if (cipIni && nroIni) consultarCip();
+if (cipIni && nroIni && location.hash !== '#repechaje') consultarCip();
 if (location.hash === '#repechaje') mostrarRepechaje();
 window.addEventListener('hashchange', function() {
   if (location.hash === '#repechaje') mostrarRepechaje();
+  else salirModoRepechaje();
 });
 </script>
 </body>
