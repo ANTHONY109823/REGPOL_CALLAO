@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="responsive.css?v=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
-    .consulta-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:4px 0 24px;}
+    .consulta-top{display:flex;justify-content:center;align-items:flex-start;margin:4px 0 24px;}
     .consulta-fields{display:flex;flex-direction:column;gap:14px;align-items:stretch;width:100%;max-width:340px;}
     .consulta-fields label{font-size:12px;font-weight:700;color:#004d3d;display:block;margin-bottom:6px;}
     .consulta-fields input{width:100%;padding:11px 12px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;letter-spacing:1px;box-sizing:border-box;}
@@ -18,9 +18,9 @@
     .btn-consultar{background:#004d3d;color:#fff;border:none;padding:12px 22px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;}
     .btn-consultar:hover{background:#006b55;}
     .btn-consultar:disabled{opacity:.6;cursor:not-allowed;}
-    .btn-repechaje{background:#004d3d;color:#fff;border:none;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none;white-space:nowrap;flex-shrink:0;}
-    .btn-repechaje:hover{background:#006b55;}
     .consulta-form{background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:24px;margin-bottom:24px;}
+    .consulta-volver-wrap{display:flex;justify-content:center;margin-top:8px;}
+    body.body-cursos .portal-footer{display:none!important;margin:0!important;padding:0!important;}
     .consulta-alerta{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none;}
     .consulta-alerta.error{background:#f8d7da;color:#842029;display:block;}
     .consulta-alerta.info{background:#e8f4fd;color:#0c5460;display:block;}
@@ -85,8 +85,6 @@
     .constancia-acciones{display:flex;flex-wrap:wrap;gap:12px;}
     .sin-resultados{text-align:center;padding:40px 20px;color:#888;font-size:14px;}
     @media (max-width:600px){
-      .consulta-top{flex-direction:column-reverse;align-items:stretch;}
-      .btn-repechaje{align-self:flex-end;}
       .consulta-fields{max-width:100%;}
       .consulta-meta{grid-template-columns:1fr 1fr;gap:12px;}
       .expediente-box{padding:16px;}
@@ -137,9 +135,6 @@
         <button type="submit" class="btn-consultar" id="btn-consultar"><i class="fas fa-search"></i> CONSULTAR</button>
       </div>
     </form>
-    <a href="#repechaje" class="btn-repechaje" onclick="mostrarRepechaje();return false;">
-      <i class="fas fa-redo-alt"></i> REPECHAJE
-    </a>
   </div>
 
   <div id="repechaje-box" class="consulta-form" style="display:none;border-color:#c8a94a;">
@@ -175,12 +170,10 @@
   <div id="consulta-alerta" class="consulta-alerta"></div>
   <div id="consulta-resultados"></div>
 
-  <a href="index.html" class="btn-volver" style="display:inline-flex;margin-top:8px;"><i class="fas fa-arrow-left"></i> Volver al portal</a>
+  <div class="consulta-volver-wrap">
+    <a href="index.html" class="btn-volver" style="display:inline-flex;"><i class="fas fa-arrow-left"></i> Volver al portal</a>
+  </div>
 </main>
-
-<footer class="portal-footer">
-  <p>&copy; 2026 Regi&#243;n Policial Callao - UNITIC | Todos los derechos reservados</p>
-</footer>
 
 <script src="api-config.js?v=2"></script>
 <script src="portal-data.js?v=7"></script>
