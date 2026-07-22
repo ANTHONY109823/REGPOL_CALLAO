@@ -24,29 +24,44 @@
     .consulta-alerta{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none;}
     .consulta-alerta.error{background:#f8d7da;color:#842029;display:block;}
     .consulta-alerta.info{background:#e8f4fd;color:#0c5460;display:block;}
-    .consulta-card{background:#fff;border:1.5px solid #e0e8e0;border-radius:12px;padding:20px;margin-bottom:16px;}
-    .consulta-card.ganador{border-color:#c8a94a;background:#fffdf5;}
-    .consulta-card h3{color:#004d3d;font-size:15px;margin:0 0 4px;}
+    .consulta-card{background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:22px 24px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,77,61,.06);}
+    .consulta-card.ganador{border-color:#c8a94a;border-top:4px solid #c8a94a;background:#fff;}
+    .consulta-card h3{color:#004d3d;font-size:18px;margin:4px 0 10px;font-weight:800;}
     .consulta-card .tipo{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;}
-    .consulta-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:14px 0;font-size:13px;color:#333;}
-    .consulta-meta span{display:block;font-size:10px;font-weight:800;color:#004d3d;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;}
-    .estado-chip{display:inline-block;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;margin-top:8px;}
-    .estado-pendiente,.estado-verificado,.estado-aprobado{background:#fff3cd;color:#856404;}
-    .estado-ganador{background:#d4edda;color:#1a5c32;}
+    .consulta-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px 20px;margin:18px 0;font-size:13.5px;color:#222;padding:14px 16px;background:#f7faf7;border:1px solid #e0ebe4;border-radius:10px;}
+    .consulta-meta > div strong{display:block;font-weight:700;color:#1a1a1a;line-height:1.35;}
+    .consulta-meta span{display:block;font-size:10px;font-weight:800;color:#004d3d;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}
+    .estado-chip{display:inline-block;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;margin-top:4px;}
+    .estado-pendiente,.estado-verificado,.estado-aprobado,.estado-preinscrito{background:#fff3cd;color:#856404;}
+    .estado-ganador{background:#e8f5f1;color:#004d3d;border:1px solid #a5d6a7;}
     .estado-reserva{background:#e9ecef;color:#495057;}
-    .estado-rechazado{background:#f8d7da;color:#842029;}
-    .constancia-box{background:#f7faf7;border:1px solid #c8e6c9;border-radius:10px;padding:16px;margin-top:14px;}
-    .constancia-box p{font-size:13px;color:#444;margin:0 0 12px;line-height:1.5;}
-    .plazo-countdown{display:inline-block;margin:8px 0 12px;font-size:15px;font-weight:800;font-family:ui-monospace,Consolas,monospace;letter-spacing:.4px;padding:8px 12px;border-radius:8px;}
-    .plazo-countdown.ok{background:#e8f5f1;color:#004d3d;border:1px solid #a5d6a7;}
-    .plazo-countdown.warn{background:#fff3cd;color:#856404;border:1px solid #ffe082;}
-    .plazo-countdown.danger{background:#fdecea;color:#c0392b;border:1px solid #f5c2c7;}
-    .plazo-countdown.vencido{background:#eee;color:#666;border:1px solid #ccc;}
-    .constancia-acciones{display:flex;flex-wrap:wrap;gap:10px;}
-    .btn-pdf-ver,.btn-pdf-desc{background:#004d3d;color:#fff;border:none;padding:9px 16px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+    .estado-rechazado,.estado-caducado{background:#f8d7da;color:#842029;}
+    .estado-observado{background:#fff8e1;color:#856404;}
+    .estado-expediente_ok,.estado-en_revision{background:#d4edda;color:#1a5c32;}
+    .obs-box{background:#fff8e1;border:1.5px solid #c8a94a;border-radius:10px;padding:12px 14px;font-size:13px;color:#6b5420;margin:4px 0 18px;line-height:1.45;}
+    .obs-box.alerta-repechaje{background:#fff5f5;border-color:#e8b4b4;color:#842029;}
+    .expediente-box{background:#f7faf7;border:1.5px solid #c8a94a;border-radius:12px;padding:20px 22px;margin-top:4px;}
+    .expediente-box > p{font-size:13.5px;color:#333;margin:0 0 16px;line-height:1.5;font-weight:600;}
+    .expediente-box .plazo-countdown{display:block;width:fit-content;max-width:100%;margin:0 0 18px;font-size:16px;font-weight:800;font-family:ui-monospace,Consolas,monospace;letter-spacing:.5px;padding:10px 16px;border-radius:8px;}
+    .plazo-countdown.ok{background:#e8f5f1;color:#004d3d;border:1.5px solid #004d3d;}
+    .plazo-countdown.warn{background:#fff8e1;color:#856404;border:1.5px solid #c8a94a;}
+    .plazo-countdown.danger{background:#fdecea;color:#c0392b;border:1.5px solid #e74c3c;}
+    .plazo-countdown.vencido{background:#eee;color:#666;border:1.5px solid #ccc;}
+    .expediente-acciones{display:flex;flex-direction:column;align-items:stretch;gap:14px;}
+    .expediente-acciones input[type="file"]{display:block;width:100%;max-width:420px;padding:10px 12px;border:1.5px solid #c8e6c9;border-radius:8px;background:#fff;font-size:13px;color:#333;}
+    .btn-pdf-ver,.btn-pdf-desc{background:#004d3d;color:#fff;border:none;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:fit-content;}
+    .btn-pdf-ver:hover{background:#006b55;}
     .btn-pdf-desc{background:#c8a94a;color:#002d24;}
-    .obs-box{background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#856404;margin-top:10px;}
+    .btn-pdf-desc:hover{background:#e4c76b;}
+    .constancia-box{background:#f7faf7;border:1.5px solid #c8e6c9;border-radius:12px;padding:20px;margin-top:14px;}
+    .constancia-box p{font-size:13px;color:#444;margin:0 0 14px;line-height:1.5;}
+    .constancia-acciones{display:flex;flex-wrap:wrap;gap:12px;}
     .sin-resultados{text-align:center;padding:40px 20px;color:#888;font-size:14px;}
+    @media (max-width:600px){
+      .consulta-meta{grid-template-columns:1fr 1fr;gap:12px;}
+      .expediente-box{padding:16px;}
+      .btn-pdf-ver,.btn-pdf-desc{width:100%;}
+    }
   </style>
 </head>
 <body class="body-cursos">
@@ -252,21 +267,22 @@ function renderResultados(lista) {
         + '<div><span>Horario en el que laborará</span><strong>' + escC(ins.horario || '—') + '</strong></div>'
         + '<div><span>Situación</span><strong>' + escC(labelSituacionConsulta(ins.disponibilidad, ins.dia_franco)) + '</strong></div>'
         + (ins.plazo_expediente
-          ? '<div><span>Plazo para presentarlo</span>' + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</div>'
+          ? '<div><span>Plazo para presentarlo</span><strong>' + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</strong></div>'
           : '')
         + '</div>'
-        + '<div class="obs-box" style="background:#fdecea;border-color:#f5c2c7;color:#842029;">'
+        + '<div class="obs-box alerta-repechaje">'
         + '<strong>Importante:</strong> Si no presenta su documentación dentro del plazo, su vacante pasará a <strong>repechaje</strong>.'
         + '</div>'
-        + '<div class="constancia-box" style="border-color:#c8a94a;">'
-        + '<p><strong><i class="fas fa-upload"></i> Suba su expediente PDF</strong> — documentación completa en un solo archivo.</p>'
+        + '<div class="expediente-box">'
+        + '<p><i class="fas fa-cloud-upload-alt" style="color:#004d3d;"></i> Suba su expediente PDF — documentación completa en un solo archivo.</p>'
         + (plazoIso
           ? '<div class="plazo-countdown" data-plazo-exp="' + escC(plazoIso) + '">—</div>'
           : '<div class="plazo-countdown vencido">Sin plazo registrado</div>')
-        + '<input type="file" id="exp-file-' + ins.id + '" accept="application/pdf" style="margin-bottom:10px;"/>'
+        + '<div class="expediente-acciones">'
+        + '<input type="file" id="exp-file-' + ins.id + '" accept="application/pdf"/>'
         + '<button type="button" class="btn-pdf-ver" onclick="subirExpediente(' + ins.id + ')"><i class="fas fa-cloud-upload-alt"></i> SUBIR EXPEDIENTE</button>'
-        + '<p id="exp-msg-' + ins.id + '" style="font-size:12px;margin-top:8px;"></p>'
-        + '</div>';
+        + '<p id="exp-msg-' + ins.id + '" style="font-size:12px;margin:0;min-height:18px;"></p>'
+        + '</div></div>';
     } else {
       html += '<div class="consulta-meta">'
         + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
