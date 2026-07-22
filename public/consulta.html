@@ -23,6 +23,18 @@
     .consulta-alerta{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none;}
     .consulta-alerta.error{background:#f8d7da;color:#842029;display:block;}
     .consulta-alerta.info{background:#e8f4fd;color:#0c5460;display:block;}
+    .modal-consulta-res{position:fixed;inset:0;z-index:10010;background:rgba(0,30,24,.58);display:none;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;}
+    .modal-consulta-res.open{display:flex;}
+    .modal-consulta-res-box{background:#fff;border-radius:12px;width:100%;max-width:780px;max-height:92vh;display:flex;flex-direction:column;border:2px solid #c8a94a;box-shadow:0 16px 48px rgba(0,0,0,.3);overflow:hidden;}
+    .modal-consulta-res-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:#004d3d;color:#fff;flex-shrink:0;}
+    .modal-consulta-res-head h3{margin:0;font-size:14px;font-weight:800;line-height:1.3;}
+    .modal-consulta-res-cerrar{background:#c8a94a;color:#002d24;border:none;border-radius:7px;width:36px;height:36px;font-size:18px;font-weight:800;cursor:pointer;line-height:1;flex-shrink:0;}
+    .modal-consulta-res-cerrar:hover{background:#e4c76b;}
+    .modal-consulta-res-body{padding:16px 18px;overflow:auto;flex:1;min-height:0;background:#f7faf7;}
+    .modal-consulta-res-body .consulta-card{margin-bottom:0;box-shadow:none;}
+    .modal-consulta-res-body .consulta-alerta{margin-bottom:12px;}
+    .modal-consulta-res-foot{padding:12px 14px;border-top:1px solid #e0ebe4;background:#fff;display:flex;justify-content:flex-end;flex-shrink:0;}
+    body.modal-consulta-open{overflow:hidden;}
     .consulta-card{background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:22px 24px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,77,61,.06);}
     .consulta-card.ganador{border-color:#c8a94a;border-top:4px solid #c8a94a;background:#fff;}
     .consulta-card h3{color:#004d3d;font-size:18px;margin:4px 0 10px;font-weight:800;}
@@ -81,8 +93,8 @@
     .rd-table tbody tr:nth-child(even){background:#f3f8f4;}
     @media(max-width:600px){.rd-grid{grid-template-columns:1fr;}}
     body.modo-repechaje .consulta-top,
-    body.modo-repechaje #consulta-alerta,
-    body.modo-repechaje #consulta-resultados{display:none !important;}
+    body.modo-repechaje #consulta-alerta-form,
+    body.modo-repechaje #modal-consulta-res{display:none !important;}
     body.modo-repechaje #repechaje-box{display:block !important;}
     body.modal-rep-open{overflow:hidden;}
     .expediente-box{background:#f7faf7;border:1.5px solid #c8a94a;border-radius:12px;padding:20px 22px;margin-top:4px;}
@@ -259,8 +271,23 @@
     </div>
   </div>
 
-  <div id="consulta-alerta" class="consulta-alerta"></div>
-  <div id="consulta-resultados"></div>
+  <div id="consulta-alerta-form" class="consulta-alerta"></div>
+
+  <div id="modal-consulta-res" class="modal-consulta-res" role="dialog" aria-modal="true" aria-labelledby="modal-consulta-res-titulo">
+    <div class="modal-consulta-res-box">
+      <div class="modal-consulta-res-head">
+        <h3 id="modal-consulta-res-titulo"><i class="fas fa-search"></i> Resultado de la consulta</h3>
+        <button type="button" class="modal-consulta-res-cerrar" onclick="cerrarModalConsultaRes()" title="Cerrar" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="modal-consulta-res-body">
+        <div id="consulta-alerta" class="consulta-alerta"></div>
+        <div id="consulta-resultados"></div>
+      </div>
+      <div class="modal-consulta-res-foot">
+        <button type="button" class="btn-est-gris" onclick="cerrarModalConsultaRes()">Cerrar</button>
+      </div>
+    </div>
+  </div>
 
   <div class="consulta-volver-wrap">
     <a href="index.html#convenios" class="btn-volver" style="display:inline-flex;"><i class="fas fa-arrow-left"></i> VOLVER A CONVENIOS</a>
@@ -288,10 +315,41 @@ function getParamNro() {
 }
 
 function mostrarAlerta(msg, tipo) {
-  var el = document.getElementById('consulta-alerta');
-  el.textContent = msg;
-  el.className = 'consulta-alerta ' + (tipo || 'info');
-  el.style.display = msg ? 'block' : 'none';
+  var formEl = document.getElementById('consulta-alerta-form');
+  var modalEl = document.getElementById('consulta-alerta');
+  if (tipo === 'error') {
+    if (formEl) {
+      formEl.textContent = msg || '';
+      formEl.className = 'consulta-alerta error';
+      formEl.style.display = msg ? 'block' : 'none';
+    }
+    if (modalEl) {
+      modalEl.textContent = '';
+      modalEl.style.display = 'none';
+    }
+  } else {
+    if (formEl) {
+      formEl.textContent = '';
+      formEl.style.display = 'none';
+    }
+    if (modalEl) {
+      modalEl.textContent = msg || '';
+      modalEl.className = 'consulta-alerta ' + (tipo || 'info');
+      modalEl.style.display = msg ? 'block' : 'none';
+    }
+  }
+}
+
+function abrirModalConsultaRes() {
+  var m = document.getElementById('modal-consulta-res');
+  if (m) m.classList.add('open');
+  document.body.classList.add('modal-consulta-open');
+}
+
+function cerrarModalConsultaRes() {
+  var m = document.getElementById('modal-consulta-res');
+  if (m) m.classList.remove('open');
+  document.body.classList.remove('modal-consulta-open');
 }
 
 function consultarCip(e) {
@@ -311,23 +369,27 @@ function consultarCip(e) {
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
   mostrarAlerta('', '');
-  document.getElementById('consulta-resultados').innerHTML = '<p class="loading-msg"><i class="fas fa-spinner fa-spin"></i> Buscando...</p>';
+  document.getElementById('consulta-resultados').innerHTML = '<p class="loading-msg" style="text-align:center;padding:24px;color:#666;"><i class="fas fa-spinner fa-spin"></i> Buscando...</p>';
+  abrirModalConsultaRes();
 
   fetch(API_PUBLIC + '/portal/consulta-inscripcion?cip=' + encodeURIComponent(cip) + '&nro=' + encodeURIComponent(nro))
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.ok) {
+        cerrarModalConsultaRes();
         mostrarAlerta(d.error || 'Error al consultar.', 'error');
         document.getElementById('consulta-resultados').innerHTML = '';
         return;
       }
       mostrarAlerta('Consulta correcta — CIP ' + cip + ' / N° ' + nro + '.', 'info');
       renderResultados(d.inscripciones || []);
+      abrirModalConsultaRes();
       if (history.replaceState) {
         history.replaceState(null, '', 'consulta.html?cip=' + encodeURIComponent(cip) + '&nro=' + encodeURIComponent(nro));
       }
     })
     .catch(function() {
+      cerrarModalConsultaRes();
       mostrarAlerta('Error de conexión. Verifique su internet e intente nuevamente.', 'error');
       document.getElementById('consulta-resultados').innerHTML = '';
     })
@@ -1019,6 +1081,9 @@ document.getElementById('modal-rep-form').addEventListener('click', function(e) 
 });
 document.getElementById('modal-rep-det').addEventListener('click', function(e) {
   if (e.target === this) cerrarModalRepDetalle();
+});
+document.getElementById('modal-consulta-res').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModalConsultaRes();
 });
 document.getElementById('modal-verificacion').addEventListener('click', function(e) {
   if (e.target === this) cerrarModalVerificacion();
