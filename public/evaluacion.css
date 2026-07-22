@@ -899,8 +899,7 @@ body.eval-aviso-unidades-abierto { overflow: hidden; }
 .btn-prog-nuevo { background:none; border:1.5px solid #c0392b; color:#c0392b; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:7px; }
 .btn-prog-nuevo:hover { background:#fdecea; }
 
-.footer-simple { background: var(--verde-dark); color: #a1cfc5; text-align: center; padding: 22px 20px; font-size: 12px; margin-top: 40px; border-top: 3px solid var(--naranja-pnp); }
-.footer-simple a { color: var(--naranja-pnp); text-decoration: none; }
+.footer-simple { display: none !important; margin: 0 !important; padding: 0 !important; height: 0 !important; overflow: hidden !important; border: none !important; }
 
 @media (max-width: 600px) {
   .registro-foto-fila {

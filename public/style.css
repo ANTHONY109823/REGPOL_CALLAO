@@ -937,11 +937,16 @@ img {
     }
 }
 
-footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; font-size: 13px; }
-
-.body-portal.portal-home > footer,
-.portal-home > footer {
+footer,
+.footer-simple,
+footer.portal-footer {
   display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  border: none !important;
+  background: transparent !important;
 }
 
 .body-cursos,
@@ -1375,15 +1380,6 @@ footer { background: #1a1a1a; color: #888; padding: 20px 0; text-align: center; 
 
 .btn-registro-grande:hover { background: #e67e22; }
 
-.footer-simple,
-footer.portal-footer {
-    background: #1a1a1a;
-    color: #888;
-    text-align: center;
-    padding: 20px 0;
-    font-size: 13px;
-    margin-top: 50px;
-}
 
 @media (max-width: 768px) {
     .header-moderno .flex-between { flex-direction: column; gap: 16px; text-align: center; }
