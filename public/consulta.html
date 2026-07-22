@@ -217,6 +217,19 @@ function resumenConvenioConsulta(ins) {
   return partes.length ? partes.join(' · ') : (ins.convocatoria || '—');
 }
 
+function labelSituacionConsulta(disp, dia) {
+  if (disp === 'VACACIONES') return 'Vacaciones';
+  if (disp === 'FRANCO') return 'Franco' + (dia ? (' — ' + dia) : '');
+  return disp || '—';
+}
+
+function labelTurnoConsulta(mod, otro) {
+  if (!mod) return '—';
+  if (mod === 'OTROS') return otro || 'Otros';
+  if (mod === 'SERVICIO_FRANCO_RETEN') return 'Servicio / Franco / Retén';
+  return String(mod).replace(/_/g, ' ');
+}
+
 function renderResultados(lista) {
   var wrap = document.getElementById('consulta-resultados');
   if (!lista || !lista.length) {
@@ -242,7 +255,10 @@ function renderResultados(lista) {
         + '<div><span>Grado</span><strong>' + escC(ins.grado || '—') + '</strong></div>'
         + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
         + '<div><span>Nombres</span><strong>' + escC(nombreParts.nombres) + '</strong></div>'
-        + '<div style="grid-column:1/-1;"><span>Detalle del convenio</span>' + escC(resumenConvenioConsulta(ins)) + '</div>'
+        + '<div><span>Turno que postuló y ganó</span><strong>' + escC(labelTurnoConsulta(ins.modalidad, ins.modalidad_otro)) + '</strong></div>'
+        + '<div><span>Comisaría a la que postuló</span><strong>' + escC(ins.comisaria_postula || '—') + '</strong></div>'
+        + '<div><span>Horario en el que laborará</span><strong>' + escC(ins.horario || '—') + '</strong></div>'
+        + '<div><span>Situación</span><strong>' + escC(labelSituacionConsulta(ins.disponibilidad, ins.dia_franco)) + '</strong></div>'
         + (ins.plazo_expediente
           ? '<div><span>Plazo para presentarlo</span>' + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</div>'
           : '')
@@ -265,9 +281,9 @@ function renderResultados(lista) {
         + '<div><span>Área gestora</span>' + escC(ins.oficina_gestora) + '</div>'
         + '<div><span>Ubicación del trámite</span>' + escC(ins.ubicacion_tramite) + '</div>'
         + '<div><span>Fecha de inscripción</span>' + escC(ins.fecha || '—') + '</div>'
-        + '<div><span>Grado</span>' + escC(ins.grado || '—') + '</div>'
-        + '<div><span>Apellidos</span>' + escC(nombreParts.apellidos) + '</div>'
-        + '<div><span>Nombres</span>' + escC(nombreParts.nombres) + '</div>'
+        + '<div><span>Grado</span><strong>' + escC(ins.grado || '—') + '</strong></div>'
+        + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
+        + '<div><span>Nombres</span><strong>' + escC(nombreParts.nombres) + '</strong></div>'
         + (ins.unidad ? '<div><span>Unidad</span>' + escC(ins.unidad) + '</div>' : '')
         + '</div>';
       if (ins.puede_descargar_constancia) {
