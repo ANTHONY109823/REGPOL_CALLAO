@@ -6,7 +6,7 @@
     <link rel="icon" href="favicon.png?v=3" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REGPOL CALLAO - PNP</title>
-    <link rel="stylesheet" href="style.css?v=71">
+    <link rel="stylesheet" href="style.css?v=72">
     <link rel="stylesheet" href="responsive.css?v=3">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -123,19 +123,20 @@
     </section>
 
     <section id="convenios" class="portal-seccion">
-        <div class="section-header section-header--compact">
+        <div class="section-header section-header--compact section-header--con-accion">
             <h3>CONVENIOS DE TRABAJO</h3>
-        </div>
-        <div class="convenios-consulta-bar" style="background:linear-gradient(135deg,#004d3d,#006b55);border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
-            <div style="color:#fff;">
-                <strong style="font-size:14px;display:block;margin-bottom:4px;"><i class="fas fa-search"></i> Ya se inscribi?</strong>
-                <span style="font-size:13px;opacity:.92;">Consulte con su CIP + N° de inscripción el estado, el aviso del sorteo Facebook o suba su expediente si resultó ganador.</span>
-            </div>
-            <a href="consulta.html" style="background:#c8a94a;color:#002d24;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;white-space:nowrap;">
-                <i class="fas fa-id-card"></i> CONSULTA CIP + N°
+            <a href="consulta.html#repechaje" class="btn-repechaje-destaque">
+                <i class="fas fa-redo-alt"></i>
+                <span>TENEMOS REPECHAJE — CONSULTE AQUÍ</span>
             </a>
-            <a href="consulta.html#repechaje" style="background:#004d3d;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;white-space:nowrap;">
-                <i class="fas fa-redo-alt"></i> REPECHAJE
+        </div>
+        <div class="convenios-consulta-bar">
+            <div class="convenios-consulta-texto">
+                <strong><i class="fas fa-search"></i> ¿Ya se inscribió?</strong>
+                <span>Ingrese su CIP y N° de inscripción para consultar su estado, ver el aviso del sorteo en Facebook o subir su expediente si resultó ganador.</span>
+            </div>
+            <a href="consulta.html" class="btn-consulta-cip">
+                <i class="fas fa-id-card"></i> CONSULTA CIP + N°
             </a>
         </div>
         <div class="grid-modern" id="grid-convenios"></div>

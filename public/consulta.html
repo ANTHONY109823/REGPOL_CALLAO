@@ -10,17 +10,17 @@
   <link rel="stylesheet" href="responsive.css?v=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
-    .consulta-hero{background:linear-gradient(135deg,#004d3d,#006b55);border-radius:12px;padding:28px 24px;color:#fff;margin-bottom:24px;}
-    .consulta-hero h2{font-size:20px;margin:0 0 8px;font-weight:800;}
-    .consulta-hero p{margin:0;font-size:13.5px;opacity:.92;line-height:1.5;}
-    .consulta-form{background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:24px;margin-bottom:24px;}
-    .consulta-form label{font-size:12px;font-weight:700;color:#004d3d;display:block;margin-bottom:6px;}
-    .consulta-form input{width:100%;max-width:280px;padding:11px 12px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;letter-spacing:1px;}
-    .consulta-form input:focus{border-color:#004d3d;outline:none;}
-    .consulta-form .row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
-    .btn-consultar{background:#004d3d;color:#fff;border:none;padding:12px 22px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;}
+    .consulta-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:4px 0 24px;}
+    .consulta-fields{display:flex;flex-direction:column;gap:14px;align-items:stretch;width:100%;max-width:340px;}
+    .consulta-fields label{font-size:12px;font-weight:700;color:#004d3d;display:block;margin-bottom:6px;}
+    .consulta-fields input{width:100%;padding:11px 12px;border:1.5px solid #ccc;border-radius:8px;font-size:15px;letter-spacing:1px;box-sizing:border-box;}
+    .consulta-fields input:focus{border-color:#004d3d;outline:none;}
+    .btn-consultar{background:#004d3d;color:#fff;border:none;padding:12px 22px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;}
     .btn-consultar:hover{background:#006b55;}
     .btn-consultar:disabled{opacity:.6;cursor:not-allowed;}
+    .btn-repechaje{background:#004d3d;color:#fff;border:none;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none;white-space:nowrap;flex-shrink:0;}
+    .btn-repechaje:hover{background:#006b55;}
+    .consulta-form{background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:24px;margin-bottom:24px;}
     .consulta-alerta{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none;}
     .consulta-alerta.error{background:#f8d7da;color:#842029;display:block;}
     .consulta-alerta.info{background:#e8f4fd;color:#0c5460;display:block;}
@@ -58,6 +58,9 @@
     .constancia-acciones{display:flex;flex-wrap:wrap;gap:12px;}
     .sin-resultados{text-align:center;padding:40px 20px;color:#888;font-size:14px;}
     @media (max-width:600px){
+      .consulta-top{flex-direction:column-reverse;align-items:stretch;}
+      .btn-repechaje{align-self:flex-end;}
+      .consulta-fields{max-width:100%;}
       .consulta-meta{grid-template-columns:1fr 1fr;gap:12px;}
       .expediente-box{padding:16px;}
       .btn-pdf-ver,.btn-pdf-desc{width:100%;}
@@ -91,28 +94,23 @@
 <nav class="nav-main"><div class="container"><ul></ul></div></nav>
 
 <main class="container content-area">
-  <div class="consulta-hero">
-    <h2><i class="fas fa-search"></i> Consulta de inscripción</h2>
-    <p>Ingrese su <strong>CIP</strong> y su <strong>N° de inscripción</strong> para ver el estado de su preinscripción, el aviso del sorteo en Facebook o —si resultó ganador— subir su expediente.</p>
-  </div>
-
-  <div class="consulta-form">
+  <div class="consulta-top">
     <form id="form-consulta" onsubmit="consultarCip(event)">
-      <div class="row">
+      <div class="consulta-fields">
         <div>
-          <label for="input-cip">CIP del efectivo policial</label>
+          <label for="input-cip">CIP</label>
           <input type="text" id="input-cip" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="Ej: 31590992" required autocomplete="off">
         </div>
         <div>
-          <label for="input-nro">N° de inscripción / registro</label>
+          <label for="input-nro">N° de inscripción</label>
           <input type="text" id="input-nro" maxlength="30" placeholder="Ej: C202600003" required autocomplete="off" style="letter-spacing:0.5px;text-transform:uppercase;">
         </div>
         <button type="submit" class="btn-consultar" id="btn-consultar"><i class="fas fa-search"></i> CONSULTAR</button>
-        <a href="#repechaje" class="btn-consultar" style="background:#004d3d;text-decoration:none;" onclick="mostrarRepechaje();return false;">
-          <i class="fas fa-redo-alt"></i> REPECHAJE
-        </a>
       </div>
     </form>
+    <a href="#repechaje" class="btn-repechaje" onclick="mostrarRepechaje();return false;">
+      <i class="fas fa-redo-alt"></i> REPECHAJE
+    </a>
   </div>
 
   <div id="repechaje-box" class="consulta-form" style="display:none;border-color:#c8a94a;">
