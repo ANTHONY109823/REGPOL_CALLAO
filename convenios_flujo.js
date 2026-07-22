@@ -415,6 +415,22 @@ async function migrarEstadosConvenios(pool) {
 }
 
 async function caducarExpedientesVencidos(pool) {
+  // Asegurar fecha_ganador y plazo (2 días) a ganadores que aún no lo tengan
+  await pool.query(`
+    UPDATE inscripciones n
+    SET fecha_ganador = COALESCE(fecha_ganador, n.fecha, NOW()),
+        plazo_expediente = COALESCE(
+          plazo_expediente,
+          COALESCE(fecha_ganador, n.fecha, NOW()) + ($1 || ' days')::interval
+        )
+    FROM items_portal i
+    WHERE n.item_id = i.id
+      AND i.tipo = 'convenio'
+      AND n.estado = 'ganador'
+      AND COALESCE(n.pdf_requisitos,'') = ''
+      AND (n.plazo_expediente IS NULL OR n.fecha_ganador IS NULL)
+  `, [String(PLAZO_EXPEDIENTE_DIAS)]);
+
   const r = await pool.query(`
     UPDATE inscripciones n
     SET estado = 'caducado',

@@ -37,6 +37,11 @@
     .estado-rechazado{background:#f8d7da;color:#842029;}
     .constancia-box{background:#f7faf7;border:1px solid #c8e6c9;border-radius:10px;padding:16px;margin-top:14px;}
     .constancia-box p{font-size:13px;color:#444;margin:0 0 12px;line-height:1.5;}
+    .plazo-countdown{display:inline-block;margin:8px 0 12px;font-size:15px;font-weight:800;font-family:ui-monospace,Consolas,monospace;letter-spacing:.4px;padding:8px 12px;border-radius:8px;}
+    .plazo-countdown.ok{background:#e8f5f1;color:#004d3d;border:1px solid #a5d6a7;}
+    .plazo-countdown.warn{background:#fff3cd;color:#856404;border:1px solid #ffe082;}
+    .plazo-countdown.danger{background:#fdecea;color:#c0392b;border:1px solid #f5c2c7;}
+    .plazo-countdown.vencido{background:#eee;color:#666;border:1px solid #ccc;}
     .constancia-acciones{display:flex;flex-wrap:wrap;gap:10px;}
     .btn-pdf-ver,.btn-pdf-desc{background:#004d3d;color:#fff;border:none;padding:9px 16px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
     .btn-pdf-desc{background:#c8a94a;color:#002d24;}
@@ -214,9 +219,17 @@ function renderResultados(lista) {
       html += '<div class="obs-box"><strong>Observación:</strong> ' + escC(ins.observacion) + '</div>';
     }
     if (ins.puede_subir_expediente) {
+      var plazoIso = ins.plazo_expediente || '';
+      if (!plazoIso && ins.fecha_ganador) {
+        var dg = new Date(ins.fecha_ganador);
+        if (!isNaN(dg.getTime())) { dg.setDate(dg.getDate() + 2); plazoIso = dg.toISOString(); }
+      }
       html += '<div class="constancia-box" style="border-color:#c8a94a;">'
-        + '<p><strong><i class="fas fa-upload"></i> Suba su expediente PDF</strong> (plazo 2 días desde que fue ganador). '
+        + '<p><strong><i class="fas fa-upload"></i> Suba su expediente PDF</strong> (plazo desde que fue declarado ganador). '
         + 'Documentación completa en un solo archivo.</p>'
+        + (plazoIso
+          ? '<div class="plazo-countdown" data-plazo-exp="' + escC(plazoIso) + '">—</div>'
+          : '<div class="plazo-countdown vencido">Sin plazo registrado</div>')
         + '<input type="file" id="exp-file-' + ins.id + '" accept="application/pdf" style="margin-bottom:10px;"/>'
         + '<button type="button" class="btn-pdf-ver" onclick="subirExpediente(' + ins.id + ')"><i class="fas fa-cloud-upload-alt"></i> SUBIR EXPEDIENTE</button>'
         + '<p id="exp-msg-' + ins.id + '" style="font-size:12px;margin-top:8px;"></p>'
@@ -234,6 +247,44 @@ function renderResultados(lista) {
     html += '</div>';
     return html;
   }).join('');
+  iniciarTickPlazosConsulta();
+}
+
+function formatearPlazoRestanteConsulta(ms) {
+  if (ms <= 0) return { texto: 'PLAZO VENCIDO', cls: 'vencido' };
+  var totalSec = Math.floor(ms / 1000);
+  var d = Math.floor(totalSec / 86400);
+  var h = Math.floor((totalSec % 86400) / 3600);
+  var m = Math.floor((totalSec % 3600) / 60);
+  var s = totalSec % 60;
+  var pad = function(n) { return (n < 10 ? '0' : '') + n; };
+  var texto = (d > 0 ? (d + 'd ') : '') + pad(h) + ':' + pad(m) + ':' + pad(s);
+  var cls = 'ok';
+  if (ms <= 6 * 60 * 60 * 1000) cls = 'danger';
+  else if (ms <= 24 * 60 * 60 * 1000) cls = 'warn';
+  return { texto: 'Tiempo restante: ' + texto, cls: cls };
+}
+
+var _tickPlazosConsulta = null;
+function actualizarPlazosConsulta() {
+  var nodos = document.querySelectorAll('[data-plazo-exp]');
+  var now = Date.now();
+  for (var i = 0; i < nodos.length; i++) {
+    var el = nodos[i];
+    var fin = new Date(el.getAttribute('data-plazo-exp')).getTime();
+    if (isNaN(fin)) continue;
+    var r = formatearPlazoRestanteConsulta(fin - now);
+    el.textContent = r.texto;
+    el.className = 'plazo-countdown ' + r.cls;
+  }
+}
+
+function iniciarTickPlazosConsulta() {
+  actualizarPlazosConsulta();
+  if (_tickPlazosConsulta) clearInterval(_tickPlazosConsulta);
+  if (document.querySelector('[data-plazo-exp]')) {
+    _tickPlazosConsulta = setInterval(actualizarPlazosConsulta, 1000);
+  }
 }
 
 function fileToDataUrl(file) {
