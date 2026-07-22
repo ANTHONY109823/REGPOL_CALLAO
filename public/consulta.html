@@ -141,6 +141,45 @@
     body.modo-repechaje .consulta-top,
     body.modo-repechaje #consulta-alerta-form{display:none !important;}
     body.modo-repechaje #repechaje-box{display:block !important;}
+    body.modo-repechaje .content-area{
+      display:flex !important;
+      flex-direction:column;
+      align-items:center;
+      justify-content:flex-start;
+      padding-top:18px !important;
+      padding-bottom:16px !important;
+      min-height:0 !important;
+    }
+    .repechaje-box{
+      width:100%;
+      max-width:680px;
+      margin:0 auto 10px !important;
+      padding:16px 18px !important;
+      text-align:center;
+      box-sizing:border-box;
+    }
+    .repechaje-box-titulo{
+      margin:0 0 6px;
+      color:#004d3d;
+      font-size:16px;
+      font-weight:800;
+      text-align:center;
+    }
+    .repechaje-box-intro{
+      font-size:13px;
+      color:#555;
+      margin:0 auto 12px;
+      line-height:1.4;
+      max-width:480px;
+      text-align:center;
+    }
+    .repechaje-lista-wrap{margin-top:0;}
+    body.modo-repechaje .consulta-volver-wrap{margin-top:2px;margin-bottom:0;}
+    body.modo-repechaje .repechaje-row{
+      justify-content:center;
+      margin-left:auto;
+      margin-right:auto;
+    }
     body.modal-rep-open{overflow:hidden;}
     .expediente-box{background:#f7faf7;border:1.5px solid #c8a94a;border-radius:12px;padding:20px 22px;margin-top:4px;}
     .expediente-box > p{font-size:13.5px;color:#333;margin:0 0 16px;line-height:1.5;font-weight:600;}
@@ -243,12 +282,9 @@
     </form>
   </div>
 
-  <div id="repechaje-box" class="consulta-form" style="display:none;border-color:#c8a94a;">
-    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
-      <h3 style="margin:0;color:#004d3d;font-size:16px;"><i class="fas fa-redo-alt"></i> Repechaje de convenios</h3>
-      <button type="button" class="btn-rep btn-rep-reg" onclick="salirModoRepechaje()" style="background:#888;"><i class="fas fa-search"></i> Ir a consulta CIP</button>
-    </div>
-    <p style="font-size:13px;color:#555;margin:0 0 12px;line-height:1.45;">
+  <div id="repechaje-box" class="consulta-form repechaje-box" style="display:none;border-color:#c8a94a;">
+    <h3 class="repechaje-box-titulo"><i class="fas fa-redo-alt"></i> Repechaje de convenios</h3>
+    <p class="repechaje-box-intro">
       Vacantes liberadas. Pulse <strong>REGISTRARSE</strong> para completar el formulario y subir su expediente PDF.
     </p>
     <div id="repechaje-lista" class="repechaje-lista-wrap"><p style="color:#888;font-size:13px;">Cargando convocatorias...</p></div>
