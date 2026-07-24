@@ -517,7 +517,6 @@ function splitApellidosNombres(nombresCompletos) {
 function resumenConvenioConsulta(ins) {
   var partes = [];
   if (ins.horario) partes.push(ins.horario);
-  if (ins.fecha_inicio) partes.push('Beneficio: ' + ins.fecha_inicio);
   if (ins.comisaria_postula) partes.push('Postula a: ' + ins.comisaria_postula);
   if (ins.vacantes != null && ins.vacantes !== '') partes.push('Vacantes: ' + ins.vacantes);
   return partes.length ? partes.join(' · ') : (ins.convocatoria || '—');
@@ -855,8 +854,6 @@ function htmlConstanciaSheet(ins) {
     + fila('Convenio', ins.convocatoria || '—', true)
     + fila('Origen de ingreso', modo)
     + fila('Comisaría asignada', cia || '—')
-    + fila('Beneficio económico', beneficio || '—')
-    + fila('Detalle del beneficio', detalleBen || '—')
     + (ins.uniforme ? fila('Uniforme', ins.uniforme, true) : '')
     + '</div></div>'
 
@@ -1083,8 +1080,6 @@ function renderHtmlDetalleRepechaje(item, cache) {
     + '<div class="rd-item"><span>Estado</span><strong>' + escC(item.estado || '—') + '</strong></div>'
     + '<div class="rd-item"><span>Vacantes libres</span><strong>' + escC(String(disp)) + ' / ' + escC(String(vac)) + '</strong></div>'
     + '<div class="rd-item"><span>Horario</span><strong>' + escC(item.horario || '—') + '</strong></div>'
-    + '<div class="rd-item"><span>Beneficio</span><strong>' + escC(item.fecha_inicio || '—') + '</strong></div>'
-    + (item.duracion ? ('<div class="rd-item"><span>Detalle beneficio</span><strong>' + escC(item.duracion) + '</strong></div>') : '')
     + (item.lugar ? ('<div class="rd-item"><span>Lugar</span><strong>' + escC(item.lugar) + '</strong></div>') : '')
     + (item.uniforme ? ('<div class="rd-item full"><span>Uniforme</span><strong>' + escC(item.uniforme) + '</strong></div>') : '')
     + '</div>';

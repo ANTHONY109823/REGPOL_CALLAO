@@ -1526,7 +1526,7 @@
         <label>Color de tarjeta</label>
         <input type="color" id="mi-color" value="#004d3d" style="height:34px;padding:2px;"/>
       </div>
-      <div>
+      <div id="mi-wrap-fecha">
         <label id="mi-lab-fecha">Beneficio económico</label>
         <input type="text" id="mi-fecha-inicio" placeholder="Ej: S/ 75.00" maxlength="100"/>
       </div>
@@ -1534,7 +1534,7 @@
         <label id="mi-lab-duracion">Detalle del beneficio</label>
         <input type="text" id="mi-duracion" placeholder="Ej: Por día laborado" maxlength="100"/>
       </div>
-      <div style="grid-column:1/-1;">
+      <div style="grid-column:1/-1;" id="mi-wrap-horario">
         <label id="mi-lab-horario">Horario</label>
         <input type="text" id="mi-horario" placeholder="Ej: 08:00 a 20:00 hrs" maxlength="200"/>
       </div>
@@ -1566,7 +1566,7 @@
         </div>
         <div id="mi-turnos-lista" style="margin-bottom:4px;"></div>
         <textarea id="mi-turnos" rows="2" style="display:none;"></textarea>
-        <p style="font-size:10.5px;color:#888;margin:4px 0 0;">Al guardar, vacantes totales y horario se actualizan con la suma de turnos.</p>
+        <p style="font-size:10.5px;color:#888;margin:4px 0 0;">Al guardar, las vacantes totales se actualizan con la suma de turnos.</p>
       </div>
       <div style="grid-column:1/-1;display:none;" id="mi-wrap-lugar">
         <label id="mi-lab-lugar">Lugar</label>
@@ -1582,7 +1582,9 @@
       </div>
       <div style="grid-column:1/-1;" id="mi-wrap-observaciones">
         <label id="mi-lab-observaciones">Observaciones</label>
-        <input type="text" id="mi-observaciones" maxlength="300" placeholder="Ej: Entrega de documentos hasta el 30 de julio 2026"/>
+        <input type="text" id="mi-observaciones" maxlength="300" placeholder="Observaciones" style="display:none;"/>
+        <input type="date" id="mi-plazo-fecha" style="display:none;width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;"/>
+        <p id="mi-plazo-ayuda" style="display:none;font-size:10.5px;color:#888;margin:4px 0 0;">Fecha límite de entrega de documentos (calendario).</p>
       </div>
       <div style="grid-column:1/-1;">
         <label>Requisitos (uno por línea)</label>
@@ -5055,6 +5057,8 @@ function abrirModalItem(id){
   document.getElementById('mi-uniforme').value='';
   document.getElementById('mi-contactos').value='';
   document.getElementById('mi-observaciones').value='';
+  var plazoEl=document.getElementById('mi-plazo-fecha');
+  if(plazoEl) plazoEl.value='';
   document.getElementById('mi-requisitos').value='';
   document.getElementById('mi-cupos-unidades').value='';
   var turnosTa=document.getElementById('mi-turnos');
@@ -5119,6 +5123,8 @@ function poblarModalItem(item){
   document.getElementById('mi-uniforme').value=item.uniforme||'';
   document.getElementById('mi-contactos').value=item.contactos_responsables||'';
   document.getElementById('mi-observaciones').value=item.observaciones||'';
+  var plazoEl=document.getElementById('mi-plazo-fecha');
+  if(plazoEl) plazoEl.value=parsePlazoAFechaISO(item.observaciones||'')||'';
   var reqs=Array.isArray(item.requisitos)?item.requisitos:[];
   document.getElementById('mi-requisitos').value=reqs.join('\n');
   document.getElementById('mi-cupos-unidades').value=serializarCuposUnidades(item.cupos_unidades);
@@ -5255,6 +5261,8 @@ function adaptarModalItemPorTipo(tipo){
   show('mi-wrap-form-url', !esConv);
   show('mi-wrap-lugar', !esConv);
   show('mi-wrap-duracion', !esConv);
+  show('mi-wrap-fecha', !esConv);
+  show('mi-wrap-horario', !esConv);
   show('mi-wrap-vacantes', true);
   show('mi-cupos-wrap', esConv);
   show('mi-turnos-wrap', esConv);
@@ -5265,10 +5273,16 @@ function adaptarModalItemPorTipo(tipo){
   var labDur = document.getElementById('mi-lab-duracion');
   var labHor = document.getElementById('mi-lab-horario');
   var labObs = document.getElementById('mi-lab-observaciones');
+  var obsTxt = document.getElementById('mi-observaciones');
+  var plazoFecha = document.getElementById('mi-plazo-fecha');
+  var plazoAyuda = document.getElementById('mi-plazo-ayuda');
   if(labFecha) labFecha.textContent = esConv ? 'Beneficio económico' : 'Fecha de inicio';
   if(labDur) labDur.textContent = esConv ? 'Detalle del beneficio' : 'Duración';
-  if(labHor) labHor.textContent = esConv ? 'Horario (resumen)' : 'Turnos / Horarios';
-  if(labObs) labObs.textContent = esConv ? 'Plazo / aviso documental' : 'Observaciones';
+  if(labHor) labHor.textContent = esConv ? 'Horario' : 'Turnos / Horarios';
+  if(labObs) labObs.textContent = esConv ? 'Plazo entrega de documentos' : 'Observaciones';
+  if(obsTxt) obsTxt.style.display = esConv ? 'none' : '';
+  if(plazoFecha) plazoFecha.style.display = esConv ? '' : 'none';
+  if(plazoAyuda) plazoAyuda.style.display = esConv ? '' : 'none';
 
   var plantilla = document.getElementById('mi-plantilla-wrap');
   if(plantilla) plantilla.style.display = '';
@@ -5397,6 +5411,44 @@ function serializarTurnos(turnos){
   return turnos.map(function(t){
     return String((t&&t.turno)||'').trim()+' | '+String((t&&t.dia)||'PAR/IMPAR').trim()+' | '+(t&&t.vacantes!=null?t.vacantes:0);
   }).join('\n');
+}
+
+function parsePlazoAFechaISO(texto){
+  var s = String(texto || '').trim();
+  if(!s) return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  var mIso = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(mIso) return mIso[1]+'-'+mIso[2]+'-'+mIso[3];
+  var mDmY = s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if(mDmY){
+    var d = ('0'+mDmY[1]).slice(-2);
+    var mo = ('0'+mDmY[2]).slice(-2);
+    return mDmY[3]+'-'+mo+'-'+d;
+  }
+  var meses = {
+    enero:1, febrero:2, marzo:3, abril:4, mayo:5, junio:6,
+    julio:7, agosto:8, setiembre:9, septiembre:9, octubre:10, noviembre:11, diciembre:12
+  };
+  var mTxt = s.toLowerCase().match(/(\d{1,2})\s+de\s+([a-záéíóú]+)\s+(?:de\s+)?(\d{4})/i);
+  if(mTxt){
+    var mes = meses[mTxt[2].normalize('NFD').replace(/[\u0300-\u036f]/g,'')];
+    if(!mes && mTxt[2].indexOf('julio')===0) mes = 7;
+    if(mes){
+      return mTxt[3]+'-'+('0'+mes).slice(-2)+'-'+('0'+mTxt[1]).slice(-2);
+    }
+  }
+  return '';
+}
+
+function textoPlazoDesdeFechaISO(iso){
+  if(!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
+  var parts = iso.split('-');
+  var y = parseInt(parts[0],10), m = parseInt(parts[1],10)-1, d = parseInt(parts[2],10);
+  var dt = new Date(y, m, d);
+  if(isNaN(dt.getTime())) return '';
+  var dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  var mesesNom = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  return 'Entrega de documentos hasta el día '+dias[dt.getDay()]+' '+d+' de '+mesesNom[m]+' '+y+'.';
 }
 
 function parseTurnosTexto(txt){
@@ -5629,20 +5681,41 @@ function guardarItem(){
   var turnos=parseTurnosTexto((document.getElementById('mi-turnos')||{}).value);
   var sumaTurnos=turnos.reduce(function(a,t){ return a+(parseInt(t.vacantes,10)||0); },0);
   var horarioTxt=val('mi-horario');
-  if(turnos.length){
+  if(tipo==='convenio' && turnos.length){
     var nombres=[];
     var dias={};
     turnos.forEach(function(t){
       if(nombres.indexOf(t.turno)===-1) nombres.push(t.turno);
       dias[t.dia]=true;
     });
-    var autoHor=nombres.join(' / ')+' — días '+Object.keys(dias).join(' / ');
+    horarioTxt=nombres.join(' / ')+' — días '+Object.keys(dias).join(' / ');
+  } else if(turnos.length){
+    var nombres2=[];
+    var dias2={};
+    turnos.forEach(function(t){
+      if(nombres2.indexOf(t.turno)===-1) nombres2.push(t.turno);
+      dias2[t.dia]=true;
+    });
+    var autoHor=nombres2.join(' / ')+' — días '+Object.keys(dias2).join(' / ');
     if(!horarioTxt || horarioTxt.indexOf('—')!==-1) horarioTxt=autoHor;
   }
   var vacantes=sumaTurnos>0 ? sumaTurnos : (parseInt(val('mi-vacantes'))||0);
   if(sumaTurnos>0){
     var vacEl=document.getElementById('mi-vacantes');
     if(vacEl) vacEl.value=String(sumaTurnos);
+  }
+  var observacionesTxt=val('mi-observaciones');
+  var fechaInicioTxt=val('mi-fecha-inicio');
+  if(tipo==='convenio'){
+    var isoPlazo=(document.getElementById('mi-plazo-fecha')||{}).value||'';
+    observacionesTxt=textoPlazoDesdeFechaISO(isoPlazo) || '';
+    // No editar beneficio en convenio: conservar valor previo
+    if(id){
+      var prevB=(ITEMS_CACHE||[]).find(function(i){ return parseInt(i.id,10)===parseInt(id,10); });
+      fechaInicioTxt=prevB ? (prevB.fecha_inicio || '') : '';
+    } else {
+      fechaInicioTxt='';
+    }
   }
   var body={
     tipo:tipo, titulo:titulo.toUpperCase(),
@@ -5655,12 +5728,12 @@ function guardarItem(){
     turnos:turnos,
     horario:horarioTxt,
     vacantes:vacantes,
-    fecha_inicio:val('mi-fecha-inicio'),
+    fecha_inicio:fechaInicioTxt,
     duracion:val('mi-duracion'),
     lugar:val('mi-lugar'),
     uniforme:val('mi-uniforme'),
     contactos_responsables:val('mi-contactos'),
-    observaciones:val('mi-observaciones'),
+    observaciones:observacionesTxt,
     ventana_inscripcion:val('mi-ventana-inscripcion'),
     aviso_sorteo_fb:(function(){
       if(id){
@@ -6897,7 +6970,6 @@ function abrirConstanciaAdmin(id){
     +'<div class="pre-item full"><span>Convocatoria</span><strong>'+escHtml(item.titulo||'—')+'</strong></div>'
     +'<div class="pre-item"><span>Horario</span><strong>'+escHtml(item.horario||'—')+'</strong></div>'
     +'<div class="pre-item"><span>Vacantes</span><strong>'+escHtml(item.vacantes!=null?String(item.vacantes):'—')+'</strong></div>'
-    +'<div class="pre-item"><span>Beneficio económico</span><strong>'+escHtml(item.fecha_inicio||'—')+'</strong></div>'
     +'<div class="pre-item"><span>Comisaría a la que postula</span><strong>'+escHtml(ADMIN_CONSTANCIA_DATOS.comisaria_postula||'—')+'</strong></div>'
     +'<div class="pre-item"><span>Unidad / Dependencia</span><strong>'+escHtml(ADMIN_CONSTANCIA_DATOS.unidad||'—')+'</strong></div>'
     +'<div class="pre-item"><span>Región policial</span><strong>'+escHtml(ADMIN_CONSTANCIA_DATOS.region||'—')+'</strong></div>'

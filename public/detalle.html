@@ -334,10 +334,8 @@ function renderDetalle(item){
   if(item.horario) infoHtml += '<div class="info-item"><span>HORARIO:</span><p>'+escHtmlD(item.horario)+'</p></div>';
   if(item.vacantes) infoHtml += '<div class="info-item"><span>VACANTES:</span><p>'+escHtmlD(String(item.vacantes))+' efectivos</p></div>';
   if(item.lugar) infoHtml += '<div class="info-item"><span>LUGAR:</span><p>'+escHtmlD(item.lugar)+'</p></div>';
-  if(esConvenio && (item.fecha_inicio || item.duracion || item.observaciones)){
-    if(item.fecha_inicio) infoHtml += '<div class="info-item"><span>BENEFICIO ECONÓMICO:</span><p class="price">'+escHtmlD(item.fecha_inicio)+'</p></div>';
-    if(item.duracion) infoHtml += '<div class="info-item"><p>'+escHtmlD(item.duracion)+'</p></div>';
-    if(item.observaciones) infoHtml += '<div class="info-item"><span>PLAZO:</span><p><strong>'+escHtmlD(item.observaciones)+'</strong></p></div>';
+  if(esConvenio && item.observaciones){
+    infoHtml += '<div class="info-item"><span>PLAZO:</span><p><strong>'+escHtmlD(item.observaciones)+'</strong></p></div>';
   } else if(esCurso && (item.fecha_inicio || item.duracion || item.observaciones)){
     if(item.fecha_inicio) infoHtml += '<div class="info-item"><span>FECHA DE INICIO:</span><p class="price" style="color:#004d3d;">'+escHtmlD(item.fecha_inicio)+'</p></div>';
     if(item.duracion) infoHtml += '<div class="info-item"><span>DURACIÓN:</span><p>'+escHtmlD(item.duracion)+'</p></div>';
@@ -348,7 +346,7 @@ function renderDetalle(item){
   }
   if(!infoHtml) infoHtml = '<p style="color:#888;font-size:13px;margin:0;">Sin datos publicados.</p>';
 
-  var infoTitulo = esConvenio ? 'HORARIOS / VACANTES / BENEFICIO' : 'HORARIOS / VACANTES / INICIO';
+  var infoTitulo = esConvenio ? 'HORARIOS / VACANTES / PLAZO' : 'HORARIOS / VACANTES / INICIO';
 
   var cupos = Array.isArray(item.cupos_unidades) ? item.cupos_unidades.slice() : [];
   // Sin cupos configurados: mostrar un solo lugar (no forzar DIVOPUS 1)
@@ -1103,7 +1101,6 @@ function mostrarModalPreinscripcion(datos){
     +'<div class="pre-item full"><span>Convocatoria</span><strong>'+escHtmlD(item.titulo||'—')+'</strong></div>'
     +'<div class="pre-item"><span>Horario</span><strong>'+escHtmlD(item.horario||'—')+'</strong></div>'
     +'<div class="pre-item"><span>Vacantes</span><strong>'+escHtmlD(item.vacantes!=null?String(item.vacantes):'—')+'</strong></div>'
-    +'<div class="pre-item"><span>Beneficio económico</span><strong>'+escHtmlD(item.fecha_inicio||'—')+'</strong></div>'
     +'<div class="pre-item"><span>Comisaría a la que postula</span><strong>'+escHtmlD(datos.comisaria_postula||'—')+'</strong></div>'
     +'<div class="pre-item"><span>Unidad / Dependencia</span><strong>'+escHtmlD(datos.unidad||'—')+'</strong></div>'
     +'<div class="pre-item"><span>Región policial</span><strong>'+escHtmlD(datos.region||'—')+'</strong></div>'
