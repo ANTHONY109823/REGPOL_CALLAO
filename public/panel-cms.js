@@ -215,15 +215,13 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
   var puedeEditar = typeof puedeEditarItemTipo === 'function' && puedeEditarItemTipo(tipo);
 
   if (esConv) {
-    el.innerHTML = '<div style="margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;">'
+    el.innerHTML = '<div style="margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;max-width:920px;margin-left:auto;margin-right:auto;">'
       + '<div style="font-size:14px;font-weight:800;color:#004d3d;"><i class="fas fa-handshake"></i> Convenios en la web</div>'
-      + '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">'
       + (puedeEditar
         ? '<button type="button" class="btn-mini btn-mini-ok" onclick="abrirNuevoConvenioWeb()"><i class="fas fa-plus"></i> Agregar convenio</button>'
         : '')
-      + '<a class="btn-mini" href="index.html' + hash + '" target="_blank" rel="noopener" style="text-decoration:none;"><i class="fas fa-external-link-alt"></i> Ver portal</a>'
-      + '</div></div>'
-      + '<div id="cms-live-' + tipo + '" style="border:1px solid #e0e8e0;border-radius:8px;overflow:hidden;">'
+      + '</div>'
+      + '<div id="cms-live-' + tipo + '" style="border:1px solid #e0e8e0;border-radius:8px;overflow:hidden;max-width:920px;margin:0 auto;">'
       + '<p style="color:#888;font-size:12px;padding:14px;margin:0;">Cargando...</p></div>';
   } else {
     el.innerHTML = '<div style="margin-bottom:14px;">'
@@ -270,56 +268,64 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
           + (puedeEditar && esConv ? 'Pulse «Agregar convenio».' : '') + '</p>';
         return;
       }
-      box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+      box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;">'
+        + '<colgroup>'
+        + '<col style="width:auto"/>'
+        + '<col style="width:72px"/>'
+        + '<col style="width:58px"/>'
+        + '<col style="width:52px"/>'
+        + '<col style="width:52px"/>'
+        + '<col style="width:108px"/>'
+        + '</colgroup>'
         + '<thead><tr style="background:#f0f7f4;color:#004d3d;text-align:left;">'
         + '<th style="padding:8px 10px;">Convenio</th>'
-        + '<th style="padding:8px 6px;width:78px;">Vacantes</th>'
-        + '<th style="padding:8px 6px;width:56px;">Lugares</th>'
-        + '<th style="padding:8px 6px;width:64px;text-align:center;">Activo</th>'
-        + '<th style="padding:8px 6px;width:72px;text-align:center;">Inscr.</th>'
-        + '<th style="padding:8px 6px;width:120px;">Acciones</th></tr></thead><tbody>'
+        + '<th style="padding:8px 4px;text-align:center;">Vac.</th>'
+        + '<th style="padding:8px 4px;text-align:center;">Lug.</th>'
+        + '<th style="padding:8px 4px;text-align:center;">Activo</th>'
+        + '<th style="padding:8px 4px;text-align:center;">Inscr.</th>'
+        + '<th style="padding:8px 4px;text-align:center;">Acciones</th></tr></thead><tbody>'
         + items.map(function(it) {
           var activo = String(it.estado || '').toUpperCase() !== 'CERRADO';
           var nLug = Array.isArray(it.cupos_unidades) ? it.cupos_unidades.length : 0;
           var lugTxt = nLug > 0 ? String(nLug) : (it.lugar ? '1' : '—');
           var id = it.id;
           return '<tr style="border-top:1px solid #edf2ef;" id="cv-row-' + id + '">'
-            + '<td style="padding:8px 10px;font-weight:600;color:#004d3d;">' + escHtml(it.titulo || '') + '</td>'
-            + '<td style="padding:6px;">'
+            + '<td style="padding:8px 10px;font-weight:600;color:#004d3d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(it.titulo || '') + '">' + escHtml(it.titulo || '') + '</td>'
+            + '<td style="padding:6px 4px;text-align:center;">'
             + (puedeEditar
               ? '<input type="number" id="cv-vac-' + id + '" min="0" value="' + (parseInt(it.vacantes,10)||0) + '" '
-                + 'style="width:64px;padding:4px 6px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;" '
+                + 'style="width:56px;padding:4px 4px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;text-align:center;" '
                 + 'onchange="marcarLineaConvenioDirty(' + id + ')"/>'
               : escHtml(String(it.vacantes != null ? it.vacantes : '—')))
             + '</td>'
-            + '<td style="padding:8px 6px;text-align:center;">' + lugTxt + '</td>'
-            + '<td style="padding:8px 6px;text-align:center;">'
+            + '<td style="padding:8px 4px;text-align:center;">' + lugTxt + '</td>'
+            + '<td style="padding:8px 4px;text-align:center;">'
             + (puedeEditar
               ? '<input type="checkbox" id="cv-activo-' + id + '" ' + (activo ? 'checked' : '') + ' '
                 + 'title="Activo en la web" style="width:16px;height:16px;accent-color:#1a7a3a;cursor:pointer;" '
                 + 'onchange="marcarLineaConvenioDirty(' + id + ')"/>'
               : (activo ? 'Sí' : 'No'))
             + '</td>'
-            + '<td style="padding:8px 6px;text-align:center;">'
+            + '<td style="padding:8px 4px;text-align:center;">'
             + (puedeEditar
               ? '<input type="checkbox" id="cv-insc-' + id + '" ' + (it.inscripciones_abiertas ? 'checked' : '') + ' '
                 + 'title="Inscripciones abiertas" style="width:16px;height:16px;accent-color:#004d3d;cursor:pointer;" '
                 + 'onchange="marcarLineaConvenioDirty(' + id + ')"/>'
               : (it.inscripciones_abiertas ? 'Abiertas' : 'Cerradas'))
             + '</td>'
-            + '<td style="padding:6px;white-space:nowrap;">'
+            + '<td style="padding:6px 4px;text-align:center;white-space:nowrap;">'
             + (puedeEditar
-              ? '<button type="button" class="btn-mini btn-mini-ok" style="padding:3px 7px;font-size:11px;" onclick="abrirModalItem(' + id + ')" title="Editar ficha"><i class="fas fa-edit"></i></button> '
-              + '<button type="button" class="btn-mini" id="cv-btn-save-' + id + '" style="padding:3px 7px;font-size:11px;" onclick="guardarLineaConvenio(' + id + ')" title="Guardar esta línea"><i class="fas fa-save"></i></button> '
+              ? '<button type="button" class="btn-mini btn-mini-ok" style="padding:3px 6px;font-size:11px;" onclick="abrirModalItem(' + id + ')" title="Editar ficha"><i class="fas fa-edit"></i></button> '
+              + '<button type="button" class="btn-mini" id="cv-btn-save-' + id + '" style="padding:3px 6px;font-size:11px;" onclick="guardarLineaConvenio(' + id + ')" title="Guardar esta línea"><i class="fas fa-save"></i></button> '
               : '')
-            + '<a class="btn-mini" style="padding:3px 7px;font-size:11px;text-decoration:none;" href="detalle.html?id=' + encodeURIComponent(id) + '&tipo=' + tipo + '" target="_blank" rel="noopener" title="Ver en web"><i class="fas fa-external-link-alt"></i></a>'
+            + '<a class="btn-mini" style="padding:3px 6px;font-size:11px;text-decoration:none;" href="detalle.html?id=' + encodeURIComponent(id) + '&tipo=' + tipo + '" target="_blank" rel="noopener" title="Ver en web"><i class="fas fa-external-link-alt"></i></a>'
             + '</td></tr>';
         }).join('')
         + '</tbody></table>'
         + (puedeEditar
-          ? '<p style="font-size:11px;color:#666;margin:8px 0 0;line-height:1.4;">'
-            + '<strong>Activo</strong> = visible como DISPONIBLE. <strong>Inscr.</strong> = inscripciones abiertas. '
-            + 'Cambie la línea y pulse <i class="fas fa-save"></i> Guardar. Lugares y horarios se editan con <i class="fas fa-edit"></i>.</p>'
+          ? '<p style="font-size:11px;color:#666;margin:8px 10px;line-height:1.4;">'
+            + '<strong>Activo</strong> = DISPONIBLE. <strong>Inscr.</strong> = abiertas. '
+            + 'Cambie y pulse <i class="fas fa-save"></i>. Lugares/horario en <i class="fas fa-edit"></i>.</p>'
           : '');
     })
     .catch(function() {

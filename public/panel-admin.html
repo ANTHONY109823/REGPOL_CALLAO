@@ -905,7 +905,6 @@
         
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
           <button class="btn btn-v" onclick="guardarSitioWeb()"><i class="fas fa-upload"></i> Publicar cambios</button>
-          <a id="cms-ver-web" href="index.html" target="_blank" rel="noopener" class="btn" style="background:#004d3d;color:#fff;text-decoration:none;"><i class="fas fa-external-link-alt"></i> Ver portal</a>
           <span id="cms-publicado-meta" style="font-size:11px;color:#888;"></span>
           <input type="hidden" id="cms-actualizacion"/>
         </div>
@@ -1096,8 +1095,7 @@
       <div class="card">
         <h3 id="items-titulo"><i class="fas fa-clipboard-list"></i> Convocatorias</h3>
         <p id="items-ayuda-web" style="display:none;font-size:12px;color:#666;line-height:1.45;margin:-4px 0 10px;">
-          Edite solo lo que se ve en la ficha web. Acciones en <strong>Editar</strong>.
-          <a href="index.html#convenios" target="_blank" rel="noopener" style="color:#004d3d;font-weight:700;margin-left:4px;">Ver portal</a>
+          Vacantes, activo e inscripciones se editan en la tabla. En <strong>Editar</strong>: lugares, horario y requisitos.
         </p>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
           <button class="btn-mini btn-mini-ok" id="btn-nueva-convocatoria" onclick="abrirNuevoConvenioWeb()" style="display:none;"><i class="fas fa-plus"></i> Agregar convenio</button>
@@ -1499,7 +1497,7 @@
           <option value="CERRADO">CERRADO</option>
         </select>
       </div>
-      <div>
+      <div id="mi-wrap-vacantes">
         <label>Vacantes totales</label>
         <input type="number" id="mi-vacantes" min="0" placeholder="0" value="0"/>
       </div>
@@ -2120,7 +2118,7 @@
 <script src="portal-data.js?v=10"></script>
 <script src="portal.js?v=85"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=35"></script>
+<script src="panel-cms.js?v=36"></script>
 <script src="panel-descansos.js?v=4"></script>
 <script src="panel-faltos.js?v=1"></script>
 <script src="panel-rrhh.js?v=3"></script>
@@ -5142,6 +5140,7 @@ function adaptarModalItemPorTipo(tipo){
   show('mi-wrap-form-url', !esConv);
   show('mi-wrap-lugar', !esConv);
   show('mi-wrap-duracion', !esConv);
+  show('mi-wrap-vacantes', !esConv);
   show('mi-cupos-wrap', esConv);
   show('mi-aviso-sorteo-wrap', esConv);
   show('mi-wrap-icono', true);
@@ -5441,6 +5440,15 @@ function guardarItem(){
     visible:document.getElementById('mi-visible').checked,
     orden:parseInt(val('mi-orden'))||0
   };
+  // Convenio: vacantes se editan en la tabla (no en el modal)
+  if(tipo==='convenio'){
+    if(id){
+      var prev=(ITEMS_CACHE||[]).find(function(i){ return parseInt(i.id,10)===parseInt(id,10); });
+      body.vacantes=prev?(parseInt(prev.vacantes,10)||0):(parseInt(val('mi-vacantes'),10)||0);
+    } else {
+      body.vacantes=(body.cupos_unidades||[]).reduce(function(a,c){ return a+(parseInt(c.vacantes,10)||0); },0);
+    }
+  }
   var url=id?API+'/admin/items/'+id:API+'/admin/items';
   var method=id?'PUT':'POST';
   fetch(url,{method:method,headers:hdr(),body:JSON.stringify(body)})
