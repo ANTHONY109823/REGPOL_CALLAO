@@ -5342,6 +5342,7 @@ const DIVOPUS1_CIAS = [
   'CIA CALLAO', 'CIA LA PUNTA', 'CIA BELLAVISTA', 'CIA CIUDADELA CHALACA',
   'CIA CIUDAD DEL PESCADOR', 'CIA RAMON CASTILLA', 'CIA LA LEGUA', 'CIA LA PERLA'
 ];
+const DIVOPUS_CELADOR_LUGARES = ['DIVOPUS 01', 'DIVOPUS 02', 'DIVOPUS 03'];
 
 /** Cupos efectivos: multi-lugar si hay cupos_unidades; si no, un solo lugar (como ficha web). */
 function cuposEfectivosItem(item) {
@@ -5362,6 +5363,28 @@ function plantillaCuposDivopus1(vacantesTotales) {
     var vac = base + (idx < resto ? 1 : 0);
     return { nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac };
   });
+}
+
+function plantillaCuposDivopusCelador(vacantesTotales) {
+  var total = parseInt(vacantesTotales, 10) || 0;
+  var n = DIVOPUS_CELADOR_LUGARES.length;
+  var base = n ? Math.floor(total / n) : 0;
+  var resto = n ? total % n : 0;
+  return DIVOPUS_CELADOR_LUGARES.map(function(nombre, idx) {
+    var vac = base + (idx < resto ? 1 : 0);
+    return { nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac };
+  });
+}
+
+/** Celador: solo DIVOPUS 01/02/03; descarta CIAs u otros lugares. */
+function cuposParaGuardarItem(titulo, cupos_unidades, vacantes) {
+  var cupos = normalizarCuposUnidades(cupos_unidades);
+  if (String(titulo || '').toUpperCase().indexOf('CELADOR') === -1) return cupos;
+  var soloDiv = cupos.filter(function(c) {
+    return /^DIVOPUS\s*0[123]$/i.test(String(c.nombre || '').trim());
+  });
+  if (soloDiv.length) return soloDiv;
+  return plantillaCuposDivopusCelador(vacantes);
 }
 
 function plantillaCupoUnico(nombre, vacantesTotales) {
@@ -5440,7 +5463,7 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
     [VENTANA_INSCRIPCION_DEFAULT]
   );
 
-  // Cupos: Celador = DIVOPUS 1; resto = un solo lugar (mismo flujo, distinto nº de sitios)
+  // Cupos: Celador = solo DIVOPUS 01/02/03 (nunca por CIA); resto = un solo lugar
   const convs = await db.query(
     `SELECT id, titulo, lugar, vacantes, cupos_unidades, plantilla_pdf, plantilla_nombre, turnos, horario, observaciones
      FROM items_portal WHERE tipo='convenio' AND visible=TRUE`
@@ -5460,6 +5483,7 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
   let turnosCargados = 0;
   for (const row of convs.rows) {
     const tituloKey = String(row.titulo || '').trim().toUpperCase();
+    const esCelador = tituloKey.indexOf('CELADOR') !== -1;
     const datosHoja = Object.keys(CONVENIOS_DATOS_HOJA).find(function(k) {
       return k.toUpperCase() === tituloKey;
     });
@@ -5482,8 +5506,8 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
       row.vacantes = vacTotal;
       row.turnos = turnos;
       turnosCargados++;
-      if (cfg.redistribuirCupos) {
-        const nuevos = plantillaCuposDivopus1(vacTotal);
+      if (cfg.redistribuirCupos || esCelador) {
+        const nuevos = plantillaCuposDivopusCelador(vacTotal);
         await db.query(
           'UPDATE items_portal SET cupos_unidades=$1::jsonb WHERE id=$2',
           [JSON.stringify(nuevos), row.id]
@@ -5494,12 +5518,24 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
     }
 
     const cuposActuales = normalizarCuposUnidades(row.cupos_unidades);
-    const esCelador = String(row.titulo || '').toUpperCase().indexOf('CELADOR') !== -1;
-    if (!cuposActuales.length) {
+    if (esCelador) {
       const vac = parseInt(row.vacantes, 10) || 0;
-      const nuevos = esCelador
-        ? plantillaCuposDivopus1(vac)
-        : plantillaCupoUnico(row.lugar || row.titulo, vac);
+      const yaDivopus = cuposActuales.length === DIVOPUS_CELADOR_LUGARES.length
+        && cuposActuales.every(function(c, i) {
+          return String(c.nombre || '').toUpperCase() === DIVOPUS_CELADOR_LUGARES[i];
+        });
+      if (!yaDivopus) {
+        const nuevos = plantillaCuposDivopusCelador(vac);
+        await db.query(
+          'UPDATE items_portal SET cupos_unidades=$1::jsonb WHERE id=$2',
+          [JSON.stringify(nuevos), row.id]
+        );
+        cuposActualizados++;
+        row.cupos_unidades = nuevos;
+      }
+    } else if (!cuposActuales.length) {
+      const vac = parseInt(row.vacantes, 10) || 0;
+      const nuevos = plantillaCupoUnico(row.lugar || row.titulo, vac);
       await db.query(
         'UPDATE items_portal SET cupos_unidades=$1::jsonb WHERE id=$2',
         [JSON.stringify(nuevos), row.id]
@@ -6393,7 +6429,7 @@ app.post('/admin/items', requireAuth, async (req, res) => {
     if (!puedeGestionarItem(req.admin, tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     if (!titulo) return res.json({ ok: false, error: 'El título es obligatorio.' });
-    const cupos = normalizarCuposUnidades(cupos_unidades);
+    const cupos = cuposParaGuardarItem(titulo, cupos_unidades, vacantes);
     const turnosNorm = normalizarTurnos(turnos);
     const r = await pool.query(
       `INSERT INTO items_portal(tipo,titulo,descripcion,estado,icono,color,requisitos,horario,
@@ -6422,7 +6458,7 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
             vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
             formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables,
             aviso_sorteo_fb, cupos_unidades, turnos } = req.body;
-    const cupos = normalizarCuposUnidades(cupos_unidades);
+    const cupos = cuposParaGuardarItem(titulo, cupos_unidades, vacantes);
     const turnosNorm = normalizarTurnos(turnos);
     await pool.query(
       `UPDATE items_portal SET titulo=$1,descripcion=$2,estado=$3,icono=$4,color=$5,

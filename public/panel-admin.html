@@ -1534,7 +1534,7 @@
         <label id="mi-lab-duracion">Detalle del beneficio</label>
         <input type="text" id="mi-duracion" placeholder="Ej: Por día laborado" maxlength="100"/>
       </div>
-      <div style="grid-column:1/-1;" id="mi-wrap-horario">
+      <div style="grid-column:1/-1;display:none;" id="mi-wrap-horario">
         <label id="mi-lab-horario">Horario</label>
         <input type="text" id="mi-horario" placeholder="Ej: 08:00 a 20:00 hrs" maxlength="200"/>
       </div>
@@ -1602,16 +1602,21 @@
             <input type="number" id="mi-cupo-add-vac" min="0" value="0" style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;"/>
           </div>
           <button type="button" class="btn-mini btn-mini-ok" style="padding:5px 8px;" onclick="agregarCupoUnidadUI()" title="Agregar"><i class="fas fa-plus"></i></button>
-          <button type="button" class="btn-mini" id="mi-cupo-btn-d1" style="display:none;padding:5px 8px;" title="Cargar DIVOPUS 1" onclick="cargarPlantillaCuposComisarias('divopus1')"><i class="fas fa-list"></i> D1</button>
+          <span id="mi-cupo-btns-divopus" style="display:none;gap:4px;flex-wrap:wrap;align-items:center;">
+            <button type="button" class="btn-mini" style="padding:5px 8px;" title="Agregar DIVOPUS 01" onclick="agregarDivopusCelador('DIVOPUS 01')"><i class="fas fa-building"></i> D01</button>
+            <button type="button" class="btn-mini" style="padding:5px 8px;" title="Agregar DIVOPUS 02" onclick="agregarDivopusCelador('DIVOPUS 02')"><i class="fas fa-building"></i> D02</button>
+            <button type="button" class="btn-mini" style="padding:5px 8px;" title="Agregar DIVOPUS 03" onclick="agregarDivopusCelador('DIVOPUS 03')"><i class="fas fa-building"></i> D03</button>
+            <button type="button" class="btn-mini" style="padding:5px 8px;" title="Cargar las 3 DIVOPUS" onclick="cargarPlantillaCuposComisarias('divopus3')"><i class="fas fa-list"></i> 3 DIV</button>
+          </span>
           <button type="button" class="btn-mini btn-mini-danger" style="padding:5px 8px;" title="Vaciar" onclick="limpiarCuposUnidadesUI()"><i class="fas fa-times"></i></button>
         </div>
         <div id="mi-cupos-lista" style="margin-bottom:4px;"></div>
         <textarea id="mi-cupos-unidades" rows="2" style="display:none;"></textarea>
       </div>
-      <div style="grid-column:1/-1;" id="mi-wrap-ventana">
-        <label id="mi-lab-ventana">Aviso en la ficha web</label>
+      <div style="grid-column:1/-1;display:none;" id="mi-wrap-ventana">
+        <label id="mi-lab-ventana">Ventana de inscripción</label>
         <textarea id="mi-ventana-inscripcion" rows="2" maxlength="400"
-          placeholder="Ej: Las inscripciones se habilitan del 20 al 25 de cada mes. Entrega de documentos hasta el jueves 30 de julio 2026."
+          placeholder="Ej: Las inscripciones se habilitan del 20 al 25 de cada mes."
           style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;resize:vertical;"></textarea>
         <div id="mi-ventana-tools" style="display:none;margin-top:8px;padding:8px;background:#f4f8f6;border:1px solid #d5e5dc;border-radius:7px;">
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
@@ -1622,7 +1627,6 @@
             <button type="button" class="btn-mini btn-mini-ok" style="padding:5px 8px;" onclick="aplicarFechaEntregaAVentana()"><i class="fas fa-calendar-check"></i> Poner plazo</button>
             <button type="button" class="btn-mini" style="padding:5px 8px;" onclick="setVentanaInscripcionesAbiertas()"><i class="fas fa-door-open"></i> Inscripciones abiertas</button>
           </div>
-          <p style="font-size:10.5px;color:#666;margin:6px 0 0;line-height:1.35;">Un solo aviso en la ficha. Use el calendario para el plazo o el botón para texto de inscripciones abiertas.</p>
         </div>
       </div>
       <div style="grid-column:1/-1;display:none;" id="mi-aviso-sorteo-wrap">
@@ -5169,6 +5173,7 @@ function poblarModalItem(item){
   renderListaTurnosUI();
   adaptarModalItemPorTipo(item.tipo || 'curso');
   adaptarCuposUIPorTitulo();
+  asegurarCuposSoloDivopusCelador();
   document.getElementById('modal-item').classList.add('open');
 }
 
@@ -5238,6 +5243,35 @@ function esTituloCelador(titulo){
   return String(titulo || '').toUpperCase().indexOf('CELADOR') !== -1;
 }
 
+var DIVOPUS_CELADOR = ['DIVOPUS 01', 'DIVOPUS 02', 'DIVOPUS 03'];
+
+var DIVOPUS_CIAS_MAP = {
+  'DIVOPUS 01': [
+    'CIA CALLAO','CIA LA PUNTA','CIA BELLAVISTA','CIA CIUDADELA CHALACA',
+    'CIA CIUDAD DEL PESCADOR','CIA RAMON CASTILLA','CIA LA LEGUA','CIA LA PERLA'
+  ],
+  'DIVOPUS 02': [
+    'CIA JUAN INGUNZA','CIA SARITA COLONIA','CIA BOCANEGRA',
+    'CIA MANUEL DULANTO','CIA PLAYA RIMAC','CIA CARMEN DE LA LEGUA'
+  ],
+  'DIVOPUS 03': [
+    'CIA VENTANILLA','CIA OQUENDO','CIA MI PERU',
+    'CIA PACHACUTEC','CIA VILLA LOS REYES','CIA MARQUEZ'
+  ]
+};
+
+function initSelectCupoAddDivopus(){
+  var sel = document.getElementById('mi-cupo-add-nombre');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">-- Elegir DIVOPUS --</option>';
+  DIVOPUS_CELADOR.forEach(function(nombre){
+    var op = document.createElement('option');
+    op.value = nombre;
+    op.textContent = nombre;
+    sel.appendChild(op);
+  });
+}
+
 function adaptarCuposUIPorTitulo(){
   var tipo = (document.getElementById('mi-tipo') || {}).value || '';
   if (tipo !== 'convenio') return;
@@ -5246,17 +5280,49 @@ function adaptarCuposUIPorTitulo(){
   var txt = document.getElementById('mi-cupo-add-nombre-txt');
   var lab = document.getElementById('mi-cupo-add-nombre-lab');
   var labCupos = document.getElementById('mi-cupos-label');
-  var btnD1 = document.getElementById('mi-cupo-btn-d1');
+  var btnsDiv = document.getElementById('mi-cupo-btns-divopus');
   if (labCupos) {
     labCupos.innerHTML = esCel
-      ? '<i class="fas fa-map-marker-alt"></i> Comisarías y vacantes (Celador)'
+      ? '<i class="fas fa-map-marker-alt"></i> DIVOPUS y vacantes (Celador)'
       : '<i class="fas fa-map-marker-alt"></i> Lugar (dirección) y vacantes';
   }
-  if (lab) lab.textContent = esCel ? 'Comisaría' : 'Dirección / nombre del lugar';
+  if (lab) lab.textContent = esCel ? 'DIVOPUS' : 'Dirección / nombre del lugar';
   if (sel) sel.style.display = esCel ? '' : 'none';
   if (txt) txt.style.display = esCel ? 'none' : '';
-  if (btnD1) btnD1.style.display = esCel ? '' : 'none';
-  if (esCel) initSelectCupoAddNombre();
+  if (btnsDiv) btnsDiv.style.display = esCel ? 'inline-flex' : 'none';
+  if (esCel) initSelectCupoAddDivopus();
+}
+
+function agregarDivopusCelador(nombre){
+  var vacEl = document.getElementById('mi-cupo-add-vac');
+  var vac = vacEl ? (parseInt(vacEl.value, 10) || 0) : 0;
+  var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value)
+    .filter(function(c){ return /^DIVOPUS\s*0[123]$/i.test(String(c.nombre || '').trim()); });
+  var key = String(nombre || '').toUpperCase();
+  var found = cupos.find(function(c){ return String(c.nombre||'').toUpperCase() === key; });
+  if(found){
+    if(vac > 0){
+      found.vacantes = vac;
+      found.disponibles = Math.max(0, vac - (found.inscritos || 0));
+    }
+  } else {
+    cupos.push({ nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac });
+  }
+  setCuposUnidadesDesdeArray(cupos);
+  if(vacEl) vacEl.value = '0';
+  var sel = document.getElementById('mi-cupo-add-nombre');
+  if(sel) sel.value = '';
+}
+
+/** Si Celador tiene cupos por CIA u otros, los reemplaza repartiendo vacantes solo en DIVOPUS 01/02/03. */
+function asegurarCuposSoloDivopusCelador(){
+  if(!esTituloCelador((document.getElementById('mi-titulo-val') || {}).value)) return;
+  var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
+  var soloDivopus = cupos.length > 0 && cupos.every(function(c){
+    return /^DIVOPUS\s*0[123]$/i.test(String(c.nombre || '').trim());
+  });
+  if(soloDivopus) return;
+  cargarPlantillaCuposComisarias('divopus3');
 }
 
 function adaptarModalItemPorTipo(tipo){
@@ -5278,6 +5344,7 @@ function adaptarModalItemPorTipo(tipo){
   show('mi-wrap-duracion', !esConv);
   show('mi-wrap-fecha', !esConv);
   show('mi-wrap-horario', !esConv);
+  show('mi-wrap-ventana', !esConv);
   show('mi-wrap-vacantes', true);
   show('mi-cupos-wrap', esConv);
   show('mi-turnos-wrap', esConv);
@@ -5292,10 +5359,10 @@ function adaptarModalItemPorTipo(tipo){
   var toolsVen = document.getElementById('mi-ventana-tools');
   if(labFecha) labFecha.textContent = esConv ? 'Beneficio económico' : 'Fecha de inicio';
   if(labDur) labDur.textContent = esConv ? 'Detalle del beneficio' : 'Duración';
-  if(labHor) labHor.textContent = esConv ? 'Horario' : 'Turnos / Horarios';
+  if(labHor) labHor.textContent = 'Horario';
   if(labObs) labObs.textContent = 'Observaciones';
-  if(labVen) labVen.textContent = esConv ? 'Aviso en la ficha (inscripciones / plazo)' : 'Ventana de inscripción';
-  if(toolsVen) toolsVen.style.display = esConv ? '' : 'none';
+  if(labVen) labVen.textContent = 'Ventana de inscripción';
+  if(toolsVen) toolsVen.style.display = 'none';
 
   var plantilla = document.getElementById('mi-plantilla-wrap');
   if(plantilla) plantilla.style.display = '';
@@ -5589,8 +5656,13 @@ function renderListaCuposUnidadesUI(){
   var ta = document.getElementById('mi-cupos-unidades');
   if(!lista || !ta) return;
   var cupos = parseCuposUnidadesTexto(ta.value);
+  var esCel = esTituloCelador((document.getElementById('mi-titulo-val') || {}).value);
   if(!cupos.length){
-    lista.innerHTML = '<p style="font-size:12px;color:#888;margin:0;padding:8px;background:#fafafa;border:1px dashed #ccc;border-radius:6px;">Sin lugares. Agregue dirección/nombre y vacantes.</p>';
+    lista.innerHTML = '<p style="font-size:12px;color:#888;margin:0;padding:8px;background:#fafafa;border:1px dashed #ccc;border-radius:6px;">'
+      + (esCel
+        ? 'Sin DIVOPUS. Use D01 / D02 / D03 o el botón <b>3 DIV</b> para repartir vacantes.'
+        : 'Sin lugares. Agregue dirección/nombre y vacantes.')
+      + '</p>';
     return;
   }
   lista.innerHTML = '<table class="t" style="margin:0;font-size:12px;"><thead><tr>'
@@ -5626,10 +5698,12 @@ function agregarCupoUnidadUI(){
   var nombre = '';
   if (esCel) {
     nombre = sel ? String(sel.value || '').trim() : '';
-  } else {
-    nombre = txt ? String(txt.value || '').trim() : '';
+    if(!nombre){ alert('Seleccione una DIVOPUS (01, 02 o 03).'); return; }
+    agregarDivopusCelador(nombre);
+    return;
   }
-  if(!nombre){ alert(esCel ? 'Seleccione una comisaría.' : 'Escriba el nombre o dirección del lugar.'); return; }
+  nombre = txt ? String(txt.value || '').trim() : '';
+  if(!nombre){ alert('Escriba el nombre o dirección del lugar.'); return; }
   var vac = vacEl ? (parseInt(vacEl.value, 10) || 0) : 0;
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
   var key = nombre.toUpperCase();
@@ -5641,7 +5715,6 @@ function agregarCupoUnidadUI(){
     cupos.push({ nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac });
   }
   setCuposUnidadesDesdeArray(cupos);
-  if(sel) sel.value = '';
   if(txt) txt.value = '';
   if(vacEl) vacEl.value = '0';
 }
@@ -5668,23 +5741,22 @@ function limpiarCuposUnidadesUI(){
 }
 
 function cargarPlantillaCuposComisarias(modo){
-  var divopus1 = [
-    'CIA CALLAO','CIA LA PUNTA','CIA BELLAVISTA','CIA CIUDADELA CHALACA',
-    'CIA CIUDAD DEL PESCADOR','CIA RAMON CASTILLA','CIA LA LEGUA','CIA LA PERLA'
-  ];
-  var todas = (typeof COMISARIAS_CALLAO !== 'undefined' && COMISARIAS_CALLAO.length)
-    ? COMISARIAS_CALLAO
-    : divopus1.concat([
-        'CIA JUAN INGUNZA','CIA BOCANEGRA','CIA MANUEL DULANTO','CIA PLAYA RIMAC',
-        'CIA CARMEN DE LA LEGUA','CIA SARITA COLONIA','CIA VENTANILLA','CIA MI PERU',
-        'CIA PACHACUTEC','CIA VILLA LOS REYES','CIA MARQUEZ','CIA OQUENDO'
-      ]);
-  var lista = modo === 'todas' ? todas : divopus1;
+  var lista = [];
+  if(modo === 'divopus1' || modo === 'divopus01'){
+    lista = ['DIVOPUS 01'];
+  } else if(modo === 'divopus2' || modo === 'divopus02'){
+    lista = ['DIVOPUS 02'];
+  } else if(modo === 'divopus03'){
+    lista = ['DIVOPUS 03'];
+  } else {
+    // Por defecto: las 3 DIVOPUS (nunca por CIA)
+    lista = DIVOPUS_CELADOR.slice();
+  }
   var total = parseInt(document.getElementById('mi-vacantes').value,10)||0;
-  var porCia = lista.length ? Math.floor(total / lista.length) : 0;
+  var porDiv = lista.length ? Math.floor(total / lista.length) : 0;
   var resto = lista.length ? total % lista.length : 0;
   var cupos = lista.map(function(nombre, idx){
-    var vac = porCia + (idx < resto ? 1 : 0);
+    var vac = porDiv + (idx < resto ? 1 : 0);
     return { nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac };
   });
   setCuposUnidadesDesdeArray(cupos);
@@ -5744,13 +5816,27 @@ function guardarItem(){
   var fechaInicioTxt=val('mi-fecha-inicio');
   var ventanaTxt=val('mi-ventana-inscripcion');
   if(tipo==='convenio'){
-    // Un solo aviso en ficha = ventana_inscripcion; no usar observaciones aparte
     observacionesTxt='';
     if(id){
       var prevB=(ITEMS_CACHE||[]).find(function(i){ return parseInt(i.id,10)===parseInt(id,10); });
       fechaInicioTxt=prevB ? (prevB.fecha_inicio || '') : '';
+      if(prevB && prevB.ventana_inscripcion) ventanaTxt = prevB.ventana_inscripcion;
     } else {
       fechaInicioTxt='';
+    }
+  }
+  var cuposGuardar = parseCuposUnidadesTexto(document.getElementById('mi-cupos-unidades').value);
+  if(tipo === 'convenio' && esTituloCelador(titulo)){
+    cuposGuardar = cuposGuardar.filter(function(c){
+      return /^DIVOPUS\s*0[123]$/i.test(String(c.nombre || '').trim());
+    });
+    if(!cuposGuardar.length && vacantes > 0){
+      var porDiv = Math.floor(vacantes / 3);
+      var resto = vacantes % 3;
+      cuposGuardar = DIVOPUS_CELADOR.map(function(nombre, idx){
+        var vac = porDiv + (idx < resto ? 1 : 0);
+        return { nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac };
+      });
     }
   }
   var body={
@@ -5760,7 +5846,7 @@ function guardarItem(){
     icono:val('mi-icono')||'fa-graduation-cap',
     color:val('mi-color')||'#004d3d',
     requisitos:requisitos,
-    cupos_unidades:parseCuposUnidadesTexto(document.getElementById('mi-cupos-unidades').value),
+    cupos_unidades:cuposGuardar,
     turnos:turnos,
     horario:horarioTxt,
     vacantes:vacantes,
