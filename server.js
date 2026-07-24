@@ -5321,9 +5321,14 @@ const CONVENIOS_OFICIALES = [
   ['NUEVO INGRESO AEROPUERTO (BY PAS)', 'Seguridad en nuevo ingreso aeroportuario', 'fa-plane', 11]
 ];
 const REQS_CONV_OFICIAL = JSON.stringify([
-  'Pertenecer a la REGPOL Callao.',
-  'Encontrarse en situación de Actividad.',
-  'No tener sanciones vigentes.'
+  'Solicitud.',
+  'Autorización del Jefe de Unidad.',
+  'Papeleta de revista de armamento particular.',
+  'Copia de CIP, CAF Y TAF.',
+  'Acta de compromiso.',
+  'Declaración jurada.',
+  'DNI en hoja aparte ambas caras (actualizados).',
+  'Planilla Virtual.'
 ]);
 const AVISO_SORTEO_DEFAULT =
   'El sorteo en vivo se realizará por la página de Facebook REGPOL Callao. Se notificará al cerrar preinscripciones.';
@@ -5387,9 +5392,7 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
          estado=CASE WHEN TRIM(COALESCE(estado,''))='' THEN 'DISPONIBLE' ELSE estado END,
          descripcion=CASE WHEN TRIM(COALESCE(descripcion,''))='' THEN $2 ELSE descripcion END,
          icono=CASE WHEN TRIM(COALESCE(icono,'')) IN ('','fa-file') THEN $3 ELSE icono END,
-         requisitos=CASE
-           WHEN requisitos IS NULL OR requisitos::text IN ('null','[]','') THEN $4::jsonb
-           ELSE requisitos END,
+         requisitos=$4::jsonb,
          ventana_inscripcion=CASE
            WHEN TRIM(COALESCE(ventana_inscripcion,''))='' THEN 'Las inscripciones se habilitan del 20 al 25 de cada mes.'
            ELSE ventana_inscripcion END,
@@ -5414,6 +5417,12 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
     `UPDATE items_portal SET visible=FALSE
      WHERE tipo='convenio' AND UPPER(TRIM(titulo)) NOT IN (${titulosUpper.map((_, i) => `$${i + 1}`).join(',')})`,
     titulosUpper
+  );
+
+  // Requisitos oficiales en todos los convenios visibles (ficha web)
+  await db.query(
+    `UPDATE items_portal SET requisitos=$1::jsonb WHERE tipo='convenio' AND visible=TRUE`,
+    [REQS_CONV_OFICIAL]
   );
 
   // Cupos: Celador = DIVOPUS 1; resto = un solo lugar (mismo flujo, distinto nº de sitios)
