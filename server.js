@@ -5330,6 +5330,8 @@ const REQS_CONV_OFICIAL = JSON.stringify([
   'DNI en hoja aparte ambas caras (actualizados).',
   'Planilla Virtual.'
 ]);
+const VENTANA_INSCRIPCION_DEFAULT =
+  'Las inscripciones se habilitan del 20 al 25 de cada mes. Entrega de documentos hasta el jueves 30 de julio 2026.';
 const AVISO_SORTEO_DEFAULT =
   'El sorteo en vivo se realizará por la página de Facebook REGPOL Callao. Se notificará al cerrar preinscripciones.';
 const CONTACTOS_CONV_DEFAULT =
@@ -5379,11 +5381,11 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
       `INSERT INTO items_portal(tipo,titulo,descripcion,icono,requisitos,estado,visible,orden,ventana_inscripcion,
         aviso_sorteo_fb,contactos_responsables,uniforme)
        SELECT 'convenio',$1::varchar,$2::text,$3::varchar,$4::jsonb,'DISPONIBLE',TRUE,$5::integer,
-         'Las inscripciones se habilitan del 20 al 25 de cada mes.',
+         $10::text,
          $7::text,$8::text,$9::text
        WHERE NOT EXISTS (SELECT 1 FROM items_portal WHERE tipo='convenio' AND UPPER(TRIM(titulo))=UPPER(TRIM($6::text)))`,
       [titulo, desc, icono, REQS_CONV_OFICIAL, orden, titulo,
-       AVISO_SORTEO_DEFAULT, CONTACTOS_CONV_DEFAULT, UNIFORME_CONV_DEFAULT]
+       AVISO_SORTEO_DEFAULT, CONTACTOS_CONV_DEFAULT, UNIFORME_CONV_DEFAULT, VENTANA_INSCRIPCION_DEFAULT]
     );
     await db.query(
       `UPDATE items_portal SET
@@ -5393,9 +5395,7 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
          descripcion=CASE WHEN TRIM(COALESCE(descripcion,''))='' THEN $2 ELSE descripcion END,
          icono=CASE WHEN TRIM(COALESCE(icono,'')) IN ('','fa-file') THEN $3 ELSE icono END,
          requisitos=$4::jsonb,
-         ventana_inscripcion=CASE
-           WHEN TRIM(COALESCE(ventana_inscripcion,''))='' THEN 'Las inscripciones se habilitan del 20 al 25 de cada mes.'
-           ELSE ventana_inscripcion END,
+         ventana_inscripcion=$10,
          aviso_sorteo_fb=CASE
            WHEN TRIM(COALESCE(aviso_sorteo_fb,''))='' THEN $5
            ELSE aviso_sorteo_fb END,
@@ -5410,7 +5410,7 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
            ELSE lugar END
        WHERE tipo='convenio' AND UPPER(TRIM(titulo))=UPPER(TRIM($9))`,
       [orden, desc, icono, REQS_CONV_OFICIAL, AVISO_SORTEO_DEFAULT, CONTACTOS_CONV_DEFAULT,
-       UNIFORME_CONV_DEFAULT, titulo, titulo]
+       UNIFORME_CONV_DEFAULT, titulo, titulo, VENTANA_INSCRIPCION_DEFAULT]
     );
   }
   await db.query(
@@ -5419,10 +5419,11 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
     titulosUpper
   );
 
-  // Requisitos oficiales en todos los convenios visibles (ficha web)
+  // Requisitos y aviso único (ventana) en todos los convenios visibles
   await db.query(
-    `UPDATE items_portal SET requisitos=$1::jsonb WHERE tipo='convenio' AND visible=TRUE`,
-    [REQS_CONV_OFICIAL]
+    `UPDATE items_portal SET requisitos=$1::jsonb, ventana_inscripcion=$2
+     WHERE tipo='convenio' AND visible=TRUE`,
+    [REQS_CONV_OFICIAL, VENTANA_INSCRIPCION_DEFAULT]
   );
 
   // Cupos: Celador = DIVOPUS 1; resto = un solo lugar (mismo flujo, distinto nº de sitios)

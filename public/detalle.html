@@ -331,25 +331,20 @@ function renderDetalle(item){
     : '<li>Sin requisitos especificados.</li>';
 
   var infoHtml = '';
-  if(item.horario) infoHtml += '<div class="info-item"><span>HORARIO:</span><p>'+escHtmlD(item.horario)+'</p></div>';
-  // Convenios: vacantes van en CIAs/lugares; plazo de entrega va arriba
-  if(!esConvenio && item.vacantes) {
-    infoHtml += '<div class="info-item"><span>VACANTES:</span><p>'+escHtmlD(String(item.vacantes))+' efectivos</p></div>';
+  if(esCurso){
+    if(item.horario) infoHtml += '<div class="info-item"><span>HORARIO:</span><p>'+escHtmlD(item.horario)+'</p></div>';
+    if(item.vacantes) infoHtml += '<div class="info-item"><span>VACANTES:</span><p>'+escHtmlD(String(item.vacantes))+' efectivos</p></div>';
+    if(item.lugar) infoHtml += '<div class="info-item"><span>LUGAR:</span><p>'+escHtmlD(item.lugar)+'</p></div>';
+    if(item.fecha_inicio || item.duracion || item.observaciones){
+      if(item.fecha_inicio) infoHtml += '<div class="info-item"><span>FECHA DE INICIO:</span><p class="price" style="color:#004d3d;">'+escHtmlD(item.fecha_inicio)+'</p></div>';
+      if(item.duracion) infoHtml += '<div class="info-item"><span>DURACIÓN:</span><p>'+escHtmlD(item.duracion)+'</p></div>';
+      if(item.observaciones) infoHtml += '<div class="info-item"><small>* '+escHtmlD(item.observaciones)+'</small></div>';
+    }
+    if(!infoHtml) infoHtml = '<p style="color:#888;font-size:13px;margin:0;">Sin datos publicados.</p>';
   }
-  if(item.lugar && !(esConvenio && Array.isArray(item.cupos_unidades) && item.cupos_unidades.length > 1)) {
-    infoHtml += '<div class="info-item"><span>LUGAR:</span><p>'+escHtmlD(item.lugar)+'</p></div>';
-  }
-  if(esCurso && (item.fecha_inicio || item.duracion || item.observaciones)){
-    if(item.fecha_inicio) infoHtml += '<div class="info-item"><span>FECHA DE INICIO:</span><p class="price" style="color:#004d3d;">'+escHtmlD(item.fecha_inicio)+'</p></div>';
-    if(item.duracion) infoHtml += '<div class="info-item"><span>DURACIÓN:</span><p>'+escHtmlD(item.duracion)+'</p></div>';
-    if(item.observaciones) infoHtml += '<div class="info-item"><small>* '+escHtmlD(item.observaciones)+'</small></div>';
-  }
-  if(esConvenio && item.aviso_sorteo_fb) {
-    infoHtml += '<div class="info-item"><span>SORTEO FACEBOOK:</span><p>'+escHtmlD(item.aviso_sorteo_fb)+'</p></div>';
-  }
-  if(!infoHtml) infoHtml = '<p style="color:#888;font-size:13px;margin:0;">Sin datos publicados.</p>';
+  // Convenios: solo requisitos + lugares; el aviso único va arriba (ventana_inscripcion)
 
-  var infoTitulo = esConvenio ? 'HORARIO / INFORMACIÓN' : 'HORARIOS / VACANTES / INICIO';
+  var infoTitulo = esConvenio ? '' : 'HORARIOS / VACANTES / INICIO';
 
   var cupos = Array.isArray(item.cupos_unidades) ? item.cupos_unidades.slice() : [];
   // Sin cupos configurados: mostrar un solo lugar (no forzar DIVOPUS 1)
@@ -403,7 +398,6 @@ function renderDetalle(item){
   }
 
   var ventanaTxt = item.ventana_inscripcion || '';
-  var plazoTxt = esConvenio ? String(item.observaciones || '').trim() : '';
   var btnRegistrar = '';
   var formHtml = '';
   if (puedeInscribir) {
@@ -431,16 +425,13 @@ function renderDetalle(item){
     +'</div>'
     +'<div class="detalle-meta">'
     +estadoBadge(item.estado)
-    +(plazoTxt ? '<p class="ventana-inscripcion-nota is-cerrada">'+escHtmlD(plazoTxt)+'</p>' : '')
     +(ventanaTxt ? '<p class="ventana-inscripcion-nota '+(item.inscripciones_abiertas?'is-abierta':'is-cerrada')+'">'+escHtmlD(ventanaTxt)+'</p>' : '')
     +'</div>'
     +'<div class="grid-detalles-duo">'
     +'<div class="card-detalle highlight-card">'
     +'<h3>REQUISITOS</h3>'
     +'<ul>'+reqHtml+'</ul>'
-    +'<div class="bloque-info-conv">'
-    +infoHtml
-    +'</div>'
+    +(infoHtml ? ('<div class="bloque-info-conv">'+infoHtml+'</div>') : '')
     +'</div>'
     +(ciasCard || '')
     +'</div>'
@@ -581,9 +572,6 @@ function renderFormInscripcion(item){
   return '<form class="form-inscripcion" id="form-inscripcion" onsubmit="enviarInscripcion(event)">'
     + (EMBED_FORM ? '' : ('<h3>' + tituloForm + '</h3>'))
     + introRep
-    +(esConvenio && item.aviso_sorteo_fb && !EMBED_FORM
-      ? '<p class="fi-intro" style="color:#004d3d;background:#e8f5f1;padding:10px 12px;border-radius:8px;border:1px solid #c8e6c9;"><strong>Sorteo en vivo:</strong> '+escHtmlD(item.aviso_sorteo_fb)+'</p>'
-      : '')
     +'<div id="fi-alerta" class="fi-alerta"></div>'
     +'<div class="fi-grid">'
 
