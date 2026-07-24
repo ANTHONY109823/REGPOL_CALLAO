@@ -1485,13 +1485,13 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div style="grid-column:1/-1;">
         <label>Título *</label>
-        <input type="text" id="mi-titulo-val" placeholder="Ej: PLAN CELADOR" maxlength="200"/>
+        <input type="text" id="mi-titulo-val" placeholder="Ej: PLAN CELADOR" maxlength="200" oninput="adaptarCuposUIPorTitulo()"/>
       </div>
-      <div style="grid-column:1/-1;" id="mi-wrap-descripcion">
+      <div style="grid-column:1/-1;display:none;" id="mi-wrap-descripcion">
         <label>Subtítulo / descripción</label>
         <input type="text" id="mi-descripcion" placeholder="Texto corto" maxlength="300"/>
       </div>
-      <div>
+      <div style="display:none;">
         <label>Estado</label>
         <select id="mi-estado">
           <option value="DISPONIBLE">DISPONIBLE</option>
@@ -1524,7 +1524,7 @@
           <option value="fa-file-contract">Contrato</option>
         </select>
       </div>
-      <div id="mi-wrap-color">
+      <div id="mi-wrap-color" style="display:none;">
         <label>Color de tarjeta</label>
         <input type="color" id="mi-color" value="#004d3d" style="height:34px;padding:2px;"/>
       </div>
@@ -1540,39 +1540,41 @@
         <label id="mi-lab-horario">Horario</label>
         <input type="text" id="mi-horario" placeholder="Ej: 08:00 a 20:00 hrs" maxlength="200"/>
       </div>
-      <div style="grid-column:1/-1;" id="mi-wrap-lugar">
+      <div style="grid-column:1/-1;display:none;" id="mi-wrap-lugar">
         <label id="mi-lab-lugar">Lugar</label>
-        <input type="text" id="mi-lugar" placeholder="Si hay un solo sitio (sin lista de comisarías)" maxlength="200"/>
+        <input type="text" id="mi-lugar" placeholder="" maxlength="200"/>
       </div>
-      <div style="grid-column:1/-1;" id="mi-wrap-uniforme">
+      <div style="grid-column:1/-1;display:none;" id="mi-wrap-uniforme">
         <label>Uniforme autorizado</label>
-        <input type="text" id="mi-uniforme" placeholder="Ej: Uniforme de faena completo" maxlength="300"/>
+        <input type="text" id="mi-uniforme" placeholder="" maxlength="300"/>
       </div>
-      <div style="grid-column:1/-1;" id="mi-wrap-contactos">
+      <div style="grid-column:1/-1;display:none;" id="mi-wrap-contactos">
         <label>Contactos</label>
-        <textarea id="mi-contactos" rows="2" placeholder="Oficina de Convenios — WhatsApp: 980 122 452"></textarea>
+        <textarea id="mi-contactos" rows="2"></textarea>
       </div>
-      <div style="grid-column:1/-1;" id="mi-wrap-observaciones">
+      <div style="grid-column:1/-1;display:none;" id="mi-wrap-observaciones">
         <label>Observaciones</label>
-        <input type="text" id="mi-observaciones" placeholder="Opcional" maxlength="300"/>
+        <input type="text" id="mi-observaciones" maxlength="300"/>
       </div>
       <div style="grid-column:1/-1;">
         <label>Requisitos (uno por línea)</label>
         <textarea id="mi-requisitos" rows="3" placeholder="Pertenecer a la REGPOL Callao.&#10;Encontrarse en situación de Actividad."></textarea>
       </div>
       <div style="grid-column:1/-1;" id="mi-cupos-wrap">
-        <label style="margin-bottom:4px;"><i class="fas fa-map-marker-alt"></i> Lugares / comisarías (como Celador)</label>
+        <label style="margin-bottom:4px;" id="mi-cupos-label"><i class="fas fa-map-marker-alt"></i> Lugar y vacantes</label>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px;">
-          <div style="flex:1;min-width:140px;">
-            <label style="font-size:10px;margin:0;">Lugar</label>
-            <select id="mi-cupo-add-nombre" style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;"></select>
+          <div style="flex:1;min-width:160px;" id="mi-cupo-add-nombre-wrap">
+            <label style="font-size:10px;margin:0;" id="mi-cupo-add-nombre-lab">Dirección / nombre del lugar</label>
+            <input type="text" id="mi-cupo-add-nombre-txt" placeholder="Ej: Av. Sáenz Peña — Callao" maxlength="150"
+                   style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;"/>
+            <select id="mi-cupo-add-nombre" style="display:none;width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;"></select>
           </div>
-          <div style="width:78px;">
-            <label style="font-size:10px;margin:0;">Vac.</label>
+          <div style="width:88px;">
+            <label style="font-size:10px;margin:0;">Vacantes</label>
             <input type="number" id="mi-cupo-add-vac" min="0" value="0" style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;"/>
           </div>
-          <button type="button" class="btn-mini btn-mini-ok" style="padding:5px 8px;" onclick="agregarCupoUnidadUI()"><i class="fas fa-plus"></i></button>
-          <button type="button" class="btn-mini" style="padding:5px 8px;" title="Plantilla DIVOPUS 1" onclick="cargarPlantillaCuposComisarias('divopus1')"><i class="fas fa-list"></i> D1</button>
+          <button type="button" class="btn-mini btn-mini-ok" style="padding:5px 8px;" onclick="agregarCupoUnidadUI()" title="Agregar"><i class="fas fa-plus"></i></button>
+          <button type="button" class="btn-mini" id="mi-cupo-btn-d1" style="display:none;padding:5px 8px;" title="Cargar DIVOPUS 1" onclick="cargarPlantillaCuposComisarias('divopus1')"><i class="fas fa-list"></i> D1</button>
           <button type="button" class="btn-mini btn-mini-danger" style="padding:5px 8px;" title="Vaciar" onclick="limpiarCuposUnidadesUI()"><i class="fas fa-times"></i></button>
         </div>
         <div id="mi-cupos-lista" style="margin-bottom:4px;"></div>
@@ -1590,18 +1592,9 @@
         <label>URL formulario externo (opcional)</label>
         <input type="url" id="mi-formulario-url" placeholder="https://forms.google.com/..."/>
       </div>
-      <div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f0f7f0;border-radius:6px;">
-        <input type="checkbox" id="mi-inscripciones-abiertas" style="width:16px;height:16px;accent-color:#004d3d;"/>
-        <label for="mi-inscripciones-abiertas" style="font-size:12.5px;font-weight:700;color:#004d3d;cursor:pointer;margin:0;">
-          Inscripciones abiertas en el portal
-        </label>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <input type="checkbox" id="mi-visible" checked style="width:15px;height:15px;accent-color:#004d3d;"/>
-        <label for="mi-visible" style="font-size:12px;color:#555;cursor:pointer;margin:0;">Visible en el portal</label>
-      </div>
-      <div>
-        <label>Orden</label>
+      <div style="display:none;">
+        <input type="checkbox" id="mi-inscripciones-abiertas"/>
+        <input type="checkbox" id="mi-visible" checked/>
         <input type="number" id="mi-orden" value="0" min="0"/>
       </div>
     </div>
@@ -2127,7 +2120,7 @@
 <script src="portal-data.js?v=10"></script>
 <script src="portal.js?v=85"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=33"></script>
+<script src="panel-cms.js?v=34"></script>
 <script src="panel-descansos.js?v=4"></script>
 <script src="panel-faltos.js?v=1"></script>
 <script src="panel-rrhh.js?v=3"></script>
@@ -4891,24 +4884,27 @@ function renderTablaItems(items){
   var colorEstado={'DISPONIBLE':'#1a7a3a','EN PROCESO':'#856404','CERRADO':'#c0392b'};
   if(esVistaConvenio){
     el.innerHTML='<table class="t"><thead><tr>'
-      +'<th>Convenio</th><th>Estado</th><th>Vac.</th><th>Lugares</th><th>Inscr.</th><th class="col-acciones">Acciones</th>'
+      +'<th>Convenio</th><th>Vac.</th><th>Lugares</th><th>Inscr.</th><th class="col-acciones">Acciones</th>'
       +'</tr></thead><tbody>'
       +items.map(function(item){
-        var color=colorEstado[item.estado]||'#444';
+        var activo=String(item.estado||'').toUpperCase()!=='CERRADO';
         var nLugares=Array.isArray(item.cupos_unidades)?item.cupos_unidades.length:0;
         var lugaresTxt=nLugares>0?String(nLugares):(item.lugar?'1':'—');
         var badge=item.inscripciones_abiertas
           ?'<span class="badge ok">Abiertas</span>'
           :'<span class="badge pend">Cerradas</span>';
         return '<tr>'
-          +'<td style="font-weight:600;max-width:260px;font-size:12.5px;">'+escHtml(item.titulo)+'</td>'
-          +'<td><span style="color:'+color+';font-weight:700;font-size:11px;">'+escHtml(item.estado)+'</span></td>'
+          +'<td style="font-weight:600;max-width:260px;font-size:12.5px;">'+escHtml(item.titulo)
+            +(activo?'':' <span style="color:#c0392b;font-size:10px;">(apagado)</span>')
+            +'</td>'
           +'<td style="text-align:center;">'+escHtml(item.vacantes||0)+'</td>'
           +'<td style="text-align:center;font-size:12px;">'+escHtml(lugaresTxt)+'</td>'
           +'<td style="text-align:center;">'+badge+'</td>'
           +'<td class="col-acciones"><div class="btn-acciones-celda" style="flex-direction:row;max-width:none;gap:4px;">'
           +(puedeEditarItemTipo(item.tipo)
-            ? '<button class="btn-mini btn-mini-ok" style="padding:3px 8px;width:auto;" onclick="abrirModalItem('+item.id+')" title="Editar"><i class="fas fa-edit"></i></button>'
+            ? '<button class="btn-mini btn-mini-ok" style="padding:3px 7px;width:auto;" onclick="abrirModalItem('+item.id+')" title="Editar"><i class="fas fa-edit"></i></button>'
+              +'<button class="btn-mini" style="padding:3px 7px;width:auto;border-color:'+(activo?'#1a7a3a':'#c0392b')+';color:'+(activo?'#1a7a3a':'#c0392b')+';" onclick="toggleEstadoItem('+item.id+')" title="'+(activo?'Apagar':'Prender')+'"><i class="fas fa-power-off"></i></button>'
+              +'<button class="btn-mini" style="padding:3px 7px;width:auto;" onclick="toggleInscripcionesItem('+item.id+')" title="Inscripciones"><i class="fas fa-door-open"></i></button>'
             : '')
           +'<a class="btn-mini" style="padding:3px 7px;width:auto;text-decoration:none;" href="detalle.html?id='+encodeURIComponent(item.id)+'&tipo=convenio" target="_blank" rel="noopener" title="Ver"><i class="fas fa-external-link-alt"></i></a>'
           +(esUnitic()?'<button class="btn-mini btn-mini-danger" style="padding:3px 7px;width:auto;" onclick="eliminarItem('+item.id+')" title="Eliminar"><i class="fas fa-trash"></i></button>':'')
@@ -5093,6 +5089,7 @@ function poblarModalItem(item){
   initSelectCupoAddNombre();
   renderListaCuposUnidadesUI();
   adaptarModalItemPorTipo(item.tipo || 'curso');
+  adaptarCuposUIPorTitulo();
   document.getElementById('modal-item').classList.add('open');
 }
 
@@ -5107,12 +5104,36 @@ function abrirNuevoConvenioWeb(){
   adaptarModalItemPorTipo('convenio');
 }
 
+function esTituloCelador(titulo){
+  return String(titulo || '').toUpperCase().indexOf('CELADOR') !== -1;
+}
+
+function adaptarCuposUIPorTitulo(){
+  var tipo = (document.getElementById('mi-tipo') || {}).value || '';
+  if (tipo !== 'convenio') return;
+  var esCel = esTituloCelador((document.getElementById('mi-titulo-val') || {}).value);
+  var sel = document.getElementById('mi-cupo-add-nombre');
+  var txt = document.getElementById('mi-cupo-add-nombre-txt');
+  var lab = document.getElementById('mi-cupo-add-nombre-lab');
+  var labCupos = document.getElementById('mi-cupos-label');
+  var btnD1 = document.getElementById('mi-cupo-btn-d1');
+  if (labCupos) {
+    labCupos.innerHTML = esCel
+      ? '<i class="fas fa-map-marker-alt"></i> Comisarías y vacantes (Celador)'
+      : '<i class="fas fa-map-marker-alt"></i> Lugar (dirección) y vacantes';
+  }
+  if (lab) lab.textContent = esCel ? 'Comisaría' : 'Dirección / nombre del lugar';
+  if (sel) sel.style.display = esCel ? '' : 'none';
+  if (txt) txt.style.display = esCel ? 'none' : '';
+  if (btnD1) btnD1.style.display = esCel ? '' : 'none';
+  if (esCel) initSelectCupoAddNombre();
+}
+
 function adaptarModalItemPorTipo(tipo){
   var esConv = tipo === 'convenio';
   var banner = document.getElementById('mi-banner-web');
   if(banner){ banner.style.display='none'; banner.innerHTML=''; }
 
-  // Convenio: solo lo que se ve en la ficha web (estilo Celador)
   var show = function(id, visible){
     var el = document.getElementById(id);
     if(el) el.style.display = visible ? '' : 'none';
@@ -5123,39 +5144,30 @@ function adaptarModalItemPorTipo(tipo){
   show('mi-wrap-uniforme', !esConv);
   show('mi-wrap-contactos', !esConv);
   show('mi-wrap-form-url', !esConv);
+  show('mi-wrap-lugar', !esConv);
   show('mi-cupos-wrap', esConv);
   show('mi-aviso-sorteo-wrap', esConv);
-  // Icono sí se ve en detalle; en convenio lo dejamos
   show('mi-wrap-icono', true);
 
   var labFecha = document.getElementById('mi-lab-fecha');
   var labDur = document.getElementById('mi-lab-duracion');
   var labHor = document.getElementById('mi-lab-horario');
-  var labLugar = document.getElementById('mi-lab-lugar');
   if(labFecha) labFecha.textContent = esConv ? 'Beneficio económico' : 'Fecha de inicio';
   if(labDur) labDur.textContent = esConv ? 'Detalle del beneficio' : 'Duración';
   if(labHor) labHor.textContent = esConv ? 'Horario' : 'Turnos / Horarios';
-  if(labLugar) labLugar.textContent = esConv ? 'Lugar (si no usa lista de comisarías)' : 'Lugar de formación';
 
   var plantilla = document.getElementById('mi-plantilla-wrap');
   if(plantilla) plantilla.style.display = '';
+  if (esConv) adaptarCuposUIPorTitulo();
 }
 
-function toggleInscripcionesItem(id){
-  if(!id) return;
-  var item = (ITEMS_CACHE || []).find(function(i){ return i.id === id; });
-  if(!item){ alert('No se encontró el convenio.'); return; }
-  if(!puedeEditarItemTipo(item.tipo)){ alert('Sin permiso.'); return; }
-  var nuevo = !item.inscripciones_abiertas;
-  var msg = nuevo
-    ? '¿Abrir inscripciones en la web para «'+item.titulo+'»?'
-    : '¿Cerrar inscripciones en la web para «'+item.titulo+'»?';
-  if(!confirm(msg)) return;
-  var body = {
+function bodyDesdeItemCache(item, overrides){
+  overrides = overrides || {};
+  return {
     tipo: item.tipo,
     titulo: item.titulo,
     descripcion: item.descripcion || '',
-    estado: item.estado || 'DISPONIBLE',
+    estado: overrides.estado != null ? overrides.estado : (item.estado || 'DISPONIBLE'),
     icono: item.icono || 'fa-handshake',
     color: item.color || '#004d3d',
     requisitos: Array.isArray(item.requisitos) ? item.requisitos : [],
@@ -5171,19 +5183,61 @@ function toggleInscripcionesItem(id){
     ventana_inscripcion: item.ventana_inscripcion || '',
     aviso_sorteo_fb: item.aviso_sorteo_fb || '',
     formulario_url: item.formulario_url || '',
-    inscripciones_abiertas: nuevo,
+    inscripciones_abiertas: overrides.inscripciones_abiertas != null ? !!overrides.inscripciones_abiertas : !!item.inscripciones_abiertas,
     visible: item.visible !== false,
     orden: parseInt(item.orden, 10) || 0
   };
-  fetch(API+'/admin/items/'+id, { method:'PUT', headers:hdr(), body:JSON.stringify(body) })
+}
+
+function toggleEstadoItem(id){
+  if(!id) return;
+  var item = (ITEMS_CACHE || []).find(function(i){ return parseInt(i.id,10) === parseInt(id,10); });
+  if(!item){ alert('No se encontró el convenio.'); return; }
+  if(!puedeEditarItemTipo(item.tipo)){ alert('Sin permiso.'); return; }
+  var activo = String(item.estado || '').toUpperCase() !== 'CERRADO';
+  var nuevo = activo ? 'CERRADO' : 'DISPONIBLE';
+  if(!confirm(activo
+    ? '¿Apagar «'+item.titulo+'»? (pasará a CERRADO)'
+    : '¿Prender «'+item.titulo+'»? (pasará a DISPONIBLE)')) return;
+  fetch(API+'/admin/items/'+id, {
+    method:'PUT', headers:hdr(),
+    body: JSON.stringify(bodyDesdeItemCache(item, { estado: nuevo }))
+  })
     .then(function(r){ return r.json(); })
     .then(function(d){
       if(!d.ok){ alert(d.error || 'No se pudo actualizar'); return; }
-      mostrarAlertaItems(nuevo ? 'Inscripciones abiertas en la web.' : 'Inscripciones cerradas en la web.', 'ok');
-      cargarItems(item.tipo || 'convenio');
+      item.estado = nuevo;
       if(typeof renderGestionConvocatoriasCMS === 'function'){
         try { renderGestionConvocatoriasCMS('cms-lista-convenios', 'convenio'); } catch(e){}
       }
+      var filtro = document.getElementById('items-filtro-tipo');
+      if(filtro && filtro.value === 'convenio') cargarItems('convenio');
+    })
+    .catch(function(){ alert('Error de conexión'); });
+}
+
+function toggleInscripcionesItem(id){
+  if(!id) return;
+  var item = (ITEMS_CACHE || []).find(function(i){ return parseInt(i.id,10) === parseInt(id,10); });
+  if(!item){ alert('No se encontró el convenio.'); return; }
+  if(!puedeEditarItemTipo(item.tipo)){ alert('Sin permiso.'); return; }
+  var nuevo = !item.inscripciones_abiertas;
+  if(!confirm(nuevo
+    ? '¿Abrir inscripciones en la web para «'+item.titulo+'»?'
+    : '¿Cerrar inscripciones en la web para «'+item.titulo+'»?')) return;
+  fetch(API+'/admin/items/'+id, {
+    method:'PUT', headers:hdr(),
+    body: JSON.stringify(bodyDesdeItemCache(item, { inscripciones_abiertas: nuevo }))
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ alert(d.error || 'No se pudo actualizar'); return; }
+      item.inscripciones_abiertas = nuevo;
+      if(typeof renderGestionConvocatoriasCMS === 'function'){
+        try { renderGestionConvocatoriasCMS('cms-lista-convenios', 'convenio'); } catch(e){}
+      }
+      var filtro = document.getElementById('items-filtro-tipo');
+      if(filtro && filtro.value === 'convenio') cargarItems('convenio');
     })
     .catch(function(){ alert('Error de conexión'); });
 }
@@ -5207,28 +5261,6 @@ function initSelectCupoAddNombre(){
   } else {
     sel.innerHTML = '<option value="">-- Elegir comisaría --</option>';
   }
-  var opOtro = document.createElement('option');
-  opOtro.value = '__OTRO__';
-  opOtro.textContent = 'Otro lugar (escribir nombre)…';
-  sel.appendChild(opOtro);
-  sel.onchange = function(){
-    if(sel.value === '__OTRO__'){
-      var nom = prompt('Nombre del nuevo lugar / comisaría:');
-      if(!nom || !String(nom).trim()){ sel.value = ''; return; }
-      nom = String(nom).trim().toUpperCase();
-      var existe = false;
-      Array.prototype.forEach.call(sel.options, function(op){
-        if(op.value && op.value.toUpperCase() === nom) existe = true;
-      });
-      if(!existe){
-        var op = document.createElement('option');
-        op.value = nom;
-        op.textContent = nom;
-        sel.insertBefore(op, sel.options[sel.options.length - 1]);
-      }
-      sel.value = nom;
-    }
-  };
 }
 
 function renderListaCuposUnidadesUI(){
@@ -5237,22 +5269,26 @@ function renderListaCuposUnidadesUI(){
   if(!lista || !ta) return;
   var cupos = parseCuposUnidadesTexto(ta.value);
   if(!cupos.length){
-    lista.innerHTML = '<p style="font-size:12.5px;color:#888;margin:0;padding:10px;background:#fafafa;border:1px dashed #ccc;border-radius:8px;">Sin lugares cargados. Agregue uno arriba o use una plantilla. Si queda vacío, el portal usará un solo lugar.</p>';
+    lista.innerHTML = '<p style="font-size:12px;color:#888;margin:0;padding:8px;background:#fafafa;border:1px dashed #ccc;border-radius:6px;">Sin lugares. Agregue dirección/nombre y vacantes.</p>';
     return;
   }
-  lista.innerHTML = '<table class="t" style="margin:0;"><thead><tr>'
-    +'<th>Lugar</th><th style="width:90px;">Vacantes</th><th style="width:90px;">Inscritos</th><th style="width:90px;">Disponibles</th><th style="width:70px;"></th>'
+  lista.innerHTML = '<table class="t" style="margin:0;font-size:12px;"><thead><tr>'
+    +'<th>Lugar</th><th style="width:90px;">Vacantes</th><th style="width:56px;"></th>'
     +'</tr></thead><tbody>'
     +cupos.map(function(c, idx){
       return '<tr>'
         +'<td style="font-weight:600;">'+escHtml(c.nombre)+'</td>'
         +'<td><input type="number" min="0" value="'+(c.vacantes||0)+'" style="width:72px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;" onchange="actualizarCupoUnidadUI('+idx+',\'vacantes\',this.value)"/></td>'
-        +'<td><input type="number" min="0" value="'+(c.inscritos||0)+'" style="width:72px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;" onchange="actualizarCupoUnidadUI('+idx+',\'inscritos\',this.value)"/></td>'
-        +'<td style="text-align:center;font-weight:700;color:#004d3d;">'+(c.disponibles!=null?c.disponibles:Math.max(0,(c.vacantes||0)-(c.inscritos||0)))+'</td>'
-        +'<td><button type="button" class="btn-mini btn-mini-danger" onclick="quitarCupoUnidadUI('+idx+')" title="Quitar lugar"><i class="fas fa-times"></i></button></td>'
+        +'<td><button type="button" class="btn-mini btn-mini-danger" style="padding:3px 6px;" onclick="quitarCupoUnidadUI('+idx+')" title="Quitar"><i class="fas fa-times"></i></button></td>'
         +'</tr>';
     }).join('')
     +'</tbody></table>';
+  // Sincronizar vacantes totales con la suma
+  var suma = cupos.reduce(function(a,c){ return a + (parseInt(c.vacantes,10)||0); }, 0);
+  var vacEl = document.getElementById('mi-vacantes');
+  if(vacEl && suma > 0) vacEl.value = suma;
+  var lugarEl = document.getElementById('mi-lugar');
+  if(lugarEl && cupos.length === 1) lugarEl.value = cupos[0].nombre || lugarEl.value;
 }
 
 function setCuposUnidadesDesdeArray(cupos){
@@ -5262,10 +5298,17 @@ function setCuposUnidadesDesdeArray(cupos){
 }
 
 function agregarCupoUnidadUI(){
+  var esCel = esTituloCelador((document.getElementById('mi-titulo-val') || {}).value);
   var sel = document.getElementById('mi-cupo-add-nombre');
+  var txt = document.getElementById('mi-cupo-add-nombre-txt');
   var vacEl = document.getElementById('mi-cupo-add-vac');
-  var nombre = sel ? String(sel.value || '').trim() : '';
-  if(!nombre || nombre === '__OTRO__'){ alert('Seleccione o escriba un lugar.'); return; }
+  var nombre = '';
+  if (esCel) {
+    nombre = sel ? String(sel.value || '').trim() : '';
+  } else {
+    nombre = txt ? String(txt.value || '').trim() : '';
+  }
+  if(!nombre){ alert(esCel ? 'Seleccione una comisaría.' : 'Escriba el nombre o dirección del lugar.'); return; }
   var vac = vacEl ? (parseInt(vacEl.value, 10) || 0) : 0;
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
   var key = nombre.toUpperCase();
@@ -5278,6 +5321,7 @@ function agregarCupoUnidadUI(){
   }
   setCuposUnidadesDesdeArray(cupos);
   if(sel) sel.value = '';
+  if(txt) txt.value = '';
   if(vacEl) vacEl.value = '0';
 }
 

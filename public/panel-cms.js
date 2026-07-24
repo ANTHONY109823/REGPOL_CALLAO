@@ -273,28 +273,29 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
       box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
         + '<thead><tr style="background:#f0f7f4;color:#004d3d;text-align:left;">'
         + '<th style="padding:7px 8px;">Título</th>'
-        + '<th style="padding:7px 8px;">Estado</th>'
         + '<th style="padding:7px 8px;">Vacantes</th>'
         + '<th style="padding:7px 8px;">Lugares</th>'
-        + '<th style="padding:7px 8px;">Inscripciones</th>'
-        + '<th style="padding:7px 8px;width:88px;">Acciones</th></tr></thead><tbody>'
+        + '<th style="padding:7px 8px;">Inscr.</th>'
+        + '<th style="padding:7px 8px;width:130px;">Acciones</th></tr></thead><tbody>'
         + items.map(function(it) {
-          var est = escHtml(it.estado || '—');
-          var color = it.estado === 'DISPONIBLE' ? '#1a7a3a' : (it.estado === 'CERRADO' ? '#c0392b' : '#856404');
+          var activo = String(it.estado || '').toUpperCase() !== 'CERRADO';
           var nLug = Array.isArray(it.cupos_unidades) ? it.cupos_unidades.length : 0;
-          var lugTxt = nLug > 0 ? (nLug + (nLug === 1 ? ' lugar' : ' lugares')) : (it.lugar ? '1' : '—');
+          var lugTxt = nLug > 0 ? String(nLug) : (it.lugar ? '1' : '—');
           var insc = it.inscripciones_abiertas
             ? '<span style="color:#1a7a3a;font-weight:700;font-size:11px;">Abiertas</span>'
             : '<span style="color:#856404;font-weight:700;font-size:11px;">Cerradas</span>';
           return '<tr style="border-top:1px solid #edf2ef;">'
-            + '<td style="padding:7px 8px;font-weight:600;color:#004d3d;">' + escHtml(it.titulo || '') + '</td>'
-            + '<td style="padding:7px 8px;font-weight:700;color:' + color + ';font-size:11px;">' + est + '</td>'
+            + '<td style="padding:7px 8px;font-weight:600;color:#004d3d;">' + escHtml(it.titulo || '')
+            + (activo ? '' : ' <span style="color:#c0392b;font-size:10px;">(apagado)</span>')
+            + '</td>'
             + '<td style="padding:7px 8px;">' + escHtml(String(it.vacantes != null ? it.vacantes : '—')) + '</td>'
             + '<td style="padding:7px 8px;">' + lugTxt + '</td>'
             + '<td style="padding:7px 8px;">' + insc + '</td>'
             + '<td style="padding:6px 8px;white-space:nowrap;">'
             + (puedeEditar
-              ? '<button type="button" class="btn-mini btn-mini-ok" style="padding:3px 8px;font-size:11px;" onclick="abrirModalItem(' + it.id + ')" title="Editar"><i class="fas fa-edit"></i></button> '
+              ? '<button type="button" class="btn-mini btn-mini-ok" style="padding:3px 7px;font-size:11px;" onclick="abrirModalItem(' + it.id + ')" title="Editar"><i class="fas fa-edit"></i></button> '
+              + '<button type="button" class="btn-mini" style="padding:3px 7px;font-size:11px;border-color:'+(activo?'#1a7a3a':'#c0392b')+';color:'+(activo?'#1a7a3a':'#c0392b')+';" onclick="toggleEstadoItem(' + it.id + ')" title="'+(activo?'Apagar (CERRADO)':'Prender (DISPONIBLE)')+'"><i class="fas fa-power-off"></i></button> '
+              + '<button type="button" class="btn-mini" style="padding:3px 7px;font-size:11px;" onclick="toggleInscripcionesItem(' + it.id + ')" title="Abrir/cerrar inscripciones"><i class="fas fa-door-open"></i></button> '
               : '')
             + '<a class="btn-mini" style="padding:3px 7px;font-size:11px;text-decoration:none;" href="detalle.html?id=' + encodeURIComponent(it.id) + '&tipo=' + tipo + '" target="_blank" rel="noopener" title="Ver en web"><i class="fas fa-external-link-alt"></i></a>'
             + '</td></tr>';
