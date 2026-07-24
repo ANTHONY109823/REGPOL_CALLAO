@@ -6167,21 +6167,32 @@ app.get('/admin/items', requireAuth, async (req, res) => {
   try {
     const { tipo } = req.query;
     const esU = req.admin.rol === 'unitic';
+    const selectFull =
+      `SELECT i.id, i.tipo, i.titulo, i.descripcion, i.estado, i.icono, i.color, i.requisitos, i.horario,
+              i.vacantes, i.fecha_inicio, i.duracion, i.lugar, i.observaciones, i.ventana_inscripcion,
+              i.formulario_url, i.inscripciones_abiertas, i.visible, i.orden, i.uniforme,
+              i.contactos_responsables, i.aviso_sorteo_fb, i.cupos_unidades, i.plantilla_nombre,
+              (SELECT COUNT(*) FROM inscripciones n WHERE n.item_id=i.id) AS total_inscritos
+       FROM items_portal i`;
     if (!esU) {
       // Admin de área: lista completa del tipo que puede gestionar (editar web / lugares)
       if (tipo && puedeGestionarItem(req.admin, tipo)) {
+        const r = await pool.query(selectFull + ' WHERE i.tipo=$1 ORDER BY i.orden, i.id', [tipo]);
+        return res.json({ ok: true, items: r.rows });
+      }
+      // Sin ?tipo=: devolver todos los tipos que sí puede gestionar (evita 403 al editar)
+      if (!tipo) {
+        const tipos = [];
+        if (puedeGestionarItem(req.admin, 'convenio')) tipos.push('convenio');
+        if (puedeGestionarItem(req.admin, 'curso')) tipos.push('curso');
+        if (!tipos.length) return res.status(403).json({ ok: false, error: 'Sin permiso' });
         const r = await pool.query(
-          `SELECT i.id, i.tipo, i.titulo, i.descripcion, i.estado, i.icono, i.color, i.requisitos, i.horario,
-                  i.vacantes, i.fecha_inicio, i.duracion, i.lugar, i.observaciones, i.ventana_inscripcion,
-                  i.formulario_url, i.inscripciones_abiertas, i.visible, i.orden, i.uniforme,
-                  i.contactos_responsables, i.aviso_sorteo_fb, i.cupos_unidades, i.plantilla_nombre,
-                  (SELECT COUNT(*) FROM inscripciones n WHERE n.item_id=i.id) AS total_inscritos
-           FROM items_portal i WHERE i.tipo=$1 ORDER BY i.orden, i.id`,
-          [tipo]);
+          selectFull + ' WHERE i.tipo = ANY($1::varchar[]) ORDER BY i.tipo, i.orden, i.id',
+          [tipos]);
         return res.json({ ok: true, items: r.rows });
       }
       // Solo para elegir convocatoria al publicar PDF (campos mínimos)
-      if (!tipo || !puedePublicarResultadosPdf(req.admin, tipo))
+      if (!puedePublicarResultadosPdf(req.admin, tipo))
         return res.status(403).json({ ok: false, error: 'Sin permiso' });
       const r = await pool.query(
         'SELECT id, tipo, titulo, estado FROM items_portal WHERE tipo=$1 AND visible=TRUE ORDER BY orden, id',

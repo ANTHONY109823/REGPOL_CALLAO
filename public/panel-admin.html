@@ -5012,17 +5012,32 @@ function abrirModalItem(id){
     document.getElementById('modal-item').classList.add('open');
     return;
   }
-  
-  var cached=ITEMS_CACHE.find(function(i){return i.id===id;});
-  if(cached && cached.requisitos !== undefined){
+
+  var idNum = parseInt(id, 10);
+  var cached = (ITEMS_CACHE || []).find(function(i){ return parseInt(i.id, 10) === idNum; });
+  // Usar caché si trae datos de edición (título + campos web); no exigir requisitos
+  if (cached && cached.titulo != null && (cached.horario !== undefined || cached.requisitos !== undefined || cached.cupos_unidades !== undefined)) {
     poblarModalItem(cached);
     return;
   }
-  fetch(API+'/admin/items',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
-    var item=(d.items||[]).find(function(i){return i.id===id;});
-    if(item){poblarModalItem(item);}
-    else{alert('No se pudo cargar el item.');}
-  });
+  var tipoFetch = (cached && cached.tipo)
+    || (document.getElementById('mi-tipo') && document.getElementById('mi-tipo').value)
+    || (document.getElementById('items-filtro-tipo') && document.getElementById('items-filtro-tipo').value)
+    || 'convenio';
+  var urlItems = API + '/admin/items?tipo=' + encodeURIComponent(tipoFetch);
+  fetch(urlItems, { headers: hdr() })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d || !d.ok) {
+        alert((d && d.error) || 'No se pudo cargar el ítem (sin permiso o sesión).');
+        return;
+      }
+      if (d.items && d.items.length) ITEMS_CACHE = d.items;
+      var item = (d.items || []).find(function(i){ return parseInt(i.id, 10) === idNum; });
+      if (item) poblarModalItem(item);
+      else alert('No se pudo cargar el ítem.');
+    })
+    .catch(function(){ alert('Error de conexión al cargar el ítem.'); });
 }
 
 function poblarModalItem(item){
@@ -6409,8 +6424,8 @@ function verAprobadosCurso(){
     return tb-ta;
   });
   var item_vacantes = 0;
-  fetch(API+'/admin/items', {headers:hdr()}).then(function(r){return r.json();}).then(function(d){
-    var it=(d.items||[]).find(function(x){return x.id===ITEM_ACTIVO_ID;});
+  fetch(API+'/admin/items?tipo=curso', {headers:hdr()}).then(function(r){return r.json();}).then(function(d){
+    var it=(d.items||[]).find(function(x){return parseInt(x.id,10)===parseInt(ITEM_ACTIVO_ID,10);});
     if(it) item_vacantes=it.vacantes||0;
   });
 
