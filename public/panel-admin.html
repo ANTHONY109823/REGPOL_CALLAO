@@ -1487,9 +1487,9 @@
         <label>Título *</label>
         <input type="text" id="mi-titulo-val" placeholder="Ej: PLAN CELADOR" maxlength="200"/>
       </div>
-      <div style="grid-column:1/-1;">
-        <label>Subtítulo de la tarjeta (web)</label>
-        <input type="text" id="mi-descripcion" placeholder="Texto corto bajo el título en la web" maxlength="300"/>
+      <div style="grid-column:1/-1;" id="mi-wrap-descripcion">
+        <label>Subtítulo / descripción</label>
+        <input type="text" id="mi-descripcion" placeholder="Texto corto" maxlength="300"/>
       </div>
       <div>
         <label>Estado</label>
@@ -1500,7 +1500,7 @@
         </select>
       </div>
       <div>
-        <label>Vacantes</label>
+        <label>Vacantes totales</label>
         <input type="number" id="mi-vacantes" min="0" placeholder="0" value="0"/>
       </div>
       <div id="mi-wrap-icono">
@@ -1529,30 +1529,30 @@
         <input type="color" id="mi-color" value="#004d3d" style="height:34px;padding:2px;"/>
       </div>
       <div>
-        <label>Beneficio económico (web)</label>
+        <label id="mi-lab-fecha">Beneficio económico</label>
         <input type="text" id="mi-fecha-inicio" placeholder="Ej: S/ 75.00" maxlength="100"/>
       </div>
       <div>
-        <label>Detalle del beneficio (web)</label>
+        <label id="mi-lab-duracion">Detalle del beneficio</label>
         <input type="text" id="mi-duracion" placeholder="Ej: Por día laborado" maxlength="100"/>
       </div>
       <div style="grid-column:1/-1;">
-        <label>Turnos / Horarios (web)</label>
+        <label id="mi-lab-horario">Horario</label>
         <input type="text" id="mi-horario" placeholder="Ej: 08:00 a 20:00 hrs" maxlength="200"/>
       </div>
-      <div style="grid-column:1/-1;">
-        <label>Lugar general</label>
-        <input type="text" id="mi-lugar" placeholder="Si hay un solo sitio de presentación" maxlength="200"/>
+      <div style="grid-column:1/-1;" id="mi-wrap-lugar">
+        <label id="mi-lab-lugar">Lugar</label>
+        <input type="text" id="mi-lugar" placeholder="Si hay un solo sitio (sin lista de comisarías)" maxlength="200"/>
       </div>
-      <div style="grid-column:1/-1;">
+      <div style="grid-column:1/-1;" id="mi-wrap-uniforme">
         <label>Uniforme autorizado</label>
         <input type="text" id="mi-uniforme" placeholder="Ej: Uniforme de faena completo" maxlength="300"/>
       </div>
-      <div style="grid-column:1/-1;">
-        <label>Contactos (web)</label>
+      <div style="grid-column:1/-1;" id="mi-wrap-contactos">
+        <label>Contactos</label>
         <textarea id="mi-contactos" rows="2" placeholder="Oficina de Convenios — WhatsApp: 980 122 452"></textarea>
       </div>
-      <div style="grid-column:1/-1;">
+      <div style="grid-column:1/-1;" id="mi-wrap-observaciones">
         <label>Observaciones</label>
         <input type="text" id="mi-observaciones" placeholder="Opcional" maxlength="300"/>
       </div>
@@ -1561,7 +1561,7 @@
         <textarea id="mi-requisitos" rows="3" placeholder="Pertenecer a la REGPOL Callao.&#10;Encontrarse en situación de Actividad."></textarea>
       </div>
       <div style="grid-column:1/-1;" id="mi-cupos-wrap">
-        <label style="margin-bottom:4px;"><i class="fas fa-map-marker-alt"></i> Lugares / vacantes</label>
+        <label style="margin-bottom:4px;"><i class="fas fa-map-marker-alt"></i> Lugares / comisarías (como Celador)</label>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px;">
           <div style="flex:1;min-width:140px;">
             <label style="font-size:10px;margin:0;">Lugar</label>
@@ -1579,7 +1579,7 @@
         <textarea id="mi-cupos-unidades" rows="2" style="display:none;"></textarea>
       </div>
       <div style="grid-column:1/-1;">
-        <label>Ventana de inscripción (web)</label>
+        <label>Ventana de inscripción</label>
         <input type="text" id="mi-ventana-inscripcion" placeholder="Las inscripciones se habilitan del 20 al 25 de cada mes." maxlength="300"/>
       </div>
       <div style="grid-column:1/-1;" id="mi-aviso-sorteo-wrap">
@@ -5111,26 +5111,32 @@ function adaptarModalItemPorTipo(tipo){
   var esConv = tipo === 'convenio';
   var banner = document.getElementById('mi-banner-web');
   if(banner){ banner.style.display='none'; banner.innerHTML=''; }
-  var pairs = [
-    ['mi-fecha-inicio', esConv ? 'Beneficio económico (web)' : 'Fecha de inicio'],
-    ['mi-duracion', esConv ? 'Detalle del beneficio (web)' : 'Duración'],
-    ['mi-horario', esConv ? 'Turnos / Horarios (web)' : 'Turnos / Horarios'],
-    ['mi-lugar', esConv ? 'Lugar general' : 'Lugar de formación'],
-    ['mi-descripcion', esConv ? 'Subtítulo de la tarjeta (web)' : 'Descripción / Subtítulo']
-  ];
-  pairs.forEach(function(p){
-    var inp = document.getElementById(p[0]);
-    if(!inp) return;
-    var lab = inp.previousElementSibling;
-    if(lab && lab.tagName === 'LABEL') lab.textContent = p[1];
-  });
-  var cuposWrap = document.getElementById('mi-cupos-wrap');
-  if(cuposWrap) cuposWrap.style.display = esConv ? '' : 'none';
-  var avisoWrap = document.getElementById('mi-aviso-sorteo-wrap');
-  if(avisoWrap) avisoWrap.style.display = esConv ? '' : 'none';
-  var formUrl = document.getElementById('mi-wrap-form-url');
-  if(formUrl) formUrl.style.display = esConv ? 'none' : 'block';
-  // En convenio: icono/color opcionales pero visibles compactos; plantilla compacta
+
+  // Convenio: solo lo que se ve en la ficha web (estilo Celador)
+  var show = function(id, visible){
+    var el = document.getElementById(id);
+    if(el) el.style.display = visible ? '' : 'none';
+  };
+  show('mi-wrap-descripcion', !esConv);
+  show('mi-wrap-color', !esConv);
+  show('mi-wrap-observaciones', !esConv);
+  show('mi-wrap-uniforme', !esConv);
+  show('mi-wrap-contactos', !esConv);
+  show('mi-wrap-form-url', !esConv);
+  show('mi-cupos-wrap', esConv);
+  show('mi-aviso-sorteo-wrap', esConv);
+  // Icono sí se ve en detalle; en convenio lo dejamos
+  show('mi-wrap-icono', true);
+
+  var labFecha = document.getElementById('mi-lab-fecha');
+  var labDur = document.getElementById('mi-lab-duracion');
+  var labHor = document.getElementById('mi-lab-horario');
+  var labLugar = document.getElementById('mi-lab-lugar');
+  if(labFecha) labFecha.textContent = esConv ? 'Beneficio económico' : 'Fecha de inicio';
+  if(labDur) labDur.textContent = esConv ? 'Detalle del beneficio' : 'Duración';
+  if(labHor) labHor.textContent = esConv ? 'Horario' : 'Turnos / Horarios';
+  if(labLugar) labLugar.textContent = esConv ? 'Lugar (si no usa lista de comisarías)' : 'Lugar de formación';
+
   var plantilla = document.getElementById('mi-plantilla-wrap');
   if(plantilla) plantilla.style.display = '';
 }
