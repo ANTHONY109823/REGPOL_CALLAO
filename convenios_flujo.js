@@ -307,6 +307,14 @@ function prefijoNroRegistro(titulo, tipo) {
     .replace(/[\u0300-\u036f]/g, '');
   if (t.indexOf('CELADOR') !== -1) return 'C';
   if (t.indexOf('ATU') !== -1) return 'U';
+  if (t.indexOf('FELMO') !== -1) return 'F';
+  if (t.indexOf('SEDAPAL') !== -1) return 'S';
+  if (t.indexOf('PLUZ') !== -1 || t.indexOf('ENEL') !== -1) return 'Z';
+  if (t.indexOf('APM') !== -1 || t.indexOf('MTC') !== -1) return 'M';
+  if (t.indexOf('AEROPUERTO') !== -1 || t.indexOf('BY PAS') !== -1) return 'Y';
+  if (t.indexOf('VENTANILLA') !== -1) return 'V';
+  if (t.indexOf('CARMEN') !== -1 || t.indexOf('LEGUA') !== -1) return 'L';
+  if (t.indexOf('CALLAO') !== -1 && t.indexOf('MUNICIPALIDAD') !== -1) return 'O';
   if (/\bAMP\b/.test(t) || t.indexOf('APOYO AL MANTENIMIENTO') !== -1) return 'A';
   if (tipo === 'curso' || t.indexOf('CURSO') !== -1) return 'E';
   const words = t.split(/[^A-Z0-9]+/).filter(function(w) {

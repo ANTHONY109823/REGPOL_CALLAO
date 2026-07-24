@@ -424,7 +424,7 @@
     var tienePsico = esU || rol === 'bienestar' || tieneEval || tieneDesc;
     var tieneGestion = esU || tienePsico || tieneCursos || tieneConvenios || tieneDescansos || tieneFaltos || tieneRRHH;
 
-    var tienePortalCms = esU || tieneCursos || tieneDescansos;
+    var tienePortalCms = esU || tieneCursos || tieneConvenios || tieneDescansos;
     var st = document.getElementById('panel-perm-style');
     if (!st) {
       st = document.createElement('style');
@@ -439,7 +439,7 @@
       esU ? '[data-rol-unitic]{display:block!important}' : '',
       tienePortalCms ? '#sb-sec-portal{display:block!important}' : '',
       !esU ? '[data-cms-only-unitic]{display:none!important}' : '',
-      !esU ? '[data-cms-tab="convenios"]{display:none!important}' : '',
+      !esU && !tieneConvenios ? '[data-cms-tab="convenios"]{display:none!important}' : '',
       !esU && !tieneCursos ? '[data-cms-tab="cursos"]{display:none!important}' : '',
       !esU && !tieneDescansos ? '[data-cms-tab="descansos"]{display:none!important}' : '',
       tieneEval ? '[data-perm-evaluaciones],[data-perm-preguntas]{display:flex!important}' : '',
@@ -540,6 +540,9 @@
           <div class="sb-item" data-page="conv-repechaje" onclick="irConvRepechaje(this)">
             <i class="fas fa-redo"></i> 3. REPECHAJE
           </div>
+          <div class="sb-item" data-page="items-convenio" data-perm-cms-convenios onclick="irGestionItems('convenio',this)">
+            <i class="fas fa-globe"></i> 4. EDITAR EN LA WEB
+          </div>
         </div>
       </div>
 
@@ -628,7 +631,7 @@
       </div>
       <div class="sb-item" data-cms-only-unitic data-cms-tab="carrusel" onclick="irCMS('carrusel',this)"><i class="fas fa-home"></i> INICIO / CARRUSEL</div>
       <div class="sb-item" data-cms-only-unitic data-cms-tab="novedades" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> NOVEDADES</div>
-      <div class="sb-item" data-cms-only-unitic data-cms-tab="convenios" onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> CONVENIOS (WEB)</div>
+      <div class="sb-item" data-cms-tab="convenios" data-perm-cms-convenios onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> CONVENIOS (WEB)</div>
       <div class="sb-item" data-cms-tab="cursos" onclick="irCMS('cursos',this)"><i class="fas fa-graduation-cap"></i> CURSOS (WEB)</div>
       <div class="sb-item" data-cms-tab="descansos" onclick="irCMS('descansos',this)"><i class="fas fa-notes-medical"></i> DESCANSOS (WEB)</div>
       <div class="sb-item" data-cms-only-unitic data-cms-tab="bienestar" onclick="irCMS('bienestar',this)"><i class="fas fa-heart"></i> BIENESTAR (WEB)</div>
@@ -1092,9 +1095,15 @@
     <div id="page-items" class="page">
       <div class="card">
         <h3 id="items-titulo"><i class="fas fa-clipboard-list"></i> Convocatorias</h3>
+        <p id="items-ayuda-web" style="display:none;font-size:12.5px;color:#555;line-height:1.5;margin:-6px 0 12px;">
+          Todos los convenios usan el <strong>mismo flujo que Celador</strong>: preinscripción → sorteo → aviso → expediente (2 días) → aprobación/constancia → repechaje.
+          Pulse <strong>Sincronizar 11 convenios (flujo Celador)</strong> para dejarlos visibles y con lugares/plantilla listos.
+          Luego edite vacantes, horarios y abra inscripciones.
+          <a href="index.html#convenios" target="_blank" rel="noopener" style="color:#004d3d;font-weight:700;margin-left:4px;">Abrir portal <i class="fas fa-external-link-alt"></i></a>
+        </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
-          <button class="btn btn-v" onclick="abrirModalItem(null)"><i class="fas fa-plus"></i> Nueva convocatoria</button>
-          <button class="btn btn-o" id="btn-sync-convenios" onclick="syncConveniosOficiales()" style="display:none;"><i class="fas fa-sync"></i> Sincronizar 11 convenios</button>
+          <button class="btn btn-v" id="btn-nueva-convocatoria" onclick="abrirModalItem(null)"><i class="fas fa-plus"></i> Nueva convocatoria</button>
+          <button class="btn btn-o" id="btn-sync-convenios" onclick="syncConveniosOficiales()" style="display:none;"><i class="fas fa-sync"></i> Sincronizar 11 convenios (flujo Celador)</button>
           <select id="items-filtro-tipo" onchange="cargarItems(this.value)" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
             <option value="">Todos</option>
             <option value="curso">Solo Cursos</option>
@@ -1548,15 +1557,31 @@
         <textarea id="mi-requisitos" rows="4" placeholder="Pertenecer a la REGPOL Callao.&#10;Encontrarse en situación de Actividad.&#10;No tener sanciones vigentes."></textarea>
       </div>
       <div style="grid-column:1/-1;" id="mi-cupos-wrap">
-        <label><i class="fas fa-building"></i> Cupos por comisaría / unidad (lista lineal en el portal)</label>
+        <label><i class="fas fa-map-marker-alt"></i> Lugares / comisarías del convenio (cupos)</label>
+        <p style="font-size:12px;color:#666;margin:0 0 8px;line-height:1.4;">
+          Un convenio puede tener <strong>un solo lugar</strong> o <strong>varios</strong> (como Celador).
+          Agregue o quite lugares aquí; se verán en el registro del portal.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px;padding:10px;background:#f7faf7;border:1px solid #c8e6c9;border-radius:8px;">
+          <div style="flex:1;min-width:180px;">
+            <label style="font-size:11px;">Lugar / comisaría</label>
+            <select id="mi-cupo-add-nombre" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;"></select>
+          </div>
+          <div style="width:110px;">
+            <label style="font-size:11px;">Vacantes</label>
+            <input type="number" id="mi-cupo-add-vac" min="0" value="0" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;"/>
+          </div>
+          <button type="button" class="btn btn-v" style="font-size:12px;" onclick="agregarCupoUnidadUI()"><i class="fas fa-plus"></i> Agregar lugar</button>
+        </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
           <button type="button" class="btn" style="background:#004d3d;color:#fff;font-size:12px;" onclick="cargarPlantillaCuposComisarias('divopus1')"><i class="fas fa-list"></i> Cargar DIVOPUS 1</button>
           <button type="button" class="btn" style="background:#888;color:#fff;font-size:12px;" onclick="cargarPlantillaCuposComisarias('todas')"><i class="fas fa-list"></i> Cargar 20 comisarías</button>
+          <button type="button" class="btn" style="background:#c0392b;color:#fff;font-size:12px;" onclick="limpiarCuposUnidadesUI()"><i class="fas fa-trash"></i> Vaciar lista</button>
         </div>
-        <textarea id="mi-cupos-unidades" rows="5" placeholder="CIA LA LEGUA | 20 | 10 | 10&#10;CIA CALLAO | 15 | 5 | 10&#10;CIA VENTANILLA | 30 | 12 | 18"></textarea>
+        <div id="mi-cupos-lista" style="margin-bottom:8px;"></div>
+        <textarea id="mi-cupos-unidades" rows="4" placeholder="CIA CALLAO | 20 | 0 | 20" style="display:none;"></textarea>
         <small style="color:#666;font-size:11.5px;display:block;margin-top:4px;line-height:1.4;">
-          Una línea por unidad: <strong>NOMBRE | vacantes | inscritos | disponibles</strong>.
-          Si omite disponibles, se calcula (vacantes − inscritos). Editable por Super Admin y Admin de convenios/cursos.
+          Editable por Super Admin y Admin de Convenios. Si deja la lista vacía, el portal usará un solo lugar (campo “Lugar de formación”) con las vacantes generales.
         </small>
       </div>
       <div style="grid-column:1/-1;">
@@ -1920,8 +1945,11 @@
       </div>
       <div class="perm-box">
         <div class="pb-title">Convenios</div>
-        <label><input type="checkbox" value="cms_convenios" class="perm-chk"> Sorteos e inscritos operativos (convenios)</label>
-        <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Solo operaciones de convenios. No edita el portal web.</p>
+        <label><input type="checkbox" value="cms_convenios" class="perm-chk"> Admin de Convenios (operativo + web)</label>
+        <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">
+          Preinscritos, ganadores/expedientes, repechaje, sorteos y <strong>editar fichas en la web</strong> (lugares, vacantes, horarios, inscripciones).
+          No modifica carrusel, novedades ni otras secciones del portal.
+        </p>
       </div>
       <div class="perm-box">
         <div class="pb-title">Educación (Cursos)</div>
@@ -2115,7 +2143,7 @@
 <script src="portal-data.js?v=10"></script>
 <script src="portal.js?v=85"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=29"></script>
+<script src="panel-cms.js?v=31"></script>
 <script src="panel-descansos.js?v=4"></script>
 <script src="panel-faltos.js?v=1"></script>
 <script src="panel-rrhh.js?v=3"></script>
@@ -3538,11 +3566,27 @@ function aplicarRestriccionFiltroItems(){
   }
 }
 
+function puedeEditarItemTipo(tipo){
+  if (esUnitic()) return true;
+  if (tipo === 'convenio') return tienePermiso('cms_convenios');
+  if (tipo === 'curso') return tienePermiso('cms_cursos');
+  return false;
+}
+
 function irGestionItems(tipo, el){
-  if (!puedeGestionarConvocatorias()) { alert('Solo el Super Admin gestiona convocatorias e inscritos.'); return; }
-  if (tipo === 'convenio' && !esUnitic()) { alert('Sin acceso.'); return; }
-  if (tipo === 'curso' && !esUnitic()) { alert('Sin acceso.'); return; }
-  ir('items', el);
+  if (!puedeEditarItemTipo(tipo)) {
+    alert(tipo === 'convenio'
+      ? 'Sin acceso. Solo Super Admin o Admin de Convenios puede gestionar lugares y vacantes.'
+      : 'Sin acceso a convocatorias de cursos.');
+    return;
+  }
+  // Ir a la página items sin el bloqueo genérico de ir() (solo unitic)
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
+  var pg = document.getElementById('page-items');
+  if (pg) pg.classList.add('on');
+  document.querySelectorAll('.sb-item').forEach(function(i){ i.classList.remove('on'); });
+  if (el) el.classList.add('on');
+  scrollPanelAlInicio();
   cargarItems(tipo);
 }
 
@@ -3655,17 +3699,18 @@ function ir(page, el){
 }
 
 function puedeEditarPortalCMS(){
-  return esUnitic() || tienePermiso('cms_cursos') || tienePermiso('cms_descansos');
+  return esUnitic() || tienePermiso('cms_cursos') || tienePermiso('cms_descansos') || tienePermiso('cms_convenios');
 }
 function puedeEditarCmsTab(tab){
   if (esUnitic()) return true;
-  if (tab === 'convenios') return esUnitic();
+  if (tab === 'convenios') return tienePermiso('cms_convenios');
   if (tab === 'cursos') return tienePermiso('cms_cursos');
   if (tab === 'descansos') return tienePermiso('cms_descansos');
   return false;
 }
 function primerTabCmsPermitido(){
   if (esUnitic()) return 'carrusel';
+  if (tienePermiso('cms_convenios')) return 'convenios';
   if (tienePermiso('cms_cursos')) return 'cursos';
   if (tienePermiso('cms_descansos')) return 'descansos';
   return 'carrusel';
@@ -4800,10 +4845,20 @@ function cargarItems(tipo){
   aplicarRestriccionFiltroItems();
   if(tipo) document.getElementById('items-filtro-tipo').value=tipo;
   else tipo=document.getElementById('items-filtro-tipo').value||'';
-  var tipoLabel = tipo==='curso'?'Educación — Cursos':tipo==='convenio'?'Convenios':'Convocatorias';
-  document.getElementById('items-titulo').innerHTML='<i class="fas fa-clipboard-list"></i> Gestión: '+tipoLabel;
+  var tipoLabel = tipo==='curso'
+    ? 'Educación — Cursos (web)'
+    : tipo==='convenio'
+      ? 'Editar convenios en la web'
+      : 'Convocatorias';
+  document.getElementById('items-titulo').innerHTML='<i class="fas fa-globe"></i> '+tipoLabel;
+  var ayuda=document.getElementById('items-ayuda-web');
+  if(ayuda) ayuda.style.display=tipo==='convenio'?'block':'none';
+  var btnNueva=document.getElementById('btn-nueva-convocatoria');
+  if(btnNueva) btnNueva.style.display=esUnitic()?'inline-flex':'none';
   var btnSync=document.getElementById('btn-sync-convenios');
-  if(btnSync) btnSync.style.display=(esUnitic()&&(!tipo||tipo==='convenio'))?'inline-flex':'none';
+  if(btnSync) btnSync.style.display=((esUnitic()||tienePermiso('cms_convenios'))&&(!tipo||tipo==='convenio'))?'inline-flex':'none';
+  var filtroTipo=document.getElementById('items-filtro-tipo');
+  if(filtroTipo) filtroTipo.style.display=esUnitic()?'':'none';
   var url=API+'/admin/items'+(tipo?'?tipo='+tipo:'');
   document.getElementById('items-tabla').innerHTML='<p style="color:#bbb;font-size:13px;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>';
   fetch(url,{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
@@ -4821,12 +4876,54 @@ function filtrarTablaItems(){
 
 function renderTablaItems(items){
   var el=document.getElementById('items-tabla');
-  items=(items||[]).filter(function(i){ return i.visible!==false; });
+  var filtroTipo=(document.getElementById('items-filtro-tipo')||{}).value||'';
+  var esVistaConvenio=filtroTipo==='convenio'||((items||[]).length && (items||[]).every(function(i){return i.tipo==='convenio';}));
+  // En vista web-convenio mostrar también los no visibles para poder reactivarlos
+  if(!esVistaConvenio){
+    items=(items||[]).filter(function(i){ return i.visible!==false; });
+  } else {
+    items=items||[];
+  }
   if(!items.length){
     el.innerHTML='<p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">No hay convocatorias. Pulse "Nueva convocatoria" o "Sincronizar 11 convenios".</p>';
     return;
   }
   var colorEstado={'DISPONIBLE':'#1a7a3a','EN PROCESO':'#856404','CERRADO':'#c0392b'};
+  if(esVistaConvenio){
+    el.innerHTML='<table class="t"><thead><tr>'
+      +'<th>Convenio (web)</th><th>Estado</th><th>Vacantes</th><th>Lugares</th><th>Horario</th><th>Inscripciones</th><th class="col-acciones">Acciones</th>'
+      +'</tr></thead><tbody>'
+      +items.map(function(item){
+        var color=colorEstado[item.estado]||'#444';
+        var nLugares=Array.isArray(item.cupos_unidades)?item.cupos_unidades.length:0;
+        var lugaresTxt=nLugares>0?(nLugares+' lugar'+(nLugares===1?'':'es')):(item.lugar?('1 · '+String(item.lugar).slice(0,28)):'Sin configurar');
+        var badge=item.inscripciones_abiertas
+          ?'<span class="badge ok">Abiertas</span>'
+          :'<span class="badge pend">Cerradas</span>';
+        return '<tr>'
+          +'<td style="font-weight:600;max-width:240px;">'+escHtml(item.titulo)
+            +(item.descripcion?'<div style="font-size:11px;color:#666;font-weight:400;margin-top:2px;">'+escHtml(String(item.descripcion).slice(0,80))+'</div>':'')
+            +'</td>'
+          +'<td><span style="color:'+color+';font-weight:700;font-size:12px;">'+escHtml(item.estado)+'</span></td>'
+          +'<td style="text-align:center;">'+escHtml(item.vacantes||0)+'</td>'
+          +'<td style="font-size:12px;">'+escHtml(lugaresTxt)+'</td>'
+          +'<td style="font-size:11.5px;max-width:160px;color:#444;">'+escHtml(item.horario||'—')+'</td>'
+          +'<td style="text-align:center;">'+badge+'</td>'
+          +'<td class="col-acciones"><div class="btn-acciones-celda">'
+          +(puedeEditarItemTipo(item.tipo)
+            ? '<button class="btn-mini btn-mini-ok" onclick="abrirModalItem('+item.id+')" title="Editar ficha web"><i class="fas fa-edit"></i> Editar web</button>'
+            : '')
+          +'<a class="btn-mini" href="detalle.html?id='+encodeURIComponent(item.id)+'&tipo=convenio" target="_blank" rel="noopener" title="Ver ficha pública"><i class="fas fa-external-link-alt"></i> Ver</a>'
+          +(puedeEditarItemTipo(item.tipo)
+            ? '<button class="btn-mini" onclick="toggleInscripcionesItem('+item.id+')" title="Abrir/cerrar inscripciones"><i class="fas fa-door-open"></i></button>'
+            : '')
+          +(esUnitic()?'<button class="btn-mini btn-mini-danger" onclick="eliminarItem('+item.id+')"><i class="fas fa-trash"></i></button>':'')
+          +'</div></td>'
+          +'</tr>';
+      }).join('')
+      +'</tbody></table>';
+    return;
+  }
   el.innerHTML='<table class="t"><thead><tr>'
     +'<th>Tipo</th><th>Título</th><th>Estado</th><th>Vacantes</th><th>Inscritos</th><th>Inscr. abiertas</th><th class="col-acciones">Acciones</th>'
     +'</tr></thead><tbody>'
@@ -4847,7 +4944,9 @@ function renderTablaItems(items){
         +(item.tipo==='convenio'
           ? '<button class="btn-mini btn-mini-ok" onclick="abrirSorteoDesdeItem('+item.id+')" title="Abrir sorteo en vivo"><i class="fas fa-random"></i> Mandar a sorteo</button>'
           : '')
-        +(esUnitic()?'<button class="btn-mini" onclick="abrirModalItem('+item.id+')"><i class="fas fa-edit"></i></button>':'')
+        +(puedeEditarItemTipo(item.tipo)
+          ? '<button class="btn-mini" onclick="abrirModalItem('+item.id+')" title="Editar convocatoria, lugares y vacantes"><i class="fas fa-map-marker-alt"></i> Lugares</button>'
+          : '')
         +(esUnitic()?'<button class="btn-mini btn-mini-danger" onclick="eliminarItem('+item.id+')"><i class="fas fa-trash"></i></button>':'')
         +'</div></td>'
         +'</tr>';
@@ -4856,7 +4955,7 @@ function renderTablaItems(items){
 }
 
 function syncConveniosOficiales(){
-  if(!esUnitic()){ alert('Solo Super Admin.'); return; }
+  if(!esUnitic() && !tienePermiso('cms_convenios')){ alert('Sin acceso.'); return; }
   var btn=document.getElementById('btn-sync-convenios');
   if(btn) btn.disabled=true;
   fetch(API+'/admin/sync-convenios',{method:'POST',headers:hdr()})
@@ -4864,9 +4963,15 @@ function syncConveniosOficiales(){
     .then(function(d){
       if(btn) btn.disabled=false;
       if(!d.ok){ mostrarAlertaItems(d.error||'Error al sincronizar','error'); return; }
-      mostrarAlertaItems('Listos los '+d.total+' convenios oficiales en el portal.','ok');
+      var extra = '';
+      if(d.cupos_actualizados) extra += ' Lugares configurados: '+d.cupos_actualizados+'.';
+      if(d.plantillas_copiadas) extra += ' Plantillas PDF: '+d.plantillas_copiadas+'.';
+      mostrarAlertaItems((d.mensaje||('Listos los '+d.total+' convenios con flujo Celador.'))+extra,'ok');
       var tipo=document.getElementById('items-filtro-tipo');
-      cargarItems(tipo?tipo.value:'');
+      cargarItems(tipo?tipo.value:'convenio');
+      if(typeof renderGestionConvocatoriasCMS==='function'){
+        try { renderGestionConvocatoriasCMS('cms-lista-convenios','convenio'); } catch(e){}
+      }
     })
     .catch(function(){ if(btn) btn.disabled=false; mostrarAlertaItems('Error de conexión','error'); });
 }
@@ -4905,6 +5010,9 @@ function abrirModalItem(id){
   document.getElementById('mi-visible').checked=true;
   document.getElementById('mi-orden').value=0;
   document.getElementById('mi-titulo').textContent='Nueva convocatoria';
+  initSelectCupoAddNombre();
+  renderListaCuposUnidadesUI();
+  adaptarModalItemPorTipo(document.getElementById('mi-tipo').value || 'curso');
 
   if(!id){
     document.getElementById('modal-item').classList.add('open');
@@ -4961,7 +5069,107 @@ function poblarModalItem(item){
     document.getElementById('mi-plantilla-actual').style.display='none';
     document.getElementById('mi-plantilla-label').textContent='Seleccionar plantilla PDF';
   }
+  initSelectCupoAddNombre();
+  renderListaCuposUnidadesUI();
+  adaptarModalItemPorTipo(item.tipo || 'curso');
   document.getElementById('modal-item').classList.add('open');
+}
+
+function adaptarModalItemPorTipo(tipo){
+  var esConv = tipo === 'convenio';
+  var banner = document.getElementById('mi-banner-web');
+  if(!banner){
+    var box = document.querySelector('#modal-item .modal-box');
+    if(box){
+      banner = document.createElement('div');
+      banner.id = 'mi-banner-web';
+      banner.style.cssText = 'display:none;margin:0 0 12px;padding:10px 12px;background:#e8f5f1;border:1px solid #c8e6c9;border-radius:8px;font-size:12.5px;color:#004d3d;line-height:1.45;';
+      var h3 = box.querySelector('h3');
+      if(h3 && h3.nextSibling) box.insertBefore(banner, h3.nextSibling);
+      else if(h3) h3.insertAdjacentElement('afterend', banner);
+    }
+  }
+  if(banner){
+    if(esConv){
+      var id = (document.getElementById('mi-id') || {}).value || '';
+      banner.style.display = 'block';
+      banner.innerHTML = '<strong><i class="fas fa-globe"></i> Ficha pública del convenio</strong><br/>'
+        + 'Estos campos son los que ve el efectivo en la web. Super Admin y Admin de Convenios editan lo mismo.'
+        + (id ? ' <a href="detalle.html?id='+encodeURIComponent(id)+'&tipo=convenio" target="_blank" rel="noopener" style="color:#004d3d;font-weight:800;">Ver ficha actual <i class="fas fa-external-link-alt"></i></a>' : '');
+    } else {
+      banner.style.display = 'none';
+      banner.innerHTML = '';
+    }
+  }
+  var labFecha = document.querySelector('label[for="mi-fecha-inicio"]') || (function(){
+    var inp = document.getElementById('mi-fecha-inicio');
+    return inp && inp.previousElementSibling && inp.previousElementSibling.tagName === 'LABEL' ? inp.previousElementSibling : null;
+  })();
+  // Labels por proximidad (el HTML no usa for=)
+  var pairs = [
+    ['mi-fecha-inicio', esConv ? 'Beneficio económico (web)' : 'Fecha de inicio / Beneficio económico'],
+    ['mi-duracion', esConv ? 'Detalle del beneficio (web)' : 'Duración / Detalle del beneficio'],
+    ['mi-horario', esConv ? 'Turnos / Horarios (web)' : 'Turnos / Horarios'],
+    ['mi-lugar', esConv ? 'Lugar general (si hay un solo sitio)' : 'Lugar de formación / presentación diaria'],
+    ['mi-descripcion', esConv ? 'Subtítulo de la tarjeta (web)' : 'Descripción / Subtítulo']
+  ];
+  pairs.forEach(function(p){
+    var inp = document.getElementById(p[0]);
+    if(!inp) return;
+    var lab = inp.previousElementSibling;
+    if(lab && lab.tagName === 'LABEL') lab.textContent = p[1];
+  });
+  var cuposWrap = document.getElementById('mi-cupos-wrap');
+  if(cuposWrap) cuposWrap.style.display = esConv ? '' : 'none';
+  var avisoWrap = document.getElementById('mi-aviso-sorteo-wrap');
+  if(avisoWrap) avisoWrap.style.display = esConv ? '' : 'none';
+}
+
+function toggleInscripcionesItem(id){
+  if(!id) return;
+  var item = (ITEMS_CACHE || []).find(function(i){ return i.id === id; });
+  if(!item){ alert('No se encontró el convenio.'); return; }
+  if(!puedeEditarItemTipo(item.tipo)){ alert('Sin permiso.'); return; }
+  var nuevo = !item.inscripciones_abiertas;
+  var msg = nuevo
+    ? '¿Abrir inscripciones en la web para «'+item.titulo+'»?'
+    : '¿Cerrar inscripciones en la web para «'+item.titulo+'»?';
+  if(!confirm(msg)) return;
+  var body = {
+    tipo: item.tipo,
+    titulo: item.titulo,
+    descripcion: item.descripcion || '',
+    estado: item.estado || 'DISPONIBLE',
+    icono: item.icono || 'fa-handshake',
+    color: item.color || '#004d3d',
+    requisitos: Array.isArray(item.requisitos) ? item.requisitos : [],
+    cupos_unidades: Array.isArray(item.cupos_unidades) ? item.cupos_unidades : [],
+    horario: item.horario || '',
+    vacantes: parseInt(item.vacantes, 10) || 0,
+    fecha_inicio: item.fecha_inicio || '',
+    duracion: item.duracion || '',
+    lugar: item.lugar || '',
+    uniforme: item.uniforme || '',
+    contactos_responsables: item.contactos_responsables || '',
+    observaciones: item.observaciones || '',
+    ventana_inscripcion: item.ventana_inscripcion || '',
+    aviso_sorteo_fb: item.aviso_sorteo_fb || '',
+    formulario_url: item.formulario_url || '',
+    inscripciones_abiertas: nuevo,
+    visible: item.visible !== false,
+    orden: parseInt(item.orden, 10) || 0
+  };
+  fetch(API+'/admin/items/'+id, { method:'PUT', headers:hdr(), body:JSON.stringify(body) })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ alert(d.error || 'No se pudo actualizar'); return; }
+      mostrarAlertaItems(nuevo ? 'Inscripciones abiertas en la web.' : 'Inscripciones cerradas en la web.', 'ok');
+      cargarItems(item.tipo || 'convenio');
+      if(typeof renderGestionConvocatoriasCMS === 'function'){
+        try { renderGestionConvocatoriasCMS('cms-lista-convenios', 'convenio'); } catch(e){}
+      }
+    })
+    .catch(function(){ alert('Error de conexión'); });
 }
 
 function serializarCuposUnidades(cupos){
@@ -4973,6 +5181,109 @@ function serializarCuposUnidades(cupos){
     var d=c&&c.disponibles!=null?c.disponibles:Math.max(0,v-i);
     return n+' | '+v+' | '+i+' | '+d;
   }).join('\n');
+}
+
+function initSelectCupoAddNombre(){
+  var sel = document.getElementById('mi-cupo-add-nombre');
+  if(!sel) return;
+  if(typeof poblarSelectComisarias === 'function'){
+    poblarSelectComisarias(sel, '-- Elegir comisaría --');
+  } else {
+    sel.innerHTML = '<option value="">-- Elegir comisaría --</option>';
+  }
+  var opOtro = document.createElement('option');
+  opOtro.value = '__OTRO__';
+  opOtro.textContent = 'Otro lugar (escribir nombre)…';
+  sel.appendChild(opOtro);
+  sel.onchange = function(){
+    if(sel.value === '__OTRO__'){
+      var nom = prompt('Nombre del nuevo lugar / comisaría:');
+      if(!nom || !String(nom).trim()){ sel.value = ''; return; }
+      nom = String(nom).trim().toUpperCase();
+      var existe = false;
+      Array.prototype.forEach.call(sel.options, function(op){
+        if(op.value && op.value.toUpperCase() === nom) existe = true;
+      });
+      if(!existe){
+        var op = document.createElement('option');
+        op.value = nom;
+        op.textContent = nom;
+        sel.insertBefore(op, sel.options[sel.options.length - 1]);
+      }
+      sel.value = nom;
+    }
+  };
+}
+
+function renderListaCuposUnidadesUI(){
+  var lista = document.getElementById('mi-cupos-lista');
+  var ta = document.getElementById('mi-cupos-unidades');
+  if(!lista || !ta) return;
+  var cupos = parseCuposUnidadesTexto(ta.value);
+  if(!cupos.length){
+    lista.innerHTML = '<p style="font-size:12.5px;color:#888;margin:0;padding:10px;background:#fafafa;border:1px dashed #ccc;border-radius:8px;">Sin lugares cargados. Agregue uno arriba o use una plantilla. Si queda vacío, el portal usará un solo lugar.</p>';
+    return;
+  }
+  lista.innerHTML = '<table class="t" style="margin:0;"><thead><tr>'
+    +'<th>Lugar</th><th style="width:90px;">Vacantes</th><th style="width:90px;">Inscritos</th><th style="width:90px;">Disponibles</th><th style="width:70px;"></th>'
+    +'</tr></thead><tbody>'
+    +cupos.map(function(c, idx){
+      return '<tr>'
+        +'<td style="font-weight:600;">'+escHtml(c.nombre)+'</td>'
+        +'<td><input type="number" min="0" value="'+(c.vacantes||0)+'" style="width:72px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;" onchange="actualizarCupoUnidadUI('+idx+',\'vacantes\',this.value)"/></td>'
+        +'<td><input type="number" min="0" value="'+(c.inscritos||0)+'" style="width:72px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;" onchange="actualizarCupoUnidadUI('+idx+',\'inscritos\',this.value)"/></td>'
+        +'<td style="text-align:center;font-weight:700;color:#004d3d;">'+(c.disponibles!=null?c.disponibles:Math.max(0,(c.vacantes||0)-(c.inscritos||0)))+'</td>'
+        +'<td><button type="button" class="btn-mini btn-mini-danger" onclick="quitarCupoUnidadUI('+idx+')" title="Quitar lugar"><i class="fas fa-times"></i></button></td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table>';
+}
+
+function setCuposUnidadesDesdeArray(cupos){
+  var ta = document.getElementById('mi-cupos-unidades');
+  if(ta) ta.value = serializarCuposUnidades(cupos || []);
+  renderListaCuposUnidadesUI();
+}
+
+function agregarCupoUnidadUI(){
+  var sel = document.getElementById('mi-cupo-add-nombre');
+  var vacEl = document.getElementById('mi-cupo-add-vac');
+  var nombre = sel ? String(sel.value || '').trim() : '';
+  if(!nombre || nombre === '__OTRO__'){ alert('Seleccione o escriba un lugar.'); return; }
+  var vac = vacEl ? (parseInt(vacEl.value, 10) || 0) : 0;
+  var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
+  var key = nombre.toUpperCase();
+  var found = cupos.find(function(c){ return String(c.nombre||'').toUpperCase() === key; });
+  if(found){
+    found.vacantes = vac;
+    found.disponibles = Math.max(0, vac - (found.inscritos || 0));
+  } else {
+    cupos.push({ nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac });
+  }
+  setCuposUnidadesDesdeArray(cupos);
+  if(sel) sel.value = '';
+  if(vacEl) vacEl.value = '0';
+}
+
+function actualizarCupoUnidadUI(idx, campo, valor){
+  var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
+  if(!cupos[idx]) return;
+  var n = parseInt(valor, 10);
+  if(isNaN(n) || n < 0) n = 0;
+  cupos[idx][campo] = n;
+  cupos[idx].disponibles = Math.max(0, (cupos[idx].vacantes || 0) - (cupos[idx].inscritos || 0));
+  setCuposUnidadesDesdeArray(cupos);
+}
+
+function quitarCupoUnidadUI(idx){
+  var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
+  cupos.splice(idx, 1);
+  setCuposUnidadesDesdeArray(cupos);
+}
+
+function limpiarCuposUnidadesUI(){
+  if(!confirm('¿Vaciar todos los lugares de este convenio?')) return;
+  setCuposUnidadesDesdeArray([]);
 }
 
 function cargarPlantillaCuposComisarias(modo){
@@ -4991,12 +5302,11 @@ function cargarPlantillaCuposComisarias(modo){
   var total = parseInt(document.getElementById('mi-vacantes').value,10)||0;
   var porCia = lista.length ? Math.floor(total / lista.length) : 0;
   var resto = lista.length ? total % lista.length : 0;
-  var lineas = lista.map(function(nombre, idx){
+  var cupos = lista.map(function(nombre, idx){
     var vac = porCia + (idx < resto ? 1 : 0);
-    return nombre + ' | ' + vac + ' | 0 | ' + vac;
+    return { nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac };
   });
-  var el = document.getElementById('mi-cupos-unidades');
-  if(el) el.value = lineas.join('\n');
+  setCuposUnidadesDesdeArray(cupos);
 }
 
 function parseCuposUnidadesTexto(txt){
@@ -5052,21 +5362,29 @@ function guardarItem(){
     .then(function(r){return r.json();}).then(function(d){
       if(!d.ok){ alert('Error: '+(d.error||'')); return; }
       var itemId=id||d.id;
-      
+      function finOk(msg){
+        cerrarModal('modal-item');
+        cargarItems(tipo);
+        mostrarAlertaItems(msg,'ok');
+        if(tipo==='convenio' && typeof renderGestionConvocatoriasCMS==='function'){
+          try { renderGestionConvocatoriasCMS('cms-lista-convenios','convenio'); } catch(e){}
+        }
+        if(tipo==='curso' && typeof renderGestionConvocatoriasCMS==='function'){
+          try { renderGestionConvocatoriasCMS('cms-lista-cursos','curso'); } catch(e){}
+        }
+      }
       var pdfData=document.getElementById('mi-plantilla-data').value;
       if(pdfData==='__QUITAR__'){
         return fetch(API+'/admin/items/'+itemId+'/plantilla',{
           method:'PUT',headers:hdr(),body:JSON.stringify({plantilla_pdf:'',plantilla_nombre:''})
-        }).then(function(){cerrarModal('modal-item');cargarItems(tipo);mostrarAlertaItems('Convocatoria actualizada.','ok');});
+        }).then(function(){finOk('Convocatoria actualizada.');});
       } else if(pdfData){
         var pdfNombre=(document.getElementById('mi-plantilla-file').files[0]||{}).name||'plantilla.pdf';
         return fetch(API+'/admin/items/'+itemId+'/plantilla',{
           method:'PUT',headers:hdr(),body:JSON.stringify({plantilla_pdf:pdfData,plantilla_nombre:pdfNombre})
-        }).then(function(){cerrarModal('modal-item');cargarItems(tipo);mostrarAlertaItems('Convocatoria y plantilla guardadas.','ok');});
+        }).then(function(){finOk('Convocatoria y plantilla guardadas.');});
       }
-      cerrarModal('modal-item');
-      cargarItems(tipo);
-      mostrarAlertaItems((id?'Convocatoria actualizada':'Convocatoria creada')+' correctamente.','ok');
+      finOk((id?'Ficha web actualizada':'Convocatoria creada')+' correctamente. Ya se ve en el portal.');
     });
 }
 

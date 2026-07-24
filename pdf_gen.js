@@ -1478,6 +1478,12 @@ function extraerUniformeDeRequisitos(requisitos) {
 }
 
 const DEFAULTS_CONSTANCIA_CONVENIO = {
+  _DEFAULT: {
+    uniforme: 'Uniforme de faena completo (camisa, pantalón, correa y fornitura reglamentaria).',
+    lugar: 'Dependencia o punto asignado — confirmar formación diaria en Oficina de Convenios.',
+    horario: 'Por confirmar según convocatoria — consulte con Oficina de Convenios.',
+    contactos: 'Oficina de Convenios — REGPOL Callao | WhatsApp: 980 122 452.'
+  },
   'PLAN CELADOR': {
     uniforme: 'Uniforme de faena completo (camisa, pantalón, correa y fornitura reglamentaria).',
     lugar: 'Dependencia o comisaría asignada — confirmar punto de formación diaria en Oficina de Convenios.',
@@ -1488,7 +1494,7 @@ const DEFAULTS_CONSTANCIA_CONVENIO = {
 
 function detallesConstanciaConvenio(item) {
   const titulo = String(item.titulo || '').trim().toUpperCase();
-  const defs = DEFAULTS_CONSTANCIA_CONVENIO[titulo] || {};
+  const defs = DEFAULTS_CONSTANCIA_CONVENIO[titulo] || DEFAULTS_CONSTANCIA_CONVENIO._DEFAULT || {};
   const uniformeReq = extraerUniformeDeRequisitos(item.requisitos);
   return {
     uniforme: String(item.uniforme || '').trim() || uniformeReq || defs.uniforme || 'Uniforme reglamentario de faena completo y documento de identidad.',

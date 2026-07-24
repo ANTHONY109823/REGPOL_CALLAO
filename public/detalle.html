@@ -350,28 +350,25 @@ function renderDetalle(item){
 
   var infoTitulo = esConvenio ? 'HORARIOS / VACANTES / BENEFICIO' : 'HORARIOS / VACANTES / INICIO';
 
-  var DIVOPUS1_CIAS = [
-    'CIA CALLAO','CIA LA PUNTA','CIA BELLAVISTA','CIA CIUDADELA CHALACA',
-    'CIA CIUDAD DEL PESCADOR','CIA RAMON CASTILLA','CIA LA LEGUA','CIA LA PERLA'
-  ];
   var cupos = Array.isArray(item.cupos_unidades) ? item.cupos_unidades.slice() : [];
+  // Sin cupos configurados: mostrar un solo lugar (no forzar DIVOPUS 1)
   if(!cupos.length && esConvenio){
-    var totalVac = parseInt(item.vacantes, 10) || 0;
-    var n = DIVOPUS1_CIAS.length;
-    var base = n ? Math.floor(totalVac / n) : 0;
-    var resto = n ? totalVac % n : 0;
-    cupos = DIVOPUS1_CIAS.map(function(nombre, idx){
-      var vac = base + (idx < resto ? 1 : 0);
-      return { nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac };
-    });
+    var totalVacCard = parseInt(item.vacantes, 10) || 0;
+    var nombreUnicoCard = String(item.lugar || '').trim() || 'Lugar del convenio';
+    if(totalVacCard > 0){
+      cupos = [{ nombre: nombreUnicoCard, vacantes: totalVacCard, inscritos: 0, disponibles: totalVacCard }];
+    }
   }
 
   var ciasCard = '';
   if(cupos.length){
+    var tituloLugares = esConvenio
+      ? (cupos.length > 1 ? 'LUGARES / COMISARÍAS' : 'LUGAR')
+      : 'UNIDADES';
     ciasCard = '<div class="card-detalle">'
-      +'<h3>'+(esConvenio?'COMISARÍAS':'UNIDADES')+'</h3>'
+      +'<h3>'+tituloLugares+'</h3>'
       +'<div class="tabla-cupos-wrap"><table class="tabla-cupos">'
-      +'<thead><tr><th>Comisaría</th><th>Vacantes</th><th>Inscritos</th><th>Disponibles</th></tr></thead><tbody>'
+      +'<thead><tr><th>Lugar</th><th>Vacantes</th><th>Inscritos</th><th>Disponibles</th></tr></thead><tbody>'
       +cupos.map(function(c){
         return '<tr><td>'+escHtmlD(c.nombre||'')+'</td>'
           +'<td class="num">'+escHtmlD(String(c.vacantes!=null?c.vacantes:0))+'</td>'
@@ -380,8 +377,8 @@ function renderDetalle(item){
       }).join('')
       +'</tbody></table></div></div>';
   } else if(esConvenio){
-    ciasCard = '<div class="card-detalle"><h3>COMISARÍAS</h3>'
-      +'<p class="cupos-vacio">Sin cupos publicados.</p></div>';
+    ciasCard = '<div class="card-detalle"><h3>LUGAR</h3>'
+      +'<p class="cupos-vacio">Sin lugares/cupos publicados. Configúrelos en el panel (Lugares y vacantes).</p></div>';
   }
 
   var esRepechajeVista = esConvenio && (MODO_REPECHAJE || /[?&]repechaje=1/.test(location.search || ''));
@@ -519,20 +516,14 @@ function textoBtnEnviar(){
 }
 
 function obtenerCuposConVacante(item){
-  var DIVOPUS1_CIAS = [
-    'CIA CALLAO','CIA LA PUNTA','CIA BELLAVISTA','CIA CIUDADELA CHALACA',
-    'CIA CIUDAD DEL PESCADOR','CIA RAMON CASTILLA','CIA LA LEGUA','CIA LA PERLA'
-  ];
   var cupos = Array.isArray(item && item.cupos_unidades) ? item.cupos_unidades.slice() : [];
-  if(!cupos.length && item && item.tipo === 'convenio'){
+  // Sin cupos configurados: un solo lugar (no forzar DIVOPUS 1 / varias CIAs)
+  if (!cupos.length && item && item.tipo === 'convenio') {
     var totalVac = parseInt(item.vacantes, 10) || 0;
-    var n = DIVOPUS1_CIAS.length;
-    var base = n ? Math.floor(totalVac / n) : 0;
-    var resto = n ? totalVac % n : 0;
-    cupos = DIVOPUS1_CIAS.map(function(nombre, idx){
-      var vac = base + (idx < resto ? 1 : 0);
-      return { nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac };
-    });
+    var nombreUnico = String(item.lugar || '').trim() || 'Lugar del convenio';
+    if (totalVac > 0) {
+      cupos = [{ nombre: nombreUnico, vacantes: totalVac, inscritos: 0, disponibles: totalVac }];
+    }
   }
   return cupos.filter(function(c){
     var disp = parseInt(c.disponibles, 10);
@@ -547,16 +538,27 @@ function obtenerCuposConVacante(item){
 
 function htmlSelectorComisariaPostula(item){
   var disponibles = obtenerCuposConVacante(item);
+  var label = disponibles.length > 1
+    ? 'Lugar / comisaría a la que postula *'
+    : 'Lugar al que postula *';
   if(!disponibles.length){
     return '<div class="fi-group">'
-      +'<label>Comisaría a la que postula</label>'
-      +'<select id="fi-comisaria-postula" disabled><option value="">Sin vacantes</option></select>'
+      +'<label>'+label.replace(' *','')+'</label>'
+      +'<select id="fi-comisaria-postula" disabled><option value="">Sin vacantes disponibles</option></select>'
       +'</div>';
   }
+  if(disponibles.length === 1){
+    return '<div class="fi-group">'
+      +'<label>'+label+'</label>'
+      +'<select id="fi-comisaria-postula" required>'
+      +'<option value="'+escHtmlD(disponibles[0].nombre)+'" selected>'
+      +escHtmlD(disponibles[0].nombre)+' ('+disponibles[0].disponibles+')</option>'
+      +'</select></div>';
+  }
   return '<div class="fi-group">'
-    +'<label>Comisaría a la que postula *</label>'
+    +'<label>'+label+'</label>'
     +'<select id="fi-comisaria-postula" required>'
-    +'<option value="">Seleccionar comisaría</option>'
+    +'<option value="">Seleccionar lugar</option>'
     +disponibles.map(function(c){
       return '<option value="'+escHtmlD(c.nombre)+'">'+escHtmlD(c.nombre)+' ('+c.disponibles+')</option>';
     }).join('')

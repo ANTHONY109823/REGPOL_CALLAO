@@ -208,21 +208,24 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
   var titulo = esConv ? 'Convenios' : 'Cursos';
   var hash = esConv ? '#convenios' : '#cursos';
   var esSuper = typeof esUnitic === 'function' && esUnitic();
+  var puedeEditar = typeof puedeEditarItemTipo === 'function' && puedeEditarItemTipo(tipo);
   var puedePdf = typeof puedePublicarResultadosPdf === 'function' && puedePublicarResultadosPdf(tipo);
   var puedeInsc = esConv
     ? (typeof puedeOperarInscritosConvenio === 'function' && puedeOperarInscritosConvenio())
     : (typeof puedeGestionCursos === 'function' && puedeGestionCursos());
 
   el.innerHTML = '<div style="margin-bottom:14px;">'
-    + '<div style="font-size:14px;font-weight:800;color:#004d3d;margin-bottom:6px;"><i class="fas fa-clipboard-list"></i> '
-    + titulo + ' en el portal</div>'
+    + '<div style="font-size:14px;font-weight:800;color:#004d3d;margin-bottom:6px;"><i class="fas fa-globe"></i> '
+    + titulo + ' publicados en la web</div>'
     + '<p style="font-size:12.5px;color:#555;line-height:1.55;margin:0 0 12px;">'
-    + 'Las tarjetas del home salen de las convocatorias publicadas. Estado y vacantes se sincronizan al guardar cada convocatoria.</p>'
+    + 'Super Admin y Admin de ' + titulo + ' editan la <strong>misma ficha</strong> que ve el efectivo. '
+    + 'Al guardar un convenio/curso, el portal se actualiza al momento (no hace falta “Publicar cambios” para estas fichas).</p>'
     + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'
     + '<a class="btn btn-v" href="index.html' + hash + '" target="_blank" rel="noopener" style="text-decoration:none;"><i class="fas fa-external-link-alt"></i> Ver en web</a>'
-    + (esSuper ? '<button type="button" class="btn btn-v" onclick="irGestionItems(\'' + tipo + '\', document.querySelector(\'[data-page=items-' + tipo + ']\'))"><i class="fas fa-edit"></i> Gestionar convocatorias</button>' : '')
+    + (puedeEditar ? '<button type="button" class="btn btn-v" onclick="irGestionItems(\'' + tipo + '\', document.querySelector(\'[data-page=items-' + tipo + ']\'))"><i class="fas fa-edit"></i> Editar fichas</button>' : '')
+    + (esConv && puedeEditar ? '<button type="button" class="btn btn-o" onclick="syncConveniosOficiales()"><i class="fas fa-sync"></i> Sincronizar flujo Celador</button>' : '')
     + (puedePdf ? '<button type="button" class="btn" style="background:#c0392b;color:#fff;" onclick="irPublicarResultados(\'' + tipo + '\', null)"><i class="fas fa-file-pdf"></i> Relación PDF</button>' : '')
-    + (puedeInsc && esConv ? '<button type="button" class="btn" style="background:#004d3d;color:#fff;" onclick="ir(\'consulta-cip\', document.querySelector(\'[data-page=consulta-cip]\'))"><i class="fas fa-search"></i> Consulta CIP</button>' : '')
+    + (puedeInsc && esConv ? '<button type="button" class="btn" style="background:#004d3d;color:#fff;" onclick="irConvPreinscritos(document.querySelector(\'[data-page=conv-preinscritos]\'))"><i class="fas fa-users"></i> Preinscritos</button>' : '')
     + '</div>'
     + '<div id="cms-live-' + tipo + '" style="border:1.5px solid #e0e8e0;border-radius:10px;overflow:hidden;">'
     + '<p style="color:#888;font-size:12px;padding:14px;margin:0;">Cargando convocatorias...</p></div>'
@@ -230,27 +233,58 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
 
   var box = document.getElementById('cms-live-' + tipo);
   var base = apiBaseCMS() || '';
-  fetch(base + '/portal/items?tipo=' + encodeURIComponent(tipo))
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
+  // Preferir listado admin completo si hay sesión (mismos datos para editar)
+  var urlAdmin = (typeof API !== 'undefined' ? API : base) + '/admin/items?tipo=' + encodeURIComponent(tipo);
+  var urlPublic = base + '/portal/items?tipo=' + encodeURIComponent(tipo);
+  var headers = (typeof hdr === 'function') ? hdr() : {};
+  fetch(urlAdmin, { headers: headers })
+    .then(function(r) { return r.json().then(function(d){ return { okHttp: r.ok, d: d }; }); })
+    .then(function(pack) {
+      if (pack.d && pack.d.ok && pack.d.items && pack.d.items.length) {
+        return pack.d.items;
+      }
+      return fetch(urlPublic).then(function(r){ return r.json(); }).then(function(d){
+        return (d && d.ok && d.items) ? d.items : [];
+      });
+    })
+    .then(function(items) {
       if (!box) return;
-      var items = (d && d.ok && d.items) ? d.items : [];
       if (!items.length) {
         box.innerHTML = '<p style="color:#888;font-size:12px;padding:14px;margin:0;">No hay ' + titulo.toLowerCase() + ' publicados en la web.</p>';
         return;
       }
+      if (typeof ITEMS_CACHE !== 'undefined' && esConv) ITEMS_CACHE = items;
       box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12.5px;">'
         + '<thead><tr style="background:#f0f7f4;color:#004d3d;text-align:left;">'
-        + '<th style="padding:8px 10px;">Título</th><th style="padding:8px 10px;">Estado</th><th style="padding:8px 10px;">Vacantes</th><th style="padding:8px 10px;">Web</th></tr></thead><tbody>'
+        + '<th style="padding:8px 10px;">Título</th>'
+        + '<th style="padding:8px 10px;">Estado</th>'
+        + '<th style="padding:8px 10px;">Vacantes</th>'
+        + '<th style="padding:8px 10px;">Lugares</th>'
+        + '<th style="padding:8px 10px;">Inscripciones</th>'
+        + '<th style="padding:8px 10px;">Acciones</th></tr></thead><tbody>'
         + items.map(function(it) {
           var est = escHtml(it.estado || '—');
           var color = it.estado === 'DISPONIBLE' ? '#1a7a3a' : (it.estado === 'CERRADO' ? '#c0392b' : '#856404');
+          var nLug = Array.isArray(it.cupos_unidades) ? it.cupos_unidades.length : 0;
+          var lugTxt = nLug > 0 ? (nLug + ' lugar' + (nLug === 1 ? '' : 'es')) : (it.lugar ? escHtml(String(it.lugar).slice(0, 24)) : '—');
+          var insc = it.inscripciones_abiertas
+            ? '<span style="color:#1a7a3a;font-weight:700;">Abiertas</span>'
+            : '<span style="color:#856404;font-weight:700;">Cerradas</span>';
           return '<tr style="border-top:1px solid #edf2ef;">'
             + '<td style="padding:8px 10px;font-weight:600;color:#004d3d;">' + escHtml(it.titulo || '') + '</td>'
             + '<td style="padding:8px 10px;font-weight:700;color:' + color + ';">' + est + '</td>'
             + '<td style="padding:8px 10px;">' + escHtml(String(it.vacantes != null ? it.vacantes : '—')) + '</td>'
-            + '<td style="padding:8px 10px;"><a href="detalle.html?id=' + encodeURIComponent(it.id) + '&tipo=' + tipo + '" target="_blank" rel="noopener">Abrir</a></td>'
-            + '</tr>';
+            + '<td style="padding:8px 10px;">' + lugTxt + '</td>'
+            + '<td style="padding:8px 10px;">' + insc + '</td>'
+            + '<td style="padding:8px 10px;white-space:nowrap;">'
+            + (puedeEditar
+              ? '<button type="button" class="btn-mini btn-mini-ok" onclick="abrirModalItem(' + it.id + ')"><i class="fas fa-edit"></i> Editar</button> '
+              : '')
+            + (puedeEditar && esConv
+              ? '<button type="button" class="btn-mini" onclick="toggleInscripcionesItem(' + it.id + ')"><i class="fas fa-door-open"></i></button> '
+              : '')
+            + '<a class="btn-mini" href="detalle.html?id=' + encodeURIComponent(it.id) + '&tipo=' + tipo + '" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i></a>'
+            + '</td></tr>';
         }).join('')
         + '</tbody></table>';
     })

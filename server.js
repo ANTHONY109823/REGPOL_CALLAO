@@ -5252,22 +5252,89 @@ const REQS_CONV_OFICIAL = JSON.stringify([
   'Encontrarse en situación de Actividad.',
   'No tener sanciones vigentes.'
 ]);
+const AVISO_SORTEO_DEFAULT =
+  'El sorteo en vivo se realizará por la página de Facebook REGPOL Callao. Se notificará al cerrar preinscripciones.';
+const CONTACTOS_CONV_DEFAULT =
+  'Oficina de Convenios — REGPOL Callao | WhatsApp: 980 122 452.';
+const UNIFORME_CONV_DEFAULT =
+  'Uniforme de faena completo (camisa, pantalón, correa y fornitura reglamentaria).';
+const DIVOPUS1_CIAS = [
+  'CIA CALLAO', 'CIA LA PUNTA', 'CIA BELLAVISTA', 'CIA CIUDADELA CHALACA',
+  'CIA CIUDAD DEL PESCADOR', 'CIA RAMON CASTILLA', 'CIA LA LEGUA', 'CIA LA PERLA'
+];
 
+/** Cupos efectivos: multi-lugar si hay cupos_unidades; si no, un solo lugar (como ficha web). */
+function cuposEfectivosItem(item) {
+  var cupos = normalizarCuposUnidades(item && item.cupos_unidades);
+  if (cupos.length) return cupos;
+  var totalVac = parseInt(item && item.vacantes, 10) || 0;
+  var nombre = String((item && (item.lugar || item.titulo)) || '').trim() || 'Lugar del convenio';
+  if (totalVac <= 0) return [];
+  return [{ nombre: nombre, vacantes: totalVac, inscritos: 0, disponibles: totalVac }];
+}
+
+function plantillaCuposDivopus1(vacantesTotales) {
+  var total = parseInt(vacantesTotales, 10) || 0;
+  var n = DIVOPUS1_CIAS.length;
+  var base = n ? Math.floor(total / n) : 0;
+  var resto = n ? total % n : 0;
+  return DIVOPUS1_CIAS.map(function(nombre, idx) {
+    var vac = base + (idx < resto ? 1 : 0);
+    return { nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac };
+  });
+}
+
+function plantillaCupoUnico(nombre, vacantesTotales) {
+  var vac = parseInt(vacantesTotales, 10) || 0;
+  var nom = String(nombre || '').trim() || 'Lugar del convenio';
+  return [{ nombre: nom, vacantes: vac, inscritos: 0, disponibles: vac }];
+}
+
+/**
+ * Asegura que todos los convenios oficiales estén visibles y con el mismo flujo
+ * operativo que PLAN CELADOR (preinscripción → sorteo → expediente → repechaje).
+ */
 async function sincronizarConveniosOficiales(db, invalidarCache = true) {
   const titulosUpper = CONVENIOS_OFICIALES.map(c => c[0].toUpperCase());
   for (const [titulo, desc, icono, orden] of CONVENIOS_OFICIALES) {
     await db.query(
-      `INSERT INTO items_portal(tipo,titulo,descripcion,icono,requisitos,estado,visible,orden,ventana_inscripcion)
-       SELECT 'convenio',$1::varchar,$2::text,$3::varchar,$4::jsonb,'DISPONIBLE',TRUE,$5::integer,'Las inscripciones se habilitan del 20 al 25 de cada mes.'
+      `INSERT INTO items_portal(tipo,titulo,descripcion,icono,requisitos,estado,visible,orden,ventana_inscripcion,
+        aviso_sorteo_fb,contactos_responsables,uniforme)
+       SELECT 'convenio',$1::varchar,$2::text,$3::varchar,$4::jsonb,'DISPONIBLE',TRUE,$5::integer,
+         'Las inscripciones se habilitan del 20 al 25 de cada mes.',
+         $7::text,$8::text,$9::text
        WHERE NOT EXISTS (SELECT 1 FROM items_portal WHERE tipo='convenio' AND UPPER(TRIM(titulo))=UPPER(TRIM($6::text)))`,
-      [titulo, desc, icono, REQS_CONV_OFICIAL, orden, titulo]
+      [titulo, desc, icono, REQS_CONV_OFICIAL, orden, titulo,
+       AVISO_SORTEO_DEFAULT, CONTACTOS_CONV_DEFAULT, UNIFORME_CONV_DEFAULT]
     );
     await db.query(
-      `UPDATE items_portal SET orden=$1, visible=TRUE,
-        descripcion=CASE WHEN TRIM(COALESCE(descripcion,''))='' THEN $2 ELSE descripcion END,
-        icono=CASE WHEN TRIM(COALESCE(icono,'')) IN ('','fa-file') THEN $3 ELSE icono END
-       WHERE tipo='convenio' AND UPPER(TRIM(titulo))=UPPER(TRIM($4))`,
-      [orden, desc, icono, titulo]
+      `UPDATE items_portal SET
+         orden=$1,
+         visible=TRUE,
+         estado=CASE WHEN TRIM(COALESCE(estado,''))='' THEN 'DISPONIBLE' ELSE estado END,
+         descripcion=CASE WHEN TRIM(COALESCE(descripcion,''))='' THEN $2 ELSE descripcion END,
+         icono=CASE WHEN TRIM(COALESCE(icono,'')) IN ('','fa-file') THEN $3 ELSE icono END,
+         requisitos=CASE
+           WHEN requisitos IS NULL OR requisitos::text IN ('null','[]','') THEN $4::jsonb
+           ELSE requisitos END,
+         ventana_inscripcion=CASE
+           WHEN TRIM(COALESCE(ventana_inscripcion,''))='' THEN 'Las inscripciones se habilitan del 20 al 25 de cada mes.'
+           ELSE ventana_inscripcion END,
+         aviso_sorteo_fb=CASE
+           WHEN TRIM(COALESCE(aviso_sorteo_fb,''))='' THEN $5
+           ELSE aviso_sorteo_fb END,
+         contactos_responsables=CASE
+           WHEN TRIM(COALESCE(contactos_responsables,''))='' THEN $6
+           ELSE contactos_responsables END,
+         uniforme=CASE
+           WHEN TRIM(COALESCE(uniforme,''))='' THEN $7
+           ELSE uniforme END,
+         lugar=CASE
+           WHEN TRIM(COALESCE(lugar,''))='' THEN $8
+           ELSE lugar END
+       WHERE tipo='convenio' AND UPPER(TRIM(titulo))=UPPER(TRIM($9))`,
+      [orden, desc, icono, REQS_CONV_OFICIAL, AVISO_SORTEO_DEFAULT, CONTACTOS_CONV_DEFAULT,
+       UNIFORME_CONV_DEFAULT, titulo, titulo]
     );
   }
   await db.query(
@@ -5275,8 +5342,54 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
      WHERE tipo='convenio' AND UPPER(TRIM(titulo)) NOT IN (${titulosUpper.map((_, i) => `$${i + 1}`).join(',')})`,
     titulosUpper
   );
+
+  // Cupos: Celador = DIVOPUS 1; resto = un solo lugar (mismo flujo, distinto nº de sitios)
+  const convs = await db.query(
+    `SELECT id, titulo, lugar, vacantes, cupos_unidades, plantilla_pdf, plantilla_nombre
+     FROM items_portal WHERE tipo='convenio' AND visible=TRUE`
+  );
+  let celadorPlantilla = null;
+  let celadorPlantillaNombre = '';
+  for (const row of convs.rows) {
+    if (String(row.titulo || '').toUpperCase().indexOf('CELADOR') !== -1
+        && row.plantilla_pdf && String(row.plantilla_pdf).length > 20) {
+      celadorPlantilla = row.plantilla_pdf;
+      celadorPlantillaNombre = row.plantilla_nombre || 'plantilla-convenio.pdf';
+      break;
+    }
+  }
+  let cuposActualizados = 0;
+  let plantillasCopiadas = 0;
+  for (const row of convs.rows) {
+    const cuposActuales = normalizarCuposUnidades(row.cupos_unidades);
+    const esCelador = String(row.titulo || '').toUpperCase().indexOf('CELADOR') !== -1;
+    if (!cuposActuales.length) {
+      const vac = parseInt(row.vacantes, 10) || 0;
+      const nuevos = esCelador
+        ? plantillaCuposDivopus1(vac)
+        : plantillaCupoUnico(row.lugar || row.titulo, vac);
+      await db.query(
+        'UPDATE items_portal SET cupos_unidades=$1::jsonb WHERE id=$2',
+        [JSON.stringify(nuevos), row.id]
+      );
+      cuposActualizados++;
+    }
+    const sinPlantilla = !(row.plantilla_pdf && String(row.plantilla_pdf).length > 20);
+    if (sinPlantilla && celadorPlantilla) {
+      await db.query(
+        'UPDATE items_portal SET plantilla_pdf=$1, plantilla_nombre=$2 WHERE id=$3',
+        [celadorPlantilla, celadorPlantillaNombre, row.id]
+      );
+      plantillasCopiadas++;
+    }
+  }
+
   if (invalidarCache) invalidarPortalItemsCache();
-  return CONVENIOS_OFICIALES.length;
+  return {
+    total: CONVENIOS_OFICIALES.length,
+    cupos_actualizados: cuposActualizados,
+    plantillas_copiadas: plantillasCopiadas
+  };
 }
 
 function invalidarResultadosPdfCache() {
@@ -5419,6 +5532,12 @@ app.get('/portal/items/:id', async (req, res) => {
     delete item.plantilla_pdf;
     item.plantilla_pdf = tienePlantilla;
     item.tiene_plantilla = tienePlantilla;
+    // Mismo criterio que la ficha web: cupos explícitos o un solo lugar
+    if (item.tipo === 'convenio') {
+      item.cupos_unidades = cuposEfectivosItem(item);
+    } else {
+      item.cupos_unidades = normalizarCuposUnidades(item.cupos_unidades);
+    }
     res.set('Cache-Control', 'public, max-age=30');
     res.json({ ok: true, item: item });
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -5428,7 +5547,7 @@ app.get('/portal/items/:id', async (req, res) => {
 app.post('/portal/items/:id/inscribir', async (req, res) => {
   try {
     const item = await pool.query(
-      'SELECT id,titulo,tipo,inscripciones_abiertas,vacantes,cupos_unidades FROM items_portal WHERE id=$1 AND visible=TRUE',
+      'SELECT id,titulo,tipo,inscripciones_abiertas,vacantes,cupos_unidades,lugar FROM items_portal WHERE id=$1 AND visible=TRUE',
       [req.params.id]);
     if (!item.rows.length) return res.json({ ok: false, error: 'Item no encontrado' });
     const esConvenio = item.rows[0].tipo === 'convenio';
@@ -5461,7 +5580,7 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
     const modalidadOtroNorm = conveniosFlujo.limpio(modalidad_otro, 120);
     const codifinNorm = String(codifin || '').replace(/\D/g, '');
     const comisariaPostulaNorm = conveniosFlujo.limpio(comisaria_postula, 150);
-    const cuposItem = normalizarCuposUnidades(item.rows[0].cupos_unidades);
+    const cuposItem = cuposEfectivosItem(item.rows[0]);
     const cuposConVacante = cuposItem.filter(function(c) { return (c.disponibles || 0) > 0; });
 
     if (esConvenio) {
@@ -5488,13 +5607,13 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       }
       if (cuposConVacante.length) {
         if (!comisariaPostulaNorm) {
-          return res.json({ ok: false, error: 'Seleccione la comisaría a la que postula.' });
+          return res.json({ ok: false, error: 'Seleccione el lugar / comisaría a la que postula.' });
         }
         const cupoOk = cuposConVacante.find(function(c) {
           return String(c.nombre || '').trim().toUpperCase() === comisariaPostulaNorm.toUpperCase();
         });
         if (!cupoOk) {
-          return res.json({ ok: false, error: 'La comisaría seleccionada no tiene vacantes disponibles.' });
+          return res.json({ ok: false, error: 'El lugar seleccionado no tiene vacantes disponibles.' });
         }
       }
     }
@@ -5629,7 +5748,7 @@ app.get('/portal/convenios/repechaje', async (req, res) => {
     for (const it of r.rows) {
       const vac = await conveniosFlujo.vacantesDisponibles(pool, it.id);
       if (!vac.ok || (vac.disponibles || 0) < 1) continue;
-      const cuposAll = normalizarCuposUnidades(it.cupos_unidades);
+      const cuposAll = cuposEfectivosItem(it);
       const cupos = cuposAll.map(function(c) {
         return {
           nombre: c.nombre,
@@ -6027,13 +6146,19 @@ app.post('/admin/inscripciones/:id/notificar', requireAuth, async (req, res) => 
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── POST /admin/sync-convenios — asegurar los 11 convenios oficiales ───────────
+// ── POST /admin/sync-convenios — asegurar los 11 convenios + flujo tipo Celador ─
 app.post('/admin/sync-convenios', requireAuth, async (req, res) => {
   try {
-    if (req.admin.rol !== 'unitic')
+    if (req.admin.rol !== 'unitic' && !puedeGestionarItem(req.admin, 'convenio'))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
-    const total = await sincronizarConveniosOficiales(pool, true);
-    res.json({ ok: true, total });
+    const r = await sincronizarConveniosOficiales(pool, true);
+    res.json({
+      ok: true,
+      total: r.total,
+      cupos_actualizados: r.cupos_actualizados || 0,
+      plantillas_copiadas: r.plantillas_copiadas || 0,
+      mensaje: 'Los ' + r.total + ' convenios quedaron visibles con el mismo flujo que Celador (preinscripción, sorteo, expediente y repechaje).'
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -6043,6 +6168,19 @@ app.get('/admin/items', requireAuth, async (req, res) => {
     const { tipo } = req.query;
     const esU = req.admin.rol === 'unitic';
     if (!esU) {
+      // Admin de área: lista completa del tipo que puede gestionar (editar web / lugares)
+      if (tipo && puedeGestionarItem(req.admin, tipo)) {
+        const r = await pool.query(
+          `SELECT i.id, i.tipo, i.titulo, i.descripcion, i.estado, i.icono, i.color, i.requisitos, i.horario,
+                  i.vacantes, i.fecha_inicio, i.duracion, i.lugar, i.observaciones, i.ventana_inscripcion,
+                  i.formulario_url, i.inscripciones_abiertas, i.visible, i.orden, i.uniforme,
+                  i.contactos_responsables, i.aviso_sorteo_fb, i.cupos_unidades, i.plantilla_nombre,
+                  (SELECT COUNT(*) FROM inscripciones n WHERE n.item_id=i.id) AS total_inscritos
+           FROM items_portal i WHERE i.tipo=$1 ORDER BY i.orden, i.id`,
+          [tipo]);
+        return res.json({ ok: true, items: r.rows });
+      }
+      // Solo para elegir convocatoria al publicar PDF (campos mínimos)
       if (!tipo || !puedePublicarResultadosPdf(req.admin, tipo))
         return res.status(403).json({ ok: false, error: 'Sin permiso' });
       const r = await pool.query(
