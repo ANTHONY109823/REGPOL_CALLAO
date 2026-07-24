@@ -5338,10 +5338,6 @@ const CONTACTOS_CONV_DEFAULT =
   'Oficina de Convenios — REGPOL Callao | WhatsApp: 980 122 452.';
 const UNIFORME_CONV_DEFAULT =
   'Uniforme de faena completo (camisa, pantalón, correa y fornitura reglamentaria).';
-const DIVOPUS1_CIAS = [
-  'CIA CALLAO', 'CIA LA PUNTA', 'CIA BELLAVISTA', 'CIA CIUDADELA CHALACA',
-  'CIA CIUDAD DEL PESCADOR', 'CIA RAMON CASTILLA', 'CIA LA LEGUA', 'CIA LA PERLA'
-];
 const DIVOPUS_CELADOR_LUGARES = ['DIVOPUS 01', 'DIVOPUS 02', 'DIVOPUS 03'];
 
 /** Cupos efectivos: multi-lugar si hay cupos_unidades; si no, un solo lugar (como ficha web). */
@@ -5352,17 +5348,6 @@ function cuposEfectivosItem(item) {
   var nombre = String((item && (item.lugar || item.titulo)) || '').trim() || 'Lugar del convenio';
   if (totalVac <= 0) return [];
   return [{ nombre: nombre, vacantes: totalVac, inscritos: 0, disponibles: totalVac }];
-}
-
-function plantillaCuposDivopus1(vacantesTotales) {
-  var total = parseInt(vacantesTotales, 10) || 0;
-  var n = DIVOPUS1_CIAS.length;
-  var base = n ? Math.floor(total / n) : 0;
-  var resto = n ? total % n : 0;
-  return DIVOPUS1_CIAS.map(function(nombre, idx) {
-    var vac = base + (idx < resto ? 1 : 0);
-    return { nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac };
-  });
 }
 
 function plantillaCuposDivopusCelador(vacantesTotales) {
