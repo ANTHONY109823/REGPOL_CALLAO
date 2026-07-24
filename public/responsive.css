@@ -40,6 +40,14 @@ body {
   .portal-home-content .portal-seccion {
     padding: 24px 14px 20px;
     margin-bottom: 18px;
+    overflow-x: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  #convenios .regpol-marquee-wrap,
+  #cursos .regpol-marquee-wrap {
+    max-width: 100%;
   }
 }
 

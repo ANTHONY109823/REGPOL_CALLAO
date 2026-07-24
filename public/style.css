@@ -2930,9 +2930,14 @@ table.t { min-width: 600px; }
 }
 .regpol-marquee-wrap {
   width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 .regpol-marquee--2rows {
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 2%, #000 98%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 2%, #000 98%, transparent);
 }
@@ -2991,17 +2996,76 @@ table.t { min-width: 600px; }
   transform: scale(1.06);
 }
 @media (max-width: 640px) {
+  .regpol-marquee-wrap {
+    max-width: 100%;
+    overflow: hidden;
+    padding: 0;
+  }
+  .regpol-marquee--2rows {
+    -webkit-mask-image: none;
+    mask-image: none;
+    overflow: hidden;
+    width: 100%;
+  }
   .regpol-marquee-track--2rows {
-    grid-auto-columns: 200px;
+    /* Una columna visible (2 filas); ancho casi completo del teléfono */
+    grid-auto-columns: min(360px, calc(100vw - 48px));
     gap: 10px 12px;
   }
   .regpol-marquee-track--2rows > .nov-card,
   .regpol-marquee-track--2rows > a {
-    width: 200px;
-    max-width: 200px;
+    width: min(360px, calc(100vw - 48px));
+    max-width: min(360px, calc(100vw - 48px));
+    min-width: 0;
   }
   .regpol-marquee-track--2rows > a .card-modern {
-    min-height: 160px;
+    min-height: 0;
+    padding: 14px 12px 12px;
+    box-sizing: border-box;
+  }
+  .regpol-marquee-track--2rows .icon-wrapper {
+    width: 46px;
+    height: 46px;
+    font-size: 20px;
+    margin-bottom: 6px;
+  }
+  .regpol-marquee-track--2rows .card-modern h4 {
+    font-size: 12.5px;
+    line-height: 1.3;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    -webkit-line-clamp: 3;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .regpol-marquee-track--2rows .card-vacantes {
+    font-size: 12px;
+  }
+  .regpol-marquee-track--2rows .card-vacantes strong {
+    font-size: 1.2em;
+  }
+  .convenios-consulta-bar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .convenios-consulta-texto {
+    flex: 1 1 auto;
+  }
+  .convenios-consulta-texto strong {
+    font-size: 13px;
+  }
+  .convenios-consulta-texto span {
+    font-size: 12px;
+  }
+  .btn-consulta-cip {
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+    white-space: normal;
+    padding: 11px 14px;
   }
 }
 

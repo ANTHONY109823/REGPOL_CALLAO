@@ -174,8 +174,17 @@ function activarMarqueeCarrusel(container, opts) {
   var half = 0;
   var paused = false;
   var speed = Math.max(0.25, (children.length * (rows > 1 ? 18 : 28)) / Math.max(secs, 1) / 60);
-  var step = rows > 1 ? 278 : 300;
 
+  function medirStep() {
+    var first = track.querySelector('a, .nov-card');
+    if (!first) return rows > 1 ? 256 : 300;
+    var gap = 16;
+    try {
+      var cs = window.getComputedStyle(track);
+      gap = parseFloat(cs.columnGap || cs.gap) || gap;
+    } catch (e) {}
+    return Math.max(120, first.getBoundingClientRect().width + gap);
+  }
   function medirHalf() {
     half = track.scrollWidth / 2;
   }
@@ -208,7 +217,7 @@ function activarMarqueeCarrusel(container, opts) {
 
   nav.querySelectorAll('.regpol-marquee-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      offset += (parseInt(btn.getAttribute('data-dir'), 10) || 1) * step;
+      offset += (parseInt(btn.getAttribute('data-dir'), 10) || 1) * medirStep();
       aplicar();
     });
   });
