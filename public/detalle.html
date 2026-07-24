@@ -356,13 +356,56 @@ function renderDetalle(item){
     }
   }
 
+  var turnosList = Array.isArray(item.turnos) ? item.turnos.filter(function(t){
+    return t && String(t.turno || '').trim();
+  }) : [];
+
   var ciasCard = '';
-  if(cupos.length){
-    var tituloLugares = esConvenio
-      ? (cupos.length > 1 ? 'LUGARES / COMISARÍAS' : 'LUGAR')
-      : 'UNIDADES';
+  if(esConvenio){
+    var bloques = [];
+    if(turnosList.length){
+      bloques.push(
+        '<h3>TURNOS / DÍAS / VACANTES</h3>'
+        +'<div class="tabla-cupos-wrap"><table class="tabla-cupos">'
+        +'<thead><tr><th>Turno</th><th>Día</th><th>Vacantes</th></tr></thead><tbody>'
+        +turnosList.map(function(t){
+          var vacT = parseInt(t.vacantes, 10);
+          if(isNaN(vacT) || vacT < 0) vacT = 0;
+          return '<tr><td>'+escHtmlD(String(t.turno||'').toUpperCase())+'</td>'
+            +'<td>'+escHtmlD(String(t.dia||'PAR/IMPAR').toUpperCase())+'</td>'
+            +'<td class="num">'+escHtmlD(String(vacT))+'</td></tr>';
+        }).join('')
+        +'</tbody></table></div>'
+      );
+    }
+    if(cupos.length){
+      var tituloLugares = cupos.length > 1 ? 'LUGARES (POSTULACIÓN)' : 'LUGAR';
+      var esDivopus = cupos.length > 1 && cupos.every(function(c){
+        return /^DIVOPUS\s*0[123]$/i.test(String(c.nombre || '').trim());
+      });
+      if(esDivopus) tituloLugares = 'DIVOPUS / VACANTES';
+      bloques.push(
+        '<h3'+(bloques.length ? ' style="margin-top:14px;"' : '')+'>'+tituloLugares+'</h3>'
+        +'<div class="tabla-cupos-wrap"><table class="tabla-cupos">'
+        +'<thead><tr><th>Lugar</th><th>Vacantes</th><th>Inscritos</th><th>Disponibles</th></tr></thead><tbody>'
+        +cupos.map(function(c){
+          return '<tr><td>'+escHtmlD(c.nombre||'')+'</td>'
+            +'<td class="num">'+escHtmlD(String(c.vacantes!=null?c.vacantes:0))+'</td>'
+            +'<td class="num">'+escHtmlD(String(c.inscritos!=null?c.inscritos:0))+'</td>'
+            +'<td class="num">'+escHtmlD(String(c.disponibles!=null?c.disponibles:0))+'</td></tr>';
+        }).join('')
+        +'</tbody></table></div>'
+      );
+    }
+    if(bloques.length){
+      ciasCard = '<div class="card-detalle">'+bloques.join('')+'</div>';
+    } else {
+      ciasCard = '<div class="card-detalle"><h3>TURNOS / VACANTES</h3>'
+        +'<p class="cupos-vacio">Sin turnos ni lugares publicados. Configúrelos en el panel (Turnos y vacantes).</p></div>';
+    }
+  } else if(cupos.length){
     ciasCard = '<div class="card-detalle">'
-      +'<h3>'+tituloLugares+'</h3>'
+      +'<h3>UNIDADES</h3>'
       +'<div class="tabla-cupos-wrap"><table class="tabla-cupos">'
       +'<thead><tr><th>Lugar</th><th>Vacantes</th><th>Inscritos</th><th>Disponibles</th></tr></thead><tbody>'
       +cupos.map(function(c){
@@ -372,9 +415,6 @@ function renderDetalle(item){
           +'<td class="num">'+escHtmlD(String(c.disponibles!=null?c.disponibles:0))+'</td></tr>';
       }).join('')
       +'</tbody></table></div></div>';
-  } else if(esConvenio){
-    ciasCard = '<div class="card-detalle"><h3>LUGAR</h3>'
-      +'<p class="cupos-vacio">Sin lugares/cupos publicados. Configúrelos en el panel (Lugares y vacantes).</p></div>';
   }
 
   var esRepechajeVista = esConvenio && (MODO_REPECHAJE || /[?&]repechaje=1/.test(location.search || ''));
