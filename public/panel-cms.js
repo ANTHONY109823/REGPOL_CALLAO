@@ -272,35 +272,55 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
       }
       box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
         + '<thead><tr style="background:#f0f7f4;color:#004d3d;text-align:left;">'
-        + '<th style="padding:7px 8px;">Título</th>'
-        + '<th style="padding:7px 8px;">Vacantes</th>'
-        + '<th style="padding:7px 8px;">Lugares</th>'
-        + '<th style="padding:7px 8px;">Inscr.</th>'
-        + '<th style="padding:7px 8px;width:130px;">Acciones</th></tr></thead><tbody>'
+        + '<th style="padding:8px 10px;">Convenio</th>'
+        + '<th style="padding:8px 6px;width:78px;">Vacantes</th>'
+        + '<th style="padding:8px 6px;width:56px;">Lugares</th>'
+        + '<th style="padding:8px 6px;width:64px;text-align:center;">Activo</th>'
+        + '<th style="padding:8px 6px;width:72px;text-align:center;">Inscr.</th>'
+        + '<th style="padding:8px 6px;width:120px;">Acciones</th></tr></thead><tbody>'
         + items.map(function(it) {
           var activo = String(it.estado || '').toUpperCase() !== 'CERRADO';
           var nLug = Array.isArray(it.cupos_unidades) ? it.cupos_unidades.length : 0;
           var lugTxt = nLug > 0 ? String(nLug) : (it.lugar ? '1' : '—');
-          var insc = it.inscripciones_abiertas
-            ? '<span style="color:#1a7a3a;font-weight:700;font-size:11px;">Abiertas</span>'
-            : '<span style="color:#856404;font-weight:700;font-size:11px;">Cerradas</span>';
-          return '<tr style="border-top:1px solid #edf2ef;">'
-            + '<td style="padding:7px 8px;font-weight:600;color:#004d3d;">' + escHtml(it.titulo || '')
-            + (activo ? '' : ' <span style="color:#c0392b;font-size:10px;">(apagado)</span>')
-            + '</td>'
-            + '<td style="padding:7px 8px;">' + escHtml(String(it.vacantes != null ? it.vacantes : '—')) + '</td>'
-            + '<td style="padding:7px 8px;">' + lugTxt + '</td>'
-            + '<td style="padding:7px 8px;">' + insc + '</td>'
-            + '<td style="padding:6px 8px;white-space:nowrap;">'
+          var id = it.id;
+          return '<tr style="border-top:1px solid #edf2ef;" id="cv-row-' + id + '">'
+            + '<td style="padding:8px 10px;font-weight:600;color:#004d3d;">' + escHtml(it.titulo || '') + '</td>'
+            + '<td style="padding:6px;">'
             + (puedeEditar
-              ? '<button type="button" class="btn-mini btn-mini-ok" style="padding:3px 7px;font-size:11px;" onclick="abrirModalItem(' + it.id + ')" title="Editar"><i class="fas fa-edit"></i></button> '
-              + '<button type="button" class="btn-mini" style="padding:3px 7px;font-size:11px;border-color:'+(activo?'#1a7a3a':'#c0392b')+';color:'+(activo?'#1a7a3a':'#c0392b')+';" onclick="toggleEstadoItem(' + it.id + ')" title="'+(activo?'Apagar (CERRADO)':'Prender (DISPONIBLE)')+'"><i class="fas fa-power-off"></i></button> '
-              + '<button type="button" class="btn-mini" style="padding:3px 7px;font-size:11px;" onclick="toggleInscripcionesItem(' + it.id + ')" title="Abrir/cerrar inscripciones"><i class="fas fa-door-open"></i></button> '
+              ? '<input type="number" id="cv-vac-' + id + '" min="0" value="' + (parseInt(it.vacantes,10)||0) + '" '
+                + 'style="width:64px;padding:4px 6px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;" '
+                + 'onchange="marcarLineaConvenioDirty(' + id + ')"/>'
+              : escHtml(String(it.vacantes != null ? it.vacantes : '—')))
+            + '</td>'
+            + '<td style="padding:8px 6px;text-align:center;">' + lugTxt + '</td>'
+            + '<td style="padding:8px 6px;text-align:center;">'
+            + (puedeEditar
+              ? '<input type="checkbox" id="cv-activo-' + id + '" ' + (activo ? 'checked' : '') + ' '
+                + 'title="Activo en la web" style="width:16px;height:16px;accent-color:#1a7a3a;cursor:pointer;" '
+                + 'onchange="marcarLineaConvenioDirty(' + id + ')"/>'
+              : (activo ? 'Sí' : 'No'))
+            + '</td>'
+            + '<td style="padding:8px 6px;text-align:center;">'
+            + (puedeEditar
+              ? '<input type="checkbox" id="cv-insc-' + id + '" ' + (it.inscripciones_abiertas ? 'checked' : '') + ' '
+                + 'title="Inscripciones abiertas" style="width:16px;height:16px;accent-color:#004d3d;cursor:pointer;" '
+                + 'onchange="marcarLineaConvenioDirty(' + id + ')"/>'
+              : (it.inscripciones_abiertas ? 'Abiertas' : 'Cerradas'))
+            + '</td>'
+            + '<td style="padding:6px;white-space:nowrap;">'
+            + (puedeEditar
+              ? '<button type="button" class="btn-mini btn-mini-ok" style="padding:3px 7px;font-size:11px;" onclick="abrirModalItem(' + id + ')" title="Editar ficha"><i class="fas fa-edit"></i></button> '
+              + '<button type="button" class="btn-mini" id="cv-btn-save-' + id + '" style="padding:3px 7px;font-size:11px;" onclick="guardarLineaConvenio(' + id + ')" title="Guardar esta línea"><i class="fas fa-save"></i></button> '
               : '')
-            + '<a class="btn-mini" style="padding:3px 7px;font-size:11px;text-decoration:none;" href="detalle.html?id=' + encodeURIComponent(it.id) + '&tipo=' + tipo + '" target="_blank" rel="noopener" title="Ver en web"><i class="fas fa-external-link-alt"></i></a>'
+            + '<a class="btn-mini" style="padding:3px 7px;font-size:11px;text-decoration:none;" href="detalle.html?id=' + encodeURIComponent(id) + '&tipo=' + tipo + '" target="_blank" rel="noopener" title="Ver en web"><i class="fas fa-external-link-alt"></i></a>'
             + '</td></tr>';
         }).join('')
-        + '</tbody></table>';
+        + '</tbody></table>'
+        + (puedeEditar
+          ? '<p style="font-size:11px;color:#666;margin:8px 0 0;line-height:1.4;">'
+            + '<strong>Activo</strong> = visible como DISPONIBLE. <strong>Inscr.</strong> = inscripciones abiertas. '
+            + 'Cambie la línea y pulse <i class="fas fa-save"></i> Guardar. Lugares y horarios se editan con <i class="fas fa-edit"></i>.</p>'
+          : '');
     })
     .catch(function() {
       if (box) box.innerHTML = '<p style="color:#c0392b;font-size:12px;padding:14px;margin:0;">No se pudo cargar el listado.</p>';

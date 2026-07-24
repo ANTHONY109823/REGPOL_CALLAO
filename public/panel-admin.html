@@ -1532,7 +1532,7 @@
         <label id="mi-lab-fecha">Beneficio económico</label>
         <input type="text" id="mi-fecha-inicio" placeholder="Ej: S/ 75.00" maxlength="100"/>
       </div>
-      <div>
+      <div id="mi-wrap-duracion">
         <label id="mi-lab-duracion">Detalle del beneficio</label>
         <input type="text" id="mi-duracion" placeholder="Ej: Por día laborado" maxlength="100"/>
       </div>
@@ -2120,7 +2120,7 @@
 <script src="portal-data.js?v=10"></script>
 <script src="portal.js?v=85"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=34"></script>
+<script src="panel-cms.js?v=35"></script>
 <script src="panel-descansos.js?v=4"></script>
 <script src="panel-faltos.js?v=1"></script>
 <script src="panel-rrhh.js?v=3"></script>
@@ -4884,30 +4884,26 @@ function renderTablaItems(items){
   var colorEstado={'DISPONIBLE':'#1a7a3a','EN PROCESO':'#856404','CERRADO':'#c0392b'};
   if(esVistaConvenio){
     el.innerHTML='<table class="t"><thead><tr>'
-      +'<th>Convenio</th><th>Vac.</th><th>Lugares</th><th>Inscr.</th><th class="col-acciones">Acciones</th>'
+      +'<th>Convenio</th><th>Vacantes</th><th>Lugares</th><th style="text-align:center;">Activo</th><th style="text-align:center;">Inscr.</th><th class="col-acciones">Acciones</th>'
       +'</tr></thead><tbody>'
       +items.map(function(item){
         var activo=String(item.estado||'').toUpperCase()!=='CERRADO';
         var nLugares=Array.isArray(item.cupos_unidades)?item.cupos_unidades.length:0;
         var lugaresTxt=nLugares>0?String(nLugares):(item.lugar?'1':'—');
-        var badge=item.inscripciones_abiertas
-          ?'<span class="badge ok">Abiertas</span>'
-          :'<span class="badge pend">Cerradas</span>';
-        return '<tr>'
-          +'<td style="font-weight:600;max-width:260px;font-size:12.5px;">'+escHtml(item.titulo)
-            +(activo?'':' <span style="color:#c0392b;font-size:10px;">(apagado)</span>')
-            +'</td>'
-          +'<td style="text-align:center;">'+escHtml(item.vacantes||0)+'</td>'
+        var id=item.id;
+        return '<tr id="cv-row-'+id+'">'
+          +'<td style="font-weight:600;max-width:240px;font-size:12.5px;">'+escHtml(item.titulo)+'</td>'
+          +'<td><input type="number" id="cv-vac-'+id+'" min="0" value="'+(parseInt(item.vacantes,10)||0)+'" style="width:64px;padding:4px 6px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;" onchange="marcarLineaConvenioDirty('+id+')"/></td>'
           +'<td style="text-align:center;font-size:12px;">'+escHtml(lugaresTxt)+'</td>'
-          +'<td style="text-align:center;">'+badge+'</td>'
+          +'<td style="text-align:center;"><input type="checkbox" id="cv-activo-'+id+'" '+(activo?'checked':'')+' style="width:16px;height:16px;accent-color:#1a7a3a;cursor:pointer;" onchange="marcarLineaConvenioDirty('+id+')"/></td>'
+          +'<td style="text-align:center;"><input type="checkbox" id="cv-insc-'+id+'" '+(item.inscripciones_abiertas?'checked':'')+' style="width:16px;height:16px;accent-color:#004d3d;cursor:pointer;" onchange="marcarLineaConvenioDirty('+id+')"/></td>'
           +'<td class="col-acciones"><div class="btn-acciones-celda" style="flex-direction:row;max-width:none;gap:4px;">'
           +(puedeEditarItemTipo(item.tipo)
-            ? '<button class="btn-mini btn-mini-ok" style="padding:3px 7px;width:auto;" onclick="abrirModalItem('+item.id+')" title="Editar"><i class="fas fa-edit"></i></button>'
-              +'<button class="btn-mini" style="padding:3px 7px;width:auto;border-color:'+(activo?'#1a7a3a':'#c0392b')+';color:'+(activo?'#1a7a3a':'#c0392b')+';" onclick="toggleEstadoItem('+item.id+')" title="'+(activo?'Apagar':'Prender')+'"><i class="fas fa-power-off"></i></button>'
-              +'<button class="btn-mini" style="padding:3px 7px;width:auto;" onclick="toggleInscripcionesItem('+item.id+')" title="Inscripciones"><i class="fas fa-door-open"></i></button>'
+            ? '<button class="btn-mini btn-mini-ok" style="padding:3px 7px;width:auto;" onclick="abrirModalItem('+id+')" title="Editar ficha"><i class="fas fa-edit"></i></button>'
+              +'<button class="btn-mini" id="cv-btn-save-'+id+'" style="padding:3px 7px;width:auto;" onclick="guardarLineaConvenio('+id+')" title="Guardar línea"><i class="fas fa-save"></i></button>'
             : '')
-          +'<a class="btn-mini" style="padding:3px 7px;width:auto;text-decoration:none;" href="detalle.html?id='+encodeURIComponent(item.id)+'&tipo=convenio" target="_blank" rel="noopener" title="Ver"><i class="fas fa-external-link-alt"></i></a>'
-          +(esUnitic()?'<button class="btn-mini btn-mini-danger" style="padding:3px 7px;width:auto;" onclick="eliminarItem('+item.id+')" title="Eliminar"><i class="fas fa-trash"></i></button>':'')
+          +'<a class="btn-mini" style="padding:3px 7px;width:auto;text-decoration:none;" href="detalle.html?id='+encodeURIComponent(id)+'&tipo=convenio" target="_blank" rel="noopener" title="Ver"><i class="fas fa-external-link-alt"></i></a>'
+          +(esUnitic()?'<button class="btn-mini btn-mini-danger" style="padding:3px 7px;width:auto;" onclick="eliminarItem('+id+')" title="Eliminar"><i class="fas fa-trash"></i></button>':'')
           +'</div></td>'
           +'</tr>';
       }).join('')
@@ -5145,6 +5141,7 @@ function adaptarModalItemPorTipo(tipo){
   show('mi-wrap-contactos', !esConv);
   show('mi-wrap-form-url', !esConv);
   show('mi-wrap-lugar', !esConv);
+  show('mi-wrap-duracion', !esConv);
   show('mi-cupos-wrap', esConv);
   show('mi-aviso-sorteo-wrap', esConv);
   show('mi-wrap-icono', true);
@@ -5173,7 +5170,7 @@ function bodyDesdeItemCache(item, overrides){
     requisitos: Array.isArray(item.requisitos) ? item.requisitos : [],
     cupos_unidades: Array.isArray(item.cupos_unidades) ? item.cupos_unidades : [],
     horario: item.horario || '',
-    vacantes: parseInt(item.vacantes, 10) || 0,
+    vacantes: overrides.vacantes != null ? (parseInt(overrides.vacantes, 10) || 0) : (parseInt(item.vacantes, 10) || 0),
     fecha_inicio: item.fecha_inicio || '',
     duracion: item.duracion || '',
     lugar: item.lugar || '',
@@ -5189,57 +5186,85 @@ function bodyDesdeItemCache(item, overrides){
   };
 }
 
-function toggleEstadoItem(id){
+function marcarLineaConvenioDirty(id){
+  var btn = document.getElementById('cv-btn-save-' + id);
+  if(btn){
+    btn.style.background = '#004d3d';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#004d3d';
+    btn.disabled = false;
+  }
+}
+
+function guardarLineaConvenio(id){
   if(!id) return;
   var item = (ITEMS_CACHE || []).find(function(i){ return parseInt(i.id,10) === parseInt(id,10); });
   if(!item){ alert('No se encontró el convenio.'); return; }
   if(!puedeEditarItemTipo(item.tipo)){ alert('Sin permiso.'); return; }
-  var activo = String(item.estado || '').toUpperCase() !== 'CERRADO';
-  var nuevo = activo ? 'CERRADO' : 'DISPONIBLE';
-  if(!confirm(activo
-    ? '¿Apagar «'+item.titulo+'»? (pasará a CERRADO)'
-    : '¿Prender «'+item.titulo+'»? (pasará a DISPONIBLE)')) return;
-  fetch(API+'/admin/items/'+id, {
-    method:'PUT', headers:hdr(),
-    body: JSON.stringify(bodyDesdeItemCache(item, { estado: nuevo }))
+  var chkAct = document.getElementById('cv-activo-' + id);
+  var chkIns = document.getElementById('cv-insc-' + id);
+  var vacEl = document.getElementById('cv-vac-' + id);
+  var activo = chkAct ? !!chkAct.checked : String(item.estado||'').toUpperCase() !== 'CERRADO';
+  var insc = chkIns ? !!chkIns.checked : !!item.inscripciones_abiertas;
+  var vac = vacEl ? (parseInt(vacEl.value, 10) || 0) : (parseInt(item.vacantes, 10) || 0);
+  var btn = document.getElementById('cv-btn-save-' + id);
+  if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+  fetch(API + '/admin/items/' + id, {
+    method: 'PUT',
+    headers: hdr(),
+    body: JSON.stringify(bodyDesdeItemCache(item, {
+      estado: activo ? 'DISPONIBLE' : 'CERRADO',
+      inscripciones_abiertas: insc,
+      vacantes: vac
+    }))
   })
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if(!d.ok){ alert(d.error || 'No se pudo actualizar'); return; }
-      item.estado = nuevo;
+      if(!d.ok){
+        alert(d.error || 'No se pudo guardar');
+        if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i>'; }
+        return;
+      }
+      item.estado = activo ? 'DISPONIBLE' : 'CERRADO';
+      item.inscripciones_abiertas = insc;
+      item.vacantes = vac;
+      if(btn){
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i>';
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.borderColor = '';
+      }
       if(typeof renderGestionConvocatoriasCMS === 'function'){
         try { renderGestionConvocatoriasCMS('cms-lista-convenios', 'convenio'); } catch(e){}
       }
       var filtro = document.getElementById('items-filtro-tipo');
       if(filtro && filtro.value === 'convenio') cargarItems('convenio');
     })
-    .catch(function(){ alert('Error de conexión'); });
+    .catch(function(){
+      alert('Error de conexión');
+      if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i>'; }
+    });
+}
+
+function toggleEstadoItem(id){
+  var chk = document.getElementById('cv-activo-' + id);
+  if(chk){ chk.checked = !chk.checked; marcarLineaConvenioDirty(id); return; }
+  // fallback sin checkbox en DOM
+  var item = (ITEMS_CACHE || []).find(function(i){ return parseInt(i.id,10) === parseInt(id,10); });
+  if(!item) return;
+  var activo = String(item.estado || '').toUpperCase() !== 'CERRADO';
+  item.estado = activo ? 'CERRADO' : 'DISPONIBLE';
+  guardarLineaConvenio(id);
 }
 
 function toggleInscripcionesItem(id){
-  if(!id) return;
+  var chk = document.getElementById('cv-insc-' + id);
+  if(chk){ chk.checked = !chk.checked; marcarLineaConvenioDirty(id); return; }
   var item = (ITEMS_CACHE || []).find(function(i){ return parseInt(i.id,10) === parseInt(id,10); });
-  if(!item){ alert('No se encontró el convenio.'); return; }
-  if(!puedeEditarItemTipo(item.tipo)){ alert('Sin permiso.'); return; }
-  var nuevo = !item.inscripciones_abiertas;
-  if(!confirm(nuevo
-    ? '¿Abrir inscripciones en la web para «'+item.titulo+'»?'
-    : '¿Cerrar inscripciones en la web para «'+item.titulo+'»?')) return;
-  fetch(API+'/admin/items/'+id, {
-    method:'PUT', headers:hdr(),
-    body: JSON.stringify(bodyDesdeItemCache(item, { inscripciones_abiertas: nuevo }))
-  })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if(!d.ok){ alert(d.error || 'No se pudo actualizar'); return; }
-      item.inscripciones_abiertas = nuevo;
-      if(typeof renderGestionConvocatoriasCMS === 'function'){
-        try { renderGestionConvocatoriasCMS('cms-lista-convenios', 'convenio'); } catch(e){}
-      }
-      var filtro = document.getElementById('items-filtro-tipo');
-      if(filtro && filtro.value === 'convenio') cargarItems('convenio');
-    })
-    .catch(function(){ alert('Error de conexión'); });
+  if(!item) return;
+  item.inscripciones_abiertas = !item.inscripciones_abiertas;
+  guardarLineaConvenio(id);
 }
 
 function serializarCuposUnidades(cupos){
