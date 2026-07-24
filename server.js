@@ -5403,11 +5403,9 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
          descripcion=CASE WHEN TRIM(COALESCE(descripcion,''))='' THEN $2 ELSE descripcion END,
          icono=CASE WHEN TRIM(COALESCE(icono,'')) IN ('','fa-file') THEN $3 ELSE icono END,
          requisitos=$4::jsonb,
+         /* Solo rellenar aviso si está vacío; nunca pisar texto editado en el panel */
          ventana_inscripcion=CASE
-           WHEN TRIM(COALESCE(ventana_inscripcion,''))=''
-             OR ventana_inscripcion = 'Las inscripciones se habilitan del 20 al 25 de cada mes.'
-             OR ventana_inscripcion ILIKE 'Entrega de documentos hasta%'
-           THEN $10
+           WHEN TRIM(COALESCE(ventana_inscripcion,''))='' THEN $10
            ELSE ventana_inscripcion END,
          aviso_sorteo_fb=CASE
            WHEN TRIM(COALESCE(aviso_sorteo_fb,''))='' THEN $5
@@ -5432,20 +5430,10 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
     titulosUpper
   );
 
-  // Requisitos oficiales en todos; ventana: unificar aviso (sin pisar textos personalizados nuevos)
+  // Requisitos oficiales en todos. El aviso (ventana_inscripcion) solo lo edita el admin; no se pisa en sync.
   await db.query(
     `UPDATE items_portal SET requisitos=$1::jsonb WHERE tipo='convenio' AND visible=TRUE`,
     [REQS_CONV_OFICIAL]
-  );
-  await db.query(
-    `UPDATE items_portal SET ventana_inscripcion=$1
-     WHERE tipo='convenio' AND visible=TRUE
-       AND (
-         TRIM(COALESCE(ventana_inscripcion,''))=''
-         OR ventana_inscripcion = 'Las inscripciones se habilitan del 20 al 25 de cada mes.'
-         OR ventana_inscripcion ILIKE 'Entrega de documentos hasta%'
-       )`,
-    [VENTANA_INSCRIPCION_DEFAULT]
   );
 
   // Cupos: Celador = solo DIVOPUS 01/02/03 (nunca por CIA); resto = un solo lugar
