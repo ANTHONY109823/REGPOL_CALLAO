@@ -291,13 +291,7 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
           var id = it.id;
           return '<tr style="border-top:1px solid #edf2ef;" id="cv-row-' + id + '">'
             + '<td style="padding:8px 10px;font-weight:600;color:#004d3d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(it.titulo || '') + '">' + escHtml(it.titulo || '') + '</td>'
-            + '<td style="padding:6px 4px;text-align:center;">'
-            + (puedeEditar
-              ? '<input type="number" id="cv-vac-' + id + '" min="0" value="' + (parseInt(it.vacantes,10)||0) + '" '
-                + 'style="width:56px;padding:4px 4px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;text-align:center;" '
-                + 'onchange="marcarLineaConvenioDirty(' + id + ')"/>'
-              : escHtml(String(it.vacantes != null ? it.vacantes : '—')))
-            + '</td>'
+            + '<td style="padding:8px 4px;text-align:center;font-weight:600;">' + escHtml(String(it.vacantes != null ? it.vacantes : 0)) + '</td>'
             + '<td style="padding:8px 4px;text-align:center;">' + lugTxt + '</td>'
             + '<td style="padding:8px 4px;text-align:center;">'
             + (puedeEditar
@@ -325,7 +319,7 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
         + (puedeEditar
           ? '<p style="font-size:11px;color:#666;margin:8px 10px;line-height:1.4;">'
             + '<strong>Activo</strong> = DISPONIBLE. <strong>Inscr.</strong> = abiertas. '
-            + 'Cambie y pulse <i class="fas fa-save"></i>. Lugares/horario en <i class="fas fa-edit"></i>.</p>'
+            + 'Cambie Activo/Inscr. y pulse <i class="fas fa-save"></i>. Vacantes, lugares y horario en <i class="fas fa-edit"></i>.</p>'
           : '');
     })
     .catch(function() {

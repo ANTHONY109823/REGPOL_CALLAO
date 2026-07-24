@@ -1095,7 +1095,7 @@
       <div class="card">
         <h3 id="items-titulo"><i class="fas fa-clipboard-list"></i> Convocatorias</h3>
         <p id="items-ayuda-web" style="display:none;font-size:12px;color:#666;line-height:1.45;margin:-4px 0 10px;">
-          Vacantes, activo e inscripciones se editan en la tabla. En <strong>Editar</strong>: lugares, horario y requisitos.
+          Vacantes, lugares, horario y requisitos se editan en <strong>Editar</strong>. Activo e inscripciones se guardan en la fila.
         </p>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
           <button class="btn-mini btn-mini-ok" id="btn-nueva-convocatoria" onclick="abrirNuevoConvenioWeb()" style="display:none;"><i class="fas fa-plus"></i> Agregar convenio</button>
@@ -2118,7 +2118,7 @@
 <script src="portal-data.js?v=10"></script>
 <script src="portal.js?v=85"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=36"></script>
+<script src="panel-cms.js?v=37"></script>
 <script src="panel-descansos.js?v=4"></script>
 <script src="panel-faltos.js?v=1"></script>
 <script src="panel-rrhh.js?v=3"></script>
@@ -4891,7 +4891,7 @@ function renderTablaItems(items){
         var id=item.id;
         return '<tr id="cv-row-'+id+'">'
           +'<td style="font-weight:600;max-width:240px;font-size:12.5px;">'+escHtml(item.titulo)+'</td>'
-          +'<td><input type="number" id="cv-vac-'+id+'" min="0" value="'+(parseInt(item.vacantes,10)||0)+'" style="width:64px;padding:4px 6px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;" onchange="marcarLineaConvenioDirty('+id+')"/></td>'
+          +'<td style="text-align:center;font-weight:600;">'+escHtml(String(item.vacantes!=null?item.vacantes:0))+'</td>'
           +'<td style="text-align:center;font-size:12px;">'+escHtml(lugaresTxt)+'</td>'
           +'<td style="text-align:center;"><input type="checkbox" id="cv-activo-'+id+'" '+(activo?'checked':'')+' style="width:16px;height:16px;accent-color:#1a7a3a;cursor:pointer;" onchange="marcarLineaConvenioDirty('+id+')"/></td>'
           +'<td style="text-align:center;"><input type="checkbox" id="cv-insc-'+id+'" '+(item.inscripciones_abiertas?'checked':'')+' style="width:16px;height:16px;accent-color:#004d3d;cursor:pointer;" onchange="marcarLineaConvenioDirty('+id+')"/></td>'
@@ -5140,7 +5140,7 @@ function adaptarModalItemPorTipo(tipo){
   show('mi-wrap-form-url', !esConv);
   show('mi-wrap-lugar', !esConv);
   show('mi-wrap-duracion', !esConv);
-  show('mi-wrap-vacantes', !esConv);
+  show('mi-wrap-vacantes', true);
   show('mi-cupos-wrap', esConv);
   show('mi-aviso-sorteo-wrap', esConv);
   show('mi-wrap-icono', true);
@@ -5202,10 +5202,8 @@ function guardarLineaConvenio(id){
   if(!puedeEditarItemTipo(item.tipo)){ alert('Sin permiso.'); return; }
   var chkAct = document.getElementById('cv-activo-' + id);
   var chkIns = document.getElementById('cv-insc-' + id);
-  var vacEl = document.getElementById('cv-vac-' + id);
   var activo = chkAct ? !!chkAct.checked : String(item.estado||'').toUpperCase() !== 'CERRADO';
   var insc = chkIns ? !!chkIns.checked : !!item.inscripciones_abiertas;
-  var vac = vacEl ? (parseInt(vacEl.value, 10) || 0) : (parseInt(item.vacantes, 10) || 0);
   var btn = document.getElementById('cv-btn-save-' + id);
   if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
   fetch(API + '/admin/items/' + id, {
@@ -5213,8 +5211,7 @@ function guardarLineaConvenio(id){
     headers: hdr(),
     body: JSON.stringify(bodyDesdeItemCache(item, {
       estado: activo ? 'DISPONIBLE' : 'CERRADO',
-      inscripciones_abiertas: insc,
-      vacantes: vac
+      inscripciones_abiertas: insc
     }))
   })
     .then(function(r){ return r.json(); })
@@ -5226,7 +5223,6 @@ function guardarLineaConvenio(id){
       }
       item.estado = activo ? 'DISPONIBLE' : 'CERRADO';
       item.inscripciones_abiertas = insc;
-      item.vacantes = vac;
       if(btn){
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-save"></i>';
@@ -5440,15 +5436,6 @@ function guardarItem(){
     visible:document.getElementById('mi-visible').checked,
     orden:parseInt(val('mi-orden'))||0
   };
-  // Convenio: vacantes se editan en la tabla (no en el modal)
-  if(tipo==='convenio'){
-    if(id){
-      var prev=(ITEMS_CACHE||[]).find(function(i){ return parseInt(i.id,10)===parseInt(id,10); });
-      body.vacantes=prev?(parseInt(prev.vacantes,10)||0):(parseInt(val('mi-vacantes'),10)||0);
-    } else {
-      body.vacantes=(body.cupos_unidades||[]).reduce(function(a,c){ return a+(parseInt(c.vacantes,10)||0); },0);
-    }
-  }
   var url=id?API+'/admin/items/'+id:API+'/admin/items';
   var method=id?'PUT':'POST';
   fetch(url,{method:method,headers:hdr(),body:JSON.stringify(body)})
