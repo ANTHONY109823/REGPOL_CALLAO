@@ -4837,6 +4837,68 @@ function mensajeDuplicadoInscripcion(motivo) {
   return 'Ya existe una inscripción con ese CIP en esta convocatoria. No puede volver a inscribirse (ni en repechaje). Consulte con su CIP y N° de registro.';
 }
 
+/**
+ * Regla operativa: un efectivo solo puede preinscribirse en UN convenio por mes calendario (Lima).
+ * Aplica a todos los convenios (no a cursos).
+ */
+async function buscarInscripcionConvenioEnMes(cipNorm, dni, nombres) {
+  const dniNorm = normalizarDniDigits(dni);
+  const nombreNorm = normalizarNombreInscripcion(nombres);
+  const mesSql = `date_trunc('month', COALESCE(n.fecha, NOW()) AT TIME ZONE 'America/Lima')
+    = date_trunc('month', (NOW() AT TIME ZONE 'America/Lima'))`;
+
+  const byCip = await pool.query(
+    `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id
+     FROM inscripciones n
+     JOIN items_portal i ON i.id = n.item_id
+     WHERE i.tipo = 'convenio'
+       AND ${sqlCipIgual('n.cip')} = $1
+       AND ${mesSql}
+     ORDER BY n.id ASC LIMIT 1`,
+    [cipNorm]
+  );
+  if (byCip.rows.length) return { row: byCip.rows[0], motivo: 'cip' };
+
+  if (dniNorm) {
+    const byDni = await pool.query(
+      `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE i.tipo = 'convenio'
+         AND regexp_replace(COALESCE(n.dni,''), '[^0-9]', '', 'g') = $1
+         AND ${mesSql}
+       ORDER BY n.id ASC LIMIT 1`,
+      [dniNorm]
+    );
+    if (byDni.rows.length) return { row: byDni.rows[0], motivo: 'dni' };
+  }
+
+  if (nombreNorm.length >= 8) {
+    const byNom = await pool.query(
+      `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE i.tipo = 'convenio'
+         AND ${sqlNombreInscripcion('n.nombres')} = $1
+         AND ${mesSql}
+       ORDER BY n.id ASC LIMIT 1`,
+      [nombreNorm]
+    );
+    if (byNom.rows.length) return { row: byNom.rows[0], motivo: 'nombres' };
+  }
+
+  return null;
+}
+
+function mensajeUnConvenioPorMes(row) {
+  const titulo = String((row && row.titulo) || 'otro convenio').trim();
+  const nro = String((row && row.nro_registro) || '').trim();
+  return 'Solo puede inscribirse en un convenio por mes. Ya figura inscrito en «'
+    + titulo + '»'
+    + (nro ? (' (N° ' + nro + ')') : '')
+    + '. Consulte su estado con CIP y N° de inscripción.';
+}
+
 function normalizarCipConsulta(cip) {
   return normalizarCipDigits(cip);
 }
@@ -5781,6 +5843,19 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
         codigo: 'duplicado_' + dup.motivo,
         nro_registro: dup.row.nro_registro || ''
       });
+    }
+
+    if (esConvenio) {
+      const otroMes = await buscarInscripcionConvenioEnMes(cipNorm, dniNorm || dni, nombres);
+      if (otroMes) {
+        return res.json({
+          ok: false,
+          error: mensajeUnConvenioPorMes(otroMes.row),
+          codigo: 'un_convenio_por_mes',
+          nro_registro: otroMes.row.nro_registro || '',
+          convenio_titulo: otroMes.row.titulo || ''
+        });
+      }
     }
 
     const pdfBase64 = pdf_requisitos || '';
