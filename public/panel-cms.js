@@ -207,33 +207,33 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
   var esConv = tipo === 'convenio';
   var titulo = esConv ? 'Convenios' : 'Cursos';
   var hash = esConv ? '#convenios' : '#cursos';
-  var esSuper = typeof esUnitic === 'function' && esUnitic();
   var puedeEditar = typeof puedeEditarItemTipo === 'function' && puedeEditarItemTipo(tipo);
-  var puedePdf = typeof puedePublicarResultadosPdf === 'function' && puedePublicarResultadosPdf(tipo);
-  var puedeInsc = esConv
-    ? (typeof puedeOperarInscritosConvenio === 'function' && puedeOperarInscritosConvenio())
-    : (typeof puedeGestionCursos === 'function' && puedeGestionCursos());
 
-  el.innerHTML = '<div style="margin-bottom:14px;">'
-    + '<div style="font-size:14px;font-weight:800;color:#004d3d;margin-bottom:6px;"><i class="fas fa-globe"></i> '
-    + titulo + ' publicados en la web</div>'
-    + '<p style="font-size:12.5px;color:#555;line-height:1.55;margin:0 0 12px;">'
-    + 'Super Admin y Admin de ' + titulo + ' editan la <strong>misma ficha</strong> que ve el efectivo. '
-    + 'Al guardar un convenio/curso, el portal se actualiza al momento (no hace falta “Publicar cambios” para estas fichas).</p>'
-    + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'
-    + '<a class="btn btn-v" href="index.html' + hash + '" target="_blank" rel="noopener" style="text-decoration:none;"><i class="fas fa-external-link-alt"></i> Ver en web</a>'
-    + (puedeEditar ? '<button type="button" class="btn btn-v" onclick="irGestionItems(\'' + tipo + '\', document.querySelector(\'[data-page=items-' + tipo + ']\'))"><i class="fas fa-edit"></i> Editar fichas</button>' : '')
-    + (esConv && puedeEditar ? '<button type="button" class="btn btn-o" onclick="syncConveniosOficiales()"><i class="fas fa-sync"></i> Sincronizar flujo Celador</button>' : '')
-    + (puedePdf ? '<button type="button" class="btn" style="background:#c0392b;color:#fff;" onclick="irPublicarResultados(\'' + tipo + '\', null)"><i class="fas fa-file-pdf"></i> Relación PDF</button>' : '')
-    + (puedeInsc && esConv ? '<button type="button" class="btn" style="background:#004d3d;color:#fff;" onclick="irConvPreinscritos(document.querySelector(\'[data-page=conv-preinscritos]\'))"><i class="fas fa-users"></i> Preinscritos</button>' : '')
-    + '</div>'
-    + '<div id="cms-live-' + tipo + '" style="border:1.5px solid #e0e8e0;border-radius:10px;overflow:hidden;">'
-    + '<p style="color:#888;font-size:12px;padding:14px;margin:0;">Cargando convocatorias...</p></div>'
-    + '</div>';
+  if (esConv) {
+    el.innerHTML = '<div style="margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;">'
+      + '<div style="font-size:14px;font-weight:800;color:#004d3d;"><i class="fas fa-handshake"></i> Convenios en la web</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">'
+      + (puedeEditar
+        ? '<button type="button" class="btn-mini btn-mini-ok" onclick="abrirNuevoConvenioWeb()"><i class="fas fa-plus"></i> Agregar convenio</button>'
+        : '')
+      + '<a class="btn-mini" href="index.html' + hash + '" target="_blank" rel="noopener" style="text-decoration:none;"><i class="fas fa-external-link-alt"></i> Ver portal</a>'
+      + '</div></div>'
+      + '<div id="cms-live-' + tipo + '" style="border:1px solid #e0e8e0;border-radius:8px;overflow:hidden;">'
+      + '<p style="color:#888;font-size:12px;padding:14px;margin:0;">Cargando...</p></div>';
+  } else {
+    el.innerHTML = '<div style="margin-bottom:14px;">'
+      + '<div style="font-size:14px;font-weight:800;color:#004d3d;margin-bottom:6px;"><i class="fas fa-globe"></i> '
+      + titulo + ' en la web</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">'
+      + '<a class="btn-mini" href="index.html' + hash + '" target="_blank" rel="noopener" style="text-decoration:none;"><i class="fas fa-external-link-alt"></i> Ver en web</a>'
+      + (puedeEditar ? '<button type="button" class="btn-mini btn-mini-ok" onclick="irGestionItems(\'' + tipo + '\', document.querySelector(\'[data-page=items-' + tipo + ']\'))"><i class="fas fa-edit"></i> Editar</button>' : '')
+      + '</div>'
+      + '<div id="cms-live-' + tipo + '" style="border:1px solid #e0e8e0;border-radius:8px;overflow:hidden;">'
+      + '<p style="color:#888;font-size:12px;padding:14px;margin:0;">Cargando...</p></div></div>';
+  }
 
   var box = document.getElementById('cms-live-' + tipo);
   var base = apiBaseCMS() || '';
-  // Preferir listado admin completo si hay sesión (mismos datos para editar)
   var urlAdmin = (typeof API !== 'undefined' ? API : base) + '/admin/items?tipo=' + encodeURIComponent(tipo);
   var urlPublic = base + '/portal/items?tipo=' + encodeURIComponent(tipo);
   var headers = (typeof hdr === 'function') ? hdr() : {};
@@ -249,47 +249,47 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
     })
     .then(function(items) {
       if (!box) return;
+      // Solo lo publicado en web (oculta restos antiguos no visibles)
+      items = (items || []).filter(function(it) { return it.visible !== false; });
+      if (typeof ITEMS_CACHE !== 'undefined') ITEMS_CACHE = items.slice();
       if (!items.length) {
-        box.innerHTML = '<p style="color:#888;font-size:12px;padding:14px;margin:0;">No hay ' + titulo.toLowerCase() + ' publicados en la web.</p>';
+        box.innerHTML = '<p style="color:#888;font-size:12px;padding:14px;margin:0;">No hay ' + titulo.toLowerCase() + ' visibles. '
+          + (puedeEditar && esConv ? 'Pulse «Agregar convenio».' : '') + '</p>';
         return;
       }
-      if (typeof ITEMS_CACHE !== 'undefined' && esConv) ITEMS_CACHE = items;
-      box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12.5px;">'
+      box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
         + '<thead><tr style="background:#f0f7f4;color:#004d3d;text-align:left;">'
-        + '<th style="padding:8px 10px;">Título</th>'
-        + '<th style="padding:8px 10px;">Estado</th>'
-        + '<th style="padding:8px 10px;">Vacantes</th>'
-        + '<th style="padding:8px 10px;">Lugares</th>'
-        + '<th style="padding:8px 10px;">Inscripciones</th>'
-        + '<th style="padding:8px 10px;">Acciones</th></tr></thead><tbody>'
+        + '<th style="padding:7px 8px;">Título</th>'
+        + '<th style="padding:7px 8px;">Estado</th>'
+        + '<th style="padding:7px 8px;">Vacantes</th>'
+        + '<th style="padding:7px 8px;">Lugares</th>'
+        + '<th style="padding:7px 8px;">Inscripciones</th>'
+        + '<th style="padding:7px 8px;width:88px;">Acciones</th></tr></thead><tbody>'
         + items.map(function(it) {
           var est = escHtml(it.estado || '—');
           var color = it.estado === 'DISPONIBLE' ? '#1a7a3a' : (it.estado === 'CERRADO' ? '#c0392b' : '#856404');
           var nLug = Array.isArray(it.cupos_unidades) ? it.cupos_unidades.length : 0;
-          var lugTxt = nLug > 0 ? (nLug + ' lugar' + (nLug === 1 ? '' : 'es')) : (it.lugar ? escHtml(String(it.lugar).slice(0, 24)) : '—');
+          var lugTxt = nLug > 0 ? (nLug + (nLug === 1 ? ' lugar' : ' lugares')) : (it.lugar ? '1' : '—');
           var insc = it.inscripciones_abiertas
-            ? '<span style="color:#1a7a3a;font-weight:700;">Abiertas</span>'
-            : '<span style="color:#856404;font-weight:700;">Cerradas</span>';
+            ? '<span style="color:#1a7a3a;font-weight:700;font-size:11px;">Abiertas</span>'
+            : '<span style="color:#856404;font-weight:700;font-size:11px;">Cerradas</span>';
           return '<tr style="border-top:1px solid #edf2ef;">'
-            + '<td style="padding:8px 10px;font-weight:600;color:#004d3d;">' + escHtml(it.titulo || '') + '</td>'
-            + '<td style="padding:8px 10px;font-weight:700;color:' + color + ';">' + est + '</td>'
-            + '<td style="padding:8px 10px;">' + escHtml(String(it.vacantes != null ? it.vacantes : '—')) + '</td>'
-            + '<td style="padding:8px 10px;">' + lugTxt + '</td>'
-            + '<td style="padding:8px 10px;">' + insc + '</td>'
-            + '<td style="padding:8px 10px;white-space:nowrap;">'
+            + '<td style="padding:7px 8px;font-weight:600;color:#004d3d;">' + escHtml(it.titulo || '') + '</td>'
+            + '<td style="padding:7px 8px;font-weight:700;color:' + color + ';font-size:11px;">' + est + '</td>'
+            + '<td style="padding:7px 8px;">' + escHtml(String(it.vacantes != null ? it.vacantes : '—')) + '</td>'
+            + '<td style="padding:7px 8px;">' + lugTxt + '</td>'
+            + '<td style="padding:7px 8px;">' + insc + '</td>'
+            + '<td style="padding:6px 8px;white-space:nowrap;">'
             + (puedeEditar
-              ? '<button type="button" class="btn-mini btn-mini-ok" onclick="abrirModalItem(' + it.id + ')"><i class="fas fa-edit"></i> Editar</button> '
+              ? '<button type="button" class="btn-mini btn-mini-ok" style="padding:3px 8px;font-size:11px;" onclick="abrirModalItem(' + it.id + ')" title="Editar"><i class="fas fa-edit"></i></button> '
               : '')
-            + (puedeEditar && esConv
-              ? '<button type="button" class="btn-mini" onclick="toggleInscripcionesItem(' + it.id + ')"><i class="fas fa-door-open"></i></button> '
-              : '')
-            + '<a class="btn-mini" href="detalle.html?id=' + encodeURIComponent(it.id) + '&tipo=' + tipo + '" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i></a>'
+            + '<a class="btn-mini" style="padding:3px 7px;font-size:11px;text-decoration:none;" href="detalle.html?id=' + encodeURIComponent(it.id) + '&tipo=' + tipo + '" target="_blank" rel="noopener" title="Ver en web"><i class="fas fa-external-link-alt"></i></a>'
             + '</td></tr>';
         }).join('')
         + '</tbody></table>';
     })
     .catch(function() {
-      if (box) box.innerHTML = '<p style="color:#c0392b;font-size:12px;padding:14px;margin:0;">No se pudo cargar el listado. Revise la conexión al servidor.</p>';
+      if (box) box.innerHTML = '<p style="color:#c0392b;font-size:12px;padding:14px;margin:0;">No se pudo cargar el listado.</p>';
     });
 }
 

@@ -1095,21 +1095,19 @@
     <div id="page-items" class="page">
       <div class="card">
         <h3 id="items-titulo"><i class="fas fa-clipboard-list"></i> Convocatorias</h3>
-        <p id="items-ayuda-web" style="display:none;font-size:12.5px;color:#555;line-height:1.5;margin:-6px 0 12px;">
-          Todos los convenios usan el <strong>mismo flujo que Celador</strong>: preinscripción → sorteo → aviso → expediente (2 días) → aprobación/constancia → repechaje.
-          Pulse <strong>Sincronizar 11 convenios (flujo Celador)</strong> para dejarlos visibles y con lugares/plantilla listos.
-          Luego edite vacantes, horarios y abra inscripciones.
-          <a href="index.html#convenios" target="_blank" rel="noopener" style="color:#004d3d;font-weight:700;margin-left:4px;">Abrir portal <i class="fas fa-external-link-alt"></i></a>
+        <p id="items-ayuda-web" style="display:none;font-size:12px;color:#666;line-height:1.45;margin:-4px 0 10px;">
+          Edite solo lo que se ve en la ficha web. Acciones en <strong>Editar</strong>.
+          <a href="index.html#convenios" target="_blank" rel="noopener" style="color:#004d3d;font-weight:700;margin-left:4px;">Ver portal</a>
         </p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
-          <button class="btn btn-v" id="btn-nueva-convocatoria" onclick="abrirModalItem(null)"><i class="fas fa-plus"></i> Nueva convocatoria</button>
-          <button class="btn btn-o" id="btn-sync-convenios" onclick="syncConveniosOficiales()" style="display:none;"><i class="fas fa-sync"></i> Sincronizar 11 convenios (flujo Celador)</button>
-          <select id="items-filtro-tipo" onchange="cargarItems(this.value)" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+          <button class="btn-mini btn-mini-ok" id="btn-nueva-convocatoria" onclick="abrirNuevoConvenioWeb()" style="display:none;"><i class="fas fa-plus"></i> Agregar convenio</button>
+          <button class="btn-mini" id="btn-sync-convenios" onclick="syncConveniosOficiales()" style="display:none;"><i class="fas fa-sync"></i> Sync 11</button>
+          <select id="items-filtro-tipo" onchange="cargarItems(this.value)" style="padding:5px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;">
             <option value="">Todos</option>
             <option value="curso">Solo Cursos</option>
             <option value="convenio">Solo Convenios</option>
           </select>
-          <select id="items-filtro-estado" onchange="filtrarTablaItems()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
+          <select id="items-filtro-estado" onchange="filtrarTablaItems()" style="padding:5px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;">
             <option value="">Todos los estados</option>
             <option value="DISPONIBLE">Disponible</option>
             <option value="EN PROCESO">En proceso</option>
@@ -1479,19 +1477,19 @@
 </div>
 
 <div id="modal-item" class="modal">
-  <div class="modal-box" style="width:620px;max-height:90vh;overflow-y:auto;">
-    <h3><i class="fas fa-clipboard-list"></i> <span id="mi-titulo">Nueva convocatoria</span></h3>
+  <div class="modal-box" style="width:560px;max-height:90vh;overflow-y:auto;">
+    <h3 style="font-size:15px;"><i class="fas fa-edit"></i> <span id="mi-titulo">Nuevo convenio</span></h3>
     <input type="hidden" id="mi-id"/>
     <input type="hidden" id="mi-tipo"/>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div style="grid-column:1/-1;">
         <label>Título *</label>
-        <input type="text" id="mi-titulo-val" placeholder="Ej: CURSO DE INVESTIGACIÓN EN ACCIDENTES DE TRÁNSITO" maxlength="200"/>
+        <input type="text" id="mi-titulo-val" placeholder="Ej: PLAN CELADOR" maxlength="200"/>
       </div>
       <div style="grid-column:1/-1;">
-        <label>Descripción / Subtítulo</label>
-        <input type="text" id="mi-descripcion" placeholder="Breve descripción para la tarjeta" maxlength="300"/>
+        <label>Subtítulo de la tarjeta (web)</label>
+        <input type="text" id="mi-descripcion" placeholder="Texto corto bajo el título en la web" maxlength="300"/>
       </div>
       <div>
         <label>Estado</label>
@@ -1502,143 +1500,129 @@
         </select>
       </div>
       <div>
-        <label>Icono (Font Awesome)</label>
+        <label>Vacantes</label>
+        <input type="number" id="mi-vacantes" min="0" placeholder="0" value="0"/>
+      </div>
+      <div id="mi-wrap-icono">
+        <label>Icono</label>
         <select id="mi-icono">
-          <option value="fa-graduation-cap">Graduación</option>
           <option value="fa-handshake">Convenio</option>
-          <option value="fa-book">Libro</option>
           <option value="fa-shield-alt">Escudo</option>
-          <option value="fa-car">Auto/Tránsito</option>
-          <option value="fa-stethoscope">Médico</option>
-          <option value="fa-laptop">Tecnología</option>
+          <option value="fa-bus">Bus</option>
+          <option value="fa-car">Auto</option>
+          <option value="fa-building">Edificio</option>
+          <option value="fa-landmark">Municipalidad</option>
+          <option value="fa-bolt">Energía</option>
+          <option value="fa-anchor">Puerto</option>
+          <option value="fa-tint">Agua</option>
+          <option value="fa-plane">Aeropuerto</option>
+          <option value="fa-gavel">Fiscalización</option>
+          <option value="fa-graduation-cap">Graduación</option>
+          <option value="fa-book">Libro</option>
           <option value="fa-users">Personas</option>
           <option value="fa-certificate">Certificado</option>
           <option value="fa-file-contract">Contrato</option>
         </select>
       </div>
-      <div>
+      <div id="mi-wrap-color">
         <label>Color de tarjeta</label>
-        <input type="color" id="mi-color" value="#004d3d" style="height:38px;padding:2px;"/>
+        <input type="color" id="mi-color" value="#004d3d" style="height:34px;padding:2px;"/>
       </div>
       <div>
-        <label>Vacantes</label>
-        <input type="number" id="mi-vacantes" min="0" placeholder="0" value="0"/>
+        <label>Beneficio económico (web)</label>
+        <input type="text" id="mi-fecha-inicio" placeholder="Ej: S/ 75.00" maxlength="100"/>
       </div>
       <div>
-        <label>Fecha de inicio / Beneficio económico</label>
-        <input type="text" id="mi-fecha-inicio" placeholder="Curso: 15 DE JUNIO 2025 | Convenio: S/ 75.00" maxlength="100"/>
+        <label>Detalle del beneficio (web)</label>
+        <input type="text" id="mi-duracion" placeholder="Ej: Por día laborado" maxlength="100"/>
       </div>
-      <div>
-        <label>Duración / Detalle del beneficio</label>
-        <input type="text" id="mi-duracion" placeholder="Curso: SEIS (06) SEMANAS | Convenio: Por día laborado" maxlength="100"/>
+      <div style="grid-column:1/-1;">
+        <label>Turnos / Horarios (web)</label>
+        <input type="text" id="mi-horario" placeholder="Ej: 08:00 a 20:00 hrs" maxlength="200"/>
       </div>
-      <div>
-        <label>Turnos / Horarios</label>
-        <input type="text" id="mi-horario" placeholder="Ej: Turno mañana 08:00-13:00 / Turno tarde 14:00-18:00" maxlength="200"/>
+      <div style="grid-column:1/-1;">
+        <label>Lugar general</label>
+        <input type="text" id="mi-lugar" placeholder="Si hay un solo sitio de presentación" maxlength="200"/>
       </div>
-      <div>
-        <label>Lugar de formación / presentación diaria</label>
-        <input type="text" id="mi-lugar" placeholder="Ej: Comisaría asignada o punto de concentración diario" maxlength="200"/>
-      </div>
-      <div>
+      <div style="grid-column:1/-1;">
         <label>Uniforme autorizado</label>
         <input type="text" id="mi-uniforme" placeholder="Ej: Uniforme de faena completo" maxlength="300"/>
       </div>
       <div style="grid-column:1/-1;">
-        <label>Contactos de responsables (teléfonos, WhatsApp, nombres)</label>
-        <textarea id="mi-contactos" rows="2" placeholder="Ej: Oficina de Convenios — 980 122 452&#10;Responsable operativo — 980 121 440"></textarea>
+        <label>Contactos (web)</label>
+        <textarea id="mi-contactos" rows="2" placeholder="Oficina de Convenios — WhatsApp: 980 122 452"></textarea>
       </div>
       <div style="grid-column:1/-1;">
         <label>Observaciones</label>
-        <input type="text" id="mi-observaciones" placeholder="Ej: Sujeta a modificación por necesidad de servicio" maxlength="300"/>
+        <input type="text" id="mi-observaciones" placeholder="Opcional" maxlength="300"/>
       </div>
       <div style="grid-column:1/-1;">
         <label>Requisitos (uno por línea)</label>
-        <textarea id="mi-requisitos" rows="4" placeholder="Pertenecer a la REGPOL Callao.&#10;Encontrarse en situación de Actividad.&#10;No tener sanciones vigentes."></textarea>
+        <textarea id="mi-requisitos" rows="3" placeholder="Pertenecer a la REGPOL Callao.&#10;Encontrarse en situación de Actividad."></textarea>
       </div>
       <div style="grid-column:1/-1;" id="mi-cupos-wrap">
-        <label><i class="fas fa-map-marker-alt"></i> Lugares / comisarías del convenio (cupos)</label>
-        <p style="font-size:12px;color:#666;margin:0 0 8px;line-height:1.4;">
-          Un convenio puede tener <strong>un solo lugar</strong> o <strong>varios</strong> (como Celador).
-          Agregue o quite lugares aquí; se verán en el registro del portal.
-        </p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px;padding:10px;background:#f7faf7;border:1px solid #c8e6c9;border-radius:8px;">
-          <div style="flex:1;min-width:180px;">
-            <label style="font-size:11px;">Lugar / comisaría</label>
-            <select id="mi-cupo-add-nombre" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;"></select>
+        <label style="margin-bottom:4px;"><i class="fas fa-map-marker-alt"></i> Lugares / vacantes</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px;">
+          <div style="flex:1;min-width:140px;">
+            <label style="font-size:10px;margin:0;">Lugar</label>
+            <select id="mi-cupo-add-nombre" style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;"></select>
           </div>
-          <div style="width:110px;">
-            <label style="font-size:11px;">Vacantes</label>
-            <input type="number" id="mi-cupo-add-vac" min="0" value="0" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;"/>
+          <div style="width:78px;">
+            <label style="font-size:10px;margin:0;">Vac.</label>
+            <input type="number" id="mi-cupo-add-vac" min="0" value="0" style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;"/>
           </div>
-          <button type="button" class="btn btn-v" style="font-size:12px;" onclick="agregarCupoUnidadUI()"><i class="fas fa-plus"></i> Agregar lugar</button>
+          <button type="button" class="btn-mini btn-mini-ok" style="padding:5px 8px;" onclick="agregarCupoUnidadUI()"><i class="fas fa-plus"></i></button>
+          <button type="button" class="btn-mini" style="padding:5px 8px;" title="Plantilla DIVOPUS 1" onclick="cargarPlantillaCuposComisarias('divopus1')"><i class="fas fa-list"></i> D1</button>
+          <button type="button" class="btn-mini btn-mini-danger" style="padding:5px 8px;" title="Vaciar" onclick="limpiarCuposUnidadesUI()"><i class="fas fa-times"></i></button>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-          <button type="button" class="btn" style="background:#004d3d;color:#fff;font-size:12px;" onclick="cargarPlantillaCuposComisarias('divopus1')"><i class="fas fa-list"></i> Cargar DIVOPUS 1</button>
-          <button type="button" class="btn" style="background:#888;color:#fff;font-size:12px;" onclick="cargarPlantillaCuposComisarias('todas')"><i class="fas fa-list"></i> Cargar 20 comisarías</button>
-          <button type="button" class="btn" style="background:#c0392b;color:#fff;font-size:12px;" onclick="limpiarCuposUnidadesUI()"><i class="fas fa-trash"></i> Vaciar lista</button>
-        </div>
-        <div id="mi-cupos-lista" style="margin-bottom:8px;"></div>
-        <textarea id="mi-cupos-unidades" rows="4" placeholder="CIA CALLAO | 20 | 0 | 20" style="display:none;"></textarea>
-        <small style="color:#666;font-size:11.5px;display:block;margin-top:4px;line-height:1.4;">
-          Editable por Super Admin y Admin de Convenios. Si deja la lista vacía, el portal usará un solo lugar (campo “Lugar de formación”) con las vacantes generales.
-        </small>
+        <div id="mi-cupos-lista" style="margin-bottom:4px;"></div>
+        <textarea id="mi-cupos-unidades" rows="2" style="display:none;"></textarea>
       </div>
       <div style="grid-column:1/-1;">
-        <label>Ventana de inscripción (texto visible en el portal)</label>
-        <input type="text" id="mi-ventana-inscripcion" placeholder="Ej: Las inscripciones se habilitan del 20 al 25 de cada mes." maxlength="300"/>
+        <label>Ventana de inscripción (web)</label>
+        <input type="text" id="mi-ventana-inscripcion" placeholder="Las inscripciones se habilitan del 20 al 25 de cada mes." maxlength="300"/>
       </div>
       <div style="grid-column:1/-1;" id="mi-aviso-sorteo-wrap">
-        <label><i class="fab fa-facebook" style="color:#1877f2;"></i> Aviso sorteo en vivo por Facebook (editable)</label>
-        <textarea id="mi-aviso-sorteo-fb" rows="2" placeholder="Ej: El sorteo en vivo se realizará el 25/07/2026 a las 10:00 h por la página de Facebook REGPOL Callao. Se notificará al cerrar preinscripciones."></textarea>
-        <small style="color:#666;font-size:11.5px;">Se muestra al terminar la preinscripción y en la consulta del efectivo.</small>
+        <label><i class="fab fa-facebook" style="color:#1877f2;"></i> Aviso sorteo Facebook</label>
+        <textarea id="mi-aviso-sorteo-fb" rows="2" placeholder="Aviso del sorteo en vivo"></textarea>
       </div>
-      <div style="grid-column:1/-1;">
-        <label>URL de formulario externo (opcional)</label>
+      <div style="grid-column:1/-1;display:none;" id="mi-wrap-form-url">
+        <label>URL formulario externo (opcional)</label>
         <input type="url" id="mi-formulario-url" placeholder="https://forms.google.com/..."/>
       </div>
-      <div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:10px;background:#f0f7f0;border-radius:7px;">
-        <input type="checkbox" id="mi-inscripciones-abiertas" style="width:18px;height:18px;accent-color:#004d3d;"/>
-        <label for="mi-inscripciones-abiertas" style="font-size:13px;font-weight:700;color:#004d3d;cursor:pointer;margin:0;">
-          <i class="fas fa-door-open"></i> Inscripciones abiertas en el portal (formulario interno habilitado)
+      <div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f0f7f0;border-radius:6px;">
+        <input type="checkbox" id="mi-inscripciones-abiertas" style="width:16px;height:16px;accent-color:#004d3d;"/>
+        <label for="mi-inscripciones-abiertas" style="font-size:12.5px;font-weight:700;color:#004d3d;cursor:pointer;margin:0;">
+          Inscripciones abiertas en el portal
         </label>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <input type="checkbox" id="mi-visible" checked style="width:16px;height:16px;accent-color:#004d3d;"/>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="mi-visible" checked style="width:15px;height:15px;accent-color:#004d3d;"/>
         <label for="mi-visible" style="font-size:12px;color:#555;cursor:pointer;margin:0;">Visible en el portal</label>
       </div>
       <div>
-        <label>Orden de visualización</label>
+        <label>Orden</label>
         <input type="number" id="mi-orden" value="0" min="0"/>
       </div>
     </div>
 
-    
-    <hr style="margin:16px 0;border:none;border-top:1.5px solid #e0e8e0;"/>
-    <div style="background:#fffdf5;border:2px dashed #c8a94a;border-radius:9px;padding:14px;">
-      <div style="font-size:13px;font-weight:800;color:#c8a94a;margin-bottom:8px;display:flex;align-items:center;gap:7px;">
-        <i class="fas fa-file-pdf"></i> PLANTILLA / FORMULARIO DESCARGABLE
+    <div id="mi-plantilla-wrap" style="margin-top:12px;padding:10px;border:1px solid #e8e0c8;border-radius:7px;background:#fffcf5;">
+      <div style="font-size:12px;font-weight:700;color:#8a7340;margin-bottom:6px;"><i class="fas fa-file-pdf"></i> Plantilla PDF (expediente)</div>
+      <div id="mi-plantilla-actual" style="display:none;margin-bottom:6px;align-items:center;gap:8px;">
+        <i class="fas fa-file-pdf" style="color:#e74c3c;"></i>
+        <span id="mi-plantilla-nombre" style="font-size:11.5px;font-weight:600;flex:1;"></span>
+        <button type="button" class="btn-mini btn-mini-danger" style="padding:3px 7px;" onclick="quitarPlantillaItem()"><i class="fas fa-trash"></i></button>
       </div>
-      <p style="font-size:12px;color:#666;margin-bottom:10px;" id="mi-plantilla-ayuda">
-        Suba el formulario modelo (PDF) descargable. En <strong>cursos</strong> se adjunta al inscribirse; en <strong>convenios</strong> solo lo suben ganadores (o repechaje) tras el sorteo.<br/>
-        <strong style="color:#c0392b;">Máx. 10 MB. Solo PDF.</strong>
-      </p>
-      <div id="mi-plantilla-actual" style="display:none;margin-bottom:8px;background:#f0f7f0;border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:8px;">
-        <i class="fas fa-file-pdf" style="color:#e74c3c;font-size:18px;"></i>
-        <span id="mi-plantilla-nombre" style="font-size:12px;font-weight:600;flex:1;"></span>
-        <button type="button" class="btn-mini btn-mini-danger" onclick="quitarPlantillaItem()"><i class="fas fa-trash"></i> Quitar</button>
-      </div>
-      <label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:4px;">
-        <span id="mi-plantilla-label">Seleccionar plantilla PDF</span>
-      </label>
+      <label style="font-size:11px;color:#666;display:block;margin-bottom:3px;"><span id="mi-plantilla-label">Subir PDF</span></label>
       <input type="file" id="mi-plantilla-file" accept="application/pdf" onchange="cargarPlantillaItem(this)"
-             style="width:100%;padding:7px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;"/>
+             style="width:100%;padding:5px;border:1px solid #ccc;border-radius:5px;font-size:12px;"/>
       <input type="hidden" id="mi-plantilla-data"/>
+      <p style="font-size:10.5px;color:#888;margin:6px 0 0;" id="mi-plantilla-ayuda">Máx. 10 MB. Solo PDF.</p>
     </div>
 
-    <div class="modal-footer" style="margin-top:16px;">
-      <button class="btn" style="background:#999;color:#fff;" onclick="cerrarModal('modal-item')">Cancelar</button>
-      <button class="btn btn-v" onclick="guardarItem()"><i class="fas fa-save"></i> Guardar</button>
+    <div class="modal-footer" style="margin-top:12px;gap:6px;">
+      <button class="btn-mini" style="background:#999;color:#fff;border-color:#999;" onclick="cerrarModal('modal-item')">Cancelar</button>
+      <button class="btn-mini btn-mini-ok" onclick="guardarItem()"><i class="fas fa-save"></i> Guardar</button>
     </div>
   </div>
 </div>
@@ -2143,7 +2127,7 @@
 <script src="portal-data.js?v=10"></script>
 <script src="portal.js?v=85"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=31"></script>
+<script src="panel-cms.js?v=32"></script>
 <script src="panel-descansos.js?v=4"></script>
 <script src="panel-faltos.js?v=1"></script>
 <script src="panel-rrhh.js?v=3"></script>
@@ -3580,7 +3564,12 @@ function irGestionItems(tipo, el){
       : 'Sin acceso a convocatorias de cursos.');
     return;
   }
-  // Ir a la página items sin el bloqueo genérico de ir() (solo unitic)
+  // Convenios: misma vista limpia del portal web (sin banners de acciones extra)
+  if (tipo === 'convenio') {
+    var cmsEl = document.querySelector('.sb-item[data-cms-tab="convenios"]') || el;
+    irCMS('convenios', cmsEl);
+    return;
+  }
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
   var pg = document.getElementById('page-items');
   if (pg) pg.classList.add('on');
@@ -4854,7 +4843,18 @@ function cargarItems(tipo){
   var ayuda=document.getElementById('items-ayuda-web');
   if(ayuda) ayuda.style.display=tipo==='convenio'?'block':'none';
   var btnNueva=document.getElementById('btn-nueva-convocatoria');
-  if(btnNueva) btnNueva.style.display=esUnitic()?'inline-flex':'none';
+  if(btnNueva){
+    var puedeNuevo = tipo==='convenio'
+      ? (esUnitic() || tienePermiso('cms_convenios'))
+      : esUnitic();
+    btnNueva.style.display = puedeNuevo ? 'inline-flex' : 'none';
+    btnNueva.innerHTML = tipo==='convenio'
+      ? '<i class="fas fa-plus"></i> Agregar convenio'
+      : '<i class="fas fa-plus"></i> Nueva convocatoria';
+    btnNueva.onclick = tipo==='convenio'
+      ? function(){ abrirNuevoConvenioWeb(); }
+      : function(){ abrirModalItem(null); };
+  }
   var btnSync=document.getElementById('btn-sync-convenios');
   if(btnSync) btnSync.style.display=((esUnitic()||tienePermiso('cms_convenios'))&&(!tipo||tipo==='convenio'))?'inline-flex':'none';
   var filtroTipo=document.getElementById('items-filtro-tipo');
@@ -4891,33 +4891,27 @@ function renderTablaItems(items){
   var colorEstado={'DISPONIBLE':'#1a7a3a','EN PROCESO':'#856404','CERRADO':'#c0392b'};
   if(esVistaConvenio){
     el.innerHTML='<table class="t"><thead><tr>'
-      +'<th>Convenio (web)</th><th>Estado</th><th>Vacantes</th><th>Lugares</th><th>Horario</th><th>Inscripciones</th><th class="col-acciones">Acciones</th>'
+      +'<th>Convenio</th><th>Estado</th><th>Vac.</th><th>Lugares</th><th>Inscr.</th><th class="col-acciones">Acciones</th>'
       +'</tr></thead><tbody>'
       +items.map(function(item){
         var color=colorEstado[item.estado]||'#444';
         var nLugares=Array.isArray(item.cupos_unidades)?item.cupos_unidades.length:0;
-        var lugaresTxt=nLugares>0?(nLugares+' lugar'+(nLugares===1?'':'es')):(item.lugar?('1 · '+String(item.lugar).slice(0,28)):'Sin configurar');
+        var lugaresTxt=nLugares>0?String(nLugares):(item.lugar?'1':'—');
         var badge=item.inscripciones_abiertas
           ?'<span class="badge ok">Abiertas</span>'
           :'<span class="badge pend">Cerradas</span>';
         return '<tr>'
-          +'<td style="font-weight:600;max-width:240px;">'+escHtml(item.titulo)
-            +(item.descripcion?'<div style="font-size:11px;color:#666;font-weight:400;margin-top:2px;">'+escHtml(String(item.descripcion).slice(0,80))+'</div>':'')
-            +'</td>'
-          +'<td><span style="color:'+color+';font-weight:700;font-size:12px;">'+escHtml(item.estado)+'</span></td>'
+          +'<td style="font-weight:600;max-width:260px;font-size:12.5px;">'+escHtml(item.titulo)+'</td>'
+          +'<td><span style="color:'+color+';font-weight:700;font-size:11px;">'+escHtml(item.estado)+'</span></td>'
           +'<td style="text-align:center;">'+escHtml(item.vacantes||0)+'</td>'
-          +'<td style="font-size:12px;">'+escHtml(lugaresTxt)+'</td>'
-          +'<td style="font-size:11.5px;max-width:160px;color:#444;">'+escHtml(item.horario||'—')+'</td>'
+          +'<td style="text-align:center;font-size:12px;">'+escHtml(lugaresTxt)+'</td>'
           +'<td style="text-align:center;">'+badge+'</td>'
-          +'<td class="col-acciones"><div class="btn-acciones-celda">'
+          +'<td class="col-acciones"><div class="btn-acciones-celda" style="flex-direction:row;max-width:none;gap:4px;">'
           +(puedeEditarItemTipo(item.tipo)
-            ? '<button class="btn-mini btn-mini-ok" onclick="abrirModalItem('+item.id+')" title="Editar ficha web"><i class="fas fa-edit"></i> Editar web</button>'
+            ? '<button class="btn-mini btn-mini-ok" style="padding:3px 8px;width:auto;" onclick="abrirModalItem('+item.id+')" title="Editar"><i class="fas fa-edit"></i></button>'
             : '')
-          +'<a class="btn-mini" href="detalle.html?id='+encodeURIComponent(item.id)+'&tipo=convenio" target="_blank" rel="noopener" title="Ver ficha pública"><i class="fas fa-external-link-alt"></i> Ver</a>'
-          +(puedeEditarItemTipo(item.tipo)
-            ? '<button class="btn-mini" onclick="toggleInscripcionesItem('+item.id+')" title="Abrir/cerrar inscripciones"><i class="fas fa-door-open"></i></button>'
-            : '')
-          +(esUnitic()?'<button class="btn-mini btn-mini-danger" onclick="eliminarItem('+item.id+')"><i class="fas fa-trash"></i></button>':'')
+          +'<a class="btn-mini" style="padding:3px 7px;width:auto;text-decoration:none;" href="detalle.html?id='+encodeURIComponent(item.id)+'&tipo=convenio" target="_blank" rel="noopener" title="Ver"><i class="fas fa-external-link-alt"></i></a>'
+          +(esUnitic()?'<button class="btn-mini btn-mini-danger" style="padding:3px 7px;width:auto;" onclick="eliminarItem('+item.id+')" title="Eliminar"><i class="fas fa-trash"></i></button>':'')
           +'</div></td>'
           +'</tr>';
       }).join('')
@@ -5009,7 +5003,7 @@ function abrirModalItem(id){
   document.getElementById('mi-inscripciones-abiertas').checked=false;
   document.getElementById('mi-visible').checked=true;
   document.getElementById('mi-orden').value=0;
-  document.getElementById('mi-titulo').textContent='Nueva convocatoria';
+  document.getElementById('mi-titulo').textContent='Nuevo convenio';
   initSelectCupoAddNombre();
   renderListaCuposUnidadesUI();
   adaptarModalItemPorTipo(document.getElementById('mi-tipo').value || 'curso');
@@ -5075,42 +5069,26 @@ function poblarModalItem(item){
   document.getElementById('modal-item').classList.add('open');
 }
 
+function abrirNuevoConvenioWeb(){
+  if(!puedeEditarItemTipo('convenio')){ alert('Sin permiso.'); return; }
+  var filtro=document.getElementById('items-filtro-tipo');
+  if(filtro) filtro.value='convenio';
+  abrirModalItem(null);
+  document.getElementById('mi-tipo').value='convenio';
+  document.getElementById('mi-icono').value='fa-handshake';
+  document.getElementById('mi-titulo').textContent='Nuevo convenio';
+  adaptarModalItemPorTipo('convenio');
+}
+
 function adaptarModalItemPorTipo(tipo){
   var esConv = tipo === 'convenio';
   var banner = document.getElementById('mi-banner-web');
-  if(!banner){
-    var box = document.querySelector('#modal-item .modal-box');
-    if(box){
-      banner = document.createElement('div');
-      banner.id = 'mi-banner-web';
-      banner.style.cssText = 'display:none;margin:0 0 12px;padding:10px 12px;background:#e8f5f1;border:1px solid #c8e6c9;border-radius:8px;font-size:12.5px;color:#004d3d;line-height:1.45;';
-      var h3 = box.querySelector('h3');
-      if(h3 && h3.nextSibling) box.insertBefore(banner, h3.nextSibling);
-      else if(h3) h3.insertAdjacentElement('afterend', banner);
-    }
-  }
-  if(banner){
-    if(esConv){
-      var id = (document.getElementById('mi-id') || {}).value || '';
-      banner.style.display = 'block';
-      banner.innerHTML = '<strong><i class="fas fa-globe"></i> Ficha pública del convenio</strong><br/>'
-        + 'Estos campos son los que ve el efectivo en la web. Super Admin y Admin de Convenios editan lo mismo.'
-        + (id ? ' <a href="detalle.html?id='+encodeURIComponent(id)+'&tipo=convenio" target="_blank" rel="noopener" style="color:#004d3d;font-weight:800;">Ver ficha actual <i class="fas fa-external-link-alt"></i></a>' : '');
-    } else {
-      banner.style.display = 'none';
-      banner.innerHTML = '';
-    }
-  }
-  var labFecha = document.querySelector('label[for="mi-fecha-inicio"]') || (function(){
-    var inp = document.getElementById('mi-fecha-inicio');
-    return inp && inp.previousElementSibling && inp.previousElementSibling.tagName === 'LABEL' ? inp.previousElementSibling : null;
-  })();
-  // Labels por proximidad (el HTML no usa for=)
+  if(banner){ banner.style.display='none'; banner.innerHTML=''; }
   var pairs = [
-    ['mi-fecha-inicio', esConv ? 'Beneficio económico (web)' : 'Fecha de inicio / Beneficio económico'],
-    ['mi-duracion', esConv ? 'Detalle del beneficio (web)' : 'Duración / Detalle del beneficio'],
+    ['mi-fecha-inicio', esConv ? 'Beneficio económico (web)' : 'Fecha de inicio'],
+    ['mi-duracion', esConv ? 'Detalle del beneficio (web)' : 'Duración'],
     ['mi-horario', esConv ? 'Turnos / Horarios (web)' : 'Turnos / Horarios'],
-    ['mi-lugar', esConv ? 'Lugar general (si hay un solo sitio)' : 'Lugar de formación / presentación diaria'],
+    ['mi-lugar', esConv ? 'Lugar general' : 'Lugar de formación'],
     ['mi-descripcion', esConv ? 'Subtítulo de la tarjeta (web)' : 'Descripción / Subtítulo']
   ];
   pairs.forEach(function(p){
@@ -5123,6 +5101,11 @@ function adaptarModalItemPorTipo(tipo){
   if(cuposWrap) cuposWrap.style.display = esConv ? '' : 'none';
   var avisoWrap = document.getElementById('mi-aviso-sorteo-wrap');
   if(avisoWrap) avisoWrap.style.display = esConv ? '' : 'none';
+  var formUrl = document.getElementById('mi-wrap-form-url');
+  if(formUrl) formUrl.style.display = esConv ? 'none' : 'block';
+  // En convenio: icono/color opcionales pero visibles compactos; plantilla compacta
+  var plantilla = document.getElementById('mi-plantilla-wrap');
+  if(plantilla) plantilla.style.display = '';
 }
 
 function toggleInscripcionesItem(id){
