@@ -332,11 +332,14 @@ function renderDetalle(item){
 
   var infoHtml = '';
   if(item.horario) infoHtml += '<div class="info-item"><span>HORARIO:</span><p>'+escHtmlD(item.horario)+'</p></div>';
-  if(item.vacantes) infoHtml += '<div class="info-item"><span>VACANTES:</span><p>'+escHtmlD(String(item.vacantes))+' efectivos</p></div>';
-  if(item.lugar) infoHtml += '<div class="info-item"><span>LUGAR:</span><p>'+escHtmlD(item.lugar)+'</p></div>';
-  if(esConvenio && item.observaciones){
-    infoHtml += '<div class="info-item"><span>PLAZO:</span><p><strong>'+escHtmlD(item.observaciones)+'</strong></p></div>';
-  } else if(esCurso && (item.fecha_inicio || item.duracion || item.observaciones)){
+  // Convenios: vacantes van en CIAs/lugares; plazo de entrega va arriba
+  if(!esConvenio && item.vacantes) {
+    infoHtml += '<div class="info-item"><span>VACANTES:</span><p>'+escHtmlD(String(item.vacantes))+' efectivos</p></div>';
+  }
+  if(item.lugar && !(esConvenio && Array.isArray(item.cupos_unidades) && item.cupos_unidades.length > 1)) {
+    infoHtml += '<div class="info-item"><span>LUGAR:</span><p>'+escHtmlD(item.lugar)+'</p></div>';
+  }
+  if(esCurso && (item.fecha_inicio || item.duracion || item.observaciones)){
     if(item.fecha_inicio) infoHtml += '<div class="info-item"><span>FECHA DE INICIO:</span><p class="price" style="color:#004d3d;">'+escHtmlD(item.fecha_inicio)+'</p></div>';
     if(item.duracion) infoHtml += '<div class="info-item"><span>DURACIÓN:</span><p>'+escHtmlD(item.duracion)+'</p></div>';
     if(item.observaciones) infoHtml += '<div class="info-item"><small>* '+escHtmlD(item.observaciones)+'</small></div>';
@@ -346,7 +349,7 @@ function renderDetalle(item){
   }
   if(!infoHtml) infoHtml = '<p style="color:#888;font-size:13px;margin:0;">Sin datos publicados.</p>';
 
-  var infoTitulo = esConvenio ? 'HORARIOS / VACANTES / PLAZO' : 'HORARIOS / VACANTES / INICIO';
+  var infoTitulo = esConvenio ? 'HORARIO / INFORMACIÓN' : 'HORARIOS / VACANTES / INICIO';
 
   var cupos = Array.isArray(item.cupos_unidades) ? item.cupos_unidades.slice() : [];
   // Sin cupos configurados: mostrar un solo lugar (no forzar DIVOPUS 1)
@@ -400,6 +403,7 @@ function renderDetalle(item){
   }
 
   var ventanaTxt = item.ventana_inscripcion || '';
+  var plazoTxt = esConvenio ? String(item.observaciones || '').trim() : '';
   var btnRegistrar = '';
   var formHtml = '';
   if (puedeInscribir) {
@@ -427,6 +431,7 @@ function renderDetalle(item){
     +'</div>'
     +'<div class="detalle-meta">'
     +estadoBadge(item.estado)
+    +(plazoTxt ? '<p class="ventana-inscripcion-nota is-cerrada">'+escHtmlD(plazoTxt)+'</p>' : '')
     +(ventanaTxt ? '<p class="ventana-inscripcion-nota '+(item.inscripciones_abiertas?'is-abierta':'is-cerrada')+'">'+escHtmlD(ventanaTxt)+'</p>' : '')
     +'</div>'
     +'<div class="grid-detalles-duo">'
