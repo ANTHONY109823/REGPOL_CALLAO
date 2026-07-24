@@ -132,8 +132,8 @@
         </div>
         <div class="convenios-consulta-bar">
             <div class="convenios-consulta-texto">
-                <strong><i class="fas fa-search"></i> ¿Ya se inscribió?</strong>
-                <span>Ingrese su CIP y N° de inscripción para consultar su estado, ver el aviso del sorteo en Facebook o subir su expediente si resultó ganador.</span>
+                <strong id="convenios-barra-titulo"><i class="fas fa-search"></i> ¿Ya se inscribió?</strong>
+                <span id="convenios-barra-texto">Ingrese su CIP y N° de inscripción para consultar su estado, ver el aviso del sorteo en Facebook o subir su expediente si resultó ganador.</span>
             </div>
             <a href="consulta.html" class="btn-consulta-cip">
                 <i class="fas fa-id-card"></i> CONSULTA CIP + N°
@@ -236,7 +236,7 @@
 </div>
 
 <script src="portal-data.js?v=10"></script>
-<script src="portal.js?v=85"></script>
+<script src="portal.js?v=86"></script>
 <script>
     initPortalInicio();
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { cerrarNovedadModal(); cerrarModalRrhhPortal(); } });

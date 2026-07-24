@@ -126,6 +126,11 @@ function initCMS() {
       visible: true
     };
     if (!cmsDataActual.descansosPortal) cmsDataActual.descansosPortal = descansosPortalDefault();
+    if (!cmsDataActual.conveniosBarra) cmsDataActual.conveniosBarra = {
+      titulo: '¿Ya se inscribió?',
+      texto: 'Ingrese su CIP y N° de inscripción para consultar su estado, ver el aviso del sorteo en Facebook o subir su expediente si resultó ganador.',
+      avisoSorteoFb: 'El sorteo en vivo se realizará por la página de Facebook REGPOL Callao. Se notificará al cerrar preinscripciones.'
+    };
     cmsDataActual.navOcultos = normalizarNavOcultosLista(cmsDataActual.navOcultos);
     poblarFormulariosCMS();
     renderListasCMS();
@@ -215,12 +220,18 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
   var puedeEditar = typeof puedeEditarItemTipo === 'function' && puedeEditarItemTipo(tipo);
 
   if (esConv) {
+    var btnUnitic = (typeof esUnitic === 'function' && esUnitic())
+      ? '<button type="button" class="btn-mini" onclick="abrirAvisoConveniosFront()" title="Solo Super Admin">'
+        + '<i class="fab fa-facebook" style="color:#1877f2;"></i> Aviso frontend</button>'
+      : '';
     el.innerHTML = '<div style="margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;max-width:920px;margin-left:auto;margin-right:auto;">'
       + '<div style="font-size:14px;font-weight:800;color:#004d3d;"><i class="fas fa-handshake"></i> Convenios en la web</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">'
+      + btnUnitic
       + (puedeEditar
         ? '<button type="button" class="btn-mini btn-mini-ok" onclick="abrirNuevoConvenioWeb()"><i class="fas fa-plus"></i> Agregar convenio</button>'
         : '')
-      + '</div>'
+      + '</div></div>'
       + '<div id="cms-live-' + tipo + '" style="border:1px solid #e0e8e0;border-radius:8px;overflow:hidden;max-width:920px;margin:0 auto;">'
       + '<p style="color:#888;font-size:12px;padding:14px;margin:0;">Cargando...</p></div>';
   } else {

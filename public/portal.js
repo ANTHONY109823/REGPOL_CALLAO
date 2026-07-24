@@ -455,10 +455,23 @@ function obtenerSiteDataSync() {
   return null;
 }
 
+function aplicarConveniosBarra(data) {
+  var barra = (data && data.conveniosBarra) || {};
+  var tit = document.getElementById('convenios-barra-titulo');
+  var txt = document.getElementById('convenios-barra-texto');
+  if (tit && barra.titulo) {
+    tit.innerHTML = '<i class="fas fa-search"></i> ' + String(barra.titulo).replace(/</g, '&lt;');
+  }
+  if (txt && barra.texto) {
+    txt.textContent = barra.texto;
+  }
+}
+
 function aplicarPortalConfig(config, data) {
   if (!data) return;
   aplicarEncabezadoMarca(data);
   aplicarTopbarLinks(data);
+  aplicarConveniosBarra(data);
   if (config.renderResena) renderResenaHistorica(data, config.renderResena);
   if (config.renderLabor) renderNuestraLabor(data, config.renderLabor);
   if (config.renderBienestar) renderBienestarPolicial(data, config.renderBienestar);

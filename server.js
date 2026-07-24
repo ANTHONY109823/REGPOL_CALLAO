@@ -6256,6 +6256,44 @@ app.post('/admin/inscripciones/:id/notificar', requireAuth, async (req, res) => 
 });
 
 // ── POST /admin/sync-convenios — asegurar los 11 convenios + flujo tipo Celador ─
+// ── PUT /admin/convenios/aviso-frontend — solo Super Admin ─────────────────────
+app.put('/admin/convenios/aviso-frontend', requireAuth, async (req, res) => {
+  try {
+    if (req.admin.rol !== 'unitic')
+      return res.status(403).json({ ok: false, error: 'Solo el Super Admin puede editar el aviso del frontend.' });
+    const aviso = String((req.body && req.body.aviso_sorteo_fb) || '').trim();
+    if (!aviso) return res.json({ ok: false, error: 'El aviso de sorteo Facebook es obligatorio.' });
+    const r = await pool.query(
+      `UPDATE items_portal SET aviso_sorteo_fb=$1, actualizado=NOW()
+       WHERE tipo='convenio' AND visible=TRUE`,
+      [aviso.slice(0, 2000)]
+    );
+    try {
+      const titulo = String((req.body && req.body.titulo) || '').trim();
+      const texto = String((req.body && req.body.texto) || '').trim();
+      const cmsR = await pool.query('SELECT data_json FROM portal_configuracion WHERE id=1');
+      if (cmsR.rows.length) {
+        const data = typeof cmsR.rows[0].data_json === 'string'
+          ? JSON.parse(cmsR.rows[0].data_json)
+          : (cmsR.rows[0].data_json || {});
+        data.conveniosBarra = {
+          titulo: titulo || '¿Ya se inscribió?',
+          texto: texto || ((data.conveniosBarra && data.conveniosBarra.texto) || ''),
+          avisoSorteoFb: aviso
+        };
+        await pool.query(
+          'UPDATE portal_configuracion SET data_json=$1, updated_at=NOW() WHERE id=1',
+          [JSON.stringify(data)]
+        );
+      }
+    } catch (eCms) {
+      console.warn('aviso-frontend CMS:', eCms.message);
+    }
+    invalidarPortalItemsCache();
+    res.json({ ok: true, actualizados: r.rowCount || 0 });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 app.post('/admin/sync-convenios', requireAuth, async (req, res) => {
   try {
     if (req.admin.rol !== 'unitic' && !puedeGestionarItem(req.admin, 'convenio'))

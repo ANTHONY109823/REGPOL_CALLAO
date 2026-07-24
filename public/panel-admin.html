@@ -1612,7 +1612,7 @@
         <label>Ventana de inscripción</label>
         <input type="text" id="mi-ventana-inscripcion" placeholder="Las inscripciones se habilitan del 20 al 25 de cada mes." maxlength="300"/>
       </div>
-      <div style="grid-column:1/-1;" id="mi-aviso-sorteo-wrap">
+      <div style="grid-column:1/-1;display:none;" id="mi-aviso-sorteo-wrap">
         <label><i class="fab fa-facebook" style="color:#1877f2;"></i> Aviso sorteo Facebook</label>
         <textarea id="mi-aviso-sorteo-fb" rows="2" placeholder="Aviso del sorteo en vivo"></textarea>
       </div>
@@ -1644,6 +1644,34 @@
     <div class="modal-footer" style="margin-top:12px;gap:6px;">
       <button class="btn-mini" style="background:#999;color:#fff;border-color:#999;" onclick="cerrarModal('modal-item')">Cancelar</button>
       <button class="btn-mini btn-mini-ok" onclick="guardarItem()"><i class="fas fa-save"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-aviso-convenios-front" class="modal">
+  <div class="modal-box" style="width:560px;max-height:92vh;overflow-y:auto;">
+    <h3><i class="fab fa-facebook" style="color:#1877f2;"></i> Aviso frontend — Convenios</h3>
+    <p style="font-size:12px;color:#666;margin:-4px 0 12px;line-height:1.4;">
+      Solo Super Admin. Edita la barra «¿Ya se inscribió?» y el aviso de sorteo Facebook que se muestra en el portal.
+    </p>
+    <div style="display:grid;gap:10px;">
+      <div>
+        <label>Título de la barra (sección Convenios)</label>
+        <input type="text" id="acf-titulo" maxlength="120" placeholder="¿Ya se inscribió?"/>
+      </div>
+      <div>
+        <label>Texto de la barra</label>
+        <textarea id="acf-texto" rows="3" maxlength="400" placeholder="Ingrese su CIP y N° de inscripción..."></textarea>
+      </div>
+      <div>
+        <label><i class="fab fa-facebook" style="color:#1877f2;"></i> Aviso sorteo Facebook (fichas / consulta)</label>
+        <textarea id="acf-aviso-fb" rows="3" maxlength="500" placeholder="El sorteo en vivo se realizará por la página de Facebook REGPOL Callao..."></textarea>
+        <p style="font-size:11px;color:#888;margin:4px 0 0;">Se aplica a todos los convenios visibles.</p>
+      </div>
+    </div>
+    <div class="modal-footer" style="margin-top:14px;gap:6px;">
+      <button class="btn-mini" style="background:#999;color:#fff;border-color:#999;" onclick="cerrarModal('modal-aviso-convenios-front')">Cancelar</button>
+      <button class="btn-mini btn-mini-ok" onclick="guardarAvisoConveniosFront()"><i class="fas fa-save"></i> Guardar y publicar</button>
     </div>
   </div>
 </div>
@@ -2148,7 +2176,7 @@
 <script src="portal-data.js?v=10"></script>
 <script src="portal.js?v=85"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=37"></script>
+<script src="panel-cms.js?v=38"></script>
 <script src="panel-descansos.js?v=4"></script>
 <script src="panel-faltos.js?v=1"></script>
 <script src="panel-rrhh.js?v=3"></script>
@@ -5134,6 +5162,57 @@ function abrirNuevoConvenioWeb(){
   adaptarModalItemPorTipo('convenio');
 }
 
+function abrirAvisoConveniosFront(){
+  if(!esUnitic()){ alert('Solo el Super Admin puede editar el aviso del frontend.'); return; }
+  var barra = (typeof cmsDataActual !== 'undefined' && cmsDataActual && cmsDataActual.conveniosBarra)
+    ? cmsDataActual.conveniosBarra : {};
+  document.getElementById('acf-titulo').value = barra.titulo || '¿Ya se inscribió?';
+  document.getElementById('acf-texto').value = barra.texto
+    || 'Ingrese su CIP y N° de inscripción para consultar su estado, ver el aviso del sorteo en Facebook o subir su expediente si resultó ganador.';
+  var avisoDef = 'El sorteo en vivo se realizará por la página de Facebook REGPOL Callao. Se notificará al cerrar preinscripciones.';
+  var aviso = barra.avisoSorteoFb || '';
+  if(!aviso && typeof ITEMS_CACHE !== 'undefined' && ITEMS_CACHE && ITEMS_CACHE.length){
+    var conAviso = ITEMS_CACHE.find(function(i){ return i.tipo==='convenio' && i.aviso_sorteo_fb; });
+    if(conAviso) aviso = conAviso.aviso_sorteo_fb;
+  }
+  document.getElementById('acf-aviso-fb').value = aviso || avisoDef;
+  document.getElementById('modal-aviso-convenios-front').classList.add('open');
+}
+
+function guardarAvisoConveniosFront(){
+  if(!esUnitic()){ alert('Solo el Super Admin.'); return; }
+  var titulo = (document.getElementById('acf-titulo').value || '').trim() || '¿Ya se inscribió?';
+  var texto = (document.getElementById('acf-texto').value || '').trim();
+  var aviso = (document.getElementById('acf-aviso-fb').value || '').trim();
+  if(!texto){ alert('Escriba el texto de la barra.'); return; }
+  if(!aviso){ alert('Escriba el aviso de sorteo Facebook.'); return; }
+
+  fetch(API + '/admin/convenios/aviso-frontend', {
+    method: 'PUT',
+    headers: hdr(),
+    body: JSON.stringify({ aviso_sorteo_fb: aviso, titulo: titulo, texto: texto })
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d || !d.ok){ alert((d && d.error) || 'No se pudo guardar.'); return; }
+      if(typeof cmsDataActual !== 'undefined' && cmsDataActual){
+        cmsDataActual.conveniosBarra = { titulo: titulo, texto: texto, avisoSorteoFb: aviso };
+      }
+      if(typeof ITEMS_CACHE !== 'undefined' && Array.isArray(ITEMS_CACHE)){
+        ITEMS_CACHE.forEach(function(it){
+          if(it && it.tipo === 'convenio') it.aviso_sorteo_fb = aviso;
+        });
+      }
+      cerrarModal('modal-aviso-convenios-front');
+      if(typeof mostrarAlertaCMS === 'function'){
+        mostrarAlertaCMS('Aviso del frontend actualizado ('+(d.actualizados||0)+' convenios).', 'ok');
+      } else {
+        alert('Aviso del frontend actualizado.');
+      }
+    })
+    .catch(function(){ alert('Error de conexión.'); });
+}
+
 function esTituloCelador(titulo){
   return String(titulo || '').toUpperCase().indexOf('CELADOR') !== -1;
 }
@@ -5179,7 +5258,7 @@ function adaptarModalItemPorTipo(tipo){
   show('mi-wrap-vacantes', true);
   show('mi-cupos-wrap', esConv);
   show('mi-turnos-wrap', esConv);
-  show('mi-aviso-sorteo-wrap', esConv);
+  show('mi-aviso-sorteo-wrap', false);
   show('mi-wrap-icono', true);
 
   var labFecha = document.getElementById('mi-lab-fecha');
@@ -5583,7 +5662,13 @@ function guardarItem(){
     contactos_responsables:val('mi-contactos'),
     observaciones:val('mi-observaciones'),
     ventana_inscripcion:val('mi-ventana-inscripcion'),
-    aviso_sorteo_fb:val('mi-aviso-sorteo-fb'),
+    aviso_sorteo_fb:(function(){
+      if(id){
+        var prev=(ITEMS_CACHE||[]).find(function(i){ return parseInt(i.id,10)===parseInt(id,10); });
+        return prev ? (prev.aviso_sorteo_fb || '') : '';
+      }
+      return '';
+    })(),
     formulario_url:val('mi-formulario-url'),
     inscripciones_abiertas:document.getElementById('mi-inscripciones-abiertas').checked,
     visible:document.getElementById('mi-visible').checked,
