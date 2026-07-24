@@ -96,15 +96,23 @@ function htmlTarjetaPortalItem(item) {
     ? '<span style="display:inline-block;background:#d4edda;color:#1a7a3a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:4px;">\u2713 Inscripciones abiertas</span>'
     : '';
   var tipo = item.tipo || 'convenio';
+  var esConvenio = tipo === 'convenio';
   var icono = item.icono || (tipo === 'curso' ? 'fa-graduation-cap' : 'fa-handshake');
+  var vacNum = parseInt(item.vacantes, 10) || 0;
+  var vacHtml = vacNum > 0
+    ? '<p class="card-vacantes"><i class="fas fa-users" aria-hidden="true"></i> <strong>' + escHtml(String(vacNum)) + '</strong> vacantes</p>'
+    : '';
+  var descHtml = (!esConvenio && item.descripcion)
+    ? '<p class="card-desc">' + escHtml(item.descripcion) + '</p>'
+    : '';
   return '<a href="detalle.html?id=' + item.id + '&tipo=' + tipo + '">' +
-    '<div class="card-modern">' +
+    '<div class="card-modern' + (esConvenio ? ' card-modern--convenio' : '') + '">' +
       '<div class="icon-wrapper" style="background:' + escHtml(item.color || '#004d3d') + ';">' +
         '<i class="fas ' + escHtml(icono) + '"></i>' +
       '</div>' +
       '<h4>' + escHtml(item.titulo) + '</h4>' +
-      '<p>' + escHtml(item.descripcion || '') + '</p>' +
-      (item.vacantes ? '<p style="font-size:12px;color:#666;"><i class="fas fa-users" style="margin-right:4px;"></i>' + escHtml(String(item.vacantes)) + ' vacantes</p>' : '') +
+      descHtml +
+      vacHtml +
       '<span class="card-estado" style="color:' + colorEstado + ';">' + escHtml(item.estado) + '</span>' +
       inscBadge +
     '</div></a>';
