@@ -522,7 +522,7 @@ async function initDB() {
       vacantes        INTEGER DEFAULT 0,
       fecha_inicio    VARCHAR(100) DEFAULT '',
       duracion        VARCHAR(100) DEFAULT '',
-      lugar           VARCHAR(200) DEFAULT '',
+      lugar           VARCHAR(500) DEFAULT '',
       observaciones   TEXT DEFAULT '',
       formulario_url  VARCHAR(500) DEFAULT '',
       inscripciones_abiertas BOOLEAN DEFAULT FALSE,
@@ -562,6 +562,8 @@ async function initDB() {
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS tiempo_servicio VARCHAR(50) DEFAULT '';
     CREATE INDEX IF NOT EXISTS idx_inscripciones_cip ON inscripciones(cip);
 
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS lugar VARCHAR(200) DEFAULT '';
+    ALTER TABLE items_portal ALTER COLUMN lugar TYPE VARCHAR(500);
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS plantilla_pdf TEXT DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS plantilla_nombre VARCHAR(200) DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS ventana_inscripcion VARCHAR(300) DEFAULT '';
@@ -4649,7 +4651,8 @@ function normalizarCuposUnidades(raw) {
     if (isNaN(inscritos) || inscritos < 0) inscritos = 0;
     var disponibles = parseInt(c.disponibles, 10);
     if (isNaN(disponibles) || disponibles < 0) disponibles = Math.max(0, vacantes - inscritos);
-    return { nombre: nombre, vacantes: vacantes, inscritos: inscritos, disponibles: disponibles };
+    var direccion = String(c.direccion || c.direccion_lugar || '').trim();
+    return { nombre: nombre, vacantes: vacantes, inscritos: inscritos, disponibles: disponibles, direccion: direccion };
   }).filter(Boolean);
 }
 
@@ -5401,6 +5404,12 @@ const CONTACTOS_CONV_DEFAULT =
 const UNIFORME_CONV_DEFAULT =
   'Uniforme de faena completo (camisa, pantalón, correa y fornitura reglamentaria).';
 const DIVOPUS_CELADOR_LUGARES = ['DIVOPUS 01', 'DIVOPUS 02', 'DIVOPUS 03'];
+/** Dirección por DIVOPUS (referencia: CIA Callao / Ingunza / Ventanilla). */
+const DIVOPUS_CELADOR_DIR = {
+  'DIVOPUS 01': 'Av. Fernandini / Jr. Supe (CIA Callao)',
+  'DIVOPUS 02': 'Tomás Valle Cuadra 34 (CIA Juan Ingunza)',
+  'DIVOPUS 03': 'Av. Pedro Beltrán N° 138 (CIA Ventanilla)'
+};
 
 /** Cupos efectivos: multi-lugar si hay cupos_unidades; si no, un solo lugar (como ficha web). */
 function cuposEfectivosItem(item) {
@@ -5409,17 +5418,27 @@ function cuposEfectivosItem(item) {
   var totalVac = parseInt(item && item.vacantes, 10) || 0;
   var nombre = String((item && (item.lugar || item.titulo)) || '').trim() || 'Lugar del convenio';
   if (totalVac <= 0) return [];
-  return [{ nombre: nombre, vacantes: totalVac, inscritos: 0, disponibles: totalVac }];
+  return [{ nombre: nombre, vacantes: totalVac, inscritos: 0, disponibles: totalVac, direccion: '' }];
 }
 
-function plantillaCuposDivopusCelador(vacantesTotales) {
+function plantillaCuposDivopusCelador(vacantesTotales, prevCupos) {
   var total = parseInt(vacantesTotales, 10) || 0;
   var n = DIVOPUS_CELADOR_LUGARES.length;
   var base = n ? Math.floor(total / n) : 0;
   var resto = n ? total % n : 0;
+  var prevPorNombre = {};
+  (Array.isArray(prevCupos) ? prevCupos : []).forEach(function(c) {
+    var k = String((c && c.nombre) || '').trim().toUpperCase();
+    if (k) prevPorNombre[k] = c;
+  });
   return DIVOPUS_CELADOR_LUGARES.map(function(nombre, idx) {
     var vac = base + (idx < resto ? 1 : 0);
-    return { nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac };
+    var prev = prevPorNombre[nombre];
+    var insc = prev ? (parseInt(prev.inscritos, 10) || 0) : 0;
+    var dirPrev = prev && String(prev.direccion || '').trim();
+    var dirMala = !dirPrev || /^DIVOPUS\s*0[123]$/i.test(dirPrev) || dirPrev === nombre;
+    var dir = dirMala ? (DIVOPUS_CELADOR_DIR[nombre] || '') : dirPrev;
+    return { nombre: nombre, vacantes: vac, inscritos: insc, disponibles: Math.max(0, vac - insc), direccion: dir };
   });
 }
 
@@ -5431,13 +5450,13 @@ function cuposParaGuardarItem(titulo, cupos_unidades, vacantes) {
     return /^DIVOPUS\s*0[123]$/i.test(String(c.nombre || '').trim());
   });
   if (soloDiv.length) return soloDiv;
-  return plantillaCuposDivopusCelador(vacantes);
+  return plantillaCuposDivopusCelador(vacantes, cupos);
 }
 
-function plantillaCupoUnico(nombre, vacantesTotales) {
+function plantillaCupoUnico(nombre, vacantesTotales, direccion) {
   var vac = parseInt(vacantesTotales, 10) || 0;
   var nom = String(nombre || '').trim() || 'Lugar del convenio';
-  return [{ nombre: nom, vacantes: vac, inscritos: 0, disponibles: vac }];
+  return [{ nombre: nom, vacantes: vac, inscritos: 0, disponibles: vac, direccion: String(direccion || '').trim() }];
 }
 
 /**
@@ -5542,7 +5561,7 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
       row.turnos = turnos;
       turnosCargados++;
       if (cfg.redistribuirCupos || esCelador) {
-        const nuevos = plantillaCuposDivopusCelador(vacTotal);
+        const nuevos = plantillaCuposDivopusCelador(vacTotal, normalizarCuposUnidades(row.cupos_unidades));
         await db.query(
           'UPDATE items_portal SET cupos_unidades=$1::jsonb WHERE id=$2',
           [JSON.stringify(nuevos), row.id]
@@ -5560,13 +5579,35 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
           return String(c.nombre || '').toUpperCase() === DIVOPUS_CELADOR_LUGARES[i];
         });
       if (!yaDivopus) {
-        const nuevos = plantillaCuposDivopusCelador(vac);
+        const nuevos = plantillaCuposDivopusCelador(vac, cuposActuales);
         await db.query(
           'UPDATE items_portal SET cupos_unidades=$1::jsonb WHERE id=$2',
           [JSON.stringify(nuevos), row.id]
         );
         cuposActualizados++;
         row.cupos_unidades = nuevos;
+      } else {
+        // Completar / corregir dirección por DIVOPUS si falta o es inválida
+        let needDir = false;
+        const conDir = cuposActuales.map(function(c) {
+          var nom = String(c.nombre || '').trim().toUpperCase();
+          var dir = String(c.direccion || '').trim();
+          var dirMala = !dir || /^DIVOPUS\s*0[123]$/i.test(dir) || dir.toUpperCase() === nom;
+          var dirOk = DIVOPUS_CELADOR_DIR[nom] || DIVOPUS_CELADOR_DIR[c.nombre] || '';
+          if (dirMala && dirOk) {
+            needDir = true;
+            return Object.assign({}, c, { direccion: dirOk });
+          }
+          return c;
+        });
+        if (needDir) {
+          await db.query(
+            'UPDATE items_portal SET cupos_unidades=$1::jsonb WHERE id=$2',
+            [JSON.stringify(conDir), row.id]
+          );
+          cuposActualizados++;
+          row.cupos_unidades = conDir;
+        }
       }
     } else if (!cuposActuales.length) {
       const vac = parseInt(row.vacantes, 10) || 0;

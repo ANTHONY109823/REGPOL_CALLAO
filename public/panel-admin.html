@@ -107,9 +107,9 @@
       font-size:11px;text-transform:uppercase;letter-spacing:.35px;}
     table.t td select,table.t td input[type="text"]{width:100%;min-width:120px;
       padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;box-sizing:border-box;}
-    table.t td .btn-acciones-celda{display:flex;flex-direction:column;flex-wrap:nowrap;gap:4px;align-items:stretch;max-width:112px;}
-    table.t td .btn-acciones-celda .btn-mini{justify-content:center;width:100%;box-sizing:border-box;font-size:11px;padding:5px 6px;}
-    table.t th.col-acciones,table.t td.col-acciones{min-width:118px;vertical-align:top;}
+    table.t td .btn-acciones-celda{display:flex;flex-direction:row;flex-wrap:wrap;gap:4px;align-items:center;max-width:none;}
+    table.t td .btn-acciones-celda .btn-mini{justify-content:center;width:auto;box-sizing:border-box;font-size:11px;padding:4px 8px;}
+    table.t th.col-acciones,table.t td.col-acciones{min-width:160px;vertical-align:middle;}
     table.t td{padding:7px 10px;border-bottom:1px solid #eee;}
     table.t tr:nth-child(even){background:#f7faf7;}
     .badge{padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700;}
@@ -539,9 +539,6 @@
           </div>
           <div class="sb-item" data-page="conv-repechaje" onclick="irConvRepechaje(this)">
             <i class="fas fa-redo"></i> 3. REPECHAJE
-          </div>
-          <div class="sb-item" data-page="items-convenio" data-perm-cms-convenios onclick="irGestionItems('convenio',this)">
-            <i class="fas fa-globe"></i> 4. EDITAR EN LA WEB
           </div>
         </div>
       </div>
@@ -1094,9 +1091,7 @@
     <div id="page-items" class="page">
       <div class="card">
         <h3 id="items-titulo"><i class="fas fa-clipboard-list"></i> Convocatorias</h3>
-        <p id="items-ayuda-web" style="display:none;font-size:12px;color:#666;line-height:1.45;margin:-4px 0 10px;">
-          Vacantes, lugares, horario y requisitos se editan en <strong>Editar</strong>. Activo e inscripciones se guardan en la fila.
-        </p>
+        <p id="items-ayuda-web" style="display:none;font-size:12px;color:#666;line-height:1.45;margin:-4px 0 10px;"></p>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
           <button class="btn-mini btn-mini-ok" id="btn-nueva-convocatoria" onclick="abrirNuevoConvenioWeb()" style="display:none;"><i class="fas fa-plus"></i> Agregar convenio</button>
           <button class="btn-mini" id="btn-sync-convenios" onclick="syncConveniosOficiales()" style="display:none;"><i class="fas fa-sync"></i> Sync 11</button>
@@ -1566,11 +1561,20 @@
         </div>
         <div id="mi-turnos-lista" style="margin-bottom:4px;"></div>
         <textarea id="mi-turnos" rows="2" style="display:none;"></textarea>
-        <p id="mi-turnos-ayuda" style="font-size:10.5px;color:#888;margin:4px 0 0;">Al guardar, las vacantes totales se actualizan con la suma de turnos.</p>
+        <p id="mi-turnos-ayuda" style="display:none;"></p>
       </div>
       <div style="grid-column:1/-1;display:none;" id="mi-wrap-lugar">
-        <label id="mi-lab-lugar">Lugar</label>
-        <input type="text" id="mi-lugar" placeholder="" maxlength="200"/>
+        <label id="mi-lab-lugar"><i class="fas fa-map-marker-alt"></i> Lugar</label>
+        <input type="text" id="mi-lugar" maxlength="200"
+          placeholder="Ej: Municipalidad Distrital Ventanilla / Sede municipal Callao"
+          style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;"/>
+        <p id="mi-lugar-ayuda" style="display:none;font-size:10.5px;color:#666;margin:6px 0 0;line-height:1.35;">Se muestra en la ficha pública en la sección LUGAR.</p>
+      </div>
+      <div style="grid-column:1/-1;display:none;" id="mi-wrap-labor">
+        <label id="mi-lab-labor"><i class="fas fa-briefcase"></i> Labor</label>
+        <textarea id="mi-labor" rows="2" maxlength="500"
+          placeholder="Breve descripción del trabajo"
+          style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;resize:vertical;"></textarea>
       </div>
       <div style="grid-column:1/-1;display:none;" id="mi-wrap-uniforme">
         <label>Uniforme autorizado</label>
@@ -1602,21 +1606,11 @@
         <textarea id="mi-cupos-unidades" rows="2" style="display:none;"></textarea>
       </div>
       <div style="grid-column:1/-1;display:none;" id="mi-wrap-ventana">
-        <label id="mi-lab-ventana"><i class="fas fa-bullhorn"></i> Aviso en la ficha (cuadro rosa / verde)</label>
+        <label id="mi-lab-ventana"><i class="fas fa-bullhorn"></i> Aviso</label>
         <textarea id="mi-ventana-inscripcion" rows="2" maxlength="400"
-          placeholder="Ej: Las inscripciones se habilitan del 20 al 25 de cada mes. Entrega de documentos hasta el jueves 30 de julio 2026."
+          placeholder="Plazos e instrucciones para la ficha"
           style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;resize:vertical;"></textarea>
-        <div id="mi-ventana-tools" style="display:none;margin-top:8px;padding:8px;background:#f4f8f6;border:1px solid #d5e5dc;border-radius:7px;">
-          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
-            <div style="flex:1;min-width:140px;">
-              <label style="font-size:10px;margin:0;display:block;">Fecha de entrega (calendario)</label>
-              <input type="date" id="mi-plazo-fecha" style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;"/>
-            </div>
-            <button type="button" class="btn-mini btn-mini-ok" style="padding:5px 8px;" onclick="aplicarFechaEntregaAVentana()"><i class="fas fa-calendar-check"></i> Poner plazo</button>
-            <button type="button" class="btn-mini" style="padding:5px 8px;" onclick="setVentanaInscripcionesAbiertas()"><i class="fas fa-door-open"></i> Texto inscripciones</button>
-          </div>
-          <p style="font-size:10.5px;color:#666;margin:6px 0 0;line-height:1.35;">Este texto se muestra en la ficha web del convenio (banner superior). Editable por Admin de Convenios y Super Admin.</p>
-        </div>
+        <div id="mi-ventana-tools" style="display:none;"></div>
       </div>
       <div style="grid-column:1/-1;display:none;" id="mi-aviso-sorteo-wrap">
         <label><i class="fab fa-facebook" style="color:#1877f2;"></i> Aviso sorteo Facebook</label>
@@ -1633,18 +1627,18 @@
       </div>
     </div>
 
-    <div id="mi-plantilla-wrap" style="margin-top:12px;padding:10px;border:1px solid #e8e0c8;border-radius:7px;background:#fffcf5;">
-      <div style="font-size:12px;font-weight:700;color:#8a7340;margin-bottom:6px;"><i class="fas fa-file-pdf"></i> Plantilla PDF (expediente)</div>
-      <div id="mi-plantilla-actual" style="display:none;margin-bottom:6px;align-items:center;gap:8px;">
-        <i class="fas fa-file-pdf" style="color:#e74c3c;"></i>
-        <span id="mi-plantilla-nombre" style="font-size:11.5px;font-weight:600;flex:1;"></span>
-        <button type="button" class="btn-mini btn-mini-danger" style="padding:3px 7px;" onclick="quitarPlantillaItem()"><i class="fas fa-trash"></i></button>
+    <div id="mi-plantilla-wrap" style="margin-top:8px;padding:6px 8px;border:1px solid #e8e0c8;border-radius:6px;background:#fffcf5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+      <span style="font-size:11px;font-weight:700;color:#8a7340;white-space:nowrap;"><i class="fas fa-file-pdf"></i> Plantilla PDF</span>
+      <div id="mi-plantilla-actual" style="display:none;align-items:center;gap:6px;flex:1;min-width:120px;">
+        <i class="fas fa-file-pdf" style="color:#e74c3c;font-size:12px;"></i>
+        <span id="mi-plantilla-nombre" style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;"></span>
+        <button type="button" class="btn-mini btn-mini-danger" style="padding:2px 5px;font-size:10px;" onclick="quitarPlantillaItem()" title="Quitar"><i class="fas fa-trash"></i></button>
       </div>
-      <label style="font-size:11px;color:#666;display:block;margin-bottom:3px;"><span id="mi-plantilla-label">Subir PDF</span></label>
+      <label style="font-size:10px;color:#888;margin:0;"><span id="mi-plantilla-label">Subir</span></label>
       <input type="file" id="mi-plantilla-file" accept="application/pdf" onchange="cargarPlantillaItem(this)"
-             style="width:100%;padding:5px;border:1px solid #ccc;border-radius:5px;font-size:12px;"/>
+             style="flex:1;min-width:140px;max-width:220px;padding:2px;border:1px solid #ccc;border-radius:4px;font-size:11px;"/>
       <input type="hidden" id="mi-plantilla-data"/>
-      <p style="font-size:10.5px;color:#888;margin:6px 0 0;" id="mi-plantilla-ayuda">Máx. 10 MB. Solo PDF.</p>
+      <span id="mi-plantilla-ayuda" style="display:none;"></span>
     </div>
 
     <div class="modal-footer" style="margin-top:12px;gap:6px;">
@@ -2182,7 +2176,7 @@
 <script src="portal-data.js?v=10"></script>
 <script src="portal.js?v=85"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=38"></script>
+<script src="panel-cms.js?v=40"></script>
 <script src="panel-descansos.js?v=4"></script>
 <script src="panel-faltos.js?v=1"></script>
 <script src="panel-rrhh.js?v=3"></script>
@@ -4869,7 +4863,7 @@ function cargarPlantillaItem(input){
     document.getElementById('mi-plantilla-data').value=e.target.result;
     document.getElementById('mi-plantilla-nombre').textContent=file.name+' ('+Math.round(file.size/1024)+' KB)';
     document.getElementById('mi-plantilla-actual').style.display='flex';
-    document.getElementById('mi-plantilla-label').textContent='Reemplazar plantilla';
+    document.getElementById('mi-plantilla-label').textContent='Cambiar';
   };
   reader.readAsDataURL(file);
 }
@@ -4878,7 +4872,7 @@ function quitarPlantillaItem(){
   document.getElementById('mi-plantilla-data').value='__QUITAR__';
   document.getElementById('mi-plantilla-file').value='';
   document.getElementById('mi-plantilla-actual').style.display='none';
-  document.getElementById('mi-plantilla-label').textContent='Seleccionar plantilla PDF';
+  document.getElementById('mi-plantilla-label').textContent='Subir';
 }
 
 var INSCRITOS_CACHE = [];
@@ -4946,7 +4940,7 @@ function renderTablaItems(items){
   var colorEstado={'DISPONIBLE':'#1a7a3a','EN PROCESO':'#856404','CERRADO':'#c0392b'};
   if(esVistaConvenio){
     el.innerHTML='<table class="t"><thead><tr>'
-      +'<th>Convenio</th><th>Vacantes</th><th>Lugares</th><th style="text-align:center;">Activo</th><th style="text-align:center;">Inscr.</th><th class="col-acciones">Acciones</th>'
+      +'<th>Convenio</th><th>Vacantes</th><th>Lugares</th><th style="text-align:center;">Activo</th><th style="text-align:center;">Inscripciones</th><th class="col-acciones">Acciones</th>'
       +'</tr></thead><tbody>'
       +items.map(function(item){
         var activo=String(item.estado||'').toUpperCase()!=='CERRADO';
@@ -4961,11 +4955,10 @@ function renderTablaItems(items){
           +'<td style="text-align:center;"><input type="checkbox" id="cv-insc-'+id+'" '+(item.inscripciones_abiertas?'checked':'')+' style="width:16px;height:16px;accent-color:#004d3d;cursor:pointer;" onchange="marcarLineaConvenioDirty('+id+')"/></td>'
           +'<td class="col-acciones"><div class="btn-acciones-celda" style="flex-direction:row;max-width:none;gap:4px;">'
           +(puedeEditarItemTipo(item.tipo)
-            ? '<button class="btn-mini btn-mini-ok" style="padding:3px 7px;width:auto;" onclick="abrirModalItem('+id+')" title="Editar ficha"><i class="fas fa-edit"></i></button>'
-              +'<button class="btn-mini" id="cv-btn-save-'+id+'" style="padding:3px 7px;width:auto;" onclick="guardarLineaConvenio('+id+')" title="Guardar línea"><i class="fas fa-save"></i></button>'
+            ? '<button class="btn-mini btn-mini-ok" style="padding:4px 8px;width:auto;" onclick="abrirModalItem('+id+')">Editar</button>'
+              +'<button class="btn-mini" id="cv-btn-save-'+id+'" style="padding:4px 8px;width:auto;" onclick="guardarLineaConvenio('+id+')">Guardar</button>'
             : '')
-          +'<a class="btn-mini" style="padding:3px 7px;width:auto;text-decoration:none;" href="detalle.html?id='+encodeURIComponent(id)+'&tipo=convenio" target="_blank" rel="noopener" title="Ver"><i class="fas fa-external-link-alt"></i></a>'
-          +(esUnitic()?'<button class="btn-mini btn-mini-danger" style="padding:3px 7px;width:auto;" onclick="eliminarItem('+id+')" title="Eliminar"><i class="fas fa-trash"></i></button>':'')
+          +(esUnitic()?'<button class="btn-mini btn-mini-danger" style="padding:4px 8px;width:auto;" onclick="eliminarItem('+id+')">Eliminar</button>':'')
           +'</div></td>'
           +'</tr>';
       }).join('')
@@ -5058,6 +5051,8 @@ function abrirModalItem(id){
   document.getElementById('mi-duracion').value='';
   document.getElementById('mi-horario').value='';
   document.getElementById('mi-lugar').value='';
+  var laborEl=document.getElementById('mi-labor');
+  if(laborEl) laborEl.value='';
   document.getElementById('mi-uniforme').value='';
   document.getElementById('mi-contactos').value='';
   document.getElementById('mi-observaciones').value='';
@@ -5123,6 +5118,8 @@ function poblarModalItem(item){
   document.getElementById('mi-duracion').value=item.duracion||'';
   document.getElementById('mi-horario').value=item.horario||'';
   document.getElementById('mi-lugar').value=item.lugar||'';
+  var laborEl=document.getElementById('mi-labor');
+  if(laborEl) laborEl.value=item.descripcion||'';
   document.getElementById('mi-uniforme').value=item.uniforme||'';
   document.getElementById('mi-contactos').value=item.contactos_responsables||'';
   document.getElementById('mi-observaciones').value=item.observaciones||'';
@@ -5151,10 +5148,10 @@ function poblarModalItem(item){
   if(item.plantilla_nombre){
     document.getElementById('mi-plantilla-nombre').textContent=item.plantilla_nombre;
     document.getElementById('mi-plantilla-actual').style.display='flex';
-    document.getElementById('mi-plantilla-label').textContent='Reemplazar plantilla';
+    document.getElementById('mi-plantilla-label').textContent='Cambiar';
   } else {
     document.getElementById('mi-plantilla-actual').style.display='none';
-    document.getElementById('mi-plantilla-label').textContent='Seleccionar plantilla PDF';
+    document.getElementById('mi-plantilla-label').textContent='Subir';
   }
   renderListaCuposUnidadesUI();
   renderListaTurnosUI();
@@ -5230,6 +5227,19 @@ function esTituloCelador(titulo){
 }
 
 var DIVOPUS_CELADOR = ['DIVOPUS 01', 'DIVOPUS 02', 'DIVOPUS 03'];
+var DIVOPUS_CELADOR_DIR = {
+  'DIVOPUS 01': 'Av. Fernandini / Jr. Supe (CIA Callao)',
+  'DIVOPUS 02': 'Tomás Valle Cuadra 34 (CIA Juan Ingunza)',
+  'DIVOPUS 03': 'Av. Pedro Beltrán N° 138 (CIA Ventanilla)'
+};
+
+function direccionDefaultDivopus(nombre){
+  var k = String(nombre || '').trim().toUpperCase().replace(/\s+/g, ' ');
+  if(/DIVOPUS\s*01/.test(k)) return DIVOPUS_CELADOR_DIR['DIVOPUS 01'];
+  if(/DIVOPUS\s*02/.test(k)) return DIVOPUS_CELADOR_DIR['DIVOPUS 02'];
+  if(/DIVOPUS\s*03/.test(k)) return DIVOPUS_CELADOR_DIR['DIVOPUS 03'];
+  return DIVOPUS_CELADOR_DIR[nombre] || '';
+}
 
 /** UI convenios: turnos editables (como la hoja); total = suma turnos; Celador también tiene DIVOPUS. */
 function adaptarCuposUIPorTitulo(){
@@ -5245,17 +5255,26 @@ function adaptarCuposUIPorTitulo(){
   var vacEl = document.getElementById('mi-vacantes');
   if (labCupos) {
     labCupos.innerHTML = esCel
-      ? '<i class="fas fa-map-marker-alt"></i> Lugares DIVOPUS <span style="font-weight:600;color:#004d3d;">(dónde postulan)</span>'
-      : '<i class="fas fa-map-marker-alt"></i> Lugar (opcional)';
+      ? '<i class="fas fa-map-marker-alt"></i> Lugares DIVOPUS'
+      : '<i class="fas fa-map-marker-alt"></i> Lugar / dirección';
   }
-  if (addBar) addBar.style.display = esCel ? 'none' : 'flex';
+  if (addBar) addBar.style.display = 'none';
   if (turnoAdd) turnoAdd.style.display = 'flex';
+  // Labor visible; Lugar solo en la tabla de cupos (sin campo duplicado)
+  var wrapLabor = document.getElementById('mi-wrap-labor');
+  if (wrapLabor) wrapLabor.style.display = '';
+  var wrapLugar = document.getElementById('mi-wrap-lugar');
+  if (wrapLugar) wrapLugar.style.display = 'none';
+  var labLabor = document.getElementById('mi-lab-labor');
+  if (labLabor) {
+    labLabor.innerHTML = '<i class="fas fa-briefcase"></i> Labor';
+  }
   if (turnoLab) {
-    turnoLab.innerHTML = '<i class="fas fa-clock"></i> Turnos, día y vacantes <span style="font-weight:600;color:#004d3d;">(aquí se registran)</span>';
+    turnoLab.innerHTML = '<i class="fas fa-clock"></i> Turnos, día y vacantes';
   }
   if (turnoAyuda) {
-    turnoAyuda.style.display = '';
-    turnoAyuda.textContent = 'Edite Turno / Día / Vacantes como en la hoja. El total se actualiza solo.';
+    turnoAyuda.style.display = 'none';
+    turnoAyuda.textContent = '';
   }
   if (vacLab) vacLab.textContent = 'Total (suma de turnos)';
   if (vacEl) {
@@ -5316,7 +5335,10 @@ function redistribuirDivopusDesdeTotal(total){
     var vac = porDiv + (idx < resto ? 1 : 0);
     var prev = porNombre[nombre];
     var insc = prev ? (parseInt(prev.inscritos, 10) || 0) : 0;
-    return { nombre: nombre, vacantes: vac, inscritos: insc, disponibles: Math.max(0, vac - insc) };
+    var dirPrev = prev && String(prev.direccion || '').trim();
+    var dirMala = !dirPrev || /^DIVOPUS\s*0[123]$/i.test(dirPrev) || dirPrev === nombre;
+    var dir = dirMala ? direccionDefaultDivopus(nombre) : dirPrev;
+    return { nombre: nombre, vacantes: vac, inscritos: insc, disponibles: Math.max(0, vac - insc), direccion: dir };
   });
   var ta = document.getElementById('mi-cupos-unidades');
   if (ta) ta.value = serializarCuposUnidades(nuevos);
@@ -5367,6 +5389,7 @@ function adaptarModalItemPorTipo(tipo){
   show('mi-wrap-contactos', !esConv);
   show('mi-wrap-form-url', !esConv);
   show('mi-wrap-lugar', !esConv);
+  show('mi-wrap-labor', esConv);
   show('mi-wrap-duracion', !esConv);
   show('mi-wrap-fecha', !esConv);
   show('mi-wrap-horario', !esConv);
@@ -5382,12 +5405,19 @@ function adaptarModalItemPorTipo(tipo){
   var turnoAdd = document.getElementById('mi-turno-add-bar');
   var turnoAyuda = document.getElementById('mi-turnos-ayuda');
   var turnoLab = document.getElementById('mi-turnos-label');
+  var labLugar = document.getElementById('mi-lab-lugar');
+  var ayudaLugar = document.getElementById('mi-lugar-ayuda');
   if (!esConv) {
     if (vacEl) { vacEl.readOnly = false; vacEl.style.background = ''; vacEl.title = ''; }
     if (vacLab) vacLab.textContent = 'Vacantes totales';
     if (turnoAdd) turnoAdd.style.display = 'flex';
     if (turnoAyuda) turnoAyuda.style.display = '';
     if (turnoLab) turnoLab.innerHTML = '<i class="fas fa-clock"></i> Turnos y vacantes por turno';
+    if (labLugar) labLugar.innerHTML = '<i class="fas fa-map-marker-alt"></i> Lugar';
+    if (ayudaLugar) ayudaLugar.style.display = 'none';
+  } else {
+    if (labLugar) labLugar.innerHTML = '<i class="fas fa-map-marker-alt"></i> Lugar';
+    if (ayudaLugar) ayudaLugar.style.display = '';
   }
 
   var labFecha = document.getElementById('mi-lab-fecha');
@@ -5401,11 +5431,9 @@ function adaptarModalItemPorTipo(tipo){
   if(labHor) labHor.textContent = 'Horario';
   if(labObs) labObs.textContent = 'Observaciones';
   if(labVen) {
-    labVen.innerHTML = esConv
-      ? '<i class="fas fa-bullhorn"></i> Aviso en la ficha (cuadro rosa / verde)'
-      : 'Ventana de inscripción';
+    labVen.innerHTML = esConv ? '<i class="fas fa-bullhorn"></i> Aviso' : 'Ventana de inscripción';
   }
-  if(toolsVen) toolsVen.style.display = esConv ? '' : 'none';
+  if(toolsVen) toolsVen.style.display = 'none';
 
   var plantilla = document.getElementById('mi-plantilla-wrap');
   if(plantilla) plantilla.style.display = '';
@@ -5525,7 +5553,8 @@ function serializarCuposUnidades(cupos){
     var v=c&&c.vacantes!=null?c.vacantes:0;
     var i=c&&c.inscritos!=null?c.inscritos:0;
     var d=c&&c.disponibles!=null?c.disponibles:Math.max(0,v-i);
-    return n+' | '+v+' | '+i+' | '+d;
+    var dir=String((c&&c.direccion)||'').replace(/\|/g,'/').trim();
+    return n+' | '+v+' | '+i+' | '+d+' | '+dir;
   }).join('\n');
 }
 
@@ -5627,8 +5656,7 @@ function renderListaTurnosUI(){
         +'<td><button type="button" class="btn-mini btn-mini-danger" style="padding:3px 6px;" onclick="quitarTurnoUI('+idx+')" title="Quitar"><i class="fas fa-times"></i></button></td>'
         +'</tr>';
     }).join('')
-    +'</tbody></table>'
-    +(esConv ? '<p style="font-size:10.5px;color:#004d3d;margin:6px 0 0;font-weight:600;">Edite las vacantes por turno. El total se actualiza solo.</p>' : '');
+    +'</tbody></table>';
   var suma=sumaVacantesTurnosUI(turnos);
   var vacEl=document.getElementById('mi-vacantes');
   if(vacEl && (esConv || suma>0)) vacEl.value=String(suma);
@@ -5704,32 +5732,42 @@ function renderListaCuposUnidadesUI(){
   }
   if(esCel){
     lista.innerHTML = '<table class="t" style="margin:0;font-size:12px;"><thead><tr>'
-      +'<th>DIVOPUS</th><th style="width:110px;">Vacantes</th>'
-      +'</tr></thead><tbody>'
-      +cupos.map(function(c){
-        return '<tr>'
-          +'<td style="font-weight:600;">'+escHtml(c.nombre)+'</td>'
-          +'<td style="font-weight:700;color:#004d3d;">'+(c.vacantes||0)+'</td>'
-          +'</tr>';
-      }).join('')
-      +'</tbody></table>'
-      +'<p style="font-size:10.5px;color:#888;margin:6px 0 0;">Se reparte solo desde el total de turnos (DIVOPUS 01 / 02 / 03).</p>';
-  } else {
-    lista.innerHTML = '<table class="t" style="margin:0;font-size:12px;"><thead><tr>'
-      +'<th>Lugar</th><th style="width:110px;">Vacantes</th><th style="width:56px;"></th>'
+      +'<th>DIVOPUS</th><th>Dirección</th><th style="width:90px;">Vacantes</th>'
       +'</tr></thead><tbody>'
       +cupos.map(function(c, idx){
+        var dirPrev = String(c.direccion || '').trim();
+        var dirMala = !dirPrev || /^DIVOPUS\s*0[123]$/i.test(dirPrev) || dirPrev === c.nombre;
+        var dir = dirMala ? direccionDefaultDivopus(c.nombre) : dirPrev;
+        var dirAttr = escHtml(dir).replace(/"/g, '&quot;');
         return '<tr>'
-          +'<td style="font-weight:600;">'+escHtml(c.nombre)+'</td>'
-          +'<td><input type="number" min="0" value="'+(c.vacantes||0)+'" style="width:88px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;" onchange="actualizarCupoUnidadUI('+idx+',\'vacantes\',this.value)"/></td>'
+          +'<td style="font-weight:600;white-space:nowrap;">'+escHtml(c.nombre)+'</td>'
+          +'<td><input type="text" value="'+dirAttr+'" maxlength="200" '
+          +'style="width:100%;min-width:160px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:12px;" '
+          +'onchange="actualizarCupoUnidadUI('+idx+',\'direccion\',this.value)"/></td>'
+          +'<td style="font-weight:700;color:#004d3d;text-align:center;">'+(c.vacantes||0)+'</td>'
+          +'</tr>';
+      }).join('')
+      +'</tbody></table>';
+  } else {
+    lista.innerHTML = '<table class="t" style="margin:0;font-size:12px;"><thead><tr>'
+      +'<th>Lugar</th><th>Dirección</th><th style="width:90px;">Vacantes</th><th style="width:56px;"></th>'
+      +'</tr></thead><tbody>'
+      +cupos.map(function(c, idx){
+        var nomAttr = escHtml(c.nombre||'').replace(/"/g, '&quot;');
+        var dirAttr = escHtml(c.direccion||'').replace(/"/g, '&quot;');
+        return '<tr>'
+          +'<td><input type="text" value="'+nomAttr+'" maxlength="150" '
+          +'style="width:100%;min-width:140px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:12px;font-weight:600;" '
+          +'onchange="actualizarCupoUnidadUI('+idx+',\'nombre\',this.value)"/></td>'
+          +'<td><input type="text" value="'+dirAttr+'" maxlength="200" placeholder="Dirección" '
+          +'style="width:100%;min-width:140px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:12px;" '
+          +'onchange="actualizarCupoUnidadUI('+idx+',\'direccion\',this.value)"/></td>'
+          +'<td><input type="number" min="0" value="'+(c.vacantes||0)+'" style="width:72px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;" onchange="actualizarCupoUnidadUI('+idx+',\'vacantes\',this.value)"/></td>'
           +'<td><button type="button" class="btn-mini btn-mini-danger" style="padding:3px 6px;" onclick="quitarCupoUnidadUI('+idx+')" title="Quitar"><i class="fas fa-times"></i></button></td>'
           +'</tr>';
       }).join('')
-      +'</tbody></table>'
-      +'<p style="font-size:10.5px;color:#888;margin:6px 0 0;">Lugar de postulación. Las vacantes del convenio se definen en Turnos.</p>';
+      +'</tbody></table>';
   }
-  var lugarEl = document.getElementById('mi-lugar');
-  if(lugarEl && cupos.length === 1) lugarEl.value = cupos[0].nombre || lugarEl.value;
 }
 
 function setCuposUnidadesDesdeArray(cupos){
@@ -5754,13 +5792,19 @@ function agregarCupoUnidadUI(){
 }
 
 function actualizarCupoUnidadUI(idx, campo, valor){
-  if (esTituloCelador((document.getElementById('mi-titulo-val') || {}).value)) return;
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
   if(!cupos[idx]) return;
-  var n = parseInt(valor, 10);
-  if(isNaN(n) || n < 0) n = 0;
-  cupos[idx][campo] = n;
-  cupos[idx].disponibles = Math.max(0, (cupos[idx].vacantes || 0) - (cupos[idx].inscritos || 0));
+  var esCel = esTituloCelador((document.getElementById('mi-titulo-val') || {}).value);
+  if(campo === 'direccion' || campo === 'nombre'){
+    if(esCel && campo === 'nombre') return;
+    cupos[idx][campo] = String(valor || '').trim();
+  } else {
+    if(esCel) return;
+    var n = parseInt(valor, 10);
+    if(isNaN(n) || n < 0) n = 0;
+    cupos[idx][campo] = n;
+    cupos[idx].disponibles = Math.max(0, (cupos[idx].vacantes || 0) - (cupos[idx].inscritos || 0));
+  }
   setCuposUnidadesDesdeArray(cupos);
 }
 
@@ -5777,7 +5821,7 @@ function parseCuposUnidadesTexto(txt){
     if(!line) return null;
     var m=line.match(/^(.+?)\s+VACANTES\s+(\d+)\s*,?\s*INSCRITOS\s+(\d+)\s+DISPONIBLES\s+(\d+)$/i);
     if(m){
-      return {nombre:m[1].trim(),vacantes:parseInt(m[2],10)||0,inscritos:parseInt(m[3],10)||0,disponibles:parseInt(m[4],10)||0};
+      return {nombre:m[1].trim(),vacantes:parseInt(m[2],10)||0,inscritos:parseInt(m[3],10)||0,disponibles:parseInt(m[4],10)||0,direccion:''};
     }
     var parts=line.split('|').map(function(p){return p.trim();});
     if(parts.length<2||!parts[0]) return null;
@@ -5785,7 +5829,8 @@ function parseCuposUnidadesTexto(txt){
     var insc=parts[2]!=null&&parts[2]!==''?parseInt(parts[2],10)||0:0;
     var disp=parts[3]!=null&&parts[3]!==''?parseInt(parts[3],10):Math.max(0,vac-insc);
     if(isNaN(disp)||disp<0) disp=Math.max(0,vac-insc);
-    return {nombre:parts[0],vacantes:vac,inscritos:insc,disponibles:disp};
+    var dir=parts[4]!=null?String(parts[4]).trim():'';
+    return {nombre:parts[0],vacantes:vac,inscritos:insc,disponibles:disp,direccion:dir};
   }).filter(Boolean);
 }
 
@@ -5833,6 +5878,9 @@ function guardarItem(){
       fechaInicioTxt='';
     }
   }
+  var lugarTxt = val('mi-lugar').trim();
+  var laborTxt = (document.getElementById('mi-labor') ? val('mi-labor') : '').trim();
+  var descripcionTxt = tipo === 'convenio' ? laborTxt : val('mi-descripcion');
   var cuposGuardar = parseCuposUnidadesTexto(document.getElementById('mi-cupos-unidades').value);
   if(tipo === 'convenio'){
     vacantes = sumaTurnos > 0 ? sumaTurnos : sumaVacantesTurnosUI(turnos);
@@ -5847,25 +5895,47 @@ function guardarItem(){
         var prev = (parseCuposUnidadesTexto(document.getElementById('mi-cupos-unidades').value) || [])
           .find(function(c){ return String(c.nombre||'').toUpperCase() === nombre; });
         var insc = prev ? (parseInt(prev.inscritos,10)||0) : 0;
-        return { nombre: nombre, vacantes: vac, inscritos: insc, disponibles: Math.max(0, vac - insc) };
+        var dirPrev = prev && String(prev.direccion||'').trim();
+        var dirMala = !dirPrev || /^DIVOPUS\s*0[123]$/i.test(dirPrev) || dirPrev === nombre;
+        var dir = dirMala ? direccionDefaultDivopus(nombre) : dirPrev;
+        return { nombre: nombre, vacantes: vac, inscritos: insc, disponibles: Math.max(0, vac - insc), direccion: dir };
       });
-    } else if(cuposGuardar.length === 1){
-      cuposGuardar[0].vacantes = vacantes;
-      cuposGuardar[0].disponibles = Math.max(0, vacantes - (cuposGuardar[0].inscritos || 0));
-    } else if(!cuposGuardar.length && vacantes > 0){
-      cuposGuardar = [{
-        nombre: titulo || 'Lugar del convenio',
-        vacantes: vacantes,
-        inscritos: 0,
-        disponibles: vacantes
-      }];
+      lugarTxt = '';
+    } else {
+      // Lugar viene de la tabla de cupos (sin campo duplicado arriba)
+      if(cuposGuardar.length === 1){
+        if(!String(cuposGuardar[0].nombre||'').trim()){
+          cuposGuardar[0].nombre = titulo || 'Lugar del convenio';
+        }
+        cuposGuardar[0].vacantes = vacantes;
+        cuposGuardar[0].disponibles = Math.max(0, vacantes - (cuposGuardar[0].inscritos || 0));
+        if(!cuposGuardar[0].direccion) cuposGuardar[0].direccion = '';
+        lugarTxt = String(cuposGuardar[0].nombre||'').trim();
+      } else if(!cuposGuardar.length){
+        cuposGuardar = [{
+          nombre: titulo || 'Lugar del convenio',
+          vacantes: vacantes,
+          inscritos: 0,
+          disponibles: vacantes,
+          direccion: ''
+        }];
+        lugarTxt = cuposGuardar[0].nombre;
+      } else {
+        lugarTxt = cuposGuardar.map(function(c){ return String(c.nombre||'').trim(); }).filter(Boolean).join(' / ');
+        // Ajustar vacantes del primer cupo si hay un solo total de turnos y un cupo principal
+        var sumaCup = cuposGuardar.reduce(function(a,c){ return a + (parseInt(c.vacantes,10)||0); }, 0);
+        if(sumaCup <= 0 && vacantes > 0 && cuposGuardar[0]){
+          cuposGuardar[0].vacantes = vacantes;
+          cuposGuardar[0].disponibles = Math.max(0, vacantes - (cuposGuardar[0].inscritos || 0));
+        }
+      }
     }
     horarioTxt = turnos.map(function(t){ return t.turno; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).join(' / ')
       + (turnos.length ? (' — días ' + turnos.map(function(t){ return t.dia; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).join(' / ')) : '');
   }
   var body={
     tipo:tipo, titulo:titulo.toUpperCase(),
-    descripcion:val('mi-descripcion'),
+    descripcion:descripcionTxt,
     estado:val('mi-estado')||'DISPONIBLE',
     icono:val('mi-icono')||'fa-graduation-cap',
     color:val('mi-color')||'#004d3d',
@@ -5876,7 +5946,7 @@ function guardarItem(){
     vacantes:vacantes,
     fecha_inicio:fechaInicioTxt,
     duracion:val('mi-duracion'),
-    lugar:val('mi-lugar'),
+    lugar:lugarTxt,
     uniforme:val('mi-uniforme'),
     contactos_responsables:val('mi-contactos'),
     observaciones:observacionesTxt,

@@ -379,23 +379,52 @@ function renderDetalle(item){
       );
     }
     if(cupos.length){
-      var tituloLugares = cupos.length > 1 ? 'LUGARES (POSTULACIÓN)' : 'LUGAR';
+      var lugarTxt = String(item.lugar || '').trim();
+      var laborTxt = String(item.descripcion || '').trim();
+      var tituloLugares = 'LUGAR';
       var esDivopus = cupos.length > 1 && cupos.every(function(c){
         return /^DIVOPUS\s*0[123]$/i.test(String(c.nombre || '').trim());
       });
-      if(esDivopus) tituloLugares = 'DIVOPUS / VACANTES';
+      var DIR_DIVOPUS = {
+        'DIVOPUS 01': 'Av. Fernandini / Jr. Supe (CIA Callao)',
+        'DIVOPUS 02': 'Tomás Valle Cuadra 34 (CIA Juan Ingunza)',
+        'DIVOPUS 03': 'Av. Pedro Beltrán N° 138 (CIA Ventanilla)'
+      };
+      var htmlLugar = '<div class="tabla-cupos-wrap"><table class="tabla-cupos">'
+        +'<thead><tr><th>'+(esDivopus ? 'DIVOPUS' : 'Lugar')+'</th><th>Dirección</th><th>Vacantes</th></tr></thead><tbody>'
+        +cupos.map(function(c){
+          var nombreCel = esDivopus
+            ? String(c.nombre || '').trim()
+            : (lugarTxt || String(c.nombre || '').trim());
+          var nomKey = String(c.nombre || '').trim().toUpperCase().replace(/\s+/g, ' ');
+          if(nomKey.indexOf('DIVOPUS') === 0){
+            if(/01$/.test(nomKey)) nomKey = 'DIVOPUS 01';
+            else if(/02$/.test(nomKey)) nomKey = 'DIVOPUS 02';
+            else if(/03$/.test(nomKey)) nomKey = 'DIVOPUS 03';
+          }
+          var dir = String(c.direccion || '').trim();
+          var dirMala = !dir || /^DIVOPUS\s*0[123]$/i.test(dir) || dir.toUpperCase() === String(nombreCel).toUpperCase();
+          if(esDivopus && dirMala) dir = DIR_DIVOPUS[nomKey] || DIR_DIVOPUS[nombreCel] || '';
+          var vacN = parseInt(c.vacantes, 10);
+          if(isNaN(vacN) || vacN < 0) vacN = 0;
+          return '<tr>'
+            +'<td style="text-align:left;font-weight:700;">'+escHtmlD(nombreCel || '—')+'</td>'
+            +'<td style="text-align:left;line-height:1.35;">'+escHtmlD(dir || '—')+'</td>'
+            +'<td class="num">'+escHtmlD(String(vacN))+'</td>'
+            +'</tr>';
+        }).join('')
+        +'</tbody></table></div>';
       bloques.push(
         '<h3'+(bloques.length ? ' style="margin-top:14px;"' : '')+'>'+tituloLugares+'</h3>'
-        +'<div class="tabla-cupos-wrap"><table class="tabla-cupos">'
-        +'<thead><tr><th>Lugar</th><th>Vacantes</th><th>Inscritos</th><th>Disponibles</th></tr></thead><tbody>'
-        +cupos.map(function(c){
-          return '<tr><td>'+escHtmlD(c.nombre||'')+'</td>'
-            +'<td class="num">'+escHtmlD(String(c.vacantes!=null?c.vacantes:0))+'</td>'
-            +'<td class="num">'+escHtmlD(String(c.inscritos!=null?c.inscritos:0))+'</td>'
-            +'<td class="num">'+escHtmlD(String(c.disponibles!=null?c.disponibles:0))+'</td></tr>';
-        }).join('')
-        +'</tbody></table></div>'
+        +htmlLugar
       );
+      if(laborTxt){
+        bloques.push(
+          '<h3 style="margin-top:14px;">LABOR</h3>'
+          +'<p style="margin:0;padding:10px 12px;background:#f4f8f6;border:1px solid #d5e5dc;border-radius:7px;font-size:13.5px;color:#004d3d;line-height:1.45;text-align:left;">'
+          +escHtmlD(laborTxt)+'</p>'
+        );
+      }
     }
     if(bloques.length){
       ciasCard = '<div class="card-detalle">'+bloques.join('')+'</div>';

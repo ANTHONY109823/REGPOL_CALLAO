@@ -1,0 +1,13 @@
+const fs = require('fs');
+let i = fs.readFileSync('public/index.html', 'utf8');
+i = i.replace(/portal\.js\?v=\d+/, 'portal.js?v=78');
+fs.writeFileSync('public/index.html', i, 'utf8');
+const t = fs.readFileSync('public/index.html', 'utf8');
+console.log('v', t.match(/portal\.js\?v=\d+/)[0]);
+console.log('entity sub', t.includes('TECNOLOG&#205;AS'));
+console.log('entity vasquez', t.includes('V&#193;SQUEZ'));
+console.log('entity apur', t.includes('APUR&#205;MAC'));
+console.log('fffd', (t.match(/\uFFFD/g) || []).length);
+const js = fs.readFileSync('public/portal.js', 'utf8');
+console.log('jefatura const', js.includes('PORTAL_JEFATURA'));
+console.log('accent sub', js.includes('TECNOLOG\\u00cdAS'));

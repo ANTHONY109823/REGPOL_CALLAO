@@ -282,18 +282,18 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
       box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;">'
         + '<colgroup>'
         + '<col style="width:auto"/>'
-        + '<col style="width:72px"/>'
-        + '<col style="width:58px"/>'
-        + '<col style="width:52px"/>'
-        + '<col style="width:52px"/>'
-        + '<col style="width:108px"/>'
+        + '<col style="width:78px"/>'
+        + '<col style="width:70px"/>'
+        + '<col style="width:64px"/>'
+        + '<col style="width:100px"/>'
+        + '<col style="width:168px"/>'
         + '</colgroup>'
         + '<thead><tr style="background:#f0f7f4;color:#004d3d;text-align:left;">'
         + '<th style="padding:8px 10px;">Convenio</th>'
-        + '<th style="padding:8px 4px;text-align:center;">Vac.</th>'
-        + '<th style="padding:8px 4px;text-align:center;">Lug.</th>'
+        + '<th style="padding:8px 4px;text-align:center;">Vacantes</th>'
+        + '<th style="padding:8px 4px;text-align:center;">Lugares</th>'
         + '<th style="padding:8px 4px;text-align:center;">Activo</th>'
-        + '<th style="padding:8px 4px;text-align:center;">Inscr.</th>'
+        + '<th style="padding:8px 4px;text-align:center;">Inscripciones</th>'
         + '<th style="padding:8px 4px;text-align:center;">Acciones</th></tr></thead><tbody>'
         + items.map(function(it) {
           var activo = String(it.estado || '').toUpperCase() !== 'CERRADO';
@@ -320,18 +320,12 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
             + '</td>'
             + '<td style="padding:6px 4px;text-align:center;white-space:nowrap;">'
             + (puedeEditar
-              ? '<button type="button" class="btn-mini btn-mini-ok" style="padding:3px 6px;font-size:11px;" onclick="abrirModalItem(' + id + ')" title="Editar ficha"><i class="fas fa-edit"></i></button> '
-              + '<button type="button" class="btn-mini" id="cv-btn-save-' + id + '" style="padding:3px 6px;font-size:11px;" onclick="guardarLineaConvenio(' + id + ')" title="Guardar esta línea"><i class="fas fa-save"></i></button> '
+              ? '<button type="button" class="btn-mini btn-mini-ok" style="padding:4px 8px;font-size:11px;width:auto;min-width:0;height:auto;" onclick="abrirModalItem(' + id + ')">Editar</button> '
+              + '<button type="button" class="btn-mini" id="cv-btn-save-' + id + '" style="padding:4px 8px;font-size:11px;width:auto;min-width:0;height:auto;" onclick="guardarLineaConvenio(' + id + ')">Guardar</button>'
               : '')
-            + '<a class="btn-mini" style="padding:3px 6px;font-size:11px;text-decoration:none;" href="detalle.html?id=' + encodeURIComponent(id) + '&tipo=' + tipo + '" target="_blank" rel="noopener" title="Ver en web"><i class="fas fa-external-link-alt"></i></a>'
             + '</td></tr>';
         }).join('')
-        + '</tbody></table>'
-        + (puedeEditar
-          ? '<p style="font-size:11px;color:#666;margin:8px 10px;line-height:1.4;">'
-            + '<strong>Activo</strong> = DISPONIBLE. <strong>Inscr.</strong> = abiertas. '
-            + 'Cambie Activo/Inscr. y pulse <i class="fas fa-save"></i>. Vacantes, lugares y horario en <i class="fas fa-edit"></i>.</p>'
-          : '');
+        + '</tbody></table>';
     })
     .catch(function() {
       if (box) box.innerHTML = '<p style="color:#c0392b;font-size:12px;padding:14px;margin:0;">No se pudo cargar el listado.</p>';
