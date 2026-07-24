@@ -1580,11 +1580,9 @@
         <label>Contactos</label>
         <textarea id="mi-contactos" rows="2"></textarea>
       </div>
-      <div style="grid-column:1/-1;" id="mi-wrap-observaciones">
+      <div style="grid-column:1/-1;display:none;" id="mi-wrap-observaciones">
         <label id="mi-lab-observaciones">Observaciones</label>
-        <input type="text" id="mi-observaciones" maxlength="300" placeholder="Observaciones" style="display:none;"/>
-        <input type="date" id="mi-plazo-fecha" style="display:none;width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;"/>
-        <p id="mi-plazo-ayuda" style="display:none;font-size:10.5px;color:#888;margin:4px 0 0;">Fecha límite de entrega de documentos (calendario).</p>
+        <input type="text" id="mi-observaciones" maxlength="300" placeholder="Observaciones"/>
       </div>
       <div style="grid-column:1/-1;">
         <label>Requisitos (uno por línea)</label>
@@ -1610,9 +1608,22 @@
         <div id="mi-cupos-lista" style="margin-bottom:4px;"></div>
         <textarea id="mi-cupos-unidades" rows="2" style="display:none;"></textarea>
       </div>
-      <div style="grid-column:1/-1;">
-        <label>Ventana de inscripción</label>
-        <input type="text" id="mi-ventana-inscripcion" placeholder="Las inscripciones se habilitan del 20 al 25 de cada mes." maxlength="300"/>
+      <div style="grid-column:1/-1;" id="mi-wrap-ventana">
+        <label id="mi-lab-ventana">Aviso en la ficha web</label>
+        <textarea id="mi-ventana-inscripcion" rows="2" maxlength="400"
+          placeholder="Ej: Las inscripciones se habilitan del 20 al 25 de cada mes. Entrega de documentos hasta el jueves 30 de julio 2026."
+          style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;resize:vertical;"></textarea>
+        <div id="mi-ventana-tools" style="display:none;margin-top:8px;padding:8px;background:#f4f8f6;border:1px solid #d5e5dc;border-radius:7px;">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+            <div style="flex:1;min-width:140px;">
+              <label style="font-size:10px;margin:0;display:block;">Fecha de entrega (calendario)</label>
+              <input type="date" id="mi-plazo-fecha" style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;"/>
+            </div>
+            <button type="button" class="btn-mini btn-mini-ok" style="padding:5px 8px;" onclick="aplicarFechaEntregaAVentana()"><i class="fas fa-calendar-check"></i> Poner plazo</button>
+            <button type="button" class="btn-mini" style="padding:5px 8px;" onclick="setVentanaInscripcionesAbiertas()"><i class="fas fa-door-open"></i> Inscripciones abiertas</button>
+          </div>
+          <p style="font-size:10.5px;color:#666;margin:6px 0 0;line-height:1.35;">Un solo aviso en la ficha. Use el calendario para el plazo o el botón para texto de inscripciones abiertas.</p>
+        </div>
       </div>
       <div style="grid-column:1/-1;display:none;" id="mi-aviso-sorteo-wrap">
         <label><i class="fab fa-facebook" style="color:#1877f2;"></i> Aviso sorteo Facebook</label>
@@ -5124,7 +5135,11 @@ function poblarModalItem(item){
   document.getElementById('mi-contactos').value=item.contactos_responsables||'';
   document.getElementById('mi-observaciones').value=item.observaciones||'';
   var plazoEl=document.getElementById('mi-plazo-fecha');
-  if(plazoEl) plazoEl.value=parsePlazoAFechaISO(item.observaciones||'')||'';
+  if(plazoEl){
+    plazoEl.value = parsePlazoAFechaISO(item.ventana_inscripcion||'')
+      || parsePlazoAFechaISO(item.observaciones||'')
+      || '';
+  }
   var reqs=Array.isArray(item.requisitos)?item.requisitos:[];
   document.getElementById('mi-requisitos').value=reqs.join('\n');
   document.getElementById('mi-cupos-unidades').value=serializarCuposUnidades(item.cupos_unidades);
@@ -5255,7 +5270,7 @@ function adaptarModalItemPorTipo(tipo){
   };
   show('mi-wrap-descripcion', !esConv);
   show('mi-wrap-color', !esConv);
-  show('mi-wrap-observaciones', true);
+  show('mi-wrap-observaciones', !esConv);
   show('mi-wrap-uniforme', !esConv);
   show('mi-wrap-contactos', !esConv);
   show('mi-wrap-form-url', !esConv);
@@ -5273,16 +5288,14 @@ function adaptarModalItemPorTipo(tipo){
   var labDur = document.getElementById('mi-lab-duracion');
   var labHor = document.getElementById('mi-lab-horario');
   var labObs = document.getElementById('mi-lab-observaciones');
-  var obsTxt = document.getElementById('mi-observaciones');
-  var plazoFecha = document.getElementById('mi-plazo-fecha');
-  var plazoAyuda = document.getElementById('mi-plazo-ayuda');
+  var labVen = document.getElementById('mi-lab-ventana');
+  var toolsVen = document.getElementById('mi-ventana-tools');
   if(labFecha) labFecha.textContent = esConv ? 'Beneficio económico' : 'Fecha de inicio';
   if(labDur) labDur.textContent = esConv ? 'Detalle del beneficio' : 'Duración';
   if(labHor) labHor.textContent = esConv ? 'Horario' : 'Turnos / Horarios';
-  if(labObs) labObs.textContent = esConv ? 'Plazo entrega de documentos' : 'Observaciones';
-  if(obsTxt) obsTxt.style.display = esConv ? 'none' : '';
-  if(plazoFecha) plazoFecha.style.display = esConv ? '' : 'none';
-  if(plazoAyuda) plazoAyuda.style.display = esConv ? '' : 'none';
+  if(labObs) labObs.textContent = 'Observaciones';
+  if(labVen) labVen.textContent = esConv ? 'Aviso en la ficha (inscripciones / plazo)' : 'Ventana de inscripción';
+  if(toolsVen) toolsVen.style.display = esConv ? '' : 'none';
 
   var plantilla = document.getElementById('mi-plantilla-wrap');
   if(plantilla) plantilla.style.display = '';
@@ -5449,6 +5462,29 @@ function textoPlazoDesdeFechaISO(iso){
   var dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   var mesesNom = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   return 'Entrega de documentos hasta el día '+dias[dt.getDay()]+' '+d+' de '+mesesNom[m]+' '+y+'.';
+}
+
+function aplicarFechaEntregaAVentana(){
+  var iso = (document.getElementById('mi-plazo-fecha') || {}).value || '';
+  if(!iso){ alert('Elija una fecha en el calendario.'); return; }
+  var plazo = textoPlazoDesdeFechaISO(iso);
+  if(!plazo){ alert('Fecha inválida.'); return; }
+  var el = document.getElementById('mi-ventana-inscripcion');
+  if(!el) return;
+  var base = String(el.value || '').replace(/\s*Entrega de documentos hasta[^.]*\.?\s*/gi, ' ').trim();
+  base = base.replace(/\s{2,}/g, ' ').replace(/\.\s*\./g, '.').trim();
+  if(base && !/[.!?]$/.test(base)) base += '.';
+  el.value = (base ? (base + ' ') : '') + plazo;
+}
+
+function setVentanaInscripcionesAbiertas(){
+  var el = document.getElementById('mi-ventana-inscripcion');
+  if(!el) return;
+  var iso = (document.getElementById('mi-plazo-fecha') || {}).value || '';
+  var plazo = textoPlazoDesdeFechaISO(iso);
+  el.value = plazo
+    ? ('Inscripciones abiertas. ' + plazo)
+    : 'Inscripciones abiertas.';
 }
 
 function parseTurnosTexto(txt){
@@ -5706,10 +5742,10 @@ function guardarItem(){
   }
   var observacionesTxt=val('mi-observaciones');
   var fechaInicioTxt=val('mi-fecha-inicio');
+  var ventanaTxt=val('mi-ventana-inscripcion');
   if(tipo==='convenio'){
-    var isoPlazo=(document.getElementById('mi-plazo-fecha')||{}).value||'';
-    observacionesTxt=textoPlazoDesdeFechaISO(isoPlazo) || '';
-    // No editar beneficio en convenio: conservar valor previo
+    // Un solo aviso en ficha = ventana_inscripcion; no usar observaciones aparte
+    observacionesTxt='';
     if(id){
       var prevB=(ITEMS_CACHE||[]).find(function(i){ return parseInt(i.id,10)===parseInt(id,10); });
       fechaInicioTxt=prevB ? (prevB.fecha_inicio || '') : '';
@@ -5734,7 +5770,7 @@ function guardarItem(){
     uniforme:val('mi-uniforme'),
     contactos_responsables:val('mi-contactos'),
     observaciones:observacionesTxt,
-    ventana_inscripcion:val('mi-ventana-inscripcion'),
+    ventana_inscripcion:ventanaTxt,
     aviso_sorteo_fb:(function(){
       if(id){
         var prev=(ITEMS_CACHE||[]).find(function(i){ return parseInt(i.id,10)===parseInt(id,10); });
