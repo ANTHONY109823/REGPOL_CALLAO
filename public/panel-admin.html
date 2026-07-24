@@ -540,12 +540,6 @@
           <div class="sb-item" data-page="conv-repechaje" onclick="irConvRepechaje(this)">
             <i class="fas fa-redo"></i> 3. REPECHAJE
           </div>
-          <div class="sb-item" data-page="consulta-cip" onclick="ir('consulta-cip',this)">
-            <i class="fas fa-search"></i> CONSULTA POR CIP
-          </div>
-          <div class="sb-item" data-page="items-convenio" data-perm-cms-convenios onclick="irGestionItems('convenio',this)">
-            <i class="fas fa-cog"></i> ADMIN CONVOCATORIAS
-          </div>
         </div>
       </div>
 
@@ -1182,7 +1176,6 @@
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
           <button class="btn btn-v" type="button" onclick="cargarConvFlujoResumen('preinscritos')"><i class="fas fa-sync"></i> Actualizar</button>
-          <button class="btn btn-o" type="button" data-perm-cms-convenios onclick="irGestionItems('convenio',null)" style="display:none;"><i class="fas fa-cog"></i> Admin convocatorias</button>
         </div>
         <div id="conv-preinscritos-cuadros"><p style="color:#bbb;text-align:center;padding:24px;">Cargando...</p></div>
       </div>
