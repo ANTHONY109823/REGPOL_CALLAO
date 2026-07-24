@@ -2127,7 +2127,7 @@
 <script src="portal-data.js?v=10"></script>
 <script src="portal.js?v=85"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=32"></script>
+<script src="panel-cms.js?v=33"></script>
 <script src="panel-descansos.js?v=4"></script>
 <script src="panel-faltos.js?v=1"></script>
 <script src="panel-rrhh.js?v=3"></script>
@@ -4979,12 +4979,25 @@ function mostrarAlertaItems(texto,tipo){
 }
 
 function abrirModalItem(id){
+  var idNum = id ? parseInt(id, 10) : 0;
+  var cachedHint = idNum
+    ? (ITEMS_CACHE || []).find(function(i){ return parseInt(i.id, 10) === idNum; })
+    : null;
+  var filtroEl = document.getElementById('items-filtro-tipo');
+  var filtro = filtroEl ? (filtroEl.value || '') : '';
+  // Admin de Convenios no debe caer en tipo=curso (provoca 403)
+  var tipoIni = (cachedHint && cachedHint.tipo)
+    || filtro
+    || (typeof tienePermiso === 'function' && tienePermiso('cms_convenios') && !tienePermiso('cms_cursos') ? 'convenio' : '')
+    || (typeof tienePermiso === 'function' && tienePermiso('cms_cursos') && !tienePermiso('cms_convenios') ? 'curso' : '')
+    || 'convenio';
+
   document.getElementById('mi-id').value='';
-  document.getElementById('mi-tipo').value=document.getElementById('items-filtro-tipo').value||'curso';
+  document.getElementById('mi-tipo').value=tipoIni;
   document.getElementById('mi-titulo-val').value='';
   document.getElementById('mi-descripcion').value='';
   document.getElementById('mi-estado').value='DISPONIBLE';
-  document.getElementById('mi-icono').value='fa-graduation-cap';
+  document.getElementById('mi-icono').value=tipoIni==='convenio'?'fa-handshake':'fa-graduation-cap';
   document.getElementById('mi-color').value='#004d3d';
   document.getElementById('mi-vacantes').value=0;
   document.getElementById('mi-fecha-inicio').value='';
@@ -5003,27 +5016,26 @@ function abrirModalItem(id){
   document.getElementById('mi-inscripciones-abiertas').checked=false;
   document.getElementById('mi-visible').checked=true;
   document.getElementById('mi-orden').value=0;
-  document.getElementById('mi-titulo').textContent='Nuevo convenio';
+  document.getElementById('mi-titulo').textContent=tipoIni==='convenio'?'Nuevo convenio':'Nueva convocatoria';
   initSelectCupoAddNombre();
   renderListaCuposUnidadesUI();
-  adaptarModalItemPorTipo(document.getElementById('mi-tipo').value || 'curso');
+  adaptarModalItemPorTipo(tipoIni);
 
   if(!id){
     document.getElementById('modal-item').classList.add('open');
     return;
   }
 
-  var idNum = parseInt(id, 10);
-  var cached = (ITEMS_CACHE || []).find(function(i){ return parseInt(i.id, 10) === idNum; });
-  // Usar caché si trae datos de edición (título + campos web); no exigir requisitos
-  if (cached && cached.titulo != null && (cached.horario !== undefined || cached.requisitos !== undefined || cached.cupos_unidades !== undefined)) {
+  var cached = cachedHint || (ITEMS_CACHE || []).find(function(i){ return parseInt(i.id, 10) === idNum; });
+  if (cached && cached.titulo != null && cached.tipo) {
     poblarModalItem(cached);
     return;
   }
-  var tipoFetch = (cached && cached.tipo)
-    || (document.getElementById('mi-tipo') && document.getElementById('mi-tipo').value)
-    || (document.getElementById('items-filtro-tipo') && document.getElementById('items-filtro-tipo').value)
-    || 'convenio';
+  var tipoFetch = (cached && cached.tipo) || tipoIni || 'convenio';
+  if (typeof puedeEditarItemTipo === 'function' && !puedeEditarItemTipo(tipoFetch)) {
+    alert('Sin permiso para editar este tipo de convocatoria.');
+    return;
+  }
   var urlItems = API + '/admin/items?tipo=' + encodeURIComponent(tipoFetch);
   fetch(urlItems, { headers: hdr() })
     .then(function(r){ return r.json(); })

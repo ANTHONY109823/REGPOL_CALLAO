@@ -193,8 +193,13 @@ function cambiarTabCMS(tab) {
 }
 
 function renderListasCMS() {
-  renderGestionConvocatoriasCMS('cms-lista-convenios', 'convenio');
-  renderGestionConvocatoriasCMS('cms-lista-cursos', 'curso');
+  // Solo cargar módulos que el usuario puede ver (evita 403 en Admin de Convenios al pedir cursos)
+  if (typeof puedeEditarItemTipo !== 'function' || puedeEditarItemTipo('convenio') || (typeof esUnitic === 'function' && esUnitic())) {
+    renderGestionConvocatoriasCMS('cms-lista-convenios', 'convenio');
+  }
+  if (typeof puedeEditarItemTipo !== 'function' || puedeEditarItemTipo('curso') || (typeof esUnitic === 'function' && esUnitic())) {
+    renderGestionConvocatoriasCMS('cms-lista-cursos', 'curso');
+  }
   renderListaNovedades('cms-lista-novedades', cmsDataActual.novedades || []);
   renderEditorFotosEncabezado();
   renderEditorCarrusel();
@@ -237,21 +242,29 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
   var urlAdmin = (typeof API !== 'undefined' ? API : base) + '/admin/items?tipo=' + encodeURIComponent(tipo);
   var urlPublic = base + '/portal/items?tipo=' + encodeURIComponent(tipo);
   var headers = (typeof hdr === 'function') ? hdr() : {};
-  fetch(urlAdmin, { headers: headers })
-    .then(function(r) { return r.json().then(function(d){ return { okHttp: r.ok, d: d }; }); })
-    .then(function(pack) {
-      if (pack.d && pack.d.ok && pack.d.items && pack.d.items.length) {
-        return pack.d.items;
-      }
-      return fetch(urlPublic).then(function(r){ return r.json(); }).then(function(d){
+
+  // No llamar /admin/items de un tipo sin permiso (p. ej. cursos con Admin de Convenios → 403)
+  var promesa = puedeEditar
+    ? fetch(urlAdmin, { headers: headers })
+        .then(function(r) { return r.json().then(function(d){ return { okHttp: r.ok, d: d }; }); })
+        .then(function(pack) {
+          if (pack.okHttp && pack.d && pack.d.ok && pack.d.items) return pack.d.items;
+          return fetch(urlPublic).then(function(r){ return r.json(); }).then(function(d){
+            return (d && d.ok && d.items) ? d.items : [];
+          });
+        })
+    : fetch(urlPublic).then(function(r){ return r.json(); }).then(function(d){
         return (d && d.ok && d.items) ? d.items : [];
       });
-    })
+
+  promesa
     .then(function(items) {
       if (!box) return;
-      // Solo lo publicado en web (oculta restos antiguos no visibles)
       items = (items || []).filter(function(it) { return it.visible !== false; });
-      if (typeof ITEMS_CACHE !== 'undefined') ITEMS_CACHE = items.slice();
+      // No pisar caché de convenios al cargar cursos (y viceversa)
+      if (typeof ITEMS_CACHE !== 'undefined' && puedeEditar) {
+        ITEMS_CACHE = items.slice();
+      }
       if (!items.length) {
         box.innerHTML = '<p style="color:#888;font-size:12px;padding:14px;margin:0;">No hay ' + titulo.toLowerCase() + ' visibles. '
           + (puedeEditar && esConv ? 'Pulse «Agregar convenio».' : '') + '</p>';
