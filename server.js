@@ -567,6 +567,7 @@ async function initDB() {
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS ventana_inscripcion VARCHAR(300) DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS aviso_sorteo_fb TEXT DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS cupos_unidades JSONB DEFAULT '[]';
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS turnos JSONB DEFAULT '[]';
 
     CREATE TABLE IF NOT EXISTS sorteos_portal (
       id           SERIAL PRIMARY KEY,
@@ -4652,6 +4653,78 @@ function normalizarCuposUnidades(raw) {
   }).filter(Boolean);
 }
 
+function normalizarTurnos(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map(function(t) {
+    if (!t || typeof t !== 'object') return null;
+    var turno = String(t.turno || t.nombre || '').trim().toUpperCase();
+    if (!turno) return null;
+    var dia = String(t.dia || t.dias || 'PAR/IMPAR').trim().toUpperCase() || 'PAR/IMPAR';
+    var vacantes = parseInt(t.vacantes, 10);
+    if (isNaN(vacantes) || vacantes < 0) vacantes = 0;
+    return { turno: turno, dia: dia, vacantes: vacantes };
+  }).filter(Boolean);
+}
+
+function horarioDesdeTurnos(turnos) {
+  var list = normalizarTurnos(turnos);
+  if (!list.length) return '';
+  var nombres = [];
+  var dias = {};
+  list.forEach(function(t) {
+    if (nombres.indexOf(t.turno) === -1) nombres.push(t.turno);
+    dias[t.dia] = true;
+  });
+  var diasTxt = Object.keys(dias).join(' / ');
+  return nombres.join(' / ') + (diasTxt ? ' — días ' + diasTxt : '');
+}
+
+function sumaVacantesTurnos(turnos) {
+  return normalizarTurnos(turnos).reduce(function(a, t) {
+    return a + (parseInt(t.vacantes, 10) || 0);
+  }, 0);
+}
+
+/** Datos operativos de la hoja de vacantes (turnos / día / cupos). */
+const CONVENIOS_DATOS_HOJA = {
+  'MUNICIPALIDAD PROV. CALLAO': {
+    turnos: [
+      { turno: 'MAÑANA', dia: 'PAR/IMPAR', vacantes: 50 },
+      { turno: 'TARDE', dia: 'PAR/IMPAR', vacantes: 53 },
+      { turno: 'NOCHE', dia: 'PAR/IMPAR', vacantes: 40 }
+    ]
+  },
+  'MUNICIPALIDAD DISTRITAL VENTANILLA': {
+    turnos: [
+      { turno: 'TARDE', dia: 'PAR/IMPAR', vacantes: 15 },
+      { turno: 'NOCHE', dia: 'PAR/IMPAR', vacantes: 8 }
+    ]
+  },
+  'MUNI. DISTR. CARMEN DE LEGUA Y REYNOSO': {
+    turnos: [
+      { turno: 'TARDE', dia: 'PAR/IMPAR', vacantes: 9 },
+      { turno: 'NOCHE', dia: 'PAR/IMPAR', vacantes: 5 }
+    ]
+  },
+  'APM-MTC': {
+    turnos: [
+      { turno: 'TARDE', dia: 'IMPAR', vacantes: 10 }
+    ]
+  },
+  'NUEVO INGRESO AEROPUERTO (BY PAS)': {
+    turnos: [
+      { turno: 'TARDE', dia: 'PAR/IMPAR', vacantes: 20 }
+    ]
+  },
+  'PLAN CELADOR': {
+    turnos: [
+      { turno: 'TARDE', dia: 'PAR/IMPAR', vacantes: 425 }
+    ],
+    redistribuirCupos: true
+  }
+};
+const PLAZO_DOCS_HOJA = 'Entrega de documentos hasta el día jueves 30 de julio 2026.';
+
 function puedePublicarResultadosPdf(admin, tipo) {
   if (admin.rol === 'unitic') return true;
   const perms = normalizarPermisos(admin.permisos);
@@ -5345,7 +5418,7 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
 
   // Cupos: Celador = DIVOPUS 1; resto = un solo lugar (mismo flujo, distinto nº de sitios)
   const convs = await db.query(
-    `SELECT id, titulo, lugar, vacantes, cupos_unidades, plantilla_pdf, plantilla_nombre
+    `SELECT id, titulo, lugar, vacantes, cupos_unidades, plantilla_pdf, plantilla_nombre, turnos, horario, observaciones
      FROM items_portal WHERE tipo='convenio' AND visible=TRUE`
   );
   let celadorPlantilla = null;
@@ -5360,7 +5433,42 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
   }
   let cuposActualizados = 0;
   let plantillasCopiadas = 0;
+  let turnosCargados = 0;
   for (const row of convs.rows) {
+    const tituloKey = String(row.titulo || '').trim().toUpperCase();
+    const datosHoja = Object.keys(CONVENIOS_DATOS_HOJA).find(function(k) {
+      return k.toUpperCase() === tituloKey;
+    });
+    if (datosHoja) {
+      const cfg = CONVENIOS_DATOS_HOJA[datosHoja];
+      const turnos = normalizarTurnos(cfg.turnos);
+      const vacTotal = sumaVacantesTurnos(turnos);
+      const horarioTxt = horarioDesdeTurnos(turnos);
+      await db.query(
+        `UPDATE items_portal SET
+           turnos=$1::jsonb,
+           vacantes=$2,
+           horario=$3,
+           observaciones=CASE
+             WHEN TRIM(COALESCE(observaciones,''))='' OR observaciones ILIKE '%entrega de documentos%'
+             THEN $4 ELSE observaciones END
+         WHERE id=$5`,
+        [JSON.stringify(turnos), vacTotal, horarioTxt, PLAZO_DOCS_HOJA, row.id]
+      );
+      row.vacantes = vacTotal;
+      row.turnos = turnos;
+      turnosCargados++;
+      if (cfg.redistribuirCupos) {
+        const nuevos = plantillaCuposDivopus1(vacTotal);
+        await db.query(
+          'UPDATE items_portal SET cupos_unidades=$1::jsonb WHERE id=$2',
+          [JSON.stringify(nuevos), row.id]
+        );
+        cuposActualizados++;
+        row.cupos_unidades = nuevos;
+      }
+    }
+
     const cuposActuales = normalizarCuposUnidades(row.cupos_unidades);
     const esCelador = String(row.titulo || '').toUpperCase().indexOf('CELADOR') !== -1;
     if (!cuposActuales.length) {
@@ -5388,7 +5496,8 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
   return {
     total: CONVENIOS_OFICIALES.length,
     cupos_actualizados: cuposActualizados,
-    plantillas_copiadas: plantillasCopiadas
+    plantillas_copiadas: plantillasCopiadas,
+    turnos_cargados: turnosCargados
   };
 }
 
@@ -6157,7 +6266,8 @@ app.post('/admin/sync-convenios', requireAuth, async (req, res) => {
       total: r.total,
       cupos_actualizados: r.cupos_actualizados || 0,
       plantillas_copiadas: r.plantillas_copiadas || 0,
-      mensaje: 'Los ' + r.total + ' convenios quedaron visibles con el mismo flujo que Celador (preinscripción, sorteo, expediente y repechaje).'
+      turnos_cargados: r.turnos_cargados || 0,
+      mensaje: 'Los ' + r.total + ' convenios quedaron visibles. Turnos/vacantes de hoja cargados: ' + (r.turnos_cargados || 0) + '.'
     });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
@@ -6171,7 +6281,7 @@ app.get('/admin/items', requireAuth, async (req, res) => {
       `SELECT i.id, i.tipo, i.titulo, i.descripcion, i.estado, i.icono, i.color, i.requisitos, i.horario,
               i.vacantes, i.fecha_inicio, i.duracion, i.lugar, i.observaciones, i.ventana_inscripcion,
               i.formulario_url, i.inscripciones_abiertas, i.visible, i.orden, i.uniforme,
-              i.contactos_responsables, i.aviso_sorteo_fb, i.cupos_unidades, i.plantilla_nombre,
+              i.contactos_responsables, i.aviso_sorteo_fb, i.cupos_unidades, i.turnos, i.plantilla_nombre,
               (SELECT COUNT(*) FROM inscripciones n WHERE n.item_id=i.id) AS total_inscritos
        FROM items_portal i`;
     if (!esU) {
@@ -6217,21 +6327,23 @@ app.post('/admin/items', requireAuth, async (req, res) => {
     const { tipo, titulo, descripcion, estado, icono, color, requisitos, horario,
             vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
             formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables,
-            aviso_sorteo_fb, cupos_unidades } = req.body;
+            aviso_sorteo_fb, cupos_unidades, turnos } = req.body;
     if (!puedeGestionarItem(req.admin, tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     if (!titulo) return res.json({ ok: false, error: 'El título es obligatorio.' });
     const cupos = normalizarCuposUnidades(cupos_unidades);
+    const turnosNorm = normalizarTurnos(turnos);
     const r = await pool.query(
       `INSERT INTO items_portal(tipo,titulo,descripcion,estado,icono,color,requisitos,horario,
-        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden,uniforme,contactos_responsables,aviso_sorteo_fb,cupos_unidades)
-       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22::jsonb) RETURNING id`,
+        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden,uniforme,contactos_responsables,aviso_sorteo_fb,cupos_unidades,turnos)
+       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22::jsonb,$23::jsonb) RETURNING id`,
       [tipo, titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
        horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
        lugar||'', observaciones||'', ventana_inscripcion||'', formulario_url||'',
        !!inscripciones_abiertas, visible!==false, parseInt(orden)||0,
-       uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'', JSON.stringify(cupos)]);
+       uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'', JSON.stringify(cupos),
+       JSON.stringify(turnosNorm)]);
     invalidarPortalItemsCache();
     res.json({ ok: true, id: r.rows[0].id });
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -6247,20 +6359,22 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
     const { titulo, descripcion, estado, icono, color, requisitos, horario,
             vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
             formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables,
-            aviso_sorteo_fb, cupos_unidades } = req.body;
+            aviso_sorteo_fb, cupos_unidades, turnos } = req.body;
     const cupos = normalizarCuposUnidades(cupos_unidades);
+    const turnosNorm = normalizarTurnos(turnos);
     await pool.query(
       `UPDATE items_portal SET titulo=$1,descripcion=$2,estado=$3,icono=$4,color=$5,
         requisitos=$6::jsonb,horario=$7,vacantes=$8,fecha_inicio=$9,duracion=$10,
         lugar=$11,observaciones=$12,ventana_inscripcion=$13,formulario_url=$14,inscripciones_abiertas=$15,
         visible=$16,orden=$17,uniforme=$18,contactos_responsables=$19,aviso_sorteo_fb=$20,
-        cupos_unidades=$21::jsonb,actualizado=NOW() WHERE id=$22`,
+        cupos_unidades=$21::jsonb,turnos=$22::jsonb,actualizado=NOW() WHERE id=$23`,
       [titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
        horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
        lugar||'', observaciones||'', ventana_inscripcion||'', formulario_url||'',
        !!inscripciones_abiertas, visible!==false, parseInt(orden)||0,
-       uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'', JSON.stringify(cupos), req.params.id]);
+       uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'', JSON.stringify(cupos),
+       JSON.stringify(turnosNorm), req.params.id]);
     invalidarPortalItemsCache();
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }

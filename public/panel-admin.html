@@ -1538,6 +1538,36 @@
         <label id="mi-lab-horario">Horario</label>
         <input type="text" id="mi-horario" placeholder="Ej: 08:00 a 20:00 hrs" maxlength="200"/>
       </div>
+      <div style="grid-column:1/-1;" id="mi-turnos-wrap">
+        <label style="margin-bottom:4px;"><i class="fas fa-clock"></i> Turnos y vacantes por turno</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px;">
+          <div style="width:120px;">
+            <label style="font-size:10px;margin:0;">Turno</label>
+            <select id="mi-turno-add-nombre" style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;">
+              <option value="MAÑANA">MAÑANA</option>
+              <option value="TARDE" selected>TARDE</option>
+              <option value="NOCHE">NOCHE</option>
+            </select>
+          </div>
+          <div style="width:120px;">
+            <label style="font-size:10px;margin:0;">Día</label>
+            <select id="mi-turno-add-dia" style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;">
+              <option value="PAR/IMPAR" selected>PAR/IMPAR</option>
+              <option value="PAR">PAR</option>
+              <option value="IMPAR">IMPAR</option>
+            </select>
+          </div>
+          <div style="width:88px;">
+            <label style="font-size:10px;margin:0;">Vacantes</label>
+            <input type="number" id="mi-turno-add-vac" min="0" value="0" style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;"/>
+          </div>
+          <button type="button" class="btn-mini btn-mini-ok" style="padding:5px 8px;" onclick="agregarTurnoUI()" title="Agregar turno"><i class="fas fa-plus"></i></button>
+          <button type="button" class="btn-mini btn-mini-danger" style="padding:5px 8px;" title="Vaciar turnos" onclick="limpiarTurnosUI()"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="mi-turnos-lista" style="margin-bottom:4px;"></div>
+        <textarea id="mi-turnos" rows="2" style="display:none;"></textarea>
+        <p style="font-size:10.5px;color:#888;margin:4px 0 0;">Al guardar, vacantes totales y horario se actualizan con la suma de turnos.</p>
+      </div>
       <div style="grid-column:1/-1;display:none;" id="mi-wrap-lugar">
         <label id="mi-lab-lugar">Lugar</label>
         <input type="text" id="mi-lugar" placeholder="" maxlength="200"/>
@@ -1550,9 +1580,9 @@
         <label>Contactos</label>
         <textarea id="mi-contactos" rows="2"></textarea>
       </div>
-      <div style="grid-column:1/-1;display:none;" id="mi-wrap-observaciones">
-        <label>Observaciones</label>
-        <input type="text" id="mi-observaciones" maxlength="300"/>
+      <div style="grid-column:1/-1;" id="mi-wrap-observaciones">
+        <label id="mi-lab-observaciones">Observaciones</label>
+        <input type="text" id="mi-observaciones" maxlength="300" placeholder="Ej: Entrega de documentos hasta el 30 de julio 2026"/>
       </div>
       <div style="grid-column:1/-1;">
         <label>Requisitos (uno por línea)</label>
@@ -4999,6 +5029,8 @@ function abrirModalItem(id){
   document.getElementById('mi-observaciones').value='';
   document.getElementById('mi-requisitos').value='';
   document.getElementById('mi-cupos-unidades').value='';
+  var turnosTa=document.getElementById('mi-turnos');
+  if(turnosTa) turnosTa.value='';
   document.getElementById('mi-ventana-inscripcion').value='';
   var avisoFb=document.getElementById('mi-aviso-sorteo-fb');
   if(avisoFb) avisoFb.value='';
@@ -5009,6 +5041,7 @@ function abrirModalItem(id){
   document.getElementById('mi-titulo').textContent=tipoIni==='convenio'?'Nuevo convenio':'Nueva convocatoria';
   initSelectCupoAddNombre();
   renderListaCuposUnidadesUI();
+  renderListaTurnosUI();
   adaptarModalItemPorTipo(tipoIni);
 
   if(!id){
@@ -5061,6 +5094,8 @@ function poblarModalItem(item){
   var reqs=Array.isArray(item.requisitos)?item.requisitos:[];
   document.getElementById('mi-requisitos').value=reqs.join('\n');
   document.getElementById('mi-cupos-unidades').value=serializarCuposUnidades(item.cupos_unidades);
+  var turnosTa=document.getElementById('mi-turnos');
+  if(turnosTa) turnosTa.value=serializarTurnos(item.turnos);
   document.getElementById('mi-ventana-inscripcion').value=item.ventana_inscripcion||'';
   var avisoFb=document.getElementById('mi-aviso-sorteo-fb');
   if(avisoFb) avisoFb.value=item.aviso_sorteo_fb||'';
@@ -5082,6 +5117,7 @@ function poblarModalItem(item){
   }
   initSelectCupoAddNombre();
   renderListaCuposUnidadesUI();
+  renderListaTurnosUI();
   adaptarModalItemPorTipo(item.tipo || 'curso');
   adaptarCuposUIPorTitulo();
   document.getElementById('modal-item').classList.add('open');
@@ -5134,7 +5170,7 @@ function adaptarModalItemPorTipo(tipo){
   };
   show('mi-wrap-descripcion', !esConv);
   show('mi-wrap-color', !esConv);
-  show('mi-wrap-observaciones', !esConv);
+  show('mi-wrap-observaciones', true);
   show('mi-wrap-uniforme', !esConv);
   show('mi-wrap-contactos', !esConv);
   show('mi-wrap-form-url', !esConv);
@@ -5142,15 +5178,18 @@ function adaptarModalItemPorTipo(tipo){
   show('mi-wrap-duracion', !esConv);
   show('mi-wrap-vacantes', true);
   show('mi-cupos-wrap', esConv);
+  show('mi-turnos-wrap', esConv);
   show('mi-aviso-sorteo-wrap', esConv);
   show('mi-wrap-icono', true);
 
   var labFecha = document.getElementById('mi-lab-fecha');
   var labDur = document.getElementById('mi-lab-duracion');
   var labHor = document.getElementById('mi-lab-horario');
+  var labObs = document.getElementById('mi-lab-observaciones');
   if(labFecha) labFecha.textContent = esConv ? 'Beneficio económico' : 'Fecha de inicio';
   if(labDur) labDur.textContent = esConv ? 'Detalle del beneficio' : 'Duración';
-  if(labHor) labHor.textContent = esConv ? 'Horario' : 'Turnos / Horarios';
+  if(labHor) labHor.textContent = esConv ? 'Horario (resumen)' : 'Turnos / Horarios';
+  if(labObs) labObs.textContent = esConv ? 'Plazo / aviso documental' : 'Observaciones';
 
   var plantilla = document.getElementById('mi-plantilla-wrap');
   if(plantilla) plantilla.style.display = '';
@@ -5168,6 +5207,7 @@ function bodyDesdeItemCache(item, overrides){
     color: item.color || '#004d3d',
     requisitos: Array.isArray(item.requisitos) ? item.requisitos : [],
     cupos_unidades: Array.isArray(item.cupos_unidades) ? item.cupos_unidades : [],
+    turnos: Array.isArray(item.turnos) ? item.turnos : [],
     horario: item.horario || '',
     vacantes: overrides.vacantes != null ? (parseInt(overrides.vacantes, 10) || 0) : (parseInt(item.vacantes, 10) || 0),
     fecha_inicio: item.fecha_inicio || '',
@@ -5271,6 +5311,100 @@ function serializarCuposUnidades(cupos){
     var d=c&&c.disponibles!=null?c.disponibles:Math.max(0,v-i);
     return n+' | '+v+' | '+i+' | '+d;
   }).join('\n');
+}
+
+function serializarTurnos(turnos){
+  if(!Array.isArray(turnos)||!turnos.length) return '';
+  return turnos.map(function(t){
+    return String((t&&t.turno)||'').trim()+' | '+String((t&&t.dia)||'PAR/IMPAR').trim()+' | '+(t&&t.vacantes!=null?t.vacantes:0);
+  }).join('\n');
+}
+
+function parseTurnosTexto(txt){
+  return String(txt||'').split('\n').map(function(line){
+    var parts=line.split('|').map(function(p){ return p.trim(); });
+    if(!parts[0]) return null;
+    var vac=parseInt(parts[2],10); if(isNaN(vac)||vac<0) vac=0;
+    return { turno: parts[0].toUpperCase(), dia: (parts[1]||'PAR/IMPAR').toUpperCase(), vacantes: vac };
+  }).filter(Boolean);
+}
+
+function setTurnosDesdeArray(turnos){
+  var ta=document.getElementById('mi-turnos');
+  if(ta) ta.value=serializarTurnos(turnos||[]);
+  renderListaTurnosUI();
+}
+
+function renderListaTurnosUI(){
+  var lista=document.getElementById('mi-turnos-lista');
+  var ta=document.getElementById('mi-turnos');
+  if(!lista||!ta) return;
+  var turnos=parseTurnosTexto(ta.value);
+  if(!turnos.length){
+    lista.innerHTML='<p style="font-size:12px;color:#888;margin:0;padding:8px;background:#fafafa;border:1px dashed #ccc;border-radius:6px;">Sin turnos. Agregue turno, día y vacantes.</p>';
+    return;
+  }
+  lista.innerHTML='<table class="t" style="margin:0;font-size:12px;"><thead><tr>'
+    +'<th>Turno</th><th>Día</th><th style="width:90px;">Vacantes</th><th style="width:56px;"></th>'
+    +'</tr></thead><tbody>'
+    +turnos.map(function(t,idx){
+      return '<tr>'
+        +'<td style="font-weight:600;">'+escHtml(t.turno)+'</td>'
+        +'<td>'+escHtml(t.dia)+'</td>'
+        +'<td><input type="number" min="0" value="'+(t.vacantes||0)+'" style="width:72px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;" onchange="actualizarTurnoUI('+idx+',this.value)"/></td>'
+        +'<td><button type="button" class="btn-mini btn-mini-danger" style="padding:3px 6px;" onclick="quitarTurnoUI('+idx+')" title="Quitar"><i class="fas fa-times"></i></button></td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table>';
+  var suma=turnos.reduce(function(a,t){ return a+(parseInt(t.vacantes,10)||0); },0);
+  var vacEl=document.getElementById('mi-vacantes');
+  if(vacEl && suma>0) vacEl.value=suma;
+  var horEl=document.getElementById('mi-horario');
+  if(horEl && turnos.length){
+    var nombres=[];
+    var dias={};
+    turnos.forEach(function(t){
+      if(nombres.indexOf(t.turno)===-1) nombres.push(t.turno);
+      dias[t.dia]=true;
+    });
+    horEl.value=nombres.join(' / ')+' — días '+Object.keys(dias).join(' / ');
+  }
+}
+
+function agregarTurnoUI(){
+  var nomEl=document.getElementById('mi-turno-add-nombre');
+  var diaEl=document.getElementById('mi-turno-add-dia');
+  var vacEl=document.getElementById('mi-turno-add-vac');
+  var turno=nomEl?String(nomEl.value||'').trim().toUpperCase():'';
+  var dia=diaEl?String(diaEl.value||'PAR/IMPAR').trim().toUpperCase():'PAR/IMPAR';
+  var vac=vacEl?(parseInt(vacEl.value,10)||0):0;
+  if(!turno){ alert('Seleccione un turno.'); return; }
+  var turnos=parseTurnosTexto((document.getElementById('mi-turnos')||{}).value);
+  var key=turno+'|'+dia;
+  var found=turnos.find(function(t){ return (t.turno+'|'+t.dia)===key; });
+  if(found) found.vacantes=vac;
+  else turnos.push({ turno:turno, dia:dia, vacantes:vac });
+  setTurnosDesdeArray(turnos);
+  if(vacEl) vacEl.value='0';
+}
+
+function actualizarTurnoUI(idx, valor){
+  var turnos=parseTurnosTexto((document.getElementById('mi-turnos')||{}).value);
+  if(!turnos[idx]) return;
+  var n=parseInt(valor,10); if(isNaN(n)||n<0) n=0;
+  turnos[idx].vacantes=n;
+  setTurnosDesdeArray(turnos);
+}
+
+function quitarTurnoUI(idx){
+  var turnos=parseTurnosTexto((document.getElementById('mi-turnos')||{}).value);
+  turnos.splice(idx,1);
+  setTurnosDesdeArray(turnos);
+}
+
+function limpiarTurnosUI(){
+  if(!confirm('¿Vaciar todos los turnos de este convenio?')) return;
+  setTurnosDesdeArray([]);
 }
 
 function initSelectCupoAddNombre(){
@@ -5413,6 +5547,24 @@ function guardarItem(){
   if(!titulo){alert('El título es obligatorio.');return;}
   var reqText=document.getElementById('mi-requisitos').value;
   var requisitos=reqText.split('\n').map(function(r){return r.trim();}).filter(Boolean);
+  var turnos=parseTurnosTexto((document.getElementById('mi-turnos')||{}).value);
+  var sumaTurnos=turnos.reduce(function(a,t){ return a+(parseInt(t.vacantes,10)||0); },0);
+  var horarioTxt=val('mi-horario');
+  if(turnos.length){
+    var nombres=[];
+    var dias={};
+    turnos.forEach(function(t){
+      if(nombres.indexOf(t.turno)===-1) nombres.push(t.turno);
+      dias[t.dia]=true;
+    });
+    var autoHor=nombres.join(' / ')+' — días '+Object.keys(dias).join(' / ');
+    if(!horarioTxt || horarioTxt.indexOf('—')!==-1) horarioTxt=autoHor;
+  }
+  var vacantes=sumaTurnos>0 ? sumaTurnos : (parseInt(val('mi-vacantes'))||0);
+  if(sumaTurnos>0){
+    var vacEl=document.getElementById('mi-vacantes');
+    if(vacEl) vacEl.value=String(sumaTurnos);
+  }
   var body={
     tipo:tipo, titulo:titulo.toUpperCase(),
     descripcion:val('mi-descripcion'),
@@ -5421,8 +5573,9 @@ function guardarItem(){
     color:val('mi-color')||'#004d3d',
     requisitos:requisitos,
     cupos_unidades:parseCuposUnidadesTexto(document.getElementById('mi-cupos-unidades').value),
-    horario:val('mi-horario'),
-    vacantes:parseInt(val('mi-vacantes'))||0,
+    turnos:turnos,
+    horario:horarioTxt,
+    vacantes:vacantes,
     fecha_inicio:val('mi-fecha-inicio'),
     duracion:val('mi-duracion'),
     lugar:val('mi-lugar'),

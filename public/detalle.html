@@ -337,7 +337,7 @@ function renderDetalle(item){
   if(esConvenio && (item.fecha_inicio || item.duracion || item.observaciones)){
     if(item.fecha_inicio) infoHtml += '<div class="info-item"><span>BENEFICIO ECONÓMICO:</span><p class="price">'+escHtmlD(item.fecha_inicio)+'</p></div>';
     if(item.duracion) infoHtml += '<div class="info-item"><p>'+escHtmlD(item.duracion)+'</p></div>';
-    if(item.observaciones) infoHtml += '<div class="info-item"><small>* '+escHtmlD(item.observaciones)+'</small></div>';
+    if(item.observaciones) infoHtml += '<div class="info-item"><span>PLAZO:</span><p><strong>'+escHtmlD(item.observaciones)+'</strong></p></div>';
   } else if(esCurso && (item.fecha_inicio || item.duracion || item.observaciones)){
     if(item.fecha_inicio) infoHtml += '<div class="info-item"><span>FECHA DE INICIO:</span><p class="price" style="color:#004d3d;">'+escHtmlD(item.fecha_inicio)+'</p></div>';
     if(item.duracion) infoHtml += '<div class="info-item"><span>DURACIÓN:</span><p>'+escHtmlD(item.duracion)+'</p></div>';
@@ -349,6 +349,21 @@ function renderDetalle(item){
   if(!infoHtml) infoHtml = '<p style="color:#888;font-size:13px;margin:0;">Sin datos publicados.</p>';
 
   var infoTitulo = esConvenio ? 'HORARIOS / VACANTES / BENEFICIO' : 'HORARIOS / VACANTES / INICIO';
+
+  var turnos = Array.isArray(item.turnos) ? item.turnos.slice() : [];
+  var turnosCard = '';
+  if(esConvenio && turnos.length){
+    turnosCard = '<div class="card-detalle">'
+      +'<h3>TURNOS / VACANTES</h3>'
+      +'<div class="tabla-cupos-wrap"><table class="tabla-cupos">'
+      +'<thead><tr><th>Turno</th><th>Día</th><th>Vacantes</th></tr></thead><tbody>'
+      +turnos.map(function(t){
+        return '<tr><td>'+escHtmlD(t.turno||'')+'</td>'
+          +'<td class="num">'+escHtmlD(t.dia||'')+'</td>'
+          +'<td class="num">'+escHtmlD(String(t.vacantes!=null?t.vacantes:0))+'</td></tr>';
+      }).join('')
+      +'</tbody></table></div></div>';
+  }
 
   var cupos = Array.isArray(item.cupos_unidades) ? item.cupos_unidades.slice() : [];
   // Sin cupos configurados: mostrar un solo lugar (no forzar DIVOPUS 1)
@@ -439,6 +454,7 @@ function renderDetalle(item){
     +infoHtml
     +'</div>'
     +'</div>'
+    +(turnosCard || '')
     +(ciasCard || '')
     +'</div>'
     +'</div>'
