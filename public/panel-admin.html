@@ -1602,9 +1602,9 @@
         <textarea id="mi-cupos-unidades" rows="2" style="display:none;"></textarea>
       </div>
       <div style="grid-column:1/-1;display:none;" id="mi-wrap-ventana">
-        <label id="mi-lab-ventana">Ventana de inscripción</label>
+        <label id="mi-lab-ventana"><i class="fas fa-bullhorn"></i> Aviso en la ficha (cuadro rosa / verde)</label>
         <textarea id="mi-ventana-inscripcion" rows="2" maxlength="400"
-          placeholder="Ej: Las inscripciones se habilitan del 20 al 25 de cada mes."
+          placeholder="Ej: Las inscripciones se habilitan del 20 al 25 de cada mes. Entrega de documentos hasta el jueves 30 de julio 2026."
           style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;resize:vertical;"></textarea>
         <div id="mi-ventana-tools" style="display:none;margin-top:8px;padding:8px;background:#f4f8f6;border:1px solid #d5e5dc;border-radius:7px;">
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
@@ -1613,8 +1613,9 @@
               <input type="date" id="mi-plazo-fecha" style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;"/>
             </div>
             <button type="button" class="btn-mini btn-mini-ok" style="padding:5px 8px;" onclick="aplicarFechaEntregaAVentana()"><i class="fas fa-calendar-check"></i> Poner plazo</button>
-            <button type="button" class="btn-mini" style="padding:5px 8px;" onclick="setVentanaInscripcionesAbiertas()"><i class="fas fa-door-open"></i> Inscripciones abiertas</button>
+            <button type="button" class="btn-mini" style="padding:5px 8px;" onclick="setVentanaInscripcionesAbiertas()"><i class="fas fa-door-open"></i> Texto inscripciones</button>
           </div>
+          <p style="font-size:10.5px;color:#666;margin:6px 0 0;line-height:1.35;">Este texto se muestra en la ficha web del convenio (banner superior). Editable por Admin de Convenios y Super Admin.</p>
         </div>
       </div>
       <div style="grid-column:1/-1;display:none;" id="mi-aviso-sorteo-wrap">
@@ -5341,7 +5342,7 @@ function adaptarModalItemPorTipo(tipo){
   show('mi-wrap-duracion', !esConv);
   show('mi-wrap-fecha', !esConv);
   show('mi-wrap-horario', !esConv);
-  show('mi-wrap-ventana', !esConv);
+  show('mi-wrap-ventana', true);
   show('mi-wrap-vacantes', true);
   show('mi-cupos-wrap', esConv);
   show('mi-turnos-wrap', esConv);
@@ -5371,8 +5372,12 @@ function adaptarModalItemPorTipo(tipo){
   if(labDur) labDur.textContent = esConv ? 'Detalle del beneficio' : 'Duración';
   if(labHor) labHor.textContent = 'Horario';
   if(labObs) labObs.textContent = 'Observaciones';
-  if(labVen) labVen.textContent = 'Ventana de inscripción';
-  if(toolsVen) toolsVen.style.display = 'none';
+  if(labVen) {
+    labVen.innerHTML = esConv
+      ? '<i class="fas fa-bullhorn"></i> Aviso en la ficha (cuadro rosa / verde)'
+      : 'Ventana de inscripción';
+  }
+  if(toolsVen) toolsVen.style.display = esConv ? '' : 'none';
 
   var plantilla = document.getElementById('mi-plantilla-wrap');
   if(plantilla) plantilla.style.display = '';
@@ -5812,7 +5817,6 @@ function guardarItem(){
     if(id){
       var prevB=(ITEMS_CACHE||[]).find(function(i){ return parseInt(i.id,10)===parseInt(id,10); });
       fechaInicioTxt=prevB ? (prevB.fecha_inicio || '') : '';
-      if(prevB && prevB.ventana_inscripcion) ventanaTxt = prevB.ventana_inscripcion;
     } else {
       fechaInicioTxt='';
     }
