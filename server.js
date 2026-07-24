@@ -5680,6 +5680,7 @@ app.get('/portal/items/:id', async (req, res) => {
     } else {
       item.cupos_unidades = normalizarCuposUnidades(item.cupos_unidades);
     }
+    item.turnos = normalizarTurnos(item.turnos);
     res.set('Cache-Control', 'public, max-age=30');
     res.json({ ok: true, item: item });
   } catch (e) { res.json({ ok: false, error: e.message }); }
