@@ -5231,7 +5231,7 @@ function esTituloCelador(titulo){
 
 var DIVOPUS_CELADOR = ['DIVOPUS 01', 'DIVOPUS 02', 'DIVOPUS 03'];
 
-/** UI unificada de convenios: vacantes solo en lugares/DIVOPUS; total y turno automáticos. */
+/** UI convenios: turnos editables (como la hoja); total = suma turnos; Celador también tiene DIVOPUS. */
 function adaptarCuposUIPorTitulo(){
   var tipo = (document.getElementById('mi-tipo') || {}).value || '';
   if (tipo !== 'convenio') return;
@@ -5245,22 +5245,27 @@ function adaptarCuposUIPorTitulo(){
   var vacEl = document.getElementById('mi-vacantes');
   if (labCupos) {
     labCupos.innerHTML = esCel
-      ? '<i class="fas fa-map-marker-alt"></i> Vacantes por DIVOPUS <span style="font-weight:600;color:#004d3d;">(aquí se registran)</span>'
-      : '<i class="fas fa-map-marker-alt"></i> Lugares y vacantes <span style="font-weight:600;color:#004d3d;">(aquí se registran)</span>';
+      ? '<i class="fas fa-map-marker-alt"></i> Lugares DIVOPUS <span style="font-weight:600;color:#004d3d;">(dónde postulan)</span>'
+      : '<i class="fas fa-map-marker-alt"></i> Lugar (opcional)';
   }
   if (addBar) addBar.style.display = esCel ? 'none' : 'flex';
-  if (turnoAdd) turnoAdd.style.display = 'none';
-  if (turnoLab) turnoLab.innerHTML = '<i class="fas fa-clock"></i> Turno (solo referencia)';
-  if (turnoAyuda) turnoAyuda.style.display = 'none';
-  if (vacLab) vacLab.textContent = 'Total (automático)';
+  if (turnoAdd) turnoAdd.style.display = 'flex';
+  if (turnoLab) {
+    turnoLab.innerHTML = '<i class="fas fa-clock"></i> Turnos, día y vacantes <span style="font-weight:600;color:#004d3d;">(aquí se registran)</span>';
+  }
+  if (turnoAyuda) {
+    turnoAyuda.style.display = '';
+    turnoAyuda.textContent = 'Edite Turno / Día / Vacantes como en la hoja. El total se actualiza solo.';
+  }
+  if (vacLab) vacLab.textContent = 'Total (suma de turnos)';
   if (vacEl) {
     vacEl.readOnly = true;
     vacEl.style.background = '#f0f4f2';
-    vacEl.title = esCel ? 'Suma de DIVOPUS 01 + 02 + 03' : 'Suma de vacantes por lugar';
+    vacEl.title = 'Suma automática de vacantes por turno';
   }
   if (esCel) asegurarCuposSoloDivopusCelador();
   else asegurarCupoBaseConvenio();
-  sincronizarTotalDesdeCuposConvenio();
+  sincronizarTotalDesdeTurnosConvenio();
   renderListaCuposUnidadesUI();
   renderListaTurnosUI();
 }
@@ -5269,24 +5274,52 @@ function sumaVacantesCupos(cupos){
   return (cupos || []).reduce(function(a,c){ return a + (parseInt(c.vacantes,10)||0); }, 0);
 }
 
-/** Total + turno se sincronizan desde la tabla de lugares/DIVOPUS. */
-function sincronizarTotalDesdeCuposConvenio(){
+function sumaVacantesTurnosUI(turnos){
+  return (turnos || []).reduce(function(a,t){ return a + (parseInt(t.vacantes,10)||0); }, 0);
+}
+
+/** Total y cupos se alinean a la suma de turnos (fuente = hoja). */
+function sincronizarTotalDesdeTurnosConvenio(){
   var tipo = (document.getElementById('mi-tipo') || {}).value || '';
   if (tipo !== 'convenio') return;
-  var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
-  var suma = sumaVacantesCupos(cupos);
+  var turnos = parseTurnosTexto((document.getElementById('mi-turnos') || {}).value);
+  var suma = sumaVacantesTurnosUI(turnos);
   var vacEl = document.getElementById('mi-vacantes');
   if (vacEl) vacEl.value = String(suma);
-  var turnos = parseTurnosTexto((document.getElementById('mi-turnos') || {}).value);
-  if (!turnos.length) {
-    turnos = [{ turno: 'TARDE', dia: 'PAR/IMPAR', vacantes: suma }];
+  var esCel = esTituloCelador((document.getElementById('mi-titulo-val') || {}).value);
+  if (esCel) {
+    redistribuirDivopusDesdeTotal(suma);
   } else {
-    turnos = turnos.map(function(t, idx){
-      return { turno: t.turno, dia: t.dia, vacantes: idx === 0 ? suma : 0 };
-    });
+    var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
+    if (cupos.length === 1) {
+      cupos[0].vacantes = suma;
+      cupos[0].disponibles = Math.max(0, suma - (cupos[0].inscritos || 0));
+      var ta = document.getElementById('mi-cupos-unidades');
+      if (ta) ta.value = serializarCuposUnidades(cupos);
+    } else if (!cupos.length && suma > 0) {
+      asegurarCupoBaseConvenio();
+    }
   }
-  var ta = document.getElementById('mi-turnos');
-  if (ta) ta.value = serializarTurnos(turnos);
+}
+
+function redistribuirDivopusDesdeTotal(total){
+  var t = parseInt(total, 10) || 0;
+  var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
+  var porNombre = {};
+  cupos.forEach(function(c){
+    var k = String(c.nombre || '').trim().toUpperCase();
+    if (/^DIVOPUS\s*0[123]$/.test(k)) porNombre[k] = c;
+  });
+  var porDiv = Math.floor(t / 3);
+  var resto = t % 3;
+  var nuevos = DIVOPUS_CELADOR.map(function(nombre, idx){
+    var vac = porDiv + (idx < resto ? 1 : 0);
+    var prev = porNombre[nombre];
+    var insc = prev ? (parseInt(prev.inscritos, 10) || 0) : 0;
+    return { nombre: nombre, vacantes: vac, inscritos: insc, disponibles: Math.max(0, vac - insc) };
+  });
+  var ta = document.getElementById('mi-cupos-unidades');
+  if (ta) ta.value = serializarCuposUnidades(nuevos);
 }
 
 function asegurarCuposSoloDivopusCelador(){
@@ -5296,26 +5329,21 @@ function asegurarCuposSoloDivopusCelador(){
     return String(c.nombre || '').toUpperCase() === DIVOPUS_CELADOR[i];
   });
   if (soloDivopus) return;
-  var total = parseInt((document.getElementById('mi-vacantes') || {}).value, 10) || sumaVacantesCupos(cupos) || 0;
-  var porDiv = Math.floor(total / 3);
-  var resto = total % 3;
-  var nuevos = DIVOPUS_CELADOR.map(function(nombre, idx){
-    var vac = porDiv + (idx < resto ? 1 : 0);
-    return { nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac };
-  });
-  var ta = document.getElementById('mi-cupos-unidades');
-  if (ta) ta.value = serializarCuposUnidades(nuevos);
+  var turnos = parseTurnosTexto((document.getElementById('mi-turnos') || {}).value);
+  var total = sumaVacantesTurnosUI(turnos)
+    || parseInt((document.getElementById('mi-vacantes') || {}).value, 10)
+    || 0;
+  redistribuirDivopusDesdeTotal(total);
 }
 
-/** Si no hay lugares, crea uno con el total actual (otros convenios). */
+/** Si no hay lugares, crea uno con el total de turnos (otros convenios). */
 function asegurarCupoBaseConvenio(){
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
   if (cupos.length) return;
-  var vac = parseInt((document.getElementById('mi-vacantes') || {}).value, 10) || 0;
-  if (!vac) {
-    var turnos = parseTurnosTexto((document.getElementById('mi-turnos') || {}).value);
-    vac = turnos.reduce(function(a,t){ return a + (parseInt(t.vacantes,10)||0); }, 0);
-  }
+  var turnos = parseTurnosTexto((document.getElementById('mi-turnos') || {}).value);
+  var vac = sumaVacantesTurnosUI(turnos)
+    || parseInt((document.getElementById('mi-vacantes') || {}).value, 10)
+    || 0;
   var nombre = String((document.getElementById('mi-lugar') || {}).value || '').trim()
     || String((document.getElementById('mi-titulo-val') || {}).value || '').trim()
     || 'Lugar del convenio';
@@ -5578,61 +5606,55 @@ function parseTurnosTexto(txt){
   }).filter(Boolean);
 }
 
-function setTurnosDesdeArray(turnos){
-  var ta=document.getElementById('mi-turnos');
-  if(ta) ta.value=serializarTurnos(turnos||[]);
-  renderListaTurnosUI();
-}
-
 function renderListaTurnosUI(){
   var lista=document.getElementById('mi-turnos-lista');
   var ta=document.getElementById('mi-turnos');
   if(!lista||!ta) return;
   var turnos=parseTurnosTexto(ta.value);
   var esConv=((document.getElementById('mi-tipo')||{}).value||'')==='convenio';
-  if(esConv){
-    if(!turnos.length){
-      lista.innerHTML='<div style="padding:8px 10px;background:#f4f8f6;border:1px solid #d5e5dc;border-radius:6px;font-size:13px;font-weight:600;color:#004d3d;">TARDE · PAR/IMPAR</div>';
-    } else {
-      lista.innerHTML='<div style="padding:8px 10px;background:#f4f8f6;border:1px solid #d5e5dc;border-radius:6px;font-size:13px;font-weight:600;color:#004d3d;">'
-        + turnos.map(function(t){ return escHtml(t.turno)+' · '+escHtml(t.dia); }).join(' &nbsp;|&nbsp; ')
-        + '</div>';
-    }
-    var horEl=document.getElementById('mi-horario');
-    if(horEl && turnos.length){
-      var nombres=[];
-      var dias={};
-      turnos.forEach(function(t){
-        if(nombres.indexOf(t.turno)===-1) nombres.push(t.turno);
-        dias[t.dia]=true;
-      });
-      horEl.value=nombres.join(' / ')+' — días '+Object.keys(dias).join(' / ');
-    }
-    return;
-  }
   if(!turnos.length){
-    lista.innerHTML='<p style="font-size:12px;color:#888;margin:0;padding:8px;background:#fafafa;border:1px dashed #ccc;border-radius:6px;">Sin turnos. Agregue turno, día y vacantes.</p>';
+    lista.innerHTML='<p style="font-size:12px;color:#888;margin:0;padding:8px;background:#fafafa;border:1px dashed #ccc;border-radius:6px;">Sin turnos. Agregue Turno, Día y Vacantes (como en la hoja).</p>';
     return;
   }
   lista.innerHTML='<table class="t" style="margin:0;font-size:12px;"><thead><tr>'
-    +'<th>Turno</th><th>Día</th><th style="width:90px;">Vacantes</th><th style="width:56px;"></th>'
+    +'<th>Turno</th><th>Día</th><th style="width:110px;">Vacantes</th><th style="width:56px;"></th>'
     +'</tr></thead><tbody>'
     +turnos.map(function(t,idx){
       return '<tr>'
         +'<td style="font-weight:600;">'+escHtml(t.turno)+'</td>'
         +'<td>'+escHtml(t.dia)+'</td>'
-        +'<td><input type="number" min="0" value="'+(t.vacantes||0)+'" style="width:72px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;" onchange="actualizarTurnoUI('+idx+',this.value)"/></td>'
+        +'<td><input type="number" min="0" value="'+(t.vacantes||0)+'" style="width:88px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;" onchange="actualizarTurnoUI('+idx+',this.value)"/></td>'
         +'<td><button type="button" class="btn-mini btn-mini-danger" style="padding:3px 6px;" onclick="quitarTurnoUI('+idx+')" title="Quitar"><i class="fas fa-times"></i></button></td>'
         +'</tr>';
     }).join('')
-    +'</tbody></table>';
-  var suma=turnos.reduce(function(a,t){ return a+(parseInt(t.vacantes,10)||0); },0);
+    +'</tbody></table>'
+    +(esConv ? '<p style="font-size:10.5px;color:#004d3d;margin:6px 0 0;font-weight:600;">Edite las vacantes por turno. El total se actualiza solo.</p>' : '');
+  var suma=sumaVacantesTurnosUI(turnos);
   var vacEl=document.getElementById('mi-vacantes');
-  if(vacEl && suma>0) vacEl.value=suma;
+  if(vacEl && (esConv || suma>0)) vacEl.value=String(suma);
+  var horEl=document.getElementById('mi-horario');
+  if(horEl && turnos.length){
+    var nombres=[];
+    var dias={};
+    turnos.forEach(function(t){
+      if(nombres.indexOf(t.turno)===-1) nombres.push(t.turno);
+      dias[t.dia]=true;
+    });
+    horEl.value=nombres.join(' / ')+' — días '+Object.keys(dias).join(' / ');
+  }
+}
+
+function setTurnosDesdeArray(turnos){
+  var ta=document.getElementById('mi-turnos');
+  if(ta) ta.value=serializarTurnos(turnos||[]);
+  renderListaTurnosUI();
+  if(((document.getElementById('mi-tipo')||{}).value||'')==='convenio'){
+    sincronizarTotalDesdeTurnosConvenio();
+    renderListaCuposUnidadesUI();
+  }
 }
 
 function agregarTurnoUI(){
-  if(((document.getElementById('mi-tipo')||{}).value||'')==='convenio') return;
   var nomEl=document.getElementById('mi-turno-add-nombre');
   var diaEl=document.getElementById('mi-turno-add-dia');
   var vacEl=document.getElementById('mi-turno-add-vac');
@@ -5650,7 +5672,6 @@ function agregarTurnoUI(){
 }
 
 function actualizarTurnoUI(idx, valor){
-  if(((document.getElementById('mi-tipo')||{}).value||'')==='convenio') return;
   var turnos=parseTurnosTexto((document.getElementById('mi-turnos')||{}).value);
   if(!turnos[idx]) return;
   var n=parseInt(valor,10); if(isNaN(n)||n<0) n=0;
@@ -5659,15 +5680,13 @@ function actualizarTurnoUI(idx, valor){
 }
 
 function quitarTurnoUI(idx){
-  if(((document.getElementById('mi-tipo')||{}).value||'')==='convenio') return;
   var turnos=parseTurnosTexto((document.getElementById('mi-turnos')||{}).value);
   turnos.splice(idx,1);
   setTurnosDesdeArray(turnos);
 }
 
 function limpiarTurnosUI(){
-  if(((document.getElementById('mi-tipo')||{}).value||'')==='convenio') return;
-  if(!confirm('¿Vaciar todos los turnos de este convenio?')) return;
+  if(!confirm('¿Vaciar todos los turnos?')) return;
   setTurnosDesdeArray([]);
 }
 
@@ -5687,14 +5706,14 @@ function renderListaCuposUnidadesUI(){
     lista.innerHTML = '<table class="t" style="margin:0;font-size:12px;"><thead><tr>'
       +'<th>DIVOPUS</th><th style="width:110px;">Vacantes</th>'
       +'</tr></thead><tbody>'
-      +cupos.map(function(c, idx){
+      +cupos.map(function(c){
         return '<tr>'
           +'<td style="font-weight:600;">'+escHtml(c.nombre)+'</td>'
-          +'<td><input type="number" min="0" value="'+(c.vacantes||0)+'" style="width:88px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;" onchange="actualizarCupoUnidadUI('+idx+',\'vacantes\',this.value)"/></td>'
+          +'<td style="font-weight:700;color:#004d3d;">'+(c.vacantes||0)+'</td>'
           +'</tr>';
       }).join('')
       +'</tbody></table>'
-      +'<p style="font-size:10.5px;color:#004d3d;margin:6px 0 0;font-weight:600;">Edite solo estos 3 números. El total se actualiza solo.</p>';
+      +'<p style="font-size:10.5px;color:#888;margin:6px 0 0;">Se reparte solo desde el total de turnos (DIVOPUS 01 / 02 / 03).</p>';
   } else {
     lista.innerHTML = '<table class="t" style="margin:0;font-size:12px;"><thead><tr>'
       +'<th>Lugar</th><th style="width:110px;">Vacantes</th><th style="width:56px;"></th>'
@@ -5707,11 +5726,8 @@ function renderListaCuposUnidadesUI(){
           +'</tr>';
       }).join('')
       +'</tbody></table>'
-      +'<p style="font-size:10.5px;color:#004d3d;margin:6px 0 0;font-weight:600;">Edite las vacantes por lugar. El total se actualiza solo.</p>';
+      +'<p style="font-size:10.5px;color:#888;margin:6px 0 0;">Lugar de postulación. Las vacantes del convenio se definen en Turnos.</p>';
   }
-  var suma = sumaVacantesCupos(cupos);
-  var vacEl = document.getElementById('mi-vacantes');
-  if(vacEl) vacEl.value = String(suma);
   var lugarEl = document.getElementById('mi-lugar');
   if(lugarEl && cupos.length === 1) lugarEl.value = cupos[0].nombre || lugarEl.value;
 }
@@ -5729,16 +5745,16 @@ function agregarCupoUnidadUI(){
   if(!nombre){ alert('Escriba el nombre o dirección del lugar.'); return; }
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
   var key = nombre.toUpperCase();
+  var sumaTurnos = sumaVacantesTurnosUI(parseTurnosTexto((document.getElementById('mi-turnos')||{}).value));
   if(!cupos.find(function(c){ return String(c.nombre||'').toUpperCase() === key; })){
-    cupos.push({ nombre: nombre, vacantes: 0, inscritos: 0, disponibles: 0 });
+    cupos.push({ nombre: nombre, vacantes: cupos.length ? 0 : sumaTurnos, inscritos: 0, disponibles: cupos.length ? 0 : sumaTurnos });
   }
   setCuposUnidadesDesdeArray(cupos);
-  sincronizarTotalDesdeCuposConvenio();
-  renderListaTurnosUI();
   if(txt) txt.value = '';
 }
 
 function actualizarCupoUnidadUI(idx, campo, valor){
+  if (esTituloCelador((document.getElementById('mi-titulo-val') || {}).value)) return;
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
   if(!cupos[idx]) return;
   var n = parseInt(valor, 10);
@@ -5746,8 +5762,6 @@ function actualizarCupoUnidadUI(idx, campo, valor){
   cupos[idx][campo] = n;
   cupos[idx].disponibles = Math.max(0, (cupos[idx].vacantes || 0) - (cupos[idx].inscritos || 0));
   setCuposUnidadesDesdeArray(cupos);
-  sincronizarTotalDesdeCuposConvenio();
-  renderListaTurnosUI();
 }
 
 function quitarCupoUnidadUI(idx){
@@ -5755,8 +5769,6 @@ function quitarCupoUnidadUI(idx){
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
   cupos.splice(idx, 1);
   setCuposUnidadesDesdeArray(cupos);
-  sincronizarTotalDesdeCuposConvenio();
-  renderListaTurnosUI();
 }
 
 function parseCuposUnidadesTexto(txt){
@@ -5823,27 +5835,33 @@ function guardarItem(){
   }
   var cuposGuardar = parseCuposUnidadesTexto(document.getElementById('mi-cupos-unidades').value);
   if(tipo === 'convenio'){
-    if(esTituloCelador(titulo)){
-      cuposGuardar = cuposGuardar.filter(function(c){
-        return /^DIVOPUS\s*0[123]$/i.test(String(c.nombre || '').trim());
-      });
-      if(!cuposGuardar.length){
-        var base = vacantes || 0;
-        var porDiv = Math.floor(base / 3);
-        var resto = base % 3;
-        cuposGuardar = DIVOPUS_CELADOR.map(function(nombre, idx){
-          var vac = porDiv + (idx < resto ? 1 : 0);
-          return { nombre: nombre, vacantes: vac, inscritos: 0, disponibles: vac };
-        });
-      }
+    vacantes = sumaTurnos > 0 ? sumaTurnos : sumaVacantesTurnosUI(turnos);
+    if(!turnos.length && vacantes > 0){
+      turnos = [{ turno: 'TARDE', dia: 'PAR/IMPAR', vacantes: vacantes }];
     }
-    vacantes = sumaVacantesCupos(cuposGuardar);
-    if(!turnos.length) turnos = [{ turno: 'TARDE', dia: 'PAR/IMPAR', vacantes: vacantes }];
-    else turnos = turnos.map(function(t, idx){
-      return { turno: t.turno, dia: t.dia, vacantes: idx === 0 ? vacantes : 0 };
-    });
+    if(esTituloCelador(titulo)){
+      var porDiv = Math.floor(vacantes / 3);
+      var resto = vacantes % 3;
+      cuposGuardar = DIVOPUS_CELADOR.map(function(nombre, idx){
+        var vac = porDiv + (idx < resto ? 1 : 0);
+        var prev = (parseCuposUnidadesTexto(document.getElementById('mi-cupos-unidades').value) || [])
+          .find(function(c){ return String(c.nombre||'').toUpperCase() === nombre; });
+        var insc = prev ? (parseInt(prev.inscritos,10)||0) : 0;
+        return { nombre: nombre, vacantes: vac, inscritos: insc, disponibles: Math.max(0, vac - insc) };
+      });
+    } else if(cuposGuardar.length === 1){
+      cuposGuardar[0].vacantes = vacantes;
+      cuposGuardar[0].disponibles = Math.max(0, vacantes - (cuposGuardar[0].inscritos || 0));
+    } else if(!cuposGuardar.length && vacantes > 0){
+      cuposGuardar = [{
+        nombre: titulo || 'Lugar del convenio',
+        vacantes: vacantes,
+        inscritos: 0,
+        disponibles: vacantes
+      }];
+    }
     horarioTxt = turnos.map(function(t){ return t.turno; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).join(' / ')
-      + ' — días ' + turnos.map(function(t){ return t.dia; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).join(' / ');
+      + (turnos.length ? (' — días ' + turnos.map(function(t){ return t.dia; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).join(' / ')) : '');
   }
   var body={
     tipo:tipo, titulo:titulo.toUpperCase(),
