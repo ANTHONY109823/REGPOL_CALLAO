@@ -194,6 +194,9 @@ function cambiarTabCMS(tab) {
   if (tab === 'convenios' || tab === 'cursos') {
     renderGestionConvocatoriasCMS(tab === 'convenios' ? 'cms-lista-convenios' : 'cms-lista-cursos', tab === 'convenios' ? 'convenio' : 'curso');
   }
+  if (tab === 'convenios' && typeof cargarEstadoRepechaje === 'function') {
+    cargarEstadoRepechaje();
+  }
   actualizarMetaPublicacionCMS();
 }
 

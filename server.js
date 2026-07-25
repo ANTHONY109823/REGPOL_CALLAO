@@ -1352,6 +1352,20 @@ async function setConfig(clave, valor) {
   );
 }
 
+// ── Repechaje: activación global (Admin de convenios / Super Admin) ───────────
+const CFG_REPECHAJE_ACTIVO = 'repechaje_activo';
+
+async function repechajeEstaActivo() {
+  const v = await getConfig(CFG_REPECHAJE_ACTIVO);
+  return v !== '0'; // por defecto activo si nunca se configuró
+}
+
+function puedeGestionarRepechaje(admin) {
+  if (!admin) return false;
+  if (admin.rol === 'unitic') return true;
+  return normalizarPermisos(admin.permisos).includes('cms_convenios');
+}
+
 function puedeConfigurarUnidad(admin) {
   if (admin.rol === 'unitic' || admin.rol === 'bienestar') return true;
   const permisos = normalizarPermisos(admin.permisos);
@@ -5865,6 +5879,9 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
     }
 
     if (esConvenio && modoRepechaje) {
+      if (!(await repechajeEstaActivo())) {
+        return res.json({ ok: false, error: 'El repechaje está desactivado por el momento.' });
+      }
       const vac = await conveniosFlujo.vacantesDisponibles(pool, req.params.id);
       if (!vac.ok || vac.disponibles < 1) {
         return res.json({ ok: false, error: 'No hay vacantes disponibles para repechaje en esta convocatoria.' });
@@ -5996,6 +6013,9 @@ app.get('/portal/convenios/vacantes/:itemId', async (req, res) => {
 /** Lista pública de convenios con vacantes liberadas para repechaje */
 app.get('/portal/convenios/repechaje', async (req, res) => {
   try {
+    if (!(await repechajeEstaActivo())) {
+      return res.json({ ok: true, activo: false, total: 0, convenios: [] });
+    }
     const r = await pool.query(
       `SELECT id, titulo, descripcion, horario, vacantes, fecha_inicio, duracion, lugar,
               cupos_unidades, estado, icono, color, requisitos, observaciones, uniforme, aviso_sorteo_fb
@@ -6042,7 +6062,28 @@ app.get('/portal/convenios/repechaje', async (req, res) => {
         aviso_sorteo_fb: it.aviso_sorteo_fb || ''
       });
     }
-    res.json({ ok: true, total: convenios.length, convenios: convenios });
+    res.json({ ok: true, activo: true, total: convenios.length, convenios: convenios });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── Repechaje: estado (Admin de convenios / Super Admin) ─────────────────────
+app.get('/admin/repechaje/estado', requireAuth, async (req, res) => {
+  try {
+    if (!puedeGestionarRepechaje(req.admin)) {
+      return res.status(403).json({ ok: false, error: 'No tiene permiso para gestionar el repechaje.' });
+    }
+    res.json({ ok: true, activo: await repechajeEstaActivo() });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.post('/admin/repechaje/estado', requireAuth, async (req, res) => {
+  try {
+    if (!puedeGestionarRepechaje(req.admin)) {
+      return res.status(403).json({ ok: false, error: 'No tiene permiso para gestionar el repechaje.' });
+    }
+    const activo = !!(req.body && req.body.activo);
+    await setConfig(CFG_REPECHAJE_ACTIVO, activo ? '1' : '0');
+    res.json({ ok: true, activo: activo });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 

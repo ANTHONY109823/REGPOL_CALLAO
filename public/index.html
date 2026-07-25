@@ -240,6 +240,32 @@
 <script>
     initPortalInicio();
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { cerrarNovedadModal(); cerrarModalRrhhPortal(); } });
+    (function() {
+        var btn = document.querySelector('.btn-repechaje-destaque');
+        if (!btn) return;
+        function aplicarEstadoRepechaje(activo) {
+            btn.style.display = activo === false ? 'none' : '';
+        }
+        try {
+            var h = location.hostname;
+            if ((h === 'localhost' || h === '127.0.0.1') && localStorage.getItem('regpol_repechaje_preview') === '0') {
+                aplicarEstadoRepechaje(false);
+                return;
+            }
+        } catch (e) {}
+        var base = (typeof apiBasePortal === 'function') ? apiBasePortal() : '';
+        base = base ? base.replace(/\/$/, '') : '';
+        fetch(base + '/portal/convenios/repechaje?t=' + Date.now())
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d && d.ok && d.activo === false) aplicarEstadoRepechaje(false);
+            })
+            .catch(function() {});
+        window.addEventListener('storage', function(ev) {
+            if (ev.key !== 'regpol_repechaje_preview') return;
+            aplicarEstadoRepechaje(ev.newValue !== '0');
+        });
+    })();
 </script>
 </body>
 </html>

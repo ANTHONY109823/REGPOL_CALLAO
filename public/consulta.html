@@ -95,11 +95,11 @@
     .obs-box{background:#fff8e1;border:1.5px solid #c8a94a;border-radius:10px;padding:12px 14px;font-size:13px;color:#6b5420;margin:4px 0 18px;line-height:1.45;}
     .obs-box.alerta-repechaje{background:#fff5f5;border-color:#e8b4b4;color:#842029;}
     .repechaje-lista-wrap{margin-top:10px;}
-    .repechaje-row{display:flex;align-items:center;justify-content:center;gap:14px;padding:12px 16px;border:1.5px solid #dde8e5;border-radius:8px;margin-bottom:8px;background:#fff;flex-wrap:wrap;}
-    .repechaje-row-info{flex:0 1 auto;min-width:0;text-align:center;}
+    .repechaje-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;border:1.5px solid #dde8e5;border-radius:8px;margin-bottom:8px;background:#fff;flex-wrap:nowrap;}
+    .repechaje-row-info{flex:1 1 auto;min-width:0;text-align:left;}
     .repechaje-row-info h4{margin:0;color:#004d3d;font-size:15px;font-weight:800;line-height:1.25;letter-spacing:.2px;}
     .repechaje-row-det,.repechaje-row-cias{display:none!important;}
-    .repechaje-row-acciones{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;flex-shrink:0;}
+    .repechaje-row-acciones{display:flex;flex-wrap:nowrap;gap:8px;align-items:center;justify-content:flex-end;flex-shrink:0;}
     @media(max-width:600px){
       .repechaje-row{flex-direction:column;gap:10px;}
       .repechaje-row-acciones{width:100%;}
@@ -109,8 +109,8 @@
     .btn-rep{border:none;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-family:inherit;white-space:nowrap;}
     .btn-rep-reg{background:#004d3d;color:#fff;}
     .btn-rep-reg:hover{background:#006b55;color:#fff;}
-    .btn-rep-det{background:#fff;color:#004d3d;border:1.5px solid #004d3d;}
-    .btn-rep-det:hover{background:#e8f5f1;color:#004d3d;}
+    .btn-rep-det{background:#c8a94a;color:#002d24;border:1.5px solid #c8a94a;}
+    .btn-rep-det:hover{background:#dfc060;color:#002d24;border-color:#dfc060;}
     .btn-rep:disabled,.btn-rep.is-disabled{opacity:.45;pointer-events:none;cursor:not-allowed;}
     .modal-rep-form,.modal-rep-det{position:fixed;inset:0;z-index:10000;background:rgba(0,30,24,.6);display:none;align-items:center;justify-content:center;padding:8px;box-sizing:border-box;}
     /* El modal de formulario permanece en DOM (invisible) para precargar el iframe sin latencia al clic */
@@ -129,7 +129,7 @@
     }
     .modal-rep-det.open{display:flex;}
     .modal-rep-form-box{background:#fff;border-radius:12px;width:100%;max-width:1080px;max-height:97vh;height:auto;display:flex;flex-direction:column;border:2px solid #c8a94a;box-shadow:0 16px 48px rgba(0,0,0,.3);overflow:hidden;}
-    .modal-rep-det-box{background:#fff;border-radius:12px;width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column;border:2px solid #c8a94a;box-shadow:0 16px 48px rgba(0,0,0,.3);overflow:hidden;}
+    .modal-rep-det-box{background:#fff;border-radius:12px;width:100%;max-width:900px;max-height:92vh;display:flex;flex-direction:column;border:2px solid #c8a94a;box-shadow:0 16px 48px rgba(0,0,0,.3);overflow:hidden;}
     .modal-rep-form-head,.modal-rep-det-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:#004d3d;color:#fff;flex-shrink:0;}
     .modal-rep-form-head h3,.modal-rep-det-head h3{margin:0;font-size:15px;font-weight:800;line-height:1.3;flex:1;min-width:0;}
     .modal-rep-form-cerrar,.modal-rep-det-cerrar{background:#c8a94a;color:#002d24;border:none;border-radius:7px;width:38px;height:38px;font-size:20px;font-weight:800;cursor:pointer;line-height:1;flex-shrink:0;}
@@ -138,23 +138,25 @@
     .modal-rep-form-loading{display:none;padding:28px 16px;text-align:center;color:#004d3d;font-size:14px;font-weight:700;}
     .modal-rep-form.open.loading .modal-rep-form-loading{display:block;}
     .modal-rep-form.open.loading .modal-rep-form-iframe{height:1px!important;min-height:0!important;opacity:0;pointer-events:none;}
-    .modal-rep-det-body{padding:16px 18px;overflow:auto;flex:1;min-height:0;background:#f7faf7;}
-    .modal-rep-det-foot{padding:12px 14px;border-top:1px solid #e0ebe4;background:#fff;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;flex-shrink:0;}
-    .rd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-bottom:14px;}
-    .rd-item span{display:block;font-size:10px;font-weight:800;color:#004d3d;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px;}
-    .rd-item strong{font-size:13.5px;color:#222;font-weight:700;line-height:1.35;}
-    .rd-item.full{grid-column:1/-1;}
-    .rd-block{background:#fff;border:1.5px solid #c8e6c9;border-radius:10px;padding:12px 14px;margin-bottom:12px;}
-    .rd-block h4{margin:0 0 8px;color:#004d3d;font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;}
-    .rd-block ul{margin:0;padding-left:18px;font-size:13px;color:#444;line-height:1.45;}
-    .rd-block p{margin:0;font-size:13px;color:#444;line-height:1.45;}
+    .modal-rep-det-body{padding:12px 14px;overflow:auto;flex:1;min-height:0;background:#f7faf7;}
+    .modal-rep-det-foot{padding:10px 14px;border-top:1px solid #e0ebe4;background:#fff;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;flex-shrink:0;}
+    .rd-duo{display:grid;grid-template-columns:minmax(220px,1fr) minmax(260px,1.15fr);gap:10px;align-items:stretch;}
+    .rd-card{background:#fff;border:1.5px solid #c8e6c9;border-radius:10px;padding:12px 14px;}
+    .rd-card h4{margin:0 0 8px;color:#004d3d;font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;line-height:1.2;}
+    .rd-card h4.rd-sub{margin-top:12px;}
+    .rd-card ul{margin:0;padding:0;list-style:none;}
+    .rd-card ul li{padding:7px 0;border-bottom:1px solid #e8eee9;font-size:13px;color:#333;line-height:1.35;}
+    .rd-card ul li:last-child{border-bottom:none;padding-bottom:0;}
+    .rd-card ul li:first-child{padding-top:0;}
+    .rd-card p{margin:0;font-size:13px;color:#444;line-height:1.4;}
+    .rd-labor{margin:0;padding:10px 12px;background:#f4f8f6;border:1px solid #d5e5dc;border-radius:7px;font-size:13.5px;color:#004d3d;line-height:1.45;}
     .rd-table{width:100%;border-collapse:collapse;font-size:12.5px;}
     .rd-table th,.rd-table td{border:1px solid #b7d4c0;padding:6px 8px;}
     .rd-table th{background:#004d3d;color:#fff;font-weight:700;text-align:center;font-size:11px;}
     .rd-table th:first-child,.rd-table td:first-child{text-align:left;}
     .rd-table td.num{text-align:center;font-weight:600;color:#004d3d;}
     .rd-table tbody tr:nth-child(even){background:#f3f8f4;}
-    @media(max-width:600px){.rd-grid{grid-template-columns:1fr;}}
+    @media(max-width:700px){.rd-duo{grid-template-columns:1fr;}}
     body.modo-repechaje .consulta-top,
     body.modo-repechaje #consulta-alerta-form{display:none !important;}
     body.modo-repechaje #repechaje-box{display:block !important;}
@@ -185,7 +187,7 @@
     .repechaje-lista-wrap{margin-top:0;}
     body.modo-repechaje .consulta-volver-wrap{margin-top:2px;margin-bottom:0;}
     body.modo-repechaje .repechaje-row{
-      justify-content:center;
+      justify-content:space-between;
       margin-left:auto;
       margin-right:auto;
     }
@@ -999,11 +1001,25 @@ function cargarListaRepechaje() {
   if (!REPECHAJE_CACHE.length) {
     el.innerHTML = '<p style="color:#888;font-size:13px;">Cargando...</p>';
   }
+  // Vista local: el toggle del panel (localStorage) manda antes del deploy
+  try {
+    var h = location.hostname;
+    if ((h === 'localhost' || h === '127.0.0.1') && localStorage.getItem('regpol_repechaje_preview') === '0') {
+      REPECHAJE_CACHE = [];
+      el.innerHTML = '<p style="color:#856404;font-size:13px;">El repechaje no está disponible por el momento.</p>';
+      return;
+    }
+  } catch (e) {}
   fetch(API_PUBLIC + '/portal/convenios/repechaje?t=' + Date.now())
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.ok) {
         el.innerHTML = '<p style="color:#c0392b;font-size:13px;">' + escC(d.error || 'No se pudo cargar.') + '</p>';
+        return;
+      }
+      if (d.activo === false) {
+        REPECHAJE_CACHE = [];
+        el.innerHTML = '<p style="color:#856404;font-size:13px;">El repechaje no está disponible por el momento.</p>';
         return;
       }
       var list = (d.convenios || []).filter(function(c) {
@@ -1071,54 +1087,100 @@ function abrirModalRepDetalle(itemId) {
 
 function renderHtmlDetalleRepechaje(item, cache) {
   var reqs = Array.isArray(item.requisitos) ? item.requisitos : [];
-  var cupos = Array.isArray(item.cupos_unidades) ? item.cupos_unidades : [];
-  if (!cupos.length && cache && Array.isArray(cache.comisarias)) cupos = cache.comisarias;
-  var disp = cache && cache.disponibles != null ? cache.disponibles : (item.vacantes || 0);
-  var vac = cache && cache.vacantes != null ? cache.vacantes : (item.vacantes || 0);
-
-  var html = '<div class="rd-grid">'
-    + '<div class="rd-item"><span>Estado</span><strong>' + escC(item.estado || '—') + '</strong></div>'
-    + '<div class="rd-item"><span>Vacantes libres</span><strong>' + escC(String(disp)) + ' / ' + escC(String(vac)) + '</strong></div>'
-    + '<div class="rd-item"><span>Horario</span><strong>' + escC(item.horario || '—') + '</strong></div>'
-    + (item.lugar ? ('<div class="rd-item"><span>Lugar</span><strong>' + escC(item.lugar) + '</strong></div>') : '')
-    + (item.uniforme ? ('<div class="rd-item full"><span>Uniforme</span><strong>' + escC(item.uniforme) + '</strong></div>') : '')
-    + '</div>';
-
-  if (item.descripcion) {
-    html += '<div class="rd-block"><h4>Descripción</h4><p>' + escC(item.descripcion) + '</p></div>';
+  var cupos = Array.isArray(item.cupos_unidades) ? item.cupos_unidades.slice() : [];
+  if (!cupos.length && cache && Array.isArray(cache.comisarias)) {
+    cupos = cache.comisarias.slice();
   }
-  html += '<div class="rd-block"><h4>Requisitos</h4>';
-  if (reqs.length) {
-    html += '<ul>' + reqs.map(function(r) { return '<li>' + escC(r) + '</li>'; }).join('') + '</ul>';
-  } else {
-    html += '<p>Sin requisitos publicados.</p>';
+  if (!cupos.length) {
+    var totalVac = parseInt(item.vacantes, 10) || (cache && parseInt(cache.vacantes, 10)) || 0;
+    var nombreUnico = String(item.lugar || '').trim() || 'Lugar del convenio';
+    if (totalVac > 0) {
+      cupos = [{ nombre: nombreUnico, vacantes: totalVac, inscritos: 0, disponibles: totalVac, direccion: '' }];
+    }
   }
-  html += '</div>';
+  var turnosList = Array.isArray(item.turnos) ? item.turnos.filter(function(t) {
+    return t && String(t.turno || '').trim();
+  }) : [];
+  var lugarTxt = String(item.lugar || '').trim();
+  var laborTxt = String(item.descripcion || '').trim();
+  if (laborTxt.toUpperCase() === 'DETALLES DEL CONVENIO') laborTxt = '';
 
-  html += '<div class="rd-block"><h4>Comisarías / cupos</h4>';
+  var reqHtml = reqs.length
+    ? reqs.map(function(r) { return '<li>' + escC(String(r || '').trim()) + '</li>'; }).join('')
+    : '<li>Sin requisitos especificados.</li>';
+
+  var bloques = [];
+  if (turnosList.length) {
+    bloques.push(
+      '<h4>TURNOS / DÍAS / VACANTES</h4>'
+      + '<div style="overflow-x:auto;"><table class="rd-table"><thead><tr>'
+      + '<th>Turno</th><th>Día</th><th>Vacantes</th>'
+      + '</tr></thead><tbody>'
+      + turnosList.map(function(t) {
+        var vacT = parseInt(t.vacantes, 10);
+        if (isNaN(vacT) || vacT < 0) vacT = 0;
+        return '<tr><td>' + escC(String(t.turno || '').toUpperCase()) + '</td>'
+          + '<td>' + escC(String(t.dia || 'PAR/IMPAR').toUpperCase()) + '</td>'
+          + '<td class="num">' + escC(String(vacT)) + '</td></tr>';
+      }).join('')
+      + '</tbody></table></div>'
+    );
+  }
+
   if (cupos.length) {
-    html += '<div style="overflow-x:auto;"><table class="rd-table"><thead><tr>'
-      + '<th>Comisaría</th><th>Vacantes</th><th>Inscritos</th><th>Disponibles</th>'
+    var esDivopus = cupos.length > 1 && cupos.every(function(c) {
+      return /^DIVOPUS\s*0[123]$/i.test(String(c.nombre || '').trim());
+    });
+    var DIR_DIVOPUS = {
+      'DIVOPUS 01': 'Av. Fernandini / Jr. Supe (CIA Callao)',
+      'DIVOPUS 02': 'Tomás Valle Cuadra 34 (CIA Juan Ingunza)',
+      'DIVOPUS 03': 'Av. Pedro Beltrán N° 138 (CIA Ventanilla)'
+    };
+    var htmlLugar = '<div style="overflow-x:auto;"><table class="rd-table"><thead><tr>'
+      + '<th>' + (esDivopus ? 'DIVOPUS' : 'Lugar') + '</th><th>Dirección</th><th>Vacantes</th>'
       + '</tr></thead><tbody>'
       + cupos.map(function(c) {
-        return '<tr><td>' + escC(c.nombre || '') + '</td>'
-          + '<td class="num">' + escC(String(c.vacantes != null ? c.vacantes : 0)) + '</td>'
-          + '<td class="num">' + escC(String(c.inscritos != null ? c.inscritos : 0)) + '</td>'
-          + '<td class="num">' + escC(String(c.disponibles != null ? c.disponibles : 0)) + '</td></tr>';
+        var nombreCel = esDivopus
+          ? String(c.nombre || '').trim()
+          : (lugarTxt || String(c.nombre || '').trim());
+        var nomKey = String(c.nombre || '').trim().toUpperCase().replace(/\s+/g, ' ');
+        if (nomKey.indexOf('DIVOPUS') === 0) {
+          if (/01$/.test(nomKey)) nomKey = 'DIVOPUS 01';
+          else if (/02$/.test(nomKey)) nomKey = 'DIVOPUS 02';
+          else if (/03$/.test(nomKey)) nomKey = 'DIVOPUS 03';
+        }
+        var dir = String(c.direccion || '').trim();
+        var dirMala = !dir || /^DIVOPUS\s*0[123]$/i.test(dir) || dir.toUpperCase() === String(nombreCel).toUpperCase();
+        if (esDivopus && dirMala) dir = DIR_DIVOPUS[nomKey] || DIR_DIVOPUS[nombreCel] || '';
+        var vacN = parseInt(c.vacantes, 10);
+        if (isNaN(vacN) || vacN < 0) vacN = 0;
+        return '<tr>'
+          + '<td style="font-weight:700;">' + escC(nombreCel || '—') + '</td>'
+          + '<td style="line-height:1.35;">' + escC(dir || '—') + '</td>'
+          + '<td class="num">' + escC(String(vacN)) + '</td>'
+          + '</tr>';
       }).join('')
       + '</tbody></table></div>';
-  } else {
-    html += '<p>Vacantes generales de la convocatoria (sin cupo por comisaría publicado).</p>';
+    bloques.push(
+      '<h4' + (bloques.length ? ' class="rd-sub"' : '') + '>LUGAR</h4>'
+      + htmlLugar
+    );
+    if (laborTxt) {
+      bloques.push(
+        '<h4 class="rd-sub">LABOR</h4>'
+        + '<p class="rd-labor">' + escC(laborTxt) + '</p>'
+      );
+    }
   }
-  html += '</div>';
 
-  if (item.observaciones) {
-    html += '<div class="rd-block"><h4>Observaciones</h4><p>' + escC(item.observaciones) + '</p></div>';
-  }
-  if (item.aviso_sorteo_fb) {
-    html += '<div class="rd-block"><h4>Aviso / sorteo</h4><p>' + escC(item.aviso_sorteo_fb) + '</p></div>';
-  }
-  return html;
+  var derecha = bloques.length
+    ? bloques.join('')
+    : '<h4>TURNOS / VACANTES</h4><p>Sin turnos ni lugares publicados.</p>';
+
+  return '<div class="rd-duo">'
+    + '<div class="rd-card"><h4>REQUISITOS</h4><ul>' + reqHtml + '</ul></div>'
+    + '<div class="rd-card">' + derecha + '</div>'
+    + '</div>';
 }
 
 function cerrarModalRepDetalle() {
@@ -1326,6 +1388,10 @@ if (location.hash === '#repechaje') mostrarRepechaje();
 window.addEventListener('hashchange', function() {
   if (location.hash === '#repechaje') mostrarRepechaje();
   else salirModoRepechaje();
+});
+window.addEventListener('storage', function(ev) {
+  if (ev.key !== 'regpol_repechaje_preview') return;
+  if (location.hash === '#repechaje') cargarListaRepechaje();
 });
 window.addEventListener('message', function(ev) {
   var data = ev && ev.data;
