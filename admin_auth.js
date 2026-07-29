@@ -153,12 +153,25 @@ async function bootstrapSuperAdminSiFalta(pool) {
     return { creado: true };
   }
 
-  // Ya hay Super Admin: vincular CIP / reset solo si APPLY=1
-  if (!aplicar) {
-    return { creado: false, existente: existing.usuario };
+  // Ya hay Super Admin
+  const cipExistente = normalizarCipLogin(
+    existing.cip || (esUsuarioTipoCip(existing.usuario) ? existing.usuario : '')
+  );
+  const necesitaVincular = !cipExistente;
+  const forzarReset = aplicar;
+
+  // Sin CIP aún → vincular automáticamente con las variables (no exige APPLY=1).
+  // Con CIP ya vinculado → solo resetear clave si APPLY=1.
+  if (!necesitaVincular && !forzarReset) {
+    return { creado: false, existente: existing.usuario, cip: cipExistente };
   }
+
   if (!cip || !pass) {
-    console.warn('AVISO: BOOTSTRAP_ADMIN_APPLY=1 pero faltan CIP o PASSWORD.');
+    console.warn(
+      necesitaVincular
+        ? 'AVISO: Super Admin sin CIP. Configure BOOTSTRAP_ADMIN_CIP y BOOTSTRAP_ADMIN_PASSWORD en Railway y reinicie.'
+        : 'AVISO: BOOTSTRAP_ADMIN_APPLY=1 pero faltan CIP o PASSWORD.'
+    );
     return { creado: false, aviso: true };
   }
   const pol = validarPoliticaPassword(pass);
@@ -167,13 +180,14 @@ async function bootstrapSuperAdminSiFalta(pool) {
     return { creado: false, aviso: true };
   }
   const hash = await hashPassword(pass);
-  // Evitar choque UNIQUE si otro usuario ya tiene ese CIP/usuario
   const choc = await pool.query(
-    `SELECT id FROM admins WHERE id<>$1 AND (usuario=$2 OR cip=$2) LIMIT 1`,
+    `SELECT id, usuario FROM admins WHERE id<>$1 AND (usuario=$2 OR cip=$2
+      OR regexp_replace(COALESCE(cip,''), '\\D', '', 'g')=$2
+      OR regexp_replace(COALESCE(usuario,''), '\\D', '', 'g')=$2) LIMIT 1`,
     [existing.id, cip]
   );
   if (choc.rows.length) {
-    console.warn('AVISO: el CIP ' + cip + ' ya está usado por otro admin. No se aplicó bootstrap.');
+    console.warn('AVISO: el CIP ' + cip + ' ya está usado por otro admin (' + choc.rows[0].usuario + ').');
     return { creado: false, aviso: true };
   }
   await pool.query(
@@ -187,7 +201,11 @@ async function bootstrapSuperAdminSiFalta(pool) {
       WHERE id=$3`,
     [cip, hash, existing.id]
   );
-  console.log('Super Admin vinculado a CIP ' + cip + ' (BOOTSTRAP_ADMIN_APPLY=1). Debe cambiar contraseña.');
+  console.log(
+    'Super Admin vinculado a CIP ' + cip +
+      (forzarReset ? ' (reset APPLY=1)' : ' (vinculación automática)') +
+      '. Debe cambiar contraseña al ingresar.'
+  );
   return { creado: false, actualizado: true, cip: cip };
 }
 
@@ -298,12 +316,18 @@ async function autenticarAdmin(pool, usuarioRaw, password) {
   }
 
   if (!admin) {
+    if (cipIn) {
+      return {
+        ok: false,
+        error: 'CIP no registrado en el panel. El Super Admin debe vincularse con BOOTSTRAP_ADMIN_CIP en Railway (o darse de alta en Usuarios).'
+      };
+    }
     return { ok: false, error: 'Credenciales incorrectas o usuario no autorizado.' };
   }
 
   const passOk = await verifyPassword(password, admin.passhash);
   if (!passOk) {
-    return { ok: false, error: 'Credenciales incorrectas o usuario no autorizado.' };
+    return { ok: false, error: 'Contraseña incorrecta.' };
   }
 
   const cipAdmin = normalizarCipLogin(admin.cip || admin.usuario) || cipIn;
