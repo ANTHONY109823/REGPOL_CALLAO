@@ -165,17 +165,18 @@ Inicialización en `initDB()` al arrancar `server.js`. Sin migraciones externas.
 
 ## 12. Seguridad
 
-- Contraseñas admin: SHA-256
-- Sesiones del panel con token aleatorio opaco (no contiene credenciales); expira a las 12 h de inactividad
-- Tokens por cabecera `x-admin-token`
+- Login de panel por **CIP** validado en nómina (`personal_rrhh`)
+- Contraseñas: **bcrypt**; política alfanumérica (mín. 10) y **cambio obligatorio cada 45 días**
+- Compatibilidad temporal con hashes SHA-256 antiguos hasta el próximo cambio de clave
+- Sesiones con token opaco (`x-admin-token`); TTL 12 h; se revocan al cambiar contraseña
+- Ya **no** se aceptan tokens Base64 con usuario:contraseña
 - Límite de intentos de login por IP (10 fallos / 10 min)
-- Compresión gzip y cabecera `X-Content-Type-Options: nosniff`
-- Filtro por unidad para operadores restringidos
-- CORS para GitHub Pages
-- Contraseñas seed configurables por variables de entorno en Railway:
-  `SEED_PASS_UNITIC`, `SEED_PASS_PSICOLOGIA`, `SEED_PASS_CONVENIOS`, `SEED_PASS_EDUCACION`, `SEED_PASS_IMAGEN`
-  (solo aplican al crear la cuenta; las existentes se cambian desde el panel → Usuarios)
-- IMPORTANTE: cambiar las contraseñas por defecto de las 5 cuentas desde el panel tras el despliegue
+- Bitácora `admin_auditoria` (login, cambios de clave, altas, aprobaciones de expediente, repechaje)
+- Aprobación de expedientes: CIP de sesión + reingreso de contraseña
+- Bootstrap de emergencia (solo si no hay Super Admin): variables
+  `BOOTSTRAP_ADMIN_CIP` y `BOOTSTRAP_ADMIN_PASSWORD` (sin contraseñas en el código)
+- Cuentas legadas de oficina: desactivar con `ADMIN_ALLOW_LEGACY=0` tras migrar a CIP
+- **No** hay contraseñas por defecto en el repositorio
 
 ---
 

@@ -763,14 +763,31 @@
     
     <div id="page-usuarios" class="page">
       <div class="card">
-        <h3><i class="fas fa-users-cog"></i> Usuarios y permisos</h3>
+        <h3><i class="fas fa-users-cog"></i> Usuarios por CIP (acceso seguro)</h3>
+        <p style="font-size:12.5px;color:#666;margin:-6px 0 12px;line-height:1.45;">
+          Cada admin ingresa con su <strong>CIP</strong> validado en nómina. Contraseña alfanumérica (mín. 10) con cambio obligatorio cada 45 días.
+        </p>
         <button class="btn btn-v" onclick="abrirModalUsuario()" style="margin-bottom:14px;">
-          <i class="fas fa-user-plus"></i> Nuevo usuario
+          <i class="fas fa-user-plus"></i> Nuevo usuario (CIP)
         </button>
         <div style="overflow-x:auto;">
           <table class="t">
-            <thead><tr><th>Usuario</th><th>Nombre / Oficina</th><th>Rol</th><th>Unidad</th><th>Secciones asignadas</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>CIP</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Unidad</th><th>Secciones</th><th>Acciones</th></tr></thead>
             <tbody id="tabla-usuarios"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <h3><i class="fas fa-clipboard-list"></i> Auditoría de accesos y acciones</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center;">
+          <input id="aud-cip" type="text" placeholder="Filtrar CIP" style="width:140px;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;"/>
+          <input id="aud-accion" type="text" placeholder="Acción (ej. login_ok)" style="width:180px;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;"/>
+          <button class="btn btn-v" type="button" onclick="cargarAuditoria()"><i class="fas fa-sync"></i> Actualizar</button>
+        </div>
+        <div style="overflow-x:auto;max-height:420px;">
+          <table class="t">
+            <thead><tr><th>Fecha</th><th>CIP</th><th>Usuario</th><th>Acción</th><th>Módulo</th><th>Detalle</th><th>IP</th><th>OK</th></tr></thead>
+            <tbody id="tabla-auditoria"><tr><td colspan="8" style="color:#bbb;text-align:center;">Pulse Actualizar</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1845,13 +1862,13 @@
     <h3><i class="fas fa-user-check" style="color:#1a7a3a;"></i> Aprobar expediente</h3>
     <input type="hidden" id="mapr-id"/>
     <p style="font-size:12.5px;color:#666;margin:-4px 0 12px;line-height:1.45;">
-      Confirme con <strong>usuario y contraseña</strong> de quien aprueba. Su nombre completo, fecha y hora quedarán registrados en la constancia.
+      Confirme con su <strong>CIP de sesión</strong> y contraseña. Quedarán registrados en la constancia.
     </p>
-    <label>Usuario *</label>
-    <input type="text" id="mapr-usuario" autocomplete="username" placeholder="Usuario del aprobador"
-      style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;margin-bottom:10px;"/>
+    <label>CIP (sesión) *</label>
+    <input type="text" id="mapr-usuario" autocomplete="username" readonly
+      style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;margin-bottom:10px;background:#f5f5f5;"/>
     <label>Contraseña *</label>
-    <input type="password" id="mapr-password" autocomplete="current-password" placeholder="Contraseña"
+    <input type="password" id="mapr-password" autocomplete="current-password" placeholder="Su contraseña"
       style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;margin-bottom:10px;"/>
     <p id="mapr-error" style="display:none;color:#c0392b;font-size:12px;margin:0 0 8px;"></p>
     <div class="modal-footer">
@@ -1963,17 +1980,21 @@
     <input type="hidden" id="mu-id"/>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div>
-        <label>Usuario (login)</label>
-        <input type="text" id="mu-usuario" placeholder="Ej: psicologia_callao"/>
+        <label>CIP (login) *</label>
+        <input type="text" id="mu-usuario" inputmode="numeric" placeholder="Ej: 12345678"/>
       </div>
       <div>
-        <label>Contraseña <span id="mu-pass-hint" style="font-weight:400;color:#999;">(mín 6 caracteres)</span></label>
-        <input type="password" id="mu-password" placeholder="⬢⬢⬢⬢⬢⬢"/>
+        <label>Contraseña inicial <span id="mu-pass-hint" style="font-weight:400;color:#999;">(mín 10, letras y números)</span></label>
+        <input type="password" id="mu-password" placeholder="Alfanumérica"/>
       </div>
     </div>
-    <label>Nombre / Oficina</label>
-    <input type="text" id="mu-nombre" placeholder="Ej: Oficina de Psicología"/>
-    <label>Unidad asignada <span style="font-weight:400;color:#999;">(vacío = todas las unidades, ideal para Psicología)</span></label>
+    <label style="display:flex;align-items:center;gap:8px;margin:4px 0 10px;cursor:pointer;">
+      <input type="checkbox" id="mu-activo" checked style="width:16px;height:16px;accent-color:#004d3d;"/>
+      <span style="font-size:12.5px;font-weight:600;color:#004d3d;">Usuario activo</span>
+    </label>
+    <label>Nombre (se puede completar desde nómina)</label>
+    <input type="text" id="mu-nombre" placeholder="Apellidos y nombres"/>
+    <label>Unidad asignada <span style="font-weight:400;color:#999;">(vacío = global / desde nómina)</span></label>
     <input type="text" id="mu-unidad" placeholder="Dejar vacío para acceso global"/>
     <label style="margin-bottom:8px;">Área de gestión asignada</label>
     <div class="perm-grid">
@@ -2245,9 +2266,12 @@ window.addEventListener('DOMContentLoaded',function(){
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d.ok){logout();return;}
+      if(d.debe_cambiar_password){logout();return;}
       if(d.permisos) SESION.permisos=normalizarPermisosPanel(d.permisos);
       if(d.rol) SESION.rol=d.rol;
       if(d.nombre) SESION.nombre=d.nombre;
+      if(d.usuario) SESION.usuario=d.usuario;
+      if(d.cip) SESION.cip=d.cip;
       localStorage.setItem('regpol_session',JSON.stringify(SESION));
       aplicarPermisosSidebar(SESION);
       cargarDashboard(true);
@@ -4303,9 +4327,12 @@ function cargarUsuarios(){
         return '<span style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:4px;padding:1px 6px;font-size:10.5px;margin:1px;display:inline-block;">'+(ETIQUETAS_PERM[p]||p)+'</span>';
       }).join('');
       var esUnitic=u.rol==='unitic';
-      return '<tr><td><strong>'+u.usuario+'</strong></td>'
-        +'<td>'+u.nombre+'</td>'
+      var cip=u.cip||u.usuario||'';
+      var activo=u.activo!==false;
+      return '<tr><td><strong>'+cip+'</strong></td>'
+        +'<td>'+(u.nombre||'—')+'</td>'
         +'<td><span class="badge '+(esUnitic?'ok':'pend')+'">'+(esUnitic?'⭐ SUPER ADMIN':u.rol)+'</span></td>'
+        +'<td><span class="badge '+(activo?'ok':'')+'" style="'+(activo?'':'background:#f8d7da;color:#842029;')+'">'+(activo?'Activo':'Inactivo')+'</span></td>'
         +'<td style="font-size:11px;">'+(u.unidad||'<em style="color:#bbb;">Global</em>')+'</td>'
         +'<td>'+(perms||'<em style="color:#bbb;font-size:11px;">Sin secciones</em>')+'</td>'
         +'<td style="white-space:nowrap;">'
@@ -4316,13 +4343,15 @@ function cargarUsuarios(){
         +'</td></tr>';
     }).join('');
   });
+  if(typeof cargarAuditoria==='function') cargarAuditoria();
 }
 function abrirModalUsuario(){
   document.getElementById('mu-id').value='';
-  document.getElementById('mu-titulo').textContent='Nuevo usuario';
+  document.getElementById('mu-titulo').textContent='Nuevo usuario (CIP)';
   document.getElementById('mu-usuario').disabled=false;
-  document.getElementById('mu-pass-hint').textContent='(mín 6 caracteres)';
+  document.getElementById('mu-pass-hint').textContent='(mín 10, letras y números)';
   ['mu-usuario','mu-password','mu-nombre','mu-unidad'].forEach(function(id){document.getElementById(id).value='';});
+  var act=document.getElementById('mu-activo'); if(act) act.checked=true;
   document.querySelectorAll('.perm-chk').forEach(function(c){c.checked=false;});
   document.getElementById('modal-usuario').classList.add('open');
 }
@@ -4330,12 +4359,13 @@ function editarUsuario(id){
   fetch(API+'/admin/usuarios',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     var u=d.usuarios.find(function(x){return x.id===id;}); if(!u) return;
     document.getElementById('mu-id').value=u.id;
-    document.getElementById('mu-titulo').textContent='Editar: '+u.usuario;
-    document.getElementById('mu-usuario').value=u.usuario; document.getElementById('mu-usuario').disabled=true;
+    document.getElementById('mu-titulo').textContent='Editar CIP: '+(u.cip||u.usuario);
+    document.getElementById('mu-usuario').value=u.cip||u.usuario; document.getElementById('mu-usuario').disabled=true;
     document.getElementById('mu-password').value='';
     document.getElementById('mu-pass-hint').textContent='(dejar vacío para no cambiar)';
     document.getElementById('mu-nombre').value=u.nombre||'';
     document.getElementById('mu-unidad').value=u.unidad||'';
+    var act=document.getElementById('mu-activo'); if(act) act.checked=u.activo!==false;
     var perms=u.permisos||[];
     document.querySelectorAll('.perm-chk').forEach(function(c){c.checked=perms.indexOf(c.value)!==-1;});
     document.getElementById('modal-usuario').classList.add('open');
@@ -4344,19 +4374,53 @@ function editarUsuario(id){
 function guardarUsuario(){
   var id=val('mu-id'), u=val('mu-usuario'), p=val('mu-password');
   var n=val('mu-nombre'), un=val('mu-unidad');
+  var activo=document.getElementById('mu-activo')?document.getElementById('mu-activo').checked:true;
   var permisos=Array.from(document.querySelectorAll('.perm-chk:checked')).map(function(c){return c.value;});
-  if(!u){alert('El usuario es obligatorio.');return;}
-  if(!id&&p.length<6){alert('La contraseña debe tener mínimo 6 caracteres.');return;}
-  if(!permisos.length){alert('Seleccione al menos una sección.');return;}
+  if(!u){alert('El CIP es obligatorio.');return;}
+  if(!id&&(p.length<10||!/[A-Za-z]/.test(p)||!/[0-9]/.test(p))){alert('Contraseña: mínimo 10 caracteres con letras y números.');return;}
+  if(id&&p&&(p.length<10||!/[A-Za-z]/.test(p)||!/[0-9]/.test(p))){alert('Contraseña nueva: mínimo 10 caracteres con letras y números.');return;}
+  if(!permisos.length&&!esUnitic()){alert('Seleccione al menos una sección.');return;}
   var url=id?API+'/admin/usuarios/'+id:API+'/admin/usuarios';
   var method=id?'PUT':'POST';
-  var body=id?{nombre:n,unidad:un,permisos:permisos,password:p}:{usuario:u,password:p,rol:'usuario',nombre:n,unidad:un,permisos:permisos};
+  var body=id
+    ?{nombre:n,unidad:un,permisos:permisos,password:p,activo:activo}
+    :{cip:u,usuario:u,password:p,rol:'usuario',nombre:n,unidad:un,permisos:permisos,activo:activo};
   fetch(url,{method:method,headers:hdr(),body:JSON.stringify(body)}).then(function(r){return r.json()})
     .then(function(d){if(d.ok){cerrarModal('modal-usuario');cargarUsuarios();}else alert('Error: '+(d.error||''));});
 }
 function eliminarUsuario(id){
   if(!confirm('¿Eliminar este usuario?')) return;
   fetch(API+'/admin/usuarios/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarUsuarios();});
+}
+
+function cargarAuditoria(){
+  var el=document.getElementById('tabla-auditoria');
+  if(!el) return;
+  var cip=(document.getElementById('aud-cip')||{}).value||'';
+  var accion=(document.getElementById('aud-accion')||{}).value||'';
+  var q='?limite=150';
+  if(cip) q+='&cip='+encodeURIComponent(cip.trim());
+  if(accion) q+='&accion='+encodeURIComponent(accion.trim());
+  fetch(API+'/admin/auditoria'+q,{headers:hdr()})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok){ el.innerHTML='<tr><td colspan="8" style="color:#c0392b;text-align:center;">'+(d.error||'Sin acceso')+'</td></tr>'; return; }
+      if(!(d.rows||[]).length){ el.innerHTML='<tr><td colspan="8" style="color:#bbb;text-align:center;">Sin registros</td></tr>'; return; }
+      el.innerHTML=d.rows.map(function(a){
+        var f=a.fecha?new Date(a.fecha).toLocaleString('es-PE'):'—';
+        return '<tr>'
+          +'<td style="white-space:nowrap;font-size:11px;">'+f+'</td>'
+          +'<td>'+(a.cip||'—')+'</td>'
+          +'<td>'+(a.usuario||'—')+'</td>'
+          +'<td><strong>'+(a.accion||'')+'</strong></td>'
+          +'<td>'+(a.modulo||'')+'</td>'
+          +'<td style="font-size:11.5px;max-width:280px;">'+(a.detalle||'')+(a.entidad_id?(' #'+a.entidad_id):'')+'</td>'
+          +'<td style="font-size:11px;">'+(a.ip||'')+'</td>'
+          +'<td>'+(a.ok===false?'No':'Sí')+'</td>'
+          +'</tr>';
+      }).join('');
+    })
+    .catch(function(){ el.innerHTML='<tr><td colspan="8" style="color:#c0392b;text-align:center;">Error de conexión</td></tr>'; });
 }
 
 var DIVISIONES_DATA = [];
@@ -6987,7 +7051,8 @@ function revisarExpedienteConv(id, accion){
 
 function abrirModalAprobarExpediente(id){
   document.getElementById('mapr-id').value=id;
-  document.getElementById('mapr-usuario').value=(SESION && SESION.usuario) ? SESION.usuario : '';
+  var cipSes=(SESION && (SESION.cip || SESION.usuario)) ? (SESION.cip || SESION.usuario) : '';
+  document.getElementById('mapr-usuario').value=cipSes;
   document.getElementById('mapr-password').value='';
   var err=document.getElementById('mapr-error');
   if(err){ err.style.display='none'; err.textContent=''; }
@@ -6995,7 +7060,7 @@ function abrirModalAprobarExpediente(id){
   if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-check"></i> Confirmar aprobación'; }
   document.getElementById('modal-aprobar-exp').classList.add('open');
   setTimeout(function(){
-    var el=document.getElementById(SESION && SESION.usuario ? 'mapr-password' : 'mapr-usuario');
+    var el=document.getElementById('mapr-password');
     if(el) try{ el.focus(); }catch(e){}
   }, 50);
 }
@@ -7005,8 +7070,8 @@ function confirmarAprobarExpediente(){
   var usuario=(document.getElementById('mapr-usuario').value||'').trim();
   var password=document.getElementById('mapr-password').value||'';
   var err=document.getElementById('mapr-error');
-  if(!usuario || !password){
-    if(err){ err.style.display='block'; err.textContent='Ingrese usuario y contraseña del aprobador.'; }
+  if(!password){
+    if(err){ err.style.display='block'; err.textContent='Ingrese su contraseña para confirmar.'; }
     return;
   }
   var btn=document.getElementById('mapr-btn-enviar');

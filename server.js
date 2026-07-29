@@ -17,6 +17,7 @@ const descansosMedicos = require('./descansos_medicos');
 const faltosMod = require('./faltos');
 const conveniosFlujo = require('./convenios_flujo');
 const recursosHumanos = require('./recursos_humanos');
+const adminAuth = require('./admin_auth');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -127,10 +128,11 @@ async function persistirSesionDb(token, adminId, expMs) {
 async function cargarSesionDesdeDb(token) {
   const r = await pool.query(
     `SELECT a.id, a.usuario, a.passhash, a.rol, a.nombre, a.unidad, a.permisos,
+            a.cip, a.activo, a.debe_cambiar_password, a.password_changed_at,
             EXTRACT(EPOCH FROM s.expira) * 1000 AS exp_ms
      FROM admin_sesiones s
      INNER JOIN admins a ON a.id = s.admin_id
-     WHERE s.token = $1 AND s.expira > NOW()`,
+     WHERE s.token = $1 AND s.expira > NOW() AND COALESCE(a.activo, TRUE) = TRUE`,
     [token]
   );
   if (!r.rows.length) return null;
@@ -143,7 +145,11 @@ async function cargarSesionDesdeDb(token) {
       rol: row.rol,
       nombre: row.nombre,
       unidad: row.unidad,
-      permisos: row.permisos
+      permisos: row.permisos,
+      cip: row.cip,
+      activo: row.activo,
+      debe_cambiar_password: row.debe_cambiar_password,
+      password_changed_at: row.password_changed_at
     },
     exp: parseFloat(row.exp_ms)
   };
@@ -162,7 +168,7 @@ setInterval(function() {
 }, 60 * 60 * 1000).unref();
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const sha256 = s => crypto.createHash('sha256').update(s).digest('hex');
+const sha256 = adminAuth.sha256;
 
 // Timestamps en BD (TIMESTAMP sin tz, servidor UTC). fecha_iso permite hora local en el navegador.
 function sqlFechaTxt(col) { return `TO_CHAR(${col},'DD/MM/YYYY HH24:MI')`; }
@@ -634,33 +640,12 @@ async function initDB() {
   await conveniosFlujo.initColumnasFlujoConvenios(pool);
   await conveniosFlujo.migrarEstadosConvenios(pool);
   await recursosHumanos.initTablasRRHH(pool);
+  await adminAuth.initAuthTablas(pool);
+  await adminAuth.bootstrapSuperAdminSiFalta(pool);
 
-  // Admins por defecto — la contraseña inicial se toma de variables de entorno.
-  // Solo se insertan si el usuario no existe (ON CONFLICT DO NOTHING); las cuentas
-  // ya creadas conservan su contraseña y se cambian desde el panel de usuarios.
-  const seedPass = (envVar, fallback) => {
-    const v = (process.env[envVar] || '').trim();
-    if (v) return v;
-    console.warn('AVISO: usando contraseña semilla por defecto para ' + envVar + '. Defina la variable de entorno y cambie la contraseña desde el panel.');
-    return fallback;
-  };
-  const adminsDefecto = [
-    ['admin_unitic', sha256(seedPass('SEED_PASS_UNITIC',     'AdminUNITIC2026')), 'unitic',  'UNITIC REGPOL Callao',   null, '[]'],
-    ['psicologia',   sha256(seedPass('SEED_PASS_PSICOLOGIA', 'Psico2026!')),      'usuario', 'Oficina de Psicología',  null, '["evaluaciones","descargas"]'],
-    ['convenios',    sha256(seedPass('SEED_PASS_CONVENIOS',  'Convenios2026!')),  'usuario', 'Oficina de Convenios',   null, '["cms_convenios"]'],
-    ['educacion',    sha256(seedPass('SEED_PASS_EDUCACION',  'Educacion2026!')),  'usuario', 'Oficina de Educación',   null, '["cms_cursos"]'],
-    ['imagen',       sha256(seedPass('SEED_PASS_IMAGEN',     'Imagen2026!')),     'usuario', 'Oficina de Imagen',      null, '["cms_inicio","cms_resena","cms_labor","cms_novedades"]'],
-    ['descansos',    sha256(seedPass('SEED_PASS_DESCANSOS',  'Descansos2026!')),  'usuario', 'Oficina Descansos Médicos', null, '["cms_descansos"]'],
-    ['faltos',       sha256(seedPass('SEED_PASS_FALTOS',     'Faltos2026!')),     'usuario', 'Oficina de Faltos', null, '["faltos_admin"]'],
-    ['rrhh',         sha256(seedPass('SEED_PASS_RRHH',       'RRHH2026!')),       'usuario', 'Recursos Humanos', null, '["recursos_humanos"]'],
-  ];
-  for (const [u,h,r,n,un,p] of adminsDefecto) {
-    await pool.query(
-      `INSERT INTO admins (usuario,passhash,rol,nombre,unidad,permisos) VALUES ($1,$2,$3,$4,$5,$6::jsonb)
-       ON CONFLICT (usuario) DO NOTHING`,
-      [u,h,r,n,un,p]
-    );
-  }
+  // Ya no se insertan contraseñas por defecto en el código.
+  // Altas: Super Admin crea usuarios por CIP (validado en nómina).
+  // Emergencia: BOOTSTRAP_ADMIN_CIP + BOOTSTRAP_ADMIN_PASSWORD en variables de entorno.
 
   // Seed portal CMS desde site-data.json si la BD está vacía
   const { rows: cfgRows } = await pool.query('SELECT COUNT(*) AS t FROM portal_configuracion');
@@ -1286,8 +1271,7 @@ async function requireAuth(req, res, next) {
     const ses = sesiones.get(token);
     if (ses && ses.exp > Date.now()) {
       if (ses.dbExp <= Date.now()) {
-        // Refresca rol/permisos desde BD; si el usuario fue eliminado, cierra sesión
-        const rs = await pool.query('SELECT * FROM admins WHERE id=$1', [ses.adminId]);
+        const rs = await pool.query('SELECT * FROM admins WHERE id=$1 AND COALESCE(activo,TRUE)=TRUE', [ses.adminId]);
         if (!rs.rows.length) {
           sesiones.delete(token);
           await pool.query('DELETE FROM admin_sesiones WHERE token=$1', [token]).catch(function() {});
@@ -1299,12 +1283,16 @@ async function requireAuth(req, res, next) {
       ses.exp = Date.now() + SESION_TTL;
       await persistirSesionDb(token, ses.adminId, ses.exp);
       req.admin = ses.admin;
+      req.adminToken = token;
       return next();
     }
 
     // 2) Sesión persistida en PostgreSQL (sobrevive reinicios de Railway)
     const dbSes = await cargarSesionDesdeDb(token);
     if (dbSes) {
+      if (dbSes.admin && dbSes.admin.activo === false) {
+        return res.status(403).json({ ok: false, error: 'Usuario desactivado' });
+      }
       const nuevaExp = Date.now() + SESION_TTL;
       sesiones.set(token, {
         adminId: dbSes.admin.id,
@@ -1314,28 +1302,28 @@ async function requireAuth(req, res, next) {
       });
       await persistirSesionDb(token, dbSes.admin.id, nuevaExp);
       req.admin = dbSes.admin;
+      req.adminToken = token;
       return next();
     }
 
-    // 3) Compatibilidad con tokens antiguos (sesiones abiertas antes del cambio)
-    const cached = authCache.get(token);
-    if (cached && cached.exp > Date.now()) {
-      req.admin = cached.admin;
-      return next();
-    }
-    const decoded = Buffer.from(token, 'base64').toString();
-    const colon   = decoded.indexOf(':');
-    if (colon < 1) return res.status(403).json({ ok: false, error: 'Sesión expirada' });
-    const usuario = decoded.substring(0, colon);
-    const pass    = decoded.substring(colon + 1);
-    const r = await pool.query('SELECT * FROM admins WHERE usuario=$1 AND passhash=$2', [usuario, sha256(pass)]);
-    if (!r.rows.length) return res.status(403).json({ ok: false, error: 'Credenciales inválidas' });
-    req.admin = r.rows[0];
-    authCache.set(token, { admin: r.rows[0], exp: Date.now() + AUTH_CACHE_TTL });
-    next();
+    // Ya no se aceptan tokens Base64 con usuario:contraseña
+    return res.status(403).json({ ok: false, error: 'Sesión expirada. Ingrese nuevamente.' });
   } catch(e) {
     res.status(401).json({ ok: false, error: 'Token inválido' });
   }
+}
+
+async function revocarSesionesAdmin(adminId, exceptoToken) {
+  try {
+    if (exceptoToken) {
+      await pool.query('DELETE FROM admin_sesiones WHERE admin_id=$1 AND token<>$2', [adminId, exceptoToken]);
+    } else {
+      await pool.query('DELETE FROM admin_sesiones WHERE admin_id=$1', [adminId]);
+    }
+    sesiones.forEach(function(s, t) {
+      if (s.adminId === adminId && t !== exceptoToken) sesiones.delete(t);
+    });
+  } catch (e) {}
 }
 
 // ── Configuración global (dependencia activa para evaluaciones) ───────────────
@@ -1626,22 +1614,74 @@ app.post('/admin/login', async (req, res) => {
     if (loginBloqueado(ip)) {
       return res.status(429).json({ ok: false, error: 'Demasiados intentos. Espere unos minutos y vuelva a intentar.' });
     }
-    const { usuario, password } = req.body;
-    const r = await pool.query('SELECT * FROM admins WHERE usuario=$1 AND passhash=$2',
-      [usuario, sha256(password)]);
-    if (!r.rows.length) {
+    const { usuario, password } = req.body || {};
+    const auth = await adminAuth.autenticarAdmin(pool, usuario, password);
+    if (!auth.ok) {
       registrarFalloLogin(ip);
-      return res.json({ ok: false, error: 'Credenciales incorrectas' });
+      await adminAuth.registrarAuditoria(pool, {
+        cip: adminAuth.normalizarCipLogin(usuario),
+        usuario: String(usuario || '').trim(),
+        accion: 'login_fail',
+        modulo: 'auth',
+        detalle: auth.error || 'Credenciales incorrectas',
+        ip: ip,
+        ok: false
+      });
+      return res.json({ ok: false, error: auth.error || 'Credenciales incorrectas' });
     }
     loginIntentos.delete(ip);
-    const a = r.rows[0];
-    // Token opaco de sesión: no contiene ni permite recuperar la contraseña
+    const a = auth.admin;
     const token = crypto.randomBytes(24).toString('hex');
     const exp = Date.now() + SESION_TTL;
     sesiones.set(token, { adminId: a.id, admin: a, exp, dbExp: Date.now() + AUTH_CACHE_TTL });
     await persistirSesionDb(token, a.id, exp);
     await pool.query('UPDATE admins SET ultimo_acceso=NOW() WHERE id=$1', [a.id]).catch(function() {});
-    res.json({ ok: true, token, rol: a.rol, nombre: a.nombre, unidad: a.unidad, permisos: normalizarPermisos(a.permisos) });
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: a.id,
+      cip: a.cip || adminAuth.normalizarCipLogin(a.usuario),
+      usuario: a.usuario,
+      accion: auth.debe_cambiar_password ? 'login_ok_debe_cambiar_password' : 'login_ok',
+      modulo: 'auth',
+      detalle: auth.password_vencida ? 'Contraseña vencida (>45 días)' : 'Ingreso correcto',
+      ip: ip,
+      ok: true
+    });
+    res.json({
+      ok: true,
+      token: token,
+      rol: a.rol,
+      nombre: a.nombre,
+      unidad: a.unidad,
+      usuario: a.usuario,
+      cip: a.cip || adminAuth.normalizarCipLogin(a.usuario) || '',
+      permisos: normalizarPermisos(a.permisos),
+      debe_cambiar_password: !!auth.debe_cambiar_password,
+      password_max_age_days: adminAuth.PASSWORD_MAX_AGE_DAYS
+    });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── POST /admin/cambiar-password ───────────────────────────────────────────────
+app.post('/admin/cambiar-password', requireAuth, async (req, res) => {
+  try {
+    const actual = String((req.body && req.body.password_actual) || '');
+    const nueva = String((req.body && req.body.password_nueva) || '');
+    const r = await adminAuth.cambiarPasswordAdmin(pool, req.admin.id, actual, nueva);
+    if (!r.ok) return res.json(r);
+    await revocarSesionesAdmin(req.admin.id, req.adminToken);
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: req.admin.cip || adminAuth.normalizarCipLogin(req.admin.usuario),
+      usuario: req.admin.usuario,
+      accion: 'cambio_password',
+      modulo: 'auth',
+      detalle: 'Contraseña actualizada; otras sesiones revocadas',
+      ip: req.ip || '',
+      ok: true
+    });
+    res.json({ ok: true, mensaje: 'Contraseña actualizada. Use la nueva clave en próximos ingresos.' });
   } catch (e) {
     res.json({ ok: false, error: e.message });
   }
@@ -1650,13 +1690,17 @@ app.post('/admin/login', async (req, res) => {
 // ── GET /admin/perfil (refrescar sesión del panel) ────────────────────────────
 app.get('/admin/perfil', requireAuth, async (req, res) => {
   const a = req.admin;
+  const debe = adminAuth.passwordVencida(a);
   res.json({
     ok: true,
     usuario: a.usuario,
+    cip: a.cip || adminAuth.normalizarCipLogin(a.usuario) || '',
     rol: a.rol,
     nombre: a.nombre,
     unidad: a.unidad || '',
-    permisos: normalizarPermisos(a.permisos)
+    permisos: normalizarPermisos(a.permisos),
+    debe_cambiar_password: debe,
+    password_max_age_days: adminAuth.PASSWORD_MAX_AGE_DAYS
   });
 });
 
@@ -3901,41 +3945,166 @@ app.get('/pdf/grupo', requireAuth, async (req, res) => {
 // ── Gestión de admins (solo unitic) ───────────────────────────────────────────
 app.get('/admin/usuarios', requireAuth, async (req, res) => {
   if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
-  const r = await pool.query('SELECT id,usuario,rol,nombre,unidad,permisos FROM admins ORDER BY rol,usuario');
+  const r = await pool.query(
+    `SELECT id, usuario, cip, rol, nombre, unidad, permisos, activo,
+            debe_cambiar_password, password_changed_at, ultimo_acceso
+     FROM admins ORDER BY rol, usuario`
+  );
   res.json({ ok: true, usuarios: r.rows });
 });
 
 app.post('/admin/usuarios', requireAuth, async (req, res) => {
   if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
-  const { usuario, password, rol, nombre, unidad, permisos } = req.body;
   try {
+    const { password, rol, nombre, unidad, permisos, activo } = req.body || {};
+    const cip = adminAuth.normalizarCipLogin(req.body.cip || req.body.usuario);
+    if (!cip) return res.json({ ok: false, error: 'CIP obligatorio (6 a 12 dígitos).' });
+    const pol = adminAuth.validarPoliticaPassword(password);
+    if (!pol.ok) return res.json(pol);
+
+    const nomina = await adminAuth.buscarNominaParaAcceso(pool, cip);
+    const check = adminAuth.nominaPermiteAcceso(nomina);
+    if (!check.ok) return res.json({ ok: false, error: check.error });
+
+    const hash = await adminAuth.hashPassword(password);
+    const nombreFinal = String(nombre || (nomina && nomina.apellidos_nombres) || '').trim() || cip;
+    const unidadFinal = String(unidad || (nomina && nomina.unidad_nombre) || '').trim() || null;
+    const rolFinal = rol === 'unitic' ? 'unitic' : 'usuario';
+
     await pool.query(
-      'INSERT INTO admins (usuario,passhash,rol,nombre,unidad,permisos) VALUES ($1,$2,$3,$4,$5,$6::jsonb)',
-      [usuario, sha256(password), rol||'usuario', nombre||'', unidad||'', JSON.stringify(permisos||[])]
+      `INSERT INTO admins
+        (usuario, passhash, rol, nombre, unidad, permisos, cip, activo, debe_cambiar_password, password_changed_at)
+       VALUES ($1,$2,$3,$4,$5,$6::jsonb,$1,$7,TRUE,NOW())`,
+      [
+        cip,
+        hash,
+        rolFinal,
+        nombreFinal,
+        unidadFinal,
+        JSON.stringify(permisos || []),
+        activo === false ? false : true
+      ]
     );
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: req.admin.cip || adminAuth.normalizarCipLogin(req.admin.usuario),
+      usuario: req.admin.usuario,
+      accion: 'crear_usuario',
+      modulo: 'usuarios',
+      entidad: 'admin',
+      entidadId: cip,
+      detalle: 'Alta CIP ' + cip + ' rol=' + rolFinal,
+      ip: req.ip || '',
+      ok: true
+    });
     res.json({ ok: true });
   } catch (e) {
-    res.json({ ok: false, error: 'Usuario ya existe' });
+    res.json({ ok: false, error: e.message && e.message.indexOf('duplicate') >= 0 ? 'CIP ya registrado' : e.message });
   }
 });
 
 app.put('/admin/usuarios/:id', requireAuth, async (req, res) => {
   if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
-  const { nombre, unidad, permisos, password } = req.body;
-  if (password && password.length >= 6) {
-    await pool.query('UPDATE admins SET nombre=$1,unidad=$2,permisos=$3::jsonb,passhash=$4 WHERE id=$5',
-      [nombre||'', unidad||'', JSON.stringify(permisos||[]), sha256(password), req.params.id]);
-  } else {
-    await pool.query('UPDATE admins SET nombre=$1,unidad=$2,permisos=$3::jsonb WHERE id=$4',
-      [nombre||'', unidad||'', JSON.stringify(permisos||[]), req.params.id]);
+  try {
+    const id = parseInt(req.params.id, 10);
+    const cur = await pool.query('SELECT * FROM admins WHERE id=$1', [id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    const prev = cur.rows[0];
+    const { nombre, unidad, permisos, password, activo } = req.body || {};
+    const nombreFinal = String(nombre != null ? nombre : prev.nombre || '').trim();
+    const unidadFinal = String(unidad != null ? unidad : prev.unidad || '').trim() || null;
+    const permsFinal = permisos != null ? permisos : normalizarPermisos(prev.permisos);
+    const activoFinal = typeof activo === 'boolean' ? activo : (prev.activo !== false);
+
+    if (password && String(password).trim()) {
+      const pol = adminAuth.validarPoliticaPassword(password);
+      if (!pol.ok) return res.json(pol);
+      const hash = await adminAuth.hashPassword(password);
+      await pool.query(
+        `UPDATE admins SET nombre=$1, unidad=$2, permisos=$3::jsonb, passhash=$4,
+            activo=$5, debe_cambiar_password=TRUE, password_changed_at=NOW()
+         WHERE id=$6`,
+        [nombreFinal, unidadFinal, JSON.stringify(permsFinal || []), hash, activoFinal, id]
+      );
+      await revocarSesionesAdmin(id, null);
+    } else {
+      await pool.query(
+        `UPDATE admins SET nombre=$1, unidad=$2, permisos=$3::jsonb, activo=$4 WHERE id=$5`,
+        [nombreFinal, unidadFinal, JSON.stringify(permsFinal || []), activoFinal, id]
+      );
+      if (!activoFinal) await revocarSesionesAdmin(id, null);
+    }
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: req.admin.cip || adminAuth.normalizarCipLogin(req.admin.usuario),
+      usuario: req.admin.usuario,
+      accion: 'editar_usuario',
+      modulo: 'usuarios',
+      entidad: 'admin',
+      entidadId: String(id),
+      detalle: 'Edición usuario ' + (prev.usuario || id) + (activoFinal ? '' : ' (desactivado)'),
+      ip: req.ip || '',
+      ok: true
+    });
+    res.json({ ok: true });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
   }
-  res.json({ ok: true });
 });
 
 app.delete('/admin/usuarios/:id', requireAuth, async (req, res) => {
   if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false });
-  await pool.query('DELETE FROM admins WHERE id=$1 AND rol!=\'unitic\'', [req.params.id]);
+  const id = parseInt(req.params.id, 10);
+  const prev = await pool.query('SELECT usuario, cip, rol FROM admins WHERE id=$1', [id]);
+  await pool.query('DELETE FROM admins WHERE id=$1 AND rol!=\'unitic\'', [id]);
+  await revocarSesionesAdmin(id, null);
+  if (prev.rows.length) {
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: req.admin.cip || adminAuth.normalizarCipLogin(req.admin.usuario),
+      usuario: req.admin.usuario,
+      accion: 'eliminar_usuario',
+      modulo: 'usuarios',
+      entidad: 'admin',
+      entidadId: String(id),
+      detalle: 'Eliminado ' + (prev.rows[0].usuario || ''),
+      ip: req.ip || '',
+      ok: true
+    });
+  }
   res.json({ ok: true });
+});
+
+// ── GET /admin/auditoria — solo Super Admin ───────────────────────────────────
+app.get('/admin/auditoria', requireAuth, async (req, res) => {
+  if (req.admin.rol !== 'unitic') return res.status(403).json({ ok: false, error: 'Sin permiso' });
+  try {
+    const limite = Math.min(parseInt(req.query.limite, 10) || 100, 500);
+    const cip = adminAuth.normalizarCipLogin(req.query.cip || '');
+    const accion = String(req.query.accion || '').trim();
+    const params = [];
+    let where = 'WHERE 1=1';
+    if (cip) {
+      params.push(cip);
+      where += ' AND cip=$' + params.length;
+    }
+    if (accion) {
+      params.push(accion);
+      where += ' AND accion=$' + params.length;
+    }
+    params.push(limite);
+    const r = await pool.query(
+      `SELECT id, fecha, admin_id, cip, usuario, accion, modulo, entidad, entidad_id, detalle, ip, ok
+       FROM admin_auditoria
+       ${where}
+       ORDER BY fecha DESC
+       LIMIT $${params.length}`,
+      params
+    );
+    res.json({ ok: true, rows: r.rows });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
 });
 
 // ── GET /admin/divisiones ─────────────────────────────────────────────────────
@@ -6083,6 +6252,16 @@ app.post('/admin/repechaje/estado', requireAuth, async (req, res) => {
     }
     const activo = !!(req.body && req.body.activo);
     await setConfig(CFG_REPECHAJE_ACTIVO, activo ? '1' : '0');
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario),
+      usuario: req.admin.usuario,
+      accion: activo ? 'activar_repechaje' : 'desactivar_repechaje',
+      modulo: 'convenios',
+      detalle: activo ? 'Repechaje activado' : 'Repechaje desactivado',
+      ip: req.ip || '',
+      ok: true
+    });
     res.json({ ok: true, activo: activo });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
@@ -6339,20 +6518,48 @@ app.post('/admin/inscripciones/:id/revisar-expediente', requireAuth, async (req,
     const observacion = String((req.body && req.body.observacion) || '').trim();
 
     if (accion === 'aprobar') {
-      const usuarioApr = String((req.body && req.body.usuario) || '').trim();
       const passwordApr = String((req.body && req.body.password) || '');
-      if (!usuarioApr || !passwordApr) {
-        return res.json({ ok: false, error: 'Ingrese usuario y contraseña de quien aprueba el expediente.' });
+      if (!passwordApr) {
+        return res.json({ ok: false, error: 'Ingrese su contraseña para confirmar la aprobación.' });
       }
-      const authR = await pool.query(
-        'SELECT id, usuario, nombre, unidad FROM admins WHERE usuario=$1 AND passhash=$2',
-        [usuarioApr, sha256(passwordApr)]
-      );
-      if (!authR.rows.length) {
-        return res.json({ ok: false, error: 'Usuario o contraseña incorrectos. No se registró la aprobación.' });
+      // La aprobación se firma con el CIP de la sesión activa (no otra cuenta)
+      const cipSesion = adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario)
+        || String(req.admin.usuario || '').trim();
+      const usuarioBody = String((req.body && req.body.usuario) || '').trim();
+      if (usuarioBody) {
+        const cipBody = adminAuth.normalizarCipLogin(usuarioBody) || usuarioBody;
+        if (String(cipBody) !== String(cipSesion) && String(usuarioBody) !== String(req.admin.usuario)) {
+          return res.json({
+            ok: false,
+            error: 'Debe aprobar con su propio CIP de sesión (' + cipSesion + ').'
+          });
+        }
       }
-      const aprobador = authR.rows[0];
-      const nombreAprob = String(aprobador.nombre || aprobador.usuario || '').trim() || aprobador.usuario;
+      const passOk = await adminAuth.verifyPassword(passwordApr, req.admin.passhash);
+      if (!passOk) {
+        await adminAuth.registrarAuditoria(pool, {
+          adminId: req.admin.id,
+          cip: cipSesion,
+          usuario: req.admin.usuario,
+          accion: 'aprobar_expediente_fail',
+          modulo: 'convenios',
+          entidad: 'inscripcion',
+          entidadId: String(id),
+          detalle: 'Contraseña incorrecta al aprobar',
+          ip: req.ip || '',
+          ok: false
+        });
+        return res.json({ ok: false, error: 'Contraseña incorrecta. No se registró la aprobación.' });
+      }
+      // Revalidar nómina si tiene CIP
+      const cipAprob = adminAuth.normalizarCipLogin(cipSesion);
+      if (cipAprob) {
+        const nomina = await adminAuth.buscarNominaParaAcceso(pool, cipAprob);
+        const check = adminAuth.nominaPermiteAcceso(nomina);
+        if (!check.ok) return res.json({ ok: false, error: check.error });
+      }
+      const nombreAprob = String(req.admin.nombre || req.admin.usuario || '').trim() || String(cipSesion);
+      const usuarioAprob = String(cipAprob || req.admin.usuario).slice(0, 60);
       await pool.query(
         `UPDATE inscripciones SET estado='expediente_ok', motivo_observacion='',
            observacion=COALESCE(NULLIF($1,''), 'Expediente verificado — constancia habilitada'),
@@ -6360,15 +6567,28 @@ app.post('/admin/inscripciones/:id/revisar-expediente', requireAuth, async (req,
            aprobado_por_usuario=$3,
            fecha_aprobacion=NOW()
          WHERE id=$4 AND estado IN ('en_revision','repechaje','observado')`,
-        [observacion, nombreAprob.slice(0, 150), String(aprobador.usuario).slice(0, 60), id]);
+        [observacion, nombreAprob.slice(0, 150), usuarioAprob, id]);
       const token = await asegurarTokenConstancia(id);
       const n = await conveniosFlujo.notificarInscripcion(pool, id, 'expediente_ok');
+      await adminAuth.registrarAuditoria(pool, {
+        adminId: req.admin.id,
+        cip: cipAprob || '',
+        usuario: req.admin.usuario,
+        accion: 'aprobar_expediente',
+        modulo: 'convenios',
+        entidad: 'inscripcion',
+        entidadId: String(id),
+        detalle: 'Aprobado expediente — ' + (cur.rows[0].titulo || ''),
+        ip: req.ip || '',
+        ok: true
+      });
       return res.json({
         ok: true,
         estado: 'expediente_ok',
         token_constancia: token,
         notificacion: n,
         aprobado_por_nombre: nombreAprob,
+        aprobado_por_usuario: usuarioAprob,
         fecha_aprobacion: new Date().toISOString()
       });
     }
@@ -6384,6 +6604,18 @@ app.post('/admin/inscripciones/:id/revisar-expediente', requireAuth, async (req,
          WHERE id=$3 AND estado IN ('en_revision','repechaje','observado')`,
         [motivo, obsTxt, id]);
       const n = await conveniosFlujo.notificarInscripcion(pool, id, 'observado');
+      await adminAuth.registrarAuditoria(pool, {
+        adminId: req.admin.id,
+        cip: adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario),
+        usuario: req.admin.usuario,
+        accion: 'observar_expediente',
+        modulo: 'convenios',
+        entidad: 'inscripcion',
+        entidadId: String(id),
+        detalle: motivo,
+        ip: req.ip || '',
+        ok: true
+      });
       return res.json({ ok: true, estado: 'observado', notificacion: n });
     }
 
@@ -6397,6 +6629,18 @@ app.post('/admin/inscripciones/:id/revisar-expediente', requireAuth, async (req,
          WHERE id=$4`,
         [observacion, motivo || null, plazo.toISOString(), id]);
       const n = await conveniosFlujo.notificarInscripcion(pool, id, 'rechazado');
+      await adminAuth.registrarAuditoria(pool, {
+        adminId: req.admin.id,
+        cip: adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario),
+        usuario: req.admin.usuario,
+        accion: 'rechazar_expediente',
+        modulo: 'convenios',
+        entidad: 'inscripcion',
+        entidadId: String(id),
+        detalle: observacion || motivo || '',
+        ip: req.ip || '',
+        ok: true
+      });
       return res.json({ ok: true, estado: 'rechazado', notificacion: n });
     }
 

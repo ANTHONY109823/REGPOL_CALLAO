@@ -19,7 +19,6 @@
     .card::before{content:'';position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,#c8a94a,#004d3d);}
 
     .logo-wrap{text-align:center;margin-bottom:22px;}
-    .logo-wrap img{width:64px;height:64px;object-fit:contain;border-radius:50%;border:3px solid #004d3d;}
     .logo-wrap .escudo{width:64px;height:64px;background:#004d3d;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;}
     .logo-wrap .escudo i{font-size:30px;color:#c8a94a;}
 
@@ -38,9 +37,15 @@
     .btn-ingresar:disabled{background:#aaa;cursor:not-allowed;}
 
     #msg{color:#c0392b;font-size:13px;text-align:center;min-height:18px;margin-top:10px;}
+    #msg.ok{color:#1a7a3a;}
 
     .footer-card{text-align:center;margin-top:20px;color:#bbb;font-size:11px;}
     .footer-card a{color:#004d3d;text-decoration:none;}
+
+    .hint{font-size:11px;color:#888;margin:-8px 0 12px;line-height:1.35;}
+
+    #box-cambio{display:none;}
+    #box-login{display:block;}
 
     @media (max-width: 480px) {
       body { padding: 16px; align-items: flex-start; padding-top: 24px; }
@@ -58,17 +63,36 @@
     <div class="escudo"><i class="fas fa-shield-alt"></i></div>
   </div>
   <h2>REGPOL Callao</h2>
-  <div class="sub">Sistema de Administración Institucional</div>
+  <div class="sub">Acceso seguro — CIP institucional</div>
 
-  <label for="l-user"><i class="fas fa-user" style="color:#004d3d;"></i> Usuario</label>
-  <input type="text" id="l-user" placeholder="Ingrese su usuario" autocomplete="username" autofocus/>
+  <div id="box-login">
+    <label for="l-user"><i class="fas fa-id-card" style="color:#004d3d;"></i> CIP</label>
+    <input type="text" id="l-user" placeholder="Ingrese su CIP" inputmode="numeric" autocomplete="username" autofocus/>
+    <p class="hint">Solo personal autorizado en nómina y dado de alta por Super Admin.</p>
 
-  <label for="l-pass"><i class="fas fa-lock" style="color:#004d3d;"></i> Contraseña</label>
-  <input type="password" id="l-pass" placeholder="Ingrese su contraseña" autocomplete="current-password"/>
+    <label for="l-pass"><i class="fas fa-lock" style="color:#004d3d;"></i> Contraseña</label>
+    <input type="password" id="l-pass" placeholder="Contraseña alfanumérica" autocomplete="current-password"/>
 
-  <button class="btn-ingresar" id="btn-ing" onclick="ingresar()">
-    <i class="fas fa-sign-in-alt"></i> Ingresar
-  </button>
+    <button class="btn-ingresar" id="btn-ing" onclick="ingresar()">
+      <i class="fas fa-sign-in-alt"></i> Ingresar
+    </button>
+  </div>
+
+  <div id="box-cambio">
+    <p class="hint" style="margin-bottom:14px;color:#856404;background:#fff8e1;border:1px solid #c8a94a;border-radius:8px;padding:10px 12px;">
+      Debe cambiar su contraseña (primer ingreso o vencimiento cada 45 días).
+    </p>
+    <label for="c-actual">Contraseña actual</label>
+    <input type="password" id="c-actual" autocomplete="current-password"/>
+    <label for="c-nueva">Nueva contraseña</label>
+    <input type="password" id="c-nueva" autocomplete="new-password" placeholder="Mín. 10 caracteres, letras y números"/>
+    <label for="c-nueva2">Confirmar nueva</label>
+    <input type="password" id="c-nueva2" autocomplete="new-password"/>
+    <button class="btn-ingresar" id="btn-cambio" onclick="cambiarPassword()">
+      <i class="fas fa-key"></i> Guardar y continuar
+    </button>
+  </div>
+
   <div id="msg"></div>
 
   <div class="footer-card">
@@ -79,6 +103,8 @@
 <script src="api-config.js?v=2"></script>
 <script>
 var API = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
+var TOKEN_PENDIENTE = '';
+var SESION_PENDIENTE = null;
 
 var PERMS_PANEL_ADMIN = [
   'cms_cursos', 'cms_convenios', 'cms_descansos', 'faltos_admin', 'faltos_registrar',
@@ -101,21 +127,63 @@ function limpiarSesionLocal(){
   localStorage.removeItem('bienToken');
 }
 
+function guardarSesion(d){
+  localStorage.setItem('regpol_session', JSON.stringify({
+    token: d.token,
+    rol: d.rol,
+    nombre: d.nombre,
+    unidad: d.unidad || '',
+    usuario: d.usuario || '',
+    cip: d.cip || '',
+    permisos: d.permisos || []
+  }));
+  if (d.rol === 'unitic') localStorage.setItem('uniticToken', d.token);
+  if (d.rol === 'bienestar') localStorage.setItem('bienToken', d.token);
+}
+
 function redirigirSesion(s){
   window.location.href = rutaSegunSesion(s.rol, s.permisos);
 }
 
-document.addEventListener('keydown', function(e){ if(e.key==='Enter') ingresar(); });
+function mostrarCambioPassword(d){
+  TOKEN_PENDIENTE = d.token;
+  SESION_PENDIENTE = d;
+  document.getElementById('box-login').style.display = 'none';
+  document.getElementById('box-cambio').style.display = 'block';
+  document.getElementById('c-actual').value = document.getElementById('l-pass').value || '';
+  document.getElementById('msg').textContent = '';
+  document.getElementById('msg').className = '';
+}
+
+document.addEventListener('keydown', function(e){
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('box-cambio').style.display === 'block') cambiarPassword();
+  else ingresar();
+});
 
 window.addEventListener('DOMContentLoaded', function(){
   var saved = JSON.parse(localStorage.getItem('regpol_session') || 'null');
   if (saved && saved.token && saved.rol) {
-    
-    fetch(API+'/stats', { headers: {'x-admin-token': saved.token} })
+    fetch(API+'/admin/perfil', { headers: {'x-admin-token': saved.token} })
       .then(function(r){ return r.json(); })
       .then(function(d){
-        if (d.ok !== false) redirigirSesion(saved);
-        else limpiarSesionLocal();
+        if (!d.ok) { limpiarSesionLocal(); return; }
+        if (d.debe_cambiar_password) {
+          TOKEN_PENDIENTE = saved.token;
+          SESION_PENDIENTE = {
+            token: saved.token,
+            rol: d.rol,
+            nombre: d.nombre,
+            unidad: d.unidad || '',
+            usuario: d.usuario || '',
+            cip: d.cip || '',
+            permisos: d.permisos || []
+          };
+          document.getElementById('box-login').style.display = 'none';
+          document.getElementById('box-cambio').style.display = 'block';
+          return;
+        }
+        redirigirSesion({ rol: d.rol, permisos: d.permisos || [] });
       })
       .catch(function(){});
   }
@@ -127,16 +195,17 @@ function ingresar() {
   var btn      = document.getElementById('btn-ing');
   var msg      = document.getElementById('msg');
 
-  if (!usuario || !password) { msg.textContent = 'Complete usuario y contraseña.'; return; }
+  if (!usuario || !password) { msg.className=''; msg.textContent = 'Complete CIP y contraseña.'; return; }
 
   btn.disabled   = true;
   btn.innerHTML  = '<span class="spinner-inline"></span> Verificando...';
+  msg.className = '';
   msg.textContent = '';
 
   fetch(API + '/admin/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ usuario, password })
+    body: JSON.stringify({ usuario: usuario, password: password })
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
@@ -146,18 +215,13 @@ function ingresar() {
       btn.innerHTML   = '<i class="fas fa-sign-in-alt"></i> Ingresar';
       return;
     }
-    
-    localStorage.setItem('regpol_session', JSON.stringify({
-      token:    d.token,
-      rol:      d.rol,
-      nombre:   d.nombre,
-      unidad:   d.unidad || '',
-      permisos: d.permisos || []
-    }));
-    
-    if (d.rol === 'unitic')    localStorage.setItem('uniticToken',   d.token);
-    if (d.rol === 'bienestar') localStorage.setItem('bienToken',     d.token);
-
+    if (d.debe_cambiar_password) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Ingresar';
+      mostrarCambioPassword(d);
+      return;
+    }
+    guardarSesion(d);
     redirigirSesion({ rol: d.rol, permisos: d.permisos || [] });
   })
   .catch(function(){
@@ -167,6 +231,55 @@ function ingresar() {
   });
 }
 
+function cambiarPassword(){
+  var msg = document.getElementById('msg');
+  var btn = document.getElementById('btn-cambio');
+  var actual = document.getElementById('c-actual').value;
+  var nueva = document.getElementById('c-nueva').value;
+  var nueva2 = document.getElementById('c-nueva2').value;
+  msg.className = '';
+  if (!TOKEN_PENDIENTE) { msg.textContent = 'Sesión no válida. Ingrese de nuevo.'; return; }
+  if (!actual || !nueva) { msg.textContent = 'Complete ambos campos.'; return; }
+  if (nueva !== nueva2) { msg.textContent = 'La confirmación no coincide.'; return; }
+  if (nueva.length < 10 || !/[A-Za-z]/.test(nueva) || !/[0-9]/.test(nueva)) {
+    msg.textContent = 'Mínimo 10 caracteres, con letras y números.';
+    return;
+  }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-inline"></span> Guardando...';
+  fetch(API + '/admin/cambiar-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': TOKEN_PENDIENTE },
+    body: JSON.stringify({ password_actual: actual, password_nueva: nueva })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (!d.ok) {
+      msg.textContent = d.error || 'No se pudo cambiar.';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-key"></i> Guardar y continuar';
+      return;
+    }
+    msg.className = 'ok';
+    msg.textContent = 'Contraseña actualizada. Ingrese con la nueva clave.';
+    // Volver a login limpio (otras sesiones fueron revocadas)
+    limpiarSesionLocal();
+    TOKEN_PENDIENTE = '';
+    document.getElementById('box-cambio').style.display = 'none';
+    document.getElementById('box-login').style.display = 'block';
+    document.getElementById('l-pass').value = '';
+    document.getElementById('c-actual').value = '';
+    document.getElementById('c-nueva').value = '';
+    document.getElementById('c-nueva2').value = '';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-key"></i> Guardar y continuar';
+  })
+  .catch(function(){
+    msg.textContent = 'Error de conexión.';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-key"></i> Guardar y continuar';
+  });
+}
 </script>
 </body>
 </html>
