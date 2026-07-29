@@ -1630,16 +1630,19 @@ app.post('/admin/login', async (req, res) => {
       return res.json({ ok: false, error: auth.error || 'Credenciales incorrectas' });
     }
     loginIntentos.delete(ip);
-    const a = auth.admin;
+    let a = auth.admin;
+    a = await adminAuth.sincronizarAdminDesdeNomina(pool, a);
     const token = crypto.randomBytes(24).toString('hex');
     const exp = Date.now() + SESION_TTL;
     sesiones.set(token, { adminId: a.id, admin: a, exp, dbExp: Date.now() + AUTH_CACHE_TTL });
     await persistirSesionDb(token, a.id, exp);
     await pool.query('UPDATE admins SET ultimo_acceso=NOW() WHERE id=$1', [a.id]).catch(function() {});
+    const cipLog = a.cip || adminAuth.normalizarCipLogin(a.usuario) || '';
     await adminAuth.registrarAuditoria(pool, {
       adminId: a.id,
-      cip: a.cip || adminAuth.normalizarCipLogin(a.usuario),
+      cip: cipLog,
       usuario: a.usuario,
+      nombre: a.nombre || '',
       accion: auth.debe_cambiar_password ? 'login_ok_debe_cambiar_password' : 'login_ok',
       modulo: 'auth',
       detalle: auth.password_vencida ? 'Contraseña vencida (>45 días)' : 'Ingreso correcto',
@@ -1650,10 +1653,10 @@ app.post('/admin/login', async (req, res) => {
       ok: true,
       token: token,
       rol: a.rol,
-      nombre: a.nombre,
+      nombre: a.nombre || '',
       unidad: a.unidad,
       usuario: a.usuario,
-      cip: a.cip || adminAuth.normalizarCipLogin(a.usuario) || '',
+      cip: cipLog,
       permisos: normalizarPermisos(a.permisos),
       debe_cambiar_password: !!auth.debe_cambiar_password,
       password_max_age_days: adminAuth.PASSWORD_MAX_AGE_DAYS
@@ -1689,19 +1692,48 @@ app.post('/admin/cambiar-password', requireAuth, async (req, res) => {
 
 // ── GET /admin/perfil (refrescar sesión del panel) ────────────────────────────
 app.get('/admin/perfil', requireAuth, async (req, res) => {
-  const a = req.admin;
+  let a = req.admin;
+  a = await adminAuth.sincronizarAdminDesdeNomina(pool, a);
+  req.admin = a;
   const debe = adminAuth.passwordVencida(a);
   res.json({
     ok: true,
     usuario: a.usuario,
     cip: a.cip || adminAuth.normalizarCipLogin(a.usuario) || '',
     rol: a.rol,
-    nombre: a.nombre,
+    nombre: a.nombre || '',
     unidad: a.unidad || '',
     permisos: normalizarPermisos(a.permisos),
     debe_cambiar_password: debe,
     password_max_age_days: adminAuth.PASSWORD_MAX_AGE_DAYS
   });
+});
+
+// ── GET /admin/nomina-por-cip/:cip — autocompletar altas (Super Admin) ────────
+app.get('/admin/nomina-por-cip/:cip', requireAuth, async (req, res) => {
+  try {
+    if (req.admin.rol !== 'unitic') {
+      return res.status(403).json({ ok: false, error: 'Solo Super Admin' });
+    }
+    const cip = adminAuth.normalizarCipLogin(req.params.cip);
+    if (!cip) return res.json({ ok: false, error: 'CIP inválido' });
+    const nomina = await adminAuth.buscarNominaParaAcceso(pool, cip);
+    const check = adminAuth.nominaPermiteAcceso(nomina);
+    if (!nomina) return res.json({ ok: false, error: 'CIP no encontrado en nómina' });
+    res.json({
+      ok: true,
+      autorizado: check.ok,
+      error_acceso: check.ok ? '' : (check.error || ''),
+      cip: cip,
+      nombre: nomina.apellidos_nombres || '',
+      unidad: nomina.unidad_nombre || '',
+      division: nomina.division_nombre || '',
+      grado: nomina.grado || '',
+      situacion: nomina.situacion || ''
+    });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
 });
 
 // ── GET /preguntas (público — para el formulario) ─────────────────────────────
@@ -4094,7 +4126,7 @@ app.get('/admin/auditoria', requireAuth, async (req, res) => {
     }
     params.push(limite);
     const r = await pool.query(
-      `SELECT id, fecha, admin_id, cip, usuario, accion, modulo, entidad, entidad_id, detalle, ip, ok
+      `SELECT id, fecha, admin_id, cip, usuario, nombre, accion, modulo, entidad, entidad_id, detalle, ip, ok
        FROM admin_auditoria
        ${where}
        ORDER BY fecha DESC

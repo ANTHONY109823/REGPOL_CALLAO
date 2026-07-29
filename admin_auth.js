@@ -72,6 +72,7 @@ async function initAuthTablas(pool) {
       admin_id    INTEGER,
       cip         VARCHAR(20) DEFAULT '',
       usuario     VARCHAR(60) DEFAULT '',
+      nombre      VARCHAR(200) DEFAULT '',
       accion      VARCHAR(80) NOT NULL,
       modulo      VARCHAR(40) DEFAULT '',
       entidad     VARCHAR(40) DEFAULT '',
@@ -80,6 +81,7 @@ async function initAuthTablas(pool) {
       ip          VARCHAR(80) DEFAULT '',
       ok          BOOLEAN DEFAULT TRUE
     );
+    ALTER TABLE admin_auditoria ADD COLUMN IF NOT EXISTS nombre VARCHAR(200) DEFAULT '';
     CREATE INDEX IF NOT EXISTS idx_admin_aud_fecha ON admin_auditoria(fecha DESC);
     CREATE INDEX IF NOT EXISTS idx_admin_aud_cip ON admin_auditoria(cip);
     CREATE INDEX IF NOT EXISTS idx_admin_aud_accion ON admin_auditoria(accion);
@@ -192,14 +194,20 @@ async function bootstrapSuperAdminSiFalta(pool) {
 async function registrarAuditoria(pool, opts) {
   try {
     const o = opts || {};
+    let nombre = String(o.nombre || '').trim();
+    if (!nombre && o.adminId) {
+      const rn = await pool.query('SELECT nombre FROM admins WHERE id=$1', [o.adminId]);
+      if (rn.rows[0] && rn.rows[0].nombre) nombre = String(rn.rows[0].nombre).trim();
+    }
     await pool.query(
       `INSERT INTO admin_auditoria
-        (admin_id, cip, usuario, accion, modulo, entidad, entidad_id, detalle, ip, ok)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        (admin_id, cip, usuario, nombre, accion, modulo, entidad, entidad_id, detalle, ip, ok)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
       [
         o.adminId || null,
         String(o.cip || '').slice(0, 20),
         String(o.usuario || '').slice(0, 60),
+        nombre.slice(0, 200),
         String(o.accion || 'evento').slice(0, 80),
         String(o.modulo || '').slice(0, 40),
         String(o.entidad || '').slice(0, 40),
@@ -212,6 +220,27 @@ async function registrarAuditoria(pool, opts) {
   } catch (e) {
     console.warn('auditoria:', e.message);
   }
+}
+
+/** Sincroniza nombre/unidad del admin desde nómina (para login y panel). */
+async function sincronizarAdminDesdeNomina(pool, admin) {
+  if (!admin || !admin.id) return admin;
+  const cip = normalizarCipLogin(admin.cip || admin.usuario);
+  if (!cip) return admin;
+  const nomina = await buscarNominaParaAcceso(pool, cip);
+  if (!nomina) return admin;
+  const nombre = String(nomina.apellidos_nombres || '').trim();
+  const unidad = String(nomina.unidad_nombre || '').trim();
+  if (nombre && nombre !== String(admin.nombre || '').trim()) {
+    admin.nombre = nombre;
+    await pool.query('UPDATE admins SET nombre=$1 WHERE id=$2', [nombre.slice(0, 120), admin.id]).catch(function() {});
+  }
+  if (unidad && !String(admin.unidad || '').trim()) {
+    admin.unidad = unidad;
+    await pool.query('UPDATE admins SET unidad=$1 WHERE id=$2', [unidad.slice(0, 150), admin.id]).catch(function() {});
+  }
+  admin._nomina = nomina;
+  return admin;
 }
 
 async function buscarNominaParaAcceso(pool, cip) {
@@ -368,5 +397,6 @@ module.exports = {
   nominaPermiteAcceso,
   autenticarAdmin,
   cambiarPasswordAdmin,
+  sincronizarAdminDesdeNomina,
   publicAdmin
 };

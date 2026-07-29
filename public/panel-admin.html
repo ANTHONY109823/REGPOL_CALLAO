@@ -472,7 +472,12 @@
       else badge.textContent = 'USUARIO';
     }
     var nombreEl = document.getElementById('ph-nombre');
-    if (nombreEl) nombreEl.textContent = s.nombre || s.usuario || 'Panel';
+    if (nombreEl) {
+      var nom = (s.nombre || '').trim();
+      var cip = (s.cip || s.usuario || '').trim();
+      nombreEl.textContent = nom ? (nom + (cip ? ' · ' + cip : '')) : (cip || 'Panel');
+      nombreEl.title = nom || cip || '';
+    }
   };
   (function() {
     document.documentElement.classList.add('panel-iniciando');
@@ -786,7 +791,7 @@
         </div>
         <div style="overflow-x:auto;max-height:420px;">
           <table class="t">
-            <thead><tr><th>Fecha</th><th>CIP</th><th>Usuario</th><th>Acción</th><th>Módulo</th><th>Detalle</th><th>IP</th><th>OK</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>CIP</th><th>Nombre</th><th>Acción</th><th>Módulo</th><th>Detalle</th><th>IP</th><th>OK</th></tr></thead>
             <tbody id="tabla-auditoria"><tr><td colspan="8" style="color:#bbb;text-align:center;">Pulse Actualizar</td></tr></tbody>
           </table>
         </div>
@@ -1981,7 +1986,9 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div>
         <label>CIP (login) *</label>
-        <input type="text" id="mu-usuario" inputmode="numeric" placeholder="Ej: 12345678"/>
+        <input type="text" id="mu-usuario" inputmode="numeric" placeholder="Ej: 12345678"
+          onblur="buscarNominaParaUsuario()" onchange="buscarNominaParaUsuario()"/>
+        <p id="mu-nomina-msg" style="font-size:11px;color:#888;margin:4px 0 0;min-height:16px;"></p>
       </div>
       <div>
         <label>Contraseña inicial <span id="mu-pass-hint" style="font-weight:400;color:#999;">(mín 10, letras y números)</span></label>
@@ -4319,6 +4326,36 @@ function desactivarPregunta(id){
   fetch(API+'/admin/preguntas/'+id,{method:'DELETE',headers:hdr()}).then(function(){cargarPreguntas();});
 }
 
+function buscarNominaParaUsuario(){
+  var cip=(document.getElementById('mu-usuario').value||'').replace(/\D/g,'');
+  var msg=document.getElementById('mu-nomina-msg');
+  var id=document.getElementById('mu-id').value;
+  if(id) return; // edición: CIP no cambia
+  if(!msg) return;
+  if(cip.length<6){ msg.style.color='#888'; msg.textContent=''; return; }
+  msg.style.color='#888'; msg.textContent='Buscando en nómina...';
+  fetch(API+'/admin/nomina-por-cip/'+encodeURIComponent(cip),{headers:hdr()})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok){
+        msg.style.color='#c0392b';
+        msg.textContent=d.error||'CIP no encontrado en nómina.';
+        return;
+      }
+      if(d.nombre) document.getElementById('mu-nombre').value=d.nombre;
+      if(d.unidad && !document.getElementById('mu-unidad').value)
+        document.getElementById('mu-unidad').value=d.unidad;
+      if(d.autorizado===false){
+        msg.style.color='#c0392b';
+        msg.textContent=(d.error_acceso||'CIP no autorizado')+' · '+(d.grado||'')+' · '+(d.situacion||'');
+      } else {
+        msg.style.color='#1a7a3a';
+        msg.textContent='Nómina OK'+(d.grado?(' · '+d.grado):'')+(d.unidad?(' · '+d.unidad):'')+(d.situacion?(' · '+d.situacion):'');
+      }
+    })
+    .catch(function(){ msg.style.color='#c0392b'; msg.textContent='Error al consultar nómina.'; });
+}
+
 function cargarUsuarios(){
   fetch(API+'/admin/usuarios',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
     if(!d.ok) return;
@@ -4411,7 +4448,7 @@ function cargarAuditoria(){
         return '<tr>'
           +'<td style="white-space:nowrap;font-size:11px;">'+f+'</td>'
           +'<td>'+(a.cip||'—')+'</td>'
-          +'<td>'+(a.usuario||'—')+'</td>'
+          +'<td style="font-size:11.5px;">'+(a.nombre||a.usuario||'—')+'</td>'
           +'<td><strong>'+(a.accion||'')+'</strong></td>'
           +'<td>'+(a.modulo||'')+'</td>'
           +'<td style="font-size:11.5px;max-width:280px;">'+(a.detalle||'')+(a.entidad_id?(' #'+a.entidad_id):'')+'</td>'
