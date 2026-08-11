@@ -747,7 +747,7 @@ function htmlSelectorTurnoPostula(item){
   if (!obtenerTurnosPublicados(item).length) return '';
   return '<div class="fi-group" id="fi-turno-postula-box" style="display:none;">'
     +'<label>Turno al que postula *</label>'
-    +'<select id="fi-turno-postula" onchange="onCambioTurnoPostula(this.value)">'
+    +'<select id="fi-turno-postula">'
     +'<option value="">Seleccione día de franco primero</option>'
     +'</select>'
     +'<small class="fi-hint" id="fi-turno-hint">Al elegir PAR o IMPAR aparecerán MAÑANA, TARDE y/o NOCHE según las vacantes publicadas.</small>'
@@ -811,7 +811,6 @@ function actualizarSelectorTurnos(diaFranco, forzarMostrar){
     hint.textContent = 'Turnos con vacantes para día ' + (diaFranco || 'publicado') + ': '
       + turnos.map(function(t){ return t.turno; }).join(', ') + '.';
   }
-  if (turnos.length === 1) onCambioTurnoPostula(turnos[0].value);
 }
 
 function onCambioDiaFranco(val){
@@ -824,10 +823,6 @@ function onCambioDiaFranco(val){
   } else {
     actualizarSelectorTurnos('', false);
   }
-}
-
-function onCambioTurnoPostula(val){
-  // El día ya lo eligió el usuario; no lo pisamos
 }
 
 function renderFormInscripcion(item){

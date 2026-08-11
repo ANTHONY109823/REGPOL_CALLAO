@@ -424,18 +424,9 @@ function resumenSlotActual() {
     };
   }
   var vac = parseInt(slot.vacantes, 10) || 0;
-  var ocupCfg = parseInt(slot.ocupadas, 10) || 0;
-  var yaSesion = ganadoresDelSlot(slot).length;
-  var ocupadas = ocupCfg + yaSesion;
-  var disponibles = Math.max(0, vac - ocupadas);
-  // Recalcular ocupadas de sesión bien: ocupCfg ya incluye ganadores previos de BD;
-  // cupoRestanteSlot usa slot.disponibles (vac-ocupCfg) menos ganadores de esta sesión
-  disponibles = cupoRestanteSlot(slot);
-  ocupadas = vac - disponibles;
+  var disponibles = cupoRestanteSlot(slot);
+  var ocupadas = vac - disponibles;
   var franco = RUEDA_CAND.filter(function(c) {
-    return !IDS_GANADOS[c.id] && candidatoEnSlot(c, slot);
-  }).length;
-  var vacPend = VACACIONES_CAND.filter(function(c) {
     return !IDS_GANADOS[c.id] && candidatoEnSlot(c, slot);
   }).length;
   var vacAsig = GANADORES.filter(function(g) {
@@ -447,7 +438,6 @@ function resumenSlotActual() {
     ocupadas: ocupadas,
     disponibles: disponibles,
     franco: franco,
-    vacacionesPend: vacPend,
     vacacionesAsig: vacAsig,
     aSortear: aSortear,
     label: slot.label,

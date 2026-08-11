@@ -543,26 +543,6 @@ function etiquetaBloqueVacaciones(bloque) {
   return '';
 }
 
-/**
- * Reparte por sorteo (Fisher–Yates) en dos bloques de ~15 días.
- * Devuelve array { id, bloque: '1'|'2' }.
- */
-function sortearBloquesVacaciones(ids) {
-  var list = (Array.isArray(ids) ? ids : []).map(function(id) {
-    return parseInt(id, 10);
-  }).filter(Boolean);
-  for (var i = list.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var tmp = list[i];
-    list[i] = list[j];
-    list[j] = tmp;
-  }
-  var mitad = Math.ceil(list.length / 2);
-  return list.map(function(id, idx) {
-    return { id: id, bloque: idx < mitad ? '1' : '2' };
-  });
-}
-
 module.exports = {
   PLAZO_EXPEDIENTE_DIAS,
   ESTADOS_CONVENIO,
@@ -571,21 +551,16 @@ module.exports = {
   MODALIDADES_TRABAJO,
   REGIONES_POLICIALES,
   etiquetaObservacion,
-  mensajeNotificacion,
-  urlsNotificacion,
   notificarInscripcion,
   initColumnasFlujoConvenios,
   migrarEstadosConvenios,
   caducarExpedientesVencidos,
   vacantesDisponibles,
   plazoDesdeAhora,
-  formatearNroRegistro,
-  prefijoNroRegistro,
   asegurarNroRegistro,
   limpio,
   soloDigitos,
   normalizarTelefonoPe,
   parsePostulacionSlot,
-  etiquetaBloqueVacaciones,
-  sortearBloquesVacaciones
+  etiquetaBloqueVacaciones
 };

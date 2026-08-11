@@ -901,10 +901,6 @@ function publicarCmsTrasEdicion(mensajeBorrador) {
   });
 }
 
-function guardarConfigMenu() {
-  guardarMenuPublicacionWeb();
-}
-
 function renderListaNovedades(containerId, items) {
   var el = document.getElementById(containerId);
   if (!el) return;
@@ -1614,45 +1610,6 @@ function publicarCmsDataAlServidor(onComplete) {
         if (typeof onComplete === 'function') onComplete(false);
       });
   });
-}
-
-function exportarSiteJSON() {
-  var data = recolectarDatosCMS();
-  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'site-data-regpol-callao.json';
-  a.click();
-}
-
-function importarSiteJSON(input) {
-  var file = input.files && input.files[0];
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      cmsDataActual = JSON.parse(e.target.result);
-      poblarFormulariosCMS();
-      renderListasCMS();
-      mostrarAlertaCMS('JSON importado. Revise y pulse Publicar.', 'ok');
-    } catch (err) {
-      mostrarAlertaCMS('Archivo JSON inválido.', 'error');
-    }
-  };
-  reader.readAsText(file);
-  input.value = '';
-}
-
-function restaurarSiteDefault() {
-  if (!confirm('¿Restaurar contenido predeterminado del portal?')) return;
-  fetch('site-data.json?v=' + Date.now())
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      cmsDataActual = data;
-      poblarFormulariosCMS();
-      renderListasCMS();
-      mostrarAlertaCMS('Contenido base cargado. Pulse Publicar para aplicar.', 'ok');
-    });
 }
 
 function mostrarAlertaCMS(texto, tipo) {

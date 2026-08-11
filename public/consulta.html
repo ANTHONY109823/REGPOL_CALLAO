@@ -1568,34 +1568,6 @@ function invalidarIframeRepForm() {
   iframe.style.height = '280px';
 }
 
-function verConstancia(id) {
-  if (!CIP_CONSULTA) return;
-  fetch(API_PUBLIC + '/portal/inscripciones/' + id + '/constancia-vacante?cip=' + encodeURIComponent(CIP_CONSULTA))
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (!d.ok || !d.pdf) {
-        alert(d.error || 'No se pudo cargar la constancia.');
-        return;
-      }
-      abrirModalPdfPortal(d.pdf, d.titulo || 'Constancia de vacante');
-    })
-    .catch(function() { alert('Error de conexión.'); });
-}
-
-function descargarConstancia(id) {
-  if (!CIP_CONSULTA) return;
-  fetch(API_PUBLIC + '/portal/inscripciones/' + id + '/constancia-vacante?cip=' + encodeURIComponent(CIP_CONSULTA))
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (!d.ok || !d.pdf) {
-        alert(d.error || 'No se pudo descargar la constancia.');
-        return;
-      }
-      descargarDataUrlPdf(d.pdf, d.nombre || 'constancia.pdf');
-    })
-    .catch(function() { alert('Error de conexión.'); });
-}
-
 initPortalPagina({ activeNav: 'convenios', showPageHero: false });
 
 var cipIni = getParamCip();

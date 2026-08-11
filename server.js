@@ -5097,7 +5097,7 @@ function diaCompatibleSorteo(diaSlot, diaCand) {
   return a === b;
 }
 
-function candidatoCoincideSlotSorteo(cand, slot, slotsAll) {
+function candidatoCoincideSlotSorteo(cand, slot) {
   if (!cand || !slot) return false;
   var p = conveniosFlujo.parsePostulacionSlot(cand.comisaria_postula);
   if (slot.lugar) {
@@ -7641,7 +7641,7 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
       var ocupadas = 0;
       r.rows.forEach(function(c) {
         if (ocupan.indexOf(c.estado) < 0) return;
-        if (candidatoCoincideSlotSorteo(c, s, slotsBase)) ocupadas++;
+        if (candidatoCoincideSlotSorteo(c, s)) ocupadas++;
       });
       var disponibles = Math.max(0, (parseInt(s.vacantes, 10) || 0) - ocupadas);
       return Object.assign({}, s, { ocupadas: ocupadas, disponibles: disponibles });

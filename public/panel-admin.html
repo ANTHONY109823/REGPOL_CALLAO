@@ -1858,12 +1858,12 @@
     <div id="mins-editar-wrap">
       <label>Estado</label>
       <select id="mins-estado">
-        <option value="pendiente">Pendiente (revisión)</option>
-        <option value="verificado">Verificado (expediente OK, sin aprobar)</option>
-        <option value="aprobado" id="mins-opt-aprobado">Aprobado para sorteo</option>
-        <option value="ganador">Ganador (sorteo)</option>
+        <option value="pendiente">Pendiente</option>
+        <option value="verificado">Verificado</option>
+        <option value="aprobado" id="mins-opt-aprobado">Aprobado</option>
+        <option value="ganador">Ganador / Seleccionado</option>
         <option value="reserva">Reserva</option>
-        <option value="rechazado">✗ Rechazado (expediente inválido)</option>
+        <option value="rechazado">Rechazado</option>
       </select>
       <label>Observación</label>
       <textarea id="mins-observacion" rows="3" placeholder="Motivo de aceptación o rechazo..."></textarea>
@@ -4701,10 +4701,6 @@ function cargarItemsSorteo(tipo){
     .catch(function(){});
 }
 
-function cargarConvocatoriasSorteo(){
-  return cargarItemsSorteo('convenio');
-}
-
 function llenarSelectItemsSorteo(selectId, placeholder){
   var sel = document.getElementById(selectId);
   if(!sel) return;
@@ -4714,10 +4710,6 @@ function llenarSelectItemsSorteo(selectId, placeholder){
       return '<option value="'+i.id+'">'+escHtml(i.titulo)+'</option>';
     }).join('');
   if(val) sel.value = val;
-}
-
-function llenarSelectConveniosSorteo(selectId, placeholder){
-  llenarSelectItemsSorteo(selectId, placeholder);
 }
 
 function onSelectConvocatoriaSorteo(){
@@ -7704,8 +7696,6 @@ function confirmarAccionPreinscripcion(){
   });
 }
 
-function confirmarDevolverPreinscripcion(){ confirmarAccionPreinscripcion(); }
-
 function abrirRevisionExpediente(id){
   document.getElementById('mobs-id').value=id;
   document.getElementById('mobs-detalle').value='';
@@ -7716,9 +7706,6 @@ function abrirRevisionExpediente(id){
   onCambioAccionRevision();
   document.getElementById('modal-observar-exp').classList.add('open');
 }
-
-/** Compat: llamadas antiguas */
-function abrirObservarExpediente(id){ abrirRevisionExpediente(id); }
 
 function confirmarRevisionExpediente(){
   var id=parseInt(document.getElementById('mobs-id').value,10);
@@ -7742,33 +7729,6 @@ function confirmarRevisionExpediente(){
   }).catch(function(){
     if(btn){ btn.disabled=false; onCambioAccionRevision(); }
     alert('Error de conexión');
-  });
-}
-
-function confirmarObservarExpediente(){ confirmarRevisionExpediente(); }
-
-function aprobarParaSorteo(id){
-  if(!confirm('¿Aprobar a este postulante para participar en el SORTEO?\nSolo los aprobados entran a la rueda aleatoria.')) return;
-  fetch(API+'/admin/inscripciones/'+id,{
-    method:'PUT', headers:hdr(),
-    body:JSON.stringify({estado:'aprobado', observacion:'Aprobado por el área de convenios para el sorteo'})
-  }).then(function(r){return r.json();}).then(function(d){
-    if(d.ok) refrescarInscritosActivos();
-    else alert('Error: '+(d.error||''));
-  });
-}
-
-function aprobarTodosParaSorteo(){
-  var lista=INSCRITOS_CACHE.filter(function(i){return i.estado==='verificado';});
-  if(!lista.length){alert('No hay inscritos verificados pendientes de aprobación.');return;}
-  if(!confirm('¿Aprobar a los '+lista.length+' postulantes verificados para el SORTEO?')) return;
-  Promise.all(lista.map(function(ins){
-    return fetch(API+'/admin/inscripciones/'+ins.id,{
-      method:'PUT', headers:hdr(),
-      body:JSON.stringify({estado:'aprobado', observacion:'Aprobado masivamente para el sorteo'})
-    }).then(function(r){return r.json();});
-  })).then(function(){
-    refrescarInscritosActivos();
   });
 }
 
