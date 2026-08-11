@@ -208,19 +208,24 @@
       <h2><i class="fas fa-clipboard-list"></i> Datos del convenio y sorteo</h2>
       <div class="cfg-convenio" id="cfg-nombre">Cargando...</div>
       <div class="conv-meta" id="cfg-meta"></div>
+      <div class="lista-total-titulo"><i class="fas fa-layer-group"></i> Cupos por turno / día</div>
+      <div id="cfg-slots" style="overflow-x:auto;margin-bottom:14px;border:1px solid #e0e8e0;border-radius:8px;"></div>
       <div class="lista-total-titulo"><i class="fas fa-users"></i> Efectivos preinscritos para el sorteo</div>
       <div style="overflow-x:auto;max-height:420px;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">
         <table class="lista-total-tabla">
           <thead><tr>
-            <th>#</th><th>Grado</th><th>Apellidos y Nombres</th><th>CIP</th><th>Unidad</th><th>Situación</th>
+            <th>#</th><th>Grado</th><th>Apellidos y Nombres</th><th>CIP</th><th>Unidad</th><th>Postula / Slot</th><th>Situación</th>
           </tr></thead>
-          <tbody id="cfg-lista-total"><tr><td colspan="6" style="text-align:center;padding:20px;color:#888;">Cargando...</td></tr></tbody>
+          <tbody id="cfg-lista-total"><tr><td colspan="7" style="text-align:center;padding:20px;color:#888;">Cargando...</td></tr></tbody>
         </table>
       </div>
       <p class="hint">
         <i class="fas fa-info-circle" style="color:#c8a94a;"></i>
-        Los efectivos en <span class="tag-vac">VACACIONES</span> ocupan vacante automáticamente y no entran a la rueda.
-        Los demás participan del sorteo hasta completar las vacantes disponibles.
+        El sorteo se hace <strong>por turno y día</strong> (y comisaría en Celador).
+        <span class="tag-vac">VACACIONES</span> ocupan vacante automáticamente y luego se sortean en
+        <strong>Bloque 1 (días 1–15)</strong> o <strong>Bloque 2 (días 16–fin)</strong>.
+        <span class="tag-rueda">FRANCO</span>: un clic en <strong>Sortear este turno</strong> hace girar la rueda
+        y saca automáticamente todos los ganadores del cupo de ese turno/día, uno tras otro.
       </p>
       <button class="btn-iniciar" id="btn-iniciar" onclick="iniciarSorteo()" disabled>
         <i class="fas fa-play"></i> INICIAR SORTEO EN VIVO
@@ -238,6 +243,14 @@
       <div class="panel-box">
         <div class="panel-head"><span><i class="fas fa-random"></i> RUEDA DE SORTEO</span><span id="drum-stats">—</span></div>
         <div class="panel-body" style="text-align:center;">
+          <div id="slot-actual-box" style="background:#e8f5e9;border:1.5px solid #c8e6c9;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:12.5px;color:#004d3d;text-align:left;">
+            <div style="font-weight:800;margin-bottom:6px;">Turno actual: <span id="slot-actual-label">—</span></div>
+            <div id="slot-sync-detalle" style="font-size:11.5px;line-height:1.55;font-weight:600;color:#333;"></div>
+          </div>
+          <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:8px;">
+            <button type="button" class="btn btn-admin" style="background:#004d3d;color:#fff;border:none;" onclick="slotAnterior()" id="btn-slot-prev">← Slot</button>
+            <button type="button" class="btn btn-admin" style="background:#004d3d;color:#fff;border:none;" onclick="slotSiguiente()" id="btn-slot-next">Slot →</button>
+          </div>
           <div class="sorteo-nro" id="sorteo-nro-actual">GANADOR N° 1</div>
           <div class="sorteo-aviso" id="sorteo-aviso">Gire la rueda para sortear</div>
           <div class="contadores">
@@ -252,8 +265,14 @@
             <div class="drum-highlight"></div>
             <div class="drum-reel" id="drum-reel"></div>
           </div>
-          <button class="btn btn-danger" id="btn-sortear" onclick="sortear()" disabled style="width:100%;justify-content:center;padding:12px;margin-top:8px;">
-            <i class="fas fa-random"></i> SORTEAR SIGUIENTE
+          <button class="btn btn-danger" id="btn-sortear" onclick="sortearTurnoCompleto()" disabled style="width:100%;justify-content:center;padding:12px;margin-top:8px;">
+            <i class="fas fa-random"></i> SORTEAR ESTE TURNO
+          </button>
+          <button class="btn btn-admin" id="btn-detener-auto" onclick="detenerAutoSorteo()" style="display:none;width:100%;justify-content:center;padding:10px;margin-top:6px;background:#856404;color:#fff;border:none;">
+            <i class="fas fa-stop"></i> DETENER
+          </button>
+          <button class="btn btn-ok" id="btn-bloques-vac" onclick="sortearBloquesVacacionesUI()" style="width:100%;justify-content:center;padding:10px;margin-top:8px;display:none;">
+            <i class="fas fa-calendar-alt"></i> SORTEAR BLOQUES DE VACACIONES (1–15 / 16–fin)
           </button>
         </div>
       </div>
@@ -277,7 +296,8 @@
     <div class="gf-nro" id="gf-nro">1</div>
     <div class="gf-nombre" id="gf-nombre">—</div>
     <div class="gf-sub" id="gf-sub">—</div>
-    <button class="btn btn-primary" onclick="cerrarFlash()"><i class="fas fa-check"></i> CONTINUAR</button>
+    <p id="gf-auto-hint" style="display:none;font-size:12px;color:#666;margin:0 0 12px;">Siguiente sorteo enseguida…</p>
+    <button class="btn btn-primary" id="btn-flash-continuar" onclick="cerrarFlash()"><i class="fas fa-check"></i> CONTINUAR</button>
   </div>
 </div>
 
@@ -287,7 +307,7 @@
     <div class="resumen-meta" id="resumen-meta"></div>
     <div style="overflow:auto;max-height:50vh;border:1px solid #e0e8e0;border-radius:8px;">
       <table class="resumen-tabla">
-        <thead><tr><th>#</th><th>Grado / Nombres</th><th>CIP</th><th>Unidad</th><th>Origen</th></tr></thead>
+        <thead><tr><th>#</th><th>Grado / Nombres</th><th>CIP</th><th>Unidad</th><th>Origen / Bloque</th></tr></thead>
         <tbody id="resumen-tbody"></tbody>
       </table>
     </div>
@@ -326,6 +346,12 @@ var ITEM_H = 48;
 var IDS_GANADOS = {};
 var IDS_PERSISTIDOS = {};
 var RESERVAS_PERSISTIDAS = false;
+var SLOTS_SORTEO = [];
+var SLOT_IDX = 0;
+var BLOQUES_VAC_HECHO = false;
+var AUTO_SORTEO = false;
+var AUTO_PAUSA_MS = 1600;
+var SPIN_DURATION_MS = 2200;
 
 if (!SESION || !SESION.token) {
   document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f0f4f0;">'
@@ -358,6 +384,166 @@ function irAlAdmin() {
   location.href = adminUrl();
 }
 
+function diaCompatible(diaSlot, diaCand) {
+  var a = String(diaSlot || '').toUpperCase();
+  var b = String(diaCand || '').toUpperCase();
+  if (!a || a === 'PAR/IMPAR') return true;
+  if (!b || b === 'PAR/IMPAR') return true;
+  return a === b;
+}
+
+function candidatoEnSlot(cand, slot) {
+  if (!cand || !slot) return false;
+  var lugar = String(cand.slot_lugar || '').trim().toUpperCase();
+  var turno = String(cand.slot_turno || '').trim().toUpperCase();
+  var dia = String(cand.slot_dia || cand.dia_franco || '').trim().toUpperCase();
+  if (slot.lugar) {
+    if (lugar !== String(slot.lugar).trim().toUpperCase()) return false;
+  }
+  // Con turno en postulación: debe coincidir. Sin turno (registros antiguos): entra por día.
+  if (slot.turno && slot.turno !== 'GENERAL') {
+    if (turno && turno !== slot.turno) return false;
+  }
+  return diaCompatible(slot.dia, dia);
+}
+
+function resumenSlotActual() {
+  var slot = slotActual();
+  if (!slot) {
+    var dispG = Math.max(0, OBJETIVO - GANADORES.length);
+    var francoG = RUEDA_CAND.filter(function(c) { return !IDS_GANADOS[c.id]; }).length;
+    return {
+      vacantes: CUPO_TOTAL,
+      ocupadas: GANADORES.length,
+      disponibles: dispG,
+      franco: francoG,
+      vacacionesAsig: 0,
+      aSortear: Math.min(dispG, francoG),
+      label: 'Cupo general',
+      sinTurno: 0
+    };
+  }
+  var vac = parseInt(slot.vacantes, 10) || 0;
+  var ocupCfg = parseInt(slot.ocupadas, 10) || 0;
+  var yaSesion = ganadoresDelSlot(slot).length;
+  var ocupadas = ocupCfg + yaSesion;
+  var disponibles = Math.max(0, vac - ocupadas);
+  // Recalcular ocupadas de sesión bien: ocupCfg ya incluye ganadores previos de BD;
+  // cupoRestanteSlot usa slot.disponibles (vac-ocupCfg) menos ganadores de esta sesión
+  disponibles = cupoRestanteSlot(slot);
+  ocupadas = vac - disponibles;
+  var franco = RUEDA_CAND.filter(function(c) {
+    return !IDS_GANADOS[c.id] && candidatoEnSlot(c, slot);
+  }).length;
+  var vacPend = VACACIONES_CAND.filter(function(c) {
+    return !IDS_GANADOS[c.id] && candidatoEnSlot(c, slot);
+  }).length;
+  var vacAsig = GANADORES.filter(function(g) {
+    return g.tipo === 'vacaciones' && g.slot_key === slot.key;
+  }).length;
+  var aSortear = Math.min(disponibles, franco);
+  return {
+    vacantes: vac,
+    ocupadas: ocupadas,
+    disponibles: disponibles,
+    franco: franco,
+    vacacionesPend: vacPend,
+    vacacionesAsig: vacAsig,
+    aSortear: aSortear,
+    label: slot.label,
+    sinTurno: LISTA_APROBADOS.filter(function(c) {
+      return !String(c.slot_turno || '').trim()
+        && diaCompatible(slot.dia, c.dia_franco || c.slot_dia);
+    }).length
+  };
+}
+
+function slotActual() {
+  return SLOTS_SORTEO[SLOT_IDX] || null;
+}
+
+function ganadoresDelSlot(slot) {
+  if (!slot) return [];
+  return GANADORES.filter(function(g) {
+    return g.slot_key === slot.key;
+  });
+}
+
+function cupoRestanteSlot(slot) {
+  if (!slot) return 0;
+  var ya = ganadoresDelSlot(slot).length;
+  var base = parseInt(slot.disponibles, 10);
+  if (isNaN(base)) base = Math.max(0, (parseInt(slot.vacantes, 10) || 0) - (parseInt(slot.ocupadas, 10) || 0));
+  return Math.max(0, base - ya);
+}
+
+function puestosPorCubrir() {
+  var slot = slotActual();
+  if (slot) return cupoRestanteSlot(slot);
+  return Math.max(0, OBJETIVO - GANADORES.length);
+}
+
+function candidatosRuedaActivos() {
+  var slot = slotActual();
+  return RUEDA_CAND.filter(function(c) {
+    if (IDS_GANADOS[c.id]) return false;
+    if (slot) return candidatoEnSlot(c, slot);
+    return true;
+  });
+}
+
+function etiquetaSituacion(c) {
+  if (c.disponibilidad === 'VACACIONES') {
+    var bl = c.bloque_vacaciones_etiqueta || '';
+    return '<span class="tag-vac">VACACIONES' + (bl ? ' · ' + escH(bl) : ' — Auto + bloque') + '</span>';
+  }
+  if (c.disponibilidad === 'FRANCO') return '<span class="tag-rueda">FRANCO ' + escH(c.dia_franco || '') + ' — Rueda</span>';
+  return '<span class="tag-rueda">En rueda</span>';
+}
+
+function labelSlotCand(c) {
+  if (c.comisaria_postula) return c.comisaria_postula;
+  if (c.slot_turno || c.slot_dia) return ((c.slot_turno || '') + ' / ' + (c.slot_dia || '')).replace(/^ \/ | \/ $/g, '');
+  return '—';
+}
+
+function renderSlotsPreview() {
+  var el = document.getElementById('cfg-slots');
+  if (!el) return;
+  if (!SLOTS_SORTEO.length) {
+    el.innerHTML = '<p style="padding:10px;font-size:12px;color:#888;margin:0;">Sin desglose de turnos: se usará el cupo general.</p>';
+    return;
+  }
+  el.innerHTML = '<p style="padding:8px 10px 4px;font-size:11.5px;color:#555;margin:0;">'
+    + 'Las <strong>vacantes</strong> salen de la ficha del convenio (admin). '
+    + '<strong>Franco / Vacaciones</strong> se cuentan desde el registro (preinscritos) emparejados a ese turno/día. '
+    + '<strong>A sortear</strong> = menor entre vacantes libres y francos.</p>'
+    + '<table class="lista-total-tabla"><thead><tr>'
+    + '<th>Slot (turno / día)</th><th>Vacantes</th><th>Ocupadas</th><th>Libres</th><th>Franco</th><th>Vacaciones</th><th>A sortear</th>'
+    + '</tr></thead><tbody>'
+    + SLOTS_SORTEO.map(function(s) {
+      var nF = LISTA_APROBADOS.filter(function(c) {
+        return c.disponibilidad !== 'VACACIONES' && candidatoEnSlot(c, s);
+      }).length;
+      var nV = LISTA_APROBADOS.filter(function(c) {
+        return c.disponibilidad === 'VACACIONES' && candidatoEnSlot(c, s);
+      }).length;
+      var libres = parseInt(s.disponibles, 10);
+      if (isNaN(libres)) libres = Math.max(0, (s.vacantes || 0) - (s.ocupadas || 0));
+      var aSortear = Math.min(libres, nF);
+      return '<tr>'
+        + '<td><strong>' + escH(s.label) + '</strong></td>'
+        + '<td>' + (s.vacantes || 0) + '</td>'
+        + '<td>' + (s.ocupadas || 0) + '</td>'
+        + '<td><strong>' + libres + '</strong></td>'
+        + '<td>' + nF + '</td>'
+        + '<td>' + nV + '</td>'
+        + '<td><strong style="color:#004d3d;">' + aSortear + '</strong></td>'
+        + '</tr>';
+    }).join('')
+    + '</tbody></table>';
+}
+
 function renderMetaConvenio(containerId) {
   var el = document.getElementById(containerId);
   if (!el || !ITEM_DATA) return;
@@ -368,6 +554,7 @@ function renderMetaConvenio(containerId) {
     '<div class="conv-meta-item"><span>Cupo total</span><strong>' + cupo + ' efectivos</strong></div>'
     + '<div class="conv-meta-item"><span>Ya ocupadas</span><strong>' + ocup + '</strong></div>'
     + '<div class="conv-meta-item"><span>Disponibles</span><strong>' + disp + '</strong></div>'
+    + '<div class="conv-meta-item"><span>Slots turno/día</span><strong>' + (SLOTS_SORTEO.length || 1) + '</strong></div>'
     + '<div class="conv-meta-item"><span>Turnos / Horarios</span><strong>' + escH(ITEM_DATA.horario || 'No especificado') + '</strong></div>'
     + '<div class="conv-meta-item"><span>Fecha inicio</span><strong>' + escH(ITEM_DATA.fecha_inicio || '—') + '</strong></div>'
     + '<div class="conv-meta-item"><span>Duración</span><strong>' + escH(ITEM_DATA.duracion || '—') + '</strong></div>'
@@ -383,6 +570,8 @@ function cargarCandidatos() {
       ITEM_DATA = d.item;
       VACANTES_INFO = d.vacantes_info || null;
       TODOS_CAND = d.candidatos || [];
+      SLOTS_SORTEO = Array.isArray(d.slots_sorteo) ? d.slots_sorteo : [];
+      SLOT_IDX = 0;
       LISTA_APROBADOS = TODOS_CAND.filter(function(c) {
         return c.estado === 'aprobado' || c.estado === 'preinscrito' || c.estado === 'pendiente' || c.estado === 'verificado';
       });
@@ -399,6 +588,7 @@ function cargarCandidatos() {
       document.getElementById('cfg-nombre').textContent = ITEM_DATA.titulo || '';
       document.getElementById('sl-subtitulo').textContent = ITEM_DATA.titulo || '';
       renderMetaConvenio('cfg-meta');
+      renderSlotsPreview();
       renderListaTotalPreview();
 
       var puedeIniciar = LISTA_APROBADOS.length >= 1 && FALTAN_INICIAL > 0;
@@ -416,16 +606,10 @@ function cargarCandidatos() {
     });
 }
 
-function etiquetaSituacion(c) {
-  if (c.disponibilidad === 'VACACIONES') return '<span class="tag-vac">VACACIONES — Automático</span>';
-  if (c.disponibilidad === 'FRANCO') return '<span class="tag-rueda">FRANCO ' + escH(c.dia_franco || '') + ' — En rueda</span>';
-  return '<span class="tag-rueda">En rueda</span>';
-}
-
 function renderListaTotalPreview() {
   var tbody = document.getElementById('cfg-lista-total');
   if (!LISTA_APROBADOS.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#c0392b;">No hay preinscritos para el sorteo.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#c0392b;">No hay preinscritos para el sorteo.</td></tr>';
     return;
   }
   tbody.innerHTML = LISTA_APROBADOS.map(function(c, i) {
@@ -436,6 +620,7 @@ function renderListaTotalPreview() {
       + '<td><strong>' + escH(c.nombres) + '</strong></td>'
       + '<td>' + escH(c.cip || '') + '</td>'
       + '<td>' + escH(c.unidad || '') + '</td>'
+      + '<td style="font-size:11px;">' + escH(labelSlotCand(c)) + '</td>'
       + '<td>' + etiquetaSituacion(c) + '</td>'
       + '</tr>';
   }).join('');
@@ -449,35 +634,42 @@ function renderListaTotalLive() {
     var esVac = c.disponibilidad === 'VACACIONES' && ganado && ganado.tipo === 'vacaciones';
     var cls = 'efectivo-item' + (ganado ? ' ganado' : '') + (esVac ? ' auto-vac' : '');
     var nroCls = 'ef-nro' + (ganado ? (esVac ? ' vac' : ' gan') : '');
+    var extra = ganado && ganado.bloque_vacaciones
+      ? ' · Bloque ' + ganado.bloque_vacaciones
+      : '';
     return '<div class="' + cls + '">'
       + '<div class="' + nroCls + '">' + (ganado ? ganado.nro : (i + 1)) + '</div>'
       + '<div style="flex:1;"><strong>' + escH(nombreCompleto(c)) + '</strong><br>'
-      + '<span style="color:#666;font-size:10px;">' + escH(c.unidad || '') + ' · CIP ' + escH(c.cip || '') + '</span></div>'
+      + '<span style="color:#666;font-size:10px;">' + escH(labelSlotCand(c)) + ' · CIP ' + escH(c.cip || '') + extra + '</span></div>'
       + '<div>' + etiquetaSituacion(c) + '</div>'
       + '</div>';
   }).join('');
 }
 
 function marcarEstadoLocal(id, estado) {
-  [TODOS_CAND, LISTA_APROBADOS, RUEDA_CAND].forEach(function(arr) {
+  [TODOS_CAND, LISTA_APROBADOS, RUEDA_CAND, VACACIONES_CAND].forEach(function(arr) {
     arr.forEach(function(c) { if (c.id === id) c.estado = estado; });
   });
 }
 
-function puestosPorCubrir() {
-  return Math.max(0, OBJETIVO - GANADORES.length);
-}
-
 function persistirGanadorUno(g) {
   if (!ITEM_ID || !g || !g.id) return Promise.resolve();
-  if (IDS_PERSISTIDOS[g.id]) return Promise.resolve({ ok: true, ganadores: 0 });
+  if (IDS_PERSISTIDOS[g.id] && !g.forceBloque) return Promise.resolve({ ok: true, ganadores: 0 });
   return fetch(API + '/admin/items/' + ITEM_ID + '/aplicar-sorteo', {
     method: 'POST', headers: HDR,
-    body: JSON.stringify({ ganadores: [{ id: g.id, tipo: g.tipo || 'sorteo' }], reservas: [] })
+    body: JSON.stringify({
+      ganadores: [{
+        id: g.id,
+        tipo: g.tipo || 'sorteo',
+        bloque_vacaciones: g.bloque_vacaciones || '',
+        slot_label: g.slot_label || ''
+      }],
+      reservas: []
+    })
   }).then(function(r) {
     return r.json().then(function(d) {
       if (!r.ok || !d.ok) throw new Error((d && d.error) || ('Error HTTP ' + r.status));
-      if ((d.ganadores | 0) < 1) throw new Error('No se actualizó el estado en base de datos.');
+      if ((d.ganadores | 0) < 1 && !g.forceBloque) throw new Error('No se actualizó el estado en base de datos.');
       IDS_PERSISTIDOS[g.id] = true;
       marcarEstadoLocal(g.id, 'ganador');
       return d;
@@ -507,11 +699,19 @@ function persistirReservasPendientes() {
 function sincronizarPendientes() {
   var cadena = Promise.resolve();
   GANADORES.forEach(function(g) {
-    if (!IDS_PERSISTIDOS[g.id]) {
+    if (!IDS_PERSISTIDOS[g.id] || g.forceBloque) {
       cadena = cadena.then(function() { return persistirGanadorUno(g); });
     }
   });
   return cadena.then(function() { return persistirReservasPendientes(); });
+}
+
+function slotPreferidoVacaciones(c) {
+  if (!SLOTS_SORTEO.length) return null;
+  var match = SLOTS_SORTEO.filter(function(s) { return candidatoEnSlot(c, s) && cupoRestanteSlot(s) > 0; });
+  if (match.length) return match[0];
+  var conCupo = SLOTS_SORTEO.filter(function(s) { return cupoRestanteSlot(s) > 0; });
+  return conCupo[0] || SLOTS_SORTEO[0] || null;
 }
 
 function iniciarSorteo() {
@@ -523,32 +723,40 @@ function iniciarSorteo() {
   IDS_GANADOS = {};
   IDS_PERSISTIDOS = {};
   RESERVAS_PERSISTIDAS = false;
+  BLOQUES_VAC_HECHO = false;
   SORTEO_INICIADO = true;
   SORTEO_CULMINADO = false;
+  SLOT_IDX = 0;
 
-  // Ya ganadores previos (ocupan cupo; no se vuelven a sortear)
   var yaGanadores = TODOS_CAND.filter(function(c) { return c.estado === 'ganador'; });
   yaGanadores.forEach(function(c) {
     var g = {
       id: c.id, grado: c.grado, nombres: c.nombres, unidad: c.unidad,
-      area: c.area, cip: c.cip, tipo: 'previo', nro: GANADORES.length + 1
+      area: c.area, cip: c.cip, tipo: 'previo', nro: GANADORES.length + 1,
+      bloque_vacaciones: c.bloque_vacaciones || '',
+      slot_key: '',
+      slot_label: labelSlotCand(c)
     };
     GANADORES.push(g);
     IDS_GANADOS[c.id] = g;
     IDS_PERSISTIDOS[c.id] = true;
   });
 
-  // Objetivo = ya ocupados en esta sesión + vacantes disponibles al cargar
   OBJETIVO = GANADORES.length + FALTAN_INICIAL;
   if (OBJETIVO > CUPO_TOTAL) OBJETIVO = CUPO_TOTAL;
 
-  // Vacaciones: solo hasta completar objetivo
+  // Vacaciones: ocupan vacante automática por slot (si hay cupo)
   VACACIONES_CAND.forEach(function(c) {
     if (GANADORES.length >= OBJETIVO) return;
     if (IDS_GANADOS[c.id]) return;
+    var slot = slotPreferidoVacaciones(c);
+    if (SLOTS_SORTEO.length && (!slot || cupoRestanteSlot(slot) <= 0)) return;
     var g = {
       id: c.id, grado: c.grado, nombres: c.nombres, unidad: c.unidad,
-      area: c.area, cip: c.cip, tipo: 'vacaciones', nro: GANADORES.length + 1
+      area: c.area, cip: c.cip, tipo: 'vacaciones', nro: GANADORES.length + 1,
+      slot_key: slot ? slot.key : '',
+      slot_label: slot ? slot.label : labelSlotCand(c),
+      bloque_vacaciones: ''
     };
     GANADORES.push(g);
     IDS_GANADOS[c.id] = g;
@@ -558,9 +766,22 @@ function iniciarSorteo() {
     });
   });
 
+  // Ir al primer slot con cupo y candidatos franco
+  for (var i = 0; i < SLOTS_SORTEO.length; i++) {
+    SLOT_IDX = i;
+    if (cupoRestanteSlot(SLOTS_SORTEO[i]) > 0 && candidatosRuedaActivos().length) break;
+  }
+
   document.getElementById('config-panel').style.display = 'none';
   document.getElementById('sorteo-panel').style.display = 'block';
   document.getElementById('btn-culminar').disabled = false;
+  var btnBloq = document.getElementById('btn-bloques-vac');
+  if (btnBloq) {
+    var hayVacSinBloque = GANADORES.some(function(g) {
+      return g.tipo === 'vacaciones' && !g.bloque_vacaciones;
+    });
+    btnBloq.style.display = hayVacSinBloque ? 'inline-flex' : 'none';
+  }
 
   buildDrum();
   renderListaTotalLive();
@@ -568,11 +789,25 @@ function iniciarSorteo() {
   actualizarUI();
 }
 
+function slotAnterior() {
+  if (!SLOTS_SORTEO.length || SORTEANDO || AUTO_SORTEO) return;
+  SLOT_IDX = (SLOT_IDX - 1 + SLOTS_SORTEO.length) % SLOTS_SORTEO.length;
+  buildDrum();
+  actualizarUI();
+}
+
+function slotSiguiente() {
+  if (!SLOTS_SORTEO.length || SORTEANDO || AUTO_SORTEO) return;
+  SLOT_IDX = (SLOT_IDX + 1) % SLOTS_SORTEO.length;
+  buildDrum();
+  actualizarUI();
+}
+
 function buildDrum() {
   var reel = document.getElementById('drum-reel');
-  var disponiblesRueda = RUEDA_CAND.filter(function(c) { return !IDS_GANADOS[c.id]; });
+  var disponiblesRueda = candidatosRuedaActivos();
   if (!disponiblesRueda.length) {
-    reel.innerHTML = '<div class="drum-item">Sin candidatos en rueda</div>';
+    reel.innerHTML = '<div class="drum-item">Sin candidatos en este slot</div>';
     return;
   }
   var html = '';
@@ -586,19 +821,116 @@ function buildDrum() {
   reel.style.transform = 'translateY(0)';
 }
 
-function candidatosRuedaActivos() {
-  return RUEDA_CAND.filter(function(c) { return !IDS_GANADOS[c.id]; });
+function shuffleIds(ids) {
+  var list = ids.slice();
+  for (var i = list.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = list[i]; list[i] = list[j]; list[j] = t;
+  }
+  return list;
 }
 
-function sortear() {
+function sortearBloquesVacacionesUI() {
+  if (!SORTEO_INICIADO || SORTEANDO) return;
+  var vacs = GANADORES.filter(function(g) { return g.tipo === 'vacaciones'; });
+  if (!vacs.length) { alert('No hay ganadores por vacaciones para sortear bloques.'); return; }
+  if (BLOQUES_VAC_HECHO && !confirm('Los bloques ya se sortearon. ¿Volver a sortear?')) return;
+  var ids = shuffleIds(vacs.map(function(g) { return g.id; }));
+  var mitad = Math.ceil(ids.length / 2);
+  var cadena = Promise.resolve();
+  ids.forEach(function(id, idx) {
+    var bloque = idx < mitad ? '1' : '2';
+    var g = IDS_GANADOS[id];
+    if (!g) return;
+    g.bloque_vacaciones = bloque;
+    g.forceBloque = true;
+    cadena = cadena.then(function() { return persistirGanadorUno(g); });
+  });
+  cadena.then(function() {
+    BLOQUES_VAC_HECHO = true;
+    vacs.forEach(function(g) { g.forceBloque = false; });
+    renderListaTotalLive();
+    renderGanadores();
+    actualizarUI();
+    alert('Bloques de vacaciones asignados por sorteo:\n'
+      + 'Bloque 1 (días 1–15): ' + mitad + '\n'
+      + 'Bloque 2 (días 16–fin): ' + (ids.length - mitad));
+  }).catch(function(e) {
+    alert('Error al guardar bloques: ' + (e.message || ''));
+  });
+}
+
+function detenerAutoSorteo() {
+  AUTO_SORTEO = false;
+  var btnStop = document.getElementById('btn-detener-auto');
+  if (btnStop) btnStop.style.display = 'none';
+  actualizarUI();
+}
+
+/** Un clic: gira la rueda y saca automáticamente todos los ganadores del turno/slot. */
+function sortearTurnoCompleto() {
+  if (SORTEANDO || AUTO_SORTEO || SORTEO_CULMINADO) return;
+  var faltan = puestosPorCubrir();
+  var activos = candidatosRuedaActivos();
+  if (faltan <= 0 || !activos.length) return;
+  AUTO_SORTEO = true;
+  var btnStop = document.getElementById('btn-detener-auto');
+  if (btnStop) btnStop.style.display = 'inline-flex';
+  sortearUnoAuto();
+}
+
+function sortearUnoAuto() {
+  if (!AUTO_SORTEO) {
+    actualizarUI();
+    return;
+  }
   var activos = candidatosRuedaActivos();
   var faltan = puestosPorCubrir();
-  if (SORTEANDO || faltan <= 0 || !activos.length) return;
+  if (faltan <= 0 || !activos.length) {
+    AUTO_SORTEO = false;
+    var btnStop = document.getElementById('btn-detener-auto');
+    if (btnStop) btnStop.style.display = 'none';
+    // Pasar al siguiente slot con cupo automáticamente
+    var slot = slotActual();
+    if (slot && SLOTS_SORTEO.length > 1) {
+      for (var i = 1; i <= SLOTS_SORTEO.length; i++) {
+        var ni = (SLOT_IDX + i) % SLOTS_SORTEO.length;
+        if (cupoRestanteSlot(SLOTS_SORTEO[ni]) > 0) {
+          var hayCand = RUEDA_CAND.some(function(c) {
+            return !IDS_GANADOS[c.id] && candidatoEnSlot(c, SLOTS_SORTEO[ni]);
+          });
+          if (hayCand) {
+            SLOT_IDX = ni;
+            buildDrum();
+            break;
+          }
+        }
+      }
+    }
+    actualizarUI();
+    return;
+  }
+  sortear(true);
+}
+
+function sortear(desdeAuto) {
+  var activos = candidatosRuedaActivos();
+  var faltan = puestosPorCubrir();
+  if (SORTEANDO || faltan <= 0 || !activos.length) {
+    if (desdeAuto) {
+      AUTO_SORTEO = false;
+      var btnStop = document.getElementById('btn-detener-auto');
+      if (btnStop) btnStop.style.display = 'none';
+      actualizarUI();
+    }
+    return;
+  }
   SORTEANDO = true;
   var btn = document.getElementById('btn-sortear');
   btn.disabled = true;
   btn.className = 'btn btn-danger spinning';
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SORTEANDO...';
+  var quedan = faltan;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SORTEANDO… quedan ' + quedan;
   btn.style.width = '100%';
   btn.style.justifyContent = 'center';
   btn.style.padding = '12px';
@@ -611,7 +943,7 @@ function sortear() {
   var targetPos = (totalItems + idx) * ITEM_H;
   var distance = targetPos - (startPos % (totalItems * ITEM_H)) + (2 * totalItems * ITEM_H);
   var startTime = null;
-  var duration = 3800;
+  var duration = SPIN_DURATION_MS;
 
   function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
 
@@ -630,31 +962,75 @@ function sortear() {
 }
 
 function registrarGanadorSorteo(ganador) {
+  var slot = slotActual();
   var g = {
     id: ganador.id, grado: ganador.grado, nombres: ganador.nombres,
     unidad: ganador.unidad, area: ganador.area, cip: ganador.cip,
-    tipo: 'sorteo', nro: GANADORES.length + 1
+    tipo: 'sorteo', nro: GANADORES.length + 1,
+    slot_key: slot ? slot.key : '',
+    slot_label: slot ? slot.label : labelSlotCand(ganador)
   };
   GANADORES.push(g);
   IDS_GANADOS[ganador.id] = g;
 
   document.getElementById('gf-nro').textContent = g.nro;
   document.getElementById('gf-nombre').textContent = nombreCompleto(ganador);
-  document.getElementById('gf-sub').textContent = (ganador.unidad || '') + (ganador.cip ? ' — CIP: ' + ganador.cip : '');
+  document.getElementById('gf-sub').textContent = (g.slot_label || ganador.unidad || '')
+    + (ganador.cip ? ' — CIP: ' + ganador.cip : '');
+  var hint = document.getElementById('gf-auto-hint');
+  var btnFlash = document.getElementById('btn-flash-continuar');
+  if (AUTO_SORTEO) {
+    if (hint) {
+      hint.style.display = 'block';
+      var rest = puestosPorCubrir();
+      hint.textContent = rest > 0
+        ? ('Quedan ' + rest + ' en este turno — siguiente giro automático…')
+        : 'Turno completo.';
+    }
+    if (btnFlash) btnFlash.style.display = 'none';
+  } else {
+    if (hint) hint.style.display = 'none';
+    if (btnFlash) btnFlash.style.display = '';
+  }
   document.getElementById('ganador-flash').classList.add('show');
 
   renderListaTotalLive();
   renderGanadores();
   buildDrum();
+  actualizarUI();
 
   persistirGanadorUno(g).catch(function(e) {
     console.error(e);
+    AUTO_SORTEO = false;
     alert('Ganador en pantalla, pero no se guardó en el sistema: ' + (e.message || ''));
   });
+
+  if (AUTO_SORTEO) {
+    setTimeout(function() {
+      document.getElementById('ganador-flash').classList.remove('show');
+      if (!AUTO_SORTEO) {
+        actualizarUI();
+        return;
+      }
+      sortearUnoAuto();
+    }, AUTO_PAUSA_MS);
+  }
 }
 
 function cerrarFlash() {
   document.getElementById('ganador-flash').classList.remove('show');
+  if (AUTO_SORTEO) return;
+  var slot = slotActual();
+  if (slot && cupoRestanteSlot(slot) <= 0 && SLOTS_SORTEO.length > 1) {
+    for (var i = 1; i <= SLOTS_SORTEO.length; i++) {
+      var ni = (SLOT_IDX + i) % SLOTS_SORTEO.length;
+      if (cupoRestanteSlot(SLOTS_SORTEO[ni]) > 0) {
+        SLOT_IDX = ni;
+        break;
+      }
+    }
+    buildDrum();
+  }
   actualizarUI();
 }
 
@@ -662,36 +1038,71 @@ function actualizarUI() {
   var btn = document.getElementById('btn-sortear');
   var faltan = puestosPorCubrir();
   var activos = candidatosRuedaActivos();
-  var completo = faltan <= 0 || (!activos.length && faltan >= 0);
+  var slot = slotActual();
   var nroSiguiente = GANADORES.length + 1;
+  var r = resumenSlotActual();
+  var lab = document.getElementById('slot-actual-label');
+  if (lab) lab.textContent = r.label;
+  var det = document.getElementById('slot-sync-detalle');
+  if (det) {
+    det.innerHTML =
+      'Vacantes del convenio (configuradas): <strong>' + r.vacantes + '</strong><br>'
+      + 'Ya ocupadas / asignadas: <strong>' + r.ocupadas + '</strong> → quedan <strong>' + r.disponibles + '</strong><br>'
+      + 'Preinscritos FRANCO en este turno: <strong>' + r.franco + '</strong><br>'
+      + 'Vacaciones ya asignadas a este turno: <strong>' + (r.vacacionesAsig || 0) + '</strong><br>'
+      + '<span style="color:#004d3d;">Con un clic se sortearán: <strong>' + r.aSortear + '</strong></span>'
+      + ' <span style="color:#666;">(= menor entre vacantes libres y francos en rueda)</span>'
+      + (r.sinTurno > 0
+        ? '<br><span style="color:#856404;">⚠ ' + r.sinTurno + ' preinscrito(s) sin turno en la postulación (entran por día; conviene «Devolver» para asignar turno).</span>'
+        : '');
+  }
 
-  document.getElementById('sorteo-nro-actual').textContent = faltan <= 0 ? 'SORTEO COMPLETO' : ('GANADOR N° ' + nroSiguiente);
-  document.getElementById('sorteo-aviso').textContent = faltan <= 0
-    ? 'Se completaron las vacantes de esta sesión (objetivo ' + OBJETIVO + ').'
-    : (activos.length ? 'Presione para sortear el efectivo N° ' + nroSiguiente : 'Sin más candidatos en rueda. Puede culminar el sorteo.');
+  document.getElementById('sorteo-nro-actual').textContent = AUTO_SORTEO
+    ? ('SORTEANDO… N° ' + nroSiguiente)
+    : (r.aSortear <= 0
+      ? (r.disponibles <= 0 ? 'TURNO COMPLETO' : 'SIN CANDIDATOS EN RUEDA')
+      : ('LISTO — se sortearán ' + r.aSortear));
 
-  btn.disabled = faltan <= 0 || SORTEANDO || !activos.length || SORTEO_CULMINADO;
-  btn.className = 'btn btn-danger' + (SORTEANDO ? ' spinning' : '');
+  document.getElementById('sorteo-aviso').textContent = AUTO_SORTEO
+    ? ('Rueda automática en ' + r.label + '…')
+    : (r.aSortear <= 0
+      ? (r.disponibles <= 0
+        ? 'Este turno ya no tiene vacantes libres.'
+        : (LISTA_APROBADOS.length
+          ? ('Hay ' + LISTA_APROBADOS.length + ' preinscritos, pero ninguno calza con este turno/día. Use ← Slot / Slot → o «Devolver» para completar turno.')
+          : 'Hay vacantes libres, pero no hay preinscritos FRANCO emparejados a este turno/día.'))
+      : ('Un clic sortea las ' + r.aSortear + ' vacantes de este turno, una tras otra.'));
+
+  btn.disabled = r.aSortear <= 0 || SORTEANDO || AUTO_SORTEO || SORTEO_CULMINADO;
+  btn.className = 'btn btn-danger' + ((SORTEANDO || AUTO_SORTEO) ? ' spinning' : '');
   btn.style.width = '100%';
   btn.style.justifyContent = 'center';
   btn.style.padding = '12px';
   btn.style.marginTop = '8px';
-  btn.innerHTML = faltan <= 0
-    ? '<i class="fas fa-check-circle"></i> CUPOS COMPLETOS'
-    : '<i class="fas fa-random"></i> SORTEAR EFECTIVO N° ' + nroSiguiente;
+  if (AUTO_SORTEO || SORTEANDO) {
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SORTEANDO… quedan ' + faltan;
+  } else if (r.aSortear <= 0) {
+    btn.innerHTML = '<i class="fas fa-check-circle"></i> NADA QUE SORTEAR AQUÍ';
+  } else {
+    btn.innerHTML = '<i class="fas fa-random"></i> SORTEAR ESTE TURNO (' + r.aSortear + ')';
+  }
 
   var pct = OBJETIVO ? Math.min(100, Math.round((GANADORES.length / OBJETIVO) * 100)) : 0;
   document.getElementById('progress-fill').style.width = pct + '%';
   document.getElementById('rp-vacantes').textContent = GANADORES.length + ' / ' + OBJETIVO;
   document.getElementById('c-ocupadas').textContent = String(GANADORES.length);
   document.getElementById('c-cupo').textContent = String(CUPO_TOTAL);
-  document.getElementById('c-faltan').textContent = String(faltan);
-  document.getElementById('drum-stats').textContent = activos.length + ' en rueda · ' + faltan + ' por cubrir';
+  document.getElementById('c-faltan').textContent = String(Math.max(0, OBJETIVO - GANADORES.length));
+  document.getElementById('drum-stats').textContent = activos.length + ' en rueda · slot ' + (SLOT_IDX + 1) + '/' + Math.max(1, SLOTS_SORTEO.length);
 
-  document.getElementById('btn-culminar').disabled = SORTEO_CULMINADO || !SORTEO_INICIADO;
-  if (faltan <= 0) {
-    document.getElementById('btn-culminar').innerHTML = '<i class="fas fa-flag-checkered"></i> CULMINAR SORTEO';
+  document.getElementById('btn-culminar').disabled = SORTEO_CULMINADO || !SORTEO_INICIADO || AUTO_SORTEO;
+  var btnBloq = document.getElementById('btn-bloques-vac');
+  if (btnBloq) {
+    var hayVac = GANADORES.some(function(g) { return g.tipo === 'vacaciones'; });
+    btnBloq.style.display = (SORTEO_INICIADO && hayVac && !AUTO_SORTEO) ? 'inline-flex' : 'none';
   }
+  var btnStop = document.getElementById('btn-detener-auto');
+  if (btnStop) btnStop.style.display = AUTO_SORTEO ? 'inline-flex' : 'none';
 }
 
 function renderGanadores() {
@@ -702,20 +1113,26 @@ function renderGanadores() {
   }
   el.innerHTML = GANADORES.map(function(g) {
     var isVac = g.tipo === 'vacaciones';
-    var origen = isVac ? ' — VACACIONES (automático)' : (g.tipo === 'previo' ? ' — Ya asignado' : '');
+    var origen = isVac ? ' — VACACIONES' : (g.tipo === 'previo' ? ' — Ya asignado' : ' — Sorteo');
+    var bloque = g.bloque_vacaciones
+      ? (g.bloque_vacaciones === '1' ? ' · Bloque 1 (1–15)' : ' · Bloque 2 (16–fin)')
+      : '';
+    var slot = g.slot_label ? (' · ' + g.slot_label) : '';
     return '<div class="rp-ganador' + (isVac ? ' vacaciones' : '') + '">'
       + '<div class="rp-nro' + (isVac ? ' vacaciones' : '') + '">' + g.nro + '</div>'
       + '<div class="rp-info">'
       + '<strong>' + escH(nombreCompleto(g)) + '</strong>'
-      + '<span>' + escH(g.unidad || '') + (g.cip ? ' — CIP: ' + escH(g.cip) : '') + origen + '</span>'
+      + '<span>' + escH(g.unidad || '') + (g.cip ? ' — CIP: ' + escH(g.cip) : '') + origen + escH(bloque) + escH(slot) + '</span>'
       + '</div></div>';
   }).join('');
 }
 
 function etiquetaOrigen(g) {
-  if (g.tipo === 'vacaciones') return 'Vacaciones (auto)';
-  if (g.tipo === 'previo') return 'Previo';
-  return 'Sorteo';
+  var base = g.tipo === 'vacaciones' ? 'Vacaciones (auto)' : (g.tipo === 'previo' ? 'Previo' : 'Sorteo');
+  if (g.bloque_vacaciones === '1') base += ' · Bloque 1 (1–15)';
+  if (g.bloque_vacaciones === '2') base += ' · Bloque 2 (16–fin)';
+  if (g.slot_label) base += ' · ' + g.slot_label;
+  return base;
 }
 
 function mostrarResumen() {
@@ -723,7 +1140,7 @@ function mostrarResumen() {
   meta.innerHTML = '<strong style="color:#004d3d;">' + escH(ITEM_DATA && ITEM_DATA.titulo || '') + '</strong><br>'
     + 'Cupo total: <strong>' + CUPO_TOTAL + '</strong> · Objetivo sesión: <strong>' + OBJETIVO + '</strong><br>'
     + 'Ganadores: <strong>' + GANADORES.length + '</strong>'
-    + ' · Por cubrir: <strong>' + puestosPorCubrir() + '</strong>';
+    + ' · Slots: <strong>' + (SLOTS_SORTEO.length || 1) + '</strong>';
   document.getElementById('resumen-tbody').innerHTML = GANADORES.map(function(g) {
     return '<tr>'
       + '<td>' + g.nro + '</td>'
@@ -740,10 +1157,16 @@ function mostrarResumen() {
 
 function culminarSorteo() {
   if (!SORTEO_INICIADO || SORTEO_CULMINADO) return;
+  var vacSinBloque = GANADORES.filter(function(g) {
+    return g.tipo === 'vacaciones' && !g.bloque_vacaciones;
+  });
+  if (vacSinBloque.length) {
+    if (!confirm('Hay ' + vacSinBloque.length + ' vacaciones sin bloque (1–15 / 16–fin). ¿Culminar igual?\n(Recomendado: pulse antes «Sortear bloques de vacaciones».)')) return;
+  }
   if (!GANADORES.length) {
     if (!confirm('No hay ganadores registrados. ¿Culminar de todas formas?')) return;
-  } else if (puestosPorCubrir() > 0 && candidatosRuedaActivos().length) {
-    if (!confirm('Aún faltan ' + puestosPorCubrir() + ' vacantes y hay candidatos en rueda. ¿Culminar el sorteo ahora?')) return;
+  } else if ((OBJETIVO - GANADORES.length) > 0 && RUEDA_CAND.some(function(c) { return !IDS_GANADOS[c.id]; })) {
+    if (!confirm('Aún faltan vacantes y hay candidatos en rueda. ¿Culminar el sorteo ahora?')) return;
   }
 
   var btn = document.getElementById('btn-culminar');
@@ -761,6 +1184,9 @@ function culminarSorteo() {
       })
     }).then(function(r) { return r.json(); }).then(function(d) {
       if (!d.ok) throw new Error(d.error || 'Error al publicar resultados');
+      if (d.purgados_anulados) {
+        console.log('Anulados purgados al culminar:', d.purgados_anulados);
+      }
     });
   }).then(function() {
     SORTEO_CULMINADO = true;

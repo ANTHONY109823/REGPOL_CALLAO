@@ -13,6 +13,8 @@ const PLAZO_EXPEDIENTE_DIAS = 2;
 
 const ESTADOS_CONVENIO = {
   PREINSCRITO: 'preinscrito',
+  CORREGIR_PREINSCRIPCION: 'corregir_preinscripcion',
+  ANULADO_SOLICITUD: 'anulado_solicitud',
   GANADOR: 'ganador',
   EN_REVISION: 'en_revision',
   OBSERVADO: 'observado',
@@ -367,10 +369,15 @@ async function initColumnasFlujoConvenios(pool) {
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS codifin VARCHAR(12) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS region_policial VARCHAR(120) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS comisaria_postula VARCHAR(150) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS bloque_vacaciones VARCHAR(10) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS token_constancia VARCHAR(64) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS aprobado_por_nombre VARCHAR(150) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS aprobado_por_usuario VARCHAR(60) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS fecha_aprobacion TIMESTAMPTZ;
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS preins_correccion_motivo TEXT DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS preins_correccion_admin VARCHAR(150) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS preins_correccion_usuario VARCHAR(60) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS preins_correccion_fecha TIMESTAMPTZ;
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS aviso_sorteo_fb TEXT DEFAULT '';
     CREATE INDEX IF NOT EXISTS idx_inscripciones_estado ON inscripciones(estado);
     CREATE INDEX IF NOT EXISTS idx_inscripciones_plazo ON inscripciones(plazo_expediente);
@@ -506,6 +513,56 @@ function plazoDesdeAhora() {
   return d;
 }
 
+/** Parsea postulación: "CIA — MAÑANA / PAR", "CIA|MAÑANA|PAR" o solo lugar. */
+function parsePostulacionSlot(texto) {
+  var s = String(texto || '').trim();
+  if (!s) return { lugar: '', turno: '', dia: '' };
+  if (s.indexOf('|') >= 0) {
+    var p = s.split('|').map(function(x) { return String(x || '').trim(); });
+    return {
+      lugar: p[0] || '',
+      turno: String(p[1] || '').toUpperCase(),
+      dia: String(p[2] || '').toUpperCase()
+    };
+  }
+  var m = s.match(/^(.+?)\s*[—\-]\s*([A-ZÁÉÍÓÚÑÜ]+)\s*\/\s*([A-ZÁÉÍÓÚÑÜ\/]+)\s*$/i);
+  if (m) {
+    return {
+      lugar: String(m[1] || '').trim(),
+      turno: String(m[2] || '').toUpperCase(),
+      dia: String(m[3] || '').toUpperCase()
+    };
+  }
+  return { lugar: s, turno: '', dia: '' };
+}
+
+function etiquetaBloqueVacaciones(bloque) {
+  var b = String(bloque || '').trim();
+  if (b === '1') return 'Bloque 1 (días 1–15)';
+  if (b === '2') return 'Bloque 2 (días 16–fin de mes)';
+  return '';
+}
+
+/**
+ * Reparte por sorteo (Fisher–Yates) en dos bloques de ~15 días.
+ * Devuelve array { id, bloque: '1'|'2' }.
+ */
+function sortearBloquesVacaciones(ids) {
+  var list = (Array.isArray(ids) ? ids : []).map(function(id) {
+    return parseInt(id, 10);
+  }).filter(Boolean);
+  for (var i = list.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = list[i];
+    list[i] = list[j];
+    list[j] = tmp;
+  }
+  var mitad = Math.ceil(list.length / 2);
+  return list.map(function(id, idx) {
+    return { id: id, bloque: idx < mitad ? '1' : '2' };
+  });
+}
+
 module.exports = {
   PLAZO_EXPEDIENTE_DIAS,
   ESTADOS_CONVENIO,
@@ -527,5 +584,8 @@ module.exports = {
   asegurarNroRegistro,
   limpio,
   soloDigitos,
-  normalizarTelefonoPe
+  normalizarTelefonoPe,
+  parsePostulacionSlot,
+  etiquetaBloqueVacaciones,
+  sortearBloquesVacaciones
 };

@@ -285,24 +285,30 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
       box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;">'
         + '<colgroup>'
         + '<col style="width:auto"/>'
-        + '<col style="width:78px"/>'
         + '<col style="width:70px"/>'
-        + '<col style="width:64px"/>'
-        + '<col style="width:100px"/>'
-        + '<col style="width:168px"/>'
+        + '<col style="width:58px"/>'
+        + '<col style="width:52px"/>'
+        + '<col style="width:190px"/>'
+        + '<col style="width:160px"/>'
         + '</colgroup>'
         + '<thead><tr style="background:#f0f7f4;color:#004d3d;text-align:left;">'
         + '<th style="padding:8px 10px;">Convenio</th>'
         + '<th style="padding:8px 4px;text-align:center;">Vacantes</th>'
         + '<th style="padding:8px 4px;text-align:center;">Lugares</th>'
         + '<th style="padding:8px 4px;text-align:center;">Activo</th>'
-        + '<th style="padding:8px 4px;text-align:center;">Inscripciones</th>'
+        + '<th style="padding:8px 4px;">Inscripciones</th>'
         + '<th style="padding:8px 4px;text-align:center;">Acciones</th></tr></thead><tbody>'
         + items.map(function(it) {
           var activo = String(it.estado || '').toUpperCase() !== 'CERRADO';
           var nLug = Array.isArray(it.cupos_unidades) ? it.cupos_unidades.length : 0;
           var lugTxt = nLug > 0 ? String(nLug) : (it.lugar ? '1' : '—');
           var id = it.id;
+          var st = (typeof etiquetaEstadoInscripcion === 'function')
+            ? etiquetaEstadoInscripcion(it)
+            : { texto: 'CERRADO', detalle: 'Sin fechas', color: '#6b7280', bg: '#f3f4f6' };
+          var celdaInsc = (typeof htmlCeldaEstadoInscripcion === 'function')
+            ? htmlCeldaEstadoInscripcion(st, id)
+            : ('<span style="font-size:11px;font-weight:700;color:' + (st.color || '#888') + ';">' + escHtml(st.texto || 'CERRADO') + '</span>');
           return '<tr style="border-top:1px solid #edf2ef;" id="cv-row-' + id + '">'
             + '<td style="padding:8px 10px;font-weight:600;color:#004d3d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(it.titulo || '') + '">' + escHtml(it.titulo || '') + '</td>'
             + '<td style="padding:8px 4px;text-align:center;font-weight:600;">' + escHtml(String(it.vacantes != null ? it.vacantes : 0)) + '</td>'
@@ -311,20 +317,13 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
             + (puedeEditar
               ? '<input type="checkbox" id="cv-activo-' + id + '" ' + (activo ? 'checked' : '') + ' '
                 + 'title="Activo en la web" style="width:16px;height:16px;accent-color:#1a7a3a;cursor:pointer;" '
-                + 'onchange="marcarLineaConvenioDirty(' + id + ')"/>'
+                + 'onchange="guardarActivoConvenio(' + id + ')"/>'
               : (activo ? 'Sí' : 'No'))
             + '</td>'
-            + '<td style="padding:8px 4px;text-align:center;">'
-            + (puedeEditar
-              ? '<input type="checkbox" id="cv-insc-' + id + '" ' + (it.inscripciones_abiertas ? 'checked' : '') + ' '
-                + 'title="Inscripciones abiertas" style="width:16px;height:16px;accent-color:#004d3d;cursor:pointer;" '
-                + 'onchange="marcarLineaConvenioDirty(' + id + ')"/>'
-              : (it.inscripciones_abiertas ? 'Abiertas' : 'Cerradas'))
-            + '</td>'
+            + '<td style="padding:6px 8px;">' + celdaInsc + '</td>'
             + '<td style="padding:6px 4px;text-align:center;white-space:nowrap;">'
             + (puedeEditar
-              ? '<button type="button" class="btn-mini btn-mini-ok" style="padding:4px 8px;font-size:11px;width:auto;min-width:0;height:auto;" onclick="abrirModalItem(' + id + ')">Editar</button> '
-              + '<button type="button" class="btn-mini" id="cv-btn-save-' + id + '" style="padding:4px 8px;font-size:11px;width:auto;min-width:0;height:auto;" onclick="guardarLineaConvenio(' + id + ')">Guardar</button>'
+              ? '<button type="button" class="btn-mini btn-mini-ok" style="padding:4px 8px;font-size:11px;width:auto;min-width:0;height:auto;" onclick="abrirModalItem(' + id + ')"><i class="fas fa-edit"></i> Editar</button>'
               : '')
             + '</td></tr>';
         }).join('')

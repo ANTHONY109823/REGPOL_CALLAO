@@ -19,6 +19,28 @@ const conveniosFlujo = require('./convenios_flujo');
 const recursosHumanos = require('./recursos_humanos');
 const adminAuth = require('./admin_auth');
 
+// Carga .env local (no se sube a git) para desarrollo en localhost
+(function cargarEnvLocal() {
+  try {
+    const envPath = path.join(__dirname, '.env');
+    if (!fs.existsSync(envPath)) return;
+    const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      const line = String(lines[i] || '').trim();
+      if (!line || line.charAt(0) === '#') continue;
+      const eq = line.indexOf('=');
+      if (eq < 1) continue;
+      const key = line.slice(0, eq).trim();
+      let val = line.slice(eq + 1).trim();
+      if ((val.charAt(0) === '"' && val.charAt(val.length - 1) === '"') ||
+          (val.charAt(0) === "'" && val.charAt(val.length - 1) === "'")) {
+        val = val.slice(1, -1);
+      }
+      if (key && process.env[key] == null) process.env[key] = val;
+    }
+  } catch (e) { /* ignorar */ }
+})();
+
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
@@ -573,6 +595,8 @@ async function initDB() {
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS plantilla_pdf TEXT DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS plantilla_nombre VARCHAR(200) DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS ventana_inscripcion VARCHAR(300) DEFAULT '';
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS inscripcion_inicio DATE;
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS inscripcion_cierre DATE;
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS aviso_sorteo_fb TEXT DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS cupos_unidades JSONB DEFAULT '[]';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS turnos JSONB DEFAULT '[]';
@@ -705,6 +729,7 @@ async function initDB() {
   await sincronizarUnidadAdministrativa();
   await sincronizarUnidadRegistroDesdeNomina();
   await corregirFotosEncabezadoPortal();
+  await sincronizarFlagsInscripcionConvenios();
 
   // Seed preguntas en lotes de 100 para no superar límite de parámetros
   const { rows } = await pool.query('SELECT COUNT(*) AS t FROM preguntas');
@@ -1662,7 +1687,14 @@ app.post('/admin/login', async (req, res) => {
       password_max_age_days: adminAuth.PASSWORD_MAX_AGE_DAYS
     });
   } catch (e) {
-    res.json({ ok: false, error: e.message });
+    const msg = String((e && e.message) || '').trim();
+    const sinDb = /ECONNREFUSED|ENOTFOUND|connection|timeout|connect/i.test(msg + ' ' + String(e && e.code || ''));
+    res.json({
+      ok: false,
+      error: sinDb || !msg
+        ? 'No hay conexión a la base de datos. En localhost configure DATABASE_URL (Railway) y reinicie el servidor.'
+        : msg
+    });
   }
 });
 
@@ -2822,11 +2854,11 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
 
     const convItems = await pool.query(
       `SELECT COUNT(*)::int AS convocatorias,
-        SUM(CASE WHEN inscripciones_abiertas THEN 1 ELSE 0 END)::int AS abiertas
+        SUM(CASE WHEN ${sqlInscripcionesAbiertasExpr('items_portal')} THEN 1 ELSE 0 END)::int AS abiertas
        FROM items_portal WHERE tipo='convenio' AND visible=TRUE`);
     const cursoItems = await pool.query(
       `SELECT COUNT(*)::int AS convocatorias,
-        SUM(CASE WHEN inscripciones_abiertas THEN 1 ELSE 0 END)::int AS abiertas
+        SUM(CASE WHEN ${sqlInscripcionesAbiertasExpr('items_portal')} THEN 1 ELSE 0 END)::int AS abiertas
        FROM items_portal WHERE tipo='curso'`);
     const inscConv = await pool.query(
       `SELECT COUNT(n.id)::int AS total,
@@ -4741,7 +4773,36 @@ app.post('/admin/sorteos/:id/resultados', requireAuth, async (req, res) => {
       const itemId = sorteoRow.rows[0]?.item_id;
       if (itemId) await sincronizarGanadoresSorteoEnItem(itemId, resultados);
     }
-    res.json({ ok: true });
+    // Al culminar: borrar por completo preinscripciones anuladas a solicitud de este convenio
+    const sRow = await pool.query('SELECT item_id FROM sorteos_portal WHERE id=$1', [req.params.id]);
+    const itemPurge = sRow.rows[0] && sRow.rows[0].item_id;
+    let purgados = 0;
+    if (itemPurge) {
+      const del = await pool.query(
+        `DELETE FROM inscripciones
+         WHERE item_id=$1 AND estado='anulado_solicitud'
+         RETURNING id, cip, nro_registro`,
+        [itemPurge]
+      );
+      purgados = del.rows.length;
+      if (purgados) {
+        await adminAuth.registrarAuditoria(pool, {
+          adminId: req.admin.id,
+          cip: req.admin.cip || req.admin.usuario || '',
+          usuario: req.admin.usuario || '',
+          nombre: req.admin.nombre || '',
+          accion: 'purgar_anulados_solicitud',
+          modulo: 'convenios',
+          entidad: 'item',
+          entidadId: String(itemPurge),
+          detalle: 'Culminación de sorteo: eliminados ' + purgados + ' registro(s) anulado_solicitud. IDs: '
+            + del.rows.map(function(r) { return r.id + '(' + (r.nro_registro || r.cip || '') + ')'; }).join(', ').slice(0, 1800),
+          ip: req.ip || '',
+          ok: true
+        });
+      }
+    }
+    res.json({ ok: true, purgados_anulados: purgados });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -4813,7 +4874,7 @@ app.get('/admin/stats-gestion', requireAuth, async (req, res) => {
     const itemsR = await pool.query(
       `SELECT COUNT(*)::int AS convocatorias,
         SUM(CASE WHEN estado='DISPONIBLE' THEN 1 ELSE 0 END)::int AS disponibles,
-        SUM(CASE WHEN inscripciones_abiertas THEN 1 ELSE 0 END)::int AS inscripciones_abiertas
+        SUM(CASE WHEN ${sqlInscripcionesAbiertasExpr('items_portal')} THEN 1 ELSE 0 END)::int AS inscripciones_abiertas
        FROM items_portal WHERE tipo=$1`, [tipo]);
     const inscR = await pool.query(
       `SELECT COUNT(n.id)::int AS total_inscritos,
@@ -4860,14 +4921,20 @@ function normalizarCuposUnidades(raw) {
     if (!c || typeof c !== 'object') return null;
     var nombre = String(c.nombre || c.unidad || c.comisaria || '').trim();
     if (!nombre) return null;
+    var turnosLugar = normalizarTurnos(c.turnos);
     var vacantes = parseInt(c.vacantes, 10);
     if (isNaN(vacantes) || vacantes < 0) vacantes = 0;
+    if (turnosLugar.length) {
+      vacantes = sumaVacantesTurnos(turnosLugar);
+    }
     var inscritos = parseInt(c.inscritos, 10);
     if (isNaN(inscritos) || inscritos < 0) inscritos = 0;
     var disponibles = parseInt(c.disponibles, 10);
     if (isNaN(disponibles) || disponibles < 0) disponibles = Math.max(0, vacantes - inscritos);
     var direccion = String(c.direccion || c.direccion_lugar || '').trim();
-    return { nombre: nombre, vacantes: vacantes, inscritos: inscritos, disponibles: disponibles, direccion: direccion };
+    var out = { nombre: nombre, vacantes: vacantes, inscritos: inscritos, disponibles: disponibles, direccion: direccion };
+    if (turnosLugar.length) out.turnos = turnosLugar;
+    return out;
   }).filter(Boolean);
 }
 
@@ -4903,6 +4970,152 @@ function sumaVacantesTurnos(turnos) {
   }, 0);
 }
 
+/** Slots fijos Celador: mañana/tarde × par/impar. */
+const CELADOR_TURNOS_SLOTS = [
+  { turno: 'MAÑANA', dia: 'PAR' },
+  { turno: 'MAÑANA', dia: 'IMPAR' },
+  { turno: 'TARDE', dia: 'PAR' },
+  { turno: 'TARDE', dia: 'IMPAR' }
+];
+
+function direccionDefaultComisariaCelador(nombre) {
+  var key = String(nombre || '').trim().toUpperCase();
+  for (var i = 0; i < CONTACTO_COMISARIAS.length; i++) {
+    if (String(CONTACTO_COMISARIAS[i].nombre || '').toUpperCase() === key) {
+      return String(CONTACTO_COMISARIAS[i].direccion || '').trim();
+    }
+  }
+  return '';
+}
+
+function plantillaTurnosCeladorCia(vacantesCia, prevTurnos) {
+  var total = parseInt(vacantesCia, 10) || 0;
+  var prevMap = {};
+  normalizarTurnos(prevTurnos).forEach(function(t) {
+    prevMap[t.turno + '|' + t.dia] = t;
+  });
+  var completo = CELADOR_TURNOS_SLOTS.every(function(s) {
+    return !!prevMap[s.turno + '|' + s.dia];
+  });
+  if (completo) {
+    return CELADOR_TURNOS_SLOTS.map(function(s) {
+      var prev = prevMap[s.turno + '|' + s.dia];
+      return { turno: s.turno, dia: s.dia, vacantes: parseInt(prev.vacantes, 10) || 0 };
+    });
+  }
+  var n = CELADOR_TURNOS_SLOTS.length;
+  var base = Math.floor(total / n);
+  var resto = total % n;
+  return CELADOR_TURNOS_SLOTS.map(function(s, idx) {
+    return { turno: s.turno, dia: s.dia, vacantes: base + (idx < resto ? 1 : 0) };
+  });
+}
+
+function turnosAgregadosCelador(cupos) {
+  var map = {};
+  CELADOR_TURNOS_SLOTS.forEach(function(s) {
+    map[s.turno + '|' + s.dia] = { turno: s.turno, dia: s.dia, vacantes: 0 };
+  });
+  (Array.isArray(cupos) ? cupos : []).forEach(function(c) {
+    normalizarTurnos(c && c.turnos).forEach(function(t) {
+      var k = t.turno + '|' + t.dia;
+      if (map[k]) map[k].vacantes += parseInt(t.vacantes, 10) || 0;
+    });
+  });
+  return CELADOR_TURNOS_SLOTS.map(function(s) {
+    return map[s.turno + '|' + s.dia];
+  });
+}
+
+function cuposCeladorTienenMatrizTurnos(cupos) {
+  var list = Array.isArray(cupos) ? cupos : [];
+  if (!list.length) return false;
+  return list.every(function(c) {
+    var slots = normalizarTurnos(c && c.turnos);
+    if (slots.length !== CELADOR_TURNOS_SLOTS.length) return false;
+    return CELADOR_TURNOS_SLOTS.every(function(s, i) {
+      return slots[i].turno === s.turno && slots[i].dia === s.dia;
+    });
+  });
+}
+
+/** Slots de sorteo: Celador = CIA×turno×día; resto = turnos del convenio. */
+function construirSlotsSorteoItem(item) {
+  var cupos = normalizarCuposUnidades(item && item.cupos_unidades);
+  var slots = [];
+  if (cuposCeladorTienenMatrizTurnos(cupos)) {
+    cupos.forEach(function(c) {
+      normalizarTurnos(c.turnos).forEach(function(t) {
+        var vac = parseInt(t.vacantes, 10) || 0;
+        if (vac <= 0) return;
+        slots.push({
+          key: String(c.nombre).toUpperCase() + '|' + t.turno + '|' + t.dia,
+          lugar: c.nombre,
+          turno: t.turno,
+          dia: t.dia,
+          vacantes: vac,
+          label: c.nombre + ' — ' + t.turno + ' / ' + t.dia
+        });
+      });
+    });
+    return slots;
+  }
+  var turnos = normalizarTurnos(item && item.turnos);
+  turnos.forEach(function(t) {
+    var vac = parseInt(t.vacantes, 10) || 0;
+    if (vac <= 0) return;
+    slots.push({
+      key: t.turno + '|' + t.dia,
+      lugar: '',
+      turno: t.turno,
+      dia: t.dia,
+      vacantes: vac,
+      label: t.turno + ' — ' + t.dia
+    });
+  });
+  if (!slots.length) {
+    var total = parseInt(item && item.vacantes, 10) || 0;
+    if (total > 0) {
+      slots.push({
+        key: 'GENERAL|PAR/IMPAR',
+        lugar: '',
+        turno: 'GENERAL',
+        dia: 'PAR/IMPAR',
+        vacantes: total,
+        label: 'Cupo general'
+      });
+    }
+  }
+  return slots;
+}
+
+function diaCompatibleSorteo(diaSlot, diaCand) {
+  var a = String(diaSlot || '').toUpperCase();
+  var b = String(diaCand || '').toUpperCase();
+  if (!a || a === 'PAR/IMPAR') return true;
+  if (!b || b === 'PAR/IMPAR') return true;
+  return a === b;
+}
+
+function candidatoCoincideSlotSorteo(cand, slot, slotsAll) {
+  if (!cand || !slot) return false;
+  var p = conveniosFlujo.parsePostulacionSlot(cand.comisaria_postula);
+  if (slot.lugar) {
+    if (String(p.lugar || '').trim().toUpperCase() !== String(slot.lugar).trim().toUpperCase()) {
+      return false;
+    }
+  }
+  // Si trae turno en la postulación, debe coincidir. Si no trae (legado), entra por día.
+  if (slot.turno && slot.turno !== 'GENERAL') {
+    if (p.turno && p.turno !== slot.turno) return false;
+  }
+  var diaCand = p.dia;
+  if (String(cand.disponibilidad || '').toUpperCase() === 'FRANCO' && cand.dia_franco) {
+    diaCand = String(cand.dia_franco).toUpperCase();
+  }
+  return diaCompatibleSorteo(slot.dia, diaCand);
+}
+
 /** Datos operativos de la hoja de vacantes (turnos / día / cupos). */
 const CONVENIOS_DATOS_HOJA = {
   'MUNICIPALIDAD PROV. CALLAO': {
@@ -4935,10 +5148,14 @@ const CONVENIOS_DATOS_HOJA = {
     ]
   },
   'PLAN CELADOR': {
+    /* Vacantes reales viven en cupos por CIA × turno × día; no pisar con un solo turno. */
     turnos: [
-      { turno: 'TARDE', dia: 'PAR/IMPAR', vacantes: 425 }
+      { turno: 'MAÑANA', dia: 'PAR', vacantes: 0 },
+      { turno: 'MAÑANA', dia: 'IMPAR', vacantes: 0 },
+      { turno: 'TARDE', dia: 'PAR', vacantes: 0 },
+      { turno: 'TARDE', dia: 'IMPAR', vacantes: 0 }
     ],
-    redistribuirCupos: true
+    redistribuirCupos: false
   }
 };
 const PLAZO_DOCS_HOJA = 'Entrega de documentos hasta el día jueves 30 de julio 2026.';
@@ -5071,6 +5288,7 @@ async function buscarInscripcionConvenioEnMes(cipNorm, dni, nombres) {
      JOIN items_portal i ON i.id = n.item_id
      WHERE i.tipo = 'convenio'
        AND ${sqlCipIgual('n.cip')} = $1
+       AND n.estado NOT IN ('anulado_solicitud','caducado','rechazado','reserva')
        AND ${mesSql}
      ORDER BY n.id ASC LIMIT 1`,
     [cipNorm]
@@ -5084,6 +5302,7 @@ async function buscarInscripcionConvenioEnMes(cipNorm, dni, nombres) {
        JOIN items_portal i ON i.id = n.item_id
        WHERE i.tipo = 'convenio'
          AND regexp_replace(COALESCE(n.dni,''), '[^0-9]', '', 'g') = $1
+         AND n.estado NOT IN ('anulado_solicitud','caducado','rechazado','reserva')
          AND ${mesSql}
        ORDER BY n.id ASC LIMIT 1`,
       [dniNorm]
@@ -5098,6 +5317,7 @@ async function buscarInscripcionConvenioEnMes(cipNorm, dni, nombres) {
        JOIN items_portal i ON i.id = n.item_id
        WHERE i.tipo = 'convenio'
          AND ${sqlNombreInscripcion('n.nombres')} = $1
+         AND n.estado NOT IN ('anulado_solicitud','caducado','rechazado','reserva')
          AND ${mesSql}
        ORDER BY n.id ASC LIMIT 1`,
       [nombreNorm]
@@ -5181,6 +5401,8 @@ function etiquetaEstadoPublico(estado, tipo) {
     const mapaConv = {
       pendiente: 'Preinscrito — a la espera del sorteo',
       preinscrito: 'Preinscrito — a la espera del sorteo',
+      corregir_preinscripcion: 'Preinscripción devuelta — corrija día y turno (Consulta CIP)',
+      anulado_solicitud: 'Preinscripción ANULADA a solicitud — puede inscribirse en otro convenio',
       verificado: 'Preinscrito — a la espera del sorteo',
       aprobado: 'Preinscrito — a la espera del sorteo',
       ganador: 'GANADOR — debe subir expediente (plazo 2 días)',
@@ -5209,6 +5431,8 @@ function ubicacionTramitePublico(estado) {
   const mapa = {
     pendiente: 'Preinscripción / lista de sorteo',
     preinscrito: 'Lista de preinscritos para sorteo',
+    corregir_preinscripcion: 'Portal — corregir turno de postulación',
+    anulado_solicitud: 'Anulada a solicitud — libre para otro convenio',
     verificado: 'Lista de preinscritos para sorteo',
     aprobado: 'Lista de preinscritos para sorteo',
     ganador: 'Portal — subir expediente (Consulta por CIP)',
@@ -5325,10 +5549,13 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
               n.plazo_expediente, n.fecha_ganador, n.nro_registro, n.modalidad, n.modalidad_otro,
               n.codifin, n.region_policial, n.comisaria_postula, n.dni, n.token_constancia,
               n.aprobado_por_nombre, n.aprobado_por_usuario, n.fecha_aprobacion,
+              n.preins_correccion_motivo, n.preins_correccion_admin, n.preins_correccion_usuario,
+              n.preins_correccion_fecha,
               CASE WHEN COALESCE(n.pdf_requisitos,'')<>'' THEN true ELSE false END AS tiene_pdf,
               i.id AS item_id, i.tipo, i.titulo, i.horario, i.lugar, i.fecha_inicio, i.duracion,
               i.descripcion, i.observaciones AS item_observaciones, i.vacantes,
-              i.uniforme, i.contactos_responsables, i.requisitos, i.aviso_sorteo_fb
+              i.uniforme, i.contactos_responsables, i.requisitos, i.aviso_sorteo_fb,
+              i.turnos, i.cupos_unidades
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
        WHERE ${sqlCipIgual('n.cip')} = $1
@@ -5361,7 +5588,39 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
       );
       const puedeConstancia = puedeDescargarConstanciaEstado(estado, row.tipo);
       const enVerificacion = row.tipo === 'convenio' && (estado === 'en_revision' || estado === 'repechaje');
-      const puedeVerMotivos = row.tipo === 'convenio' && (estado === 'observado' || estado === 'rechazado');
+      const puedeVerMotivos = row.tipo === 'convenio' && (estado === 'observado' || estado === 'rechazado' || estado === 'corregir_preinscripcion');
+      const puedeCorregirTurno = row.tipo === 'convenio' && estado === 'corregir_preinscripcion';
+      const turnosPub = normalizarTurnos(row.turnos).filter(function(t) {
+        return t && t.turno && (parseInt(t.vacantes, 10) || 0) > 0;
+      }).map(function(t) {
+        return {
+          turno: t.turno,
+          dia: t.dia || 'PAR/IMPAR',
+          vacantes: parseInt(t.vacantes, 10) || 0,
+          value: t.turno + '|' + (t.dia || 'PAR/IMPAR'),
+          label: t.turno + ' — ' + (t.dia || 'PAR/IMPAR') + ' (' + (parseInt(t.vacantes, 10) || 0) + ' vac.)'
+        };
+      });
+      const cuposNorm = normalizarCuposUnidades(row.cupos_unidades);
+      const esCelMatriz = String(row.titulo || '').toUpperCase().indexOf('CELADOR') !== -1
+        && cuposCeladorTienenMatrizTurnos(cuposNorm);
+      let opcionesCorreccion = [];
+      if (esCelMatriz) {
+        cuposNorm.forEach(function(c) {
+          normalizarTurnos(c.turnos).forEach(function(t) {
+            if ((parseInt(t.vacantes, 10) || 0) <= 0) return;
+            opcionesCorreccion.push({
+              value: String(c.nombre || '').trim() + '|' + t.turno + '|' + t.dia,
+              label: String(c.nombre || '').trim() + ' — ' + t.turno + ' / ' + t.dia + ' (' + t.vacantes + ')',
+              tipo: 'celador'
+            });
+          });
+        });
+      } else {
+        opcionesCorreccion = turnosPub.map(function(t) {
+          return Object.assign({}, t, { tipo: 'turno' });
+        });
+      }
       let tokenConst = '';
       if (puedeConstancia) {
         tokenConst = row.token_constancia || await asegurarTokenConstancia(row.id);
@@ -5415,6 +5674,13 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
         puede_subir_expediente: puedeSubir,
         puede_descargar_constancia: puedeConstancia,
         puede_ver_motivos: puedeVerMotivos,
+        puede_corregir_turno: puedeCorregirTurno,
+        opciones_correccion_turno: opcionesCorreccion,
+        preins_correccion_motivo: row.preins_correccion_motivo || '',
+        preins_correccion_admin: row.preins_correccion_admin || '',
+        preins_correccion_usuario: row.preins_correccion_usuario || '',
+        preins_correccion_fecha: row.preins_correccion_fecha || null,
+        preins_correccion_fecha_legible: formatearFechaAprobacionPe(row.preins_correccion_fecha),
         en_verificacion: enVerificacion,
         mostrar_modal_verificacion: enVerificacion,
         mostrar_modal_aprobacion: puedeConstancia,
@@ -5507,18 +5773,28 @@ app.post('/admin/items/:id/aplicar-sorteo', requireAuth, async (req, res) => {
     for (const g of ganadores) {
       const insId = parseInt(g.id, 10);
       if (!insId) continue;
-      const obs = g.tipo === 'vacaciones'
+      const bloque = String(g.bloque_vacaciones || g.bloque || '').trim();
+      const obsBase = g.tipo === 'vacaciones'
         ? 'Vacante automática por vacaciones'
         : 'Seleccionado en sorteo público';
+      const obsBloque = bloque
+        ? (' · ' + (conveniosFlujo.etiquetaBloqueVacaciones(bloque) || ('Bloque ' + bloque)))
+        : '';
+      const obsSlot = g.slot_label ? (' · ' + String(g.slot_label).trim()) : '';
+      const obs = (obsBase + obsBloque + obsSlot).slice(0, 500);
       let r;
       if (esConvenio) {
         r = await pool.query(
           `UPDATE inscripciones SET
              estado='ganador', observacion=$1, modo_ingreso='sorteo',
-             fecha_ganador=NOW(), plazo_expediente=$2
+             fecha_ganador=NOW(), plazo_expediente=$2,
+             bloque_vacaciones=CASE
+               WHEN $5::text <> '' THEN $5
+               ELSE COALESCE(bloque_vacaciones, '')
+             END
            WHERE id=$3 AND item_id=$4
              AND estado IN ('preinscrito','pendiente','aprobado','verificado','ganador')`,
-          [obs, plazo.toISOString(), insId, itemId]);
+          [obs, plazo.toISOString(), insId, itemId, bloque]);
       } else {
         r = await pool.query(
           `UPDATE inscripciones SET estado='ganador', observacion=$1
@@ -5568,12 +5844,14 @@ app.get('/portal/items', async (req, res) => {
     if (cached && cached.exp > Date.now()) {
       return res.json(cached.data);
     }
-    let q = 'SELECT id,tipo,titulo,descripcion,estado,icono,color,vacantes,fecha_inicio,duracion,inscripciones_abiertas,orden FROM items_portal WHERE visible=TRUE';
+    let q = `SELECT id,tipo,titulo,descripcion,estado,icono,color,vacantes,fecha_inicio,duracion,
+      inscripciones_abiertas,inscripcion_inicio,inscripcion_cierre,ventana_inscripcion,orden
+      FROM items_portal WHERE visible=TRUE`;
     const args = [];
     if (tipo) { q += ' AND tipo=$1'; args.push(tipo); }
     q += ' ORDER BY orden,id';
     const r = await pool.query(q, args);
-    const payload = { ok: true, items: r.rows };
+    const payload = { ok: true, items: enriquecerItemsInscripciones(r.rows) };
     portalItemsCache.set(cacheKey, { data: payload, exp: Date.now() + PORTAL_ITEMS_CACHE_MS });
     res.json(payload);
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -5614,17 +5892,204 @@ const VENTANA_INSCRIPCION_DEFAULT =
   'Las inscripciones se habilitan del 20 al 25 de cada mes. Entrega de documentos hasta el jueves 30 de julio 2026.';
 const AVISO_SORTEO_DEFAULT =
   'El sorteo en vivo se realizará por la página de Facebook REGPOL Callao. Se notificará al cerrar preinscripciones.';
+
+const MESES_ES_INSCRIPCION = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+];
+
+/** Normaliza a YYYY-MM-DD o null. */
+function fechaISOSolo(v) {
+  if (v == null || v === '') return null;
+  if (v instanceof Date && !isNaN(v.getTime())) {
+    const y = v.getUTCFullYear();
+    const m = String(v.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(v.getUTCDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+  }
+  const s = String(v).trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const y = parseInt(m[1], 10);
+  const mo = parseInt(m[2], 10);
+  const d = parseInt(m[3], 10);
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return m[1] + '-' + m[2] + '-' + m[3];
+}
+
+function formatearDiaMesAnioEs(iso) {
+  const f = fechaISOSolo(iso);
+  if (!f) return '';
+  const parts = f.split('-');
+  const d = parseInt(parts[2], 10);
+  const m = parseInt(parts[1], 10) - 1;
+  const y = parts[0];
+  return d + ' de ' + MESES_ES_INSCRIPCION[m] + ' de ' + y;
+}
+
+/** Aviso público generado desde el rango de inscripción (cierre 23:59 hrs). */
+function formatearAvisoVentanaInscripcion(inicio, cierre) {
+  const ini = fechaISOSolo(inicio);
+  const fin = fechaISOSolo(cierre);
+  if (!ini || !fin) return '';
+  const a = formatearDiaMesAnioEs(ini);
+  const b = formatearDiaMesAnioEs(fin);
+  if (ini === fin) {
+    return 'Inscripciones el ' + a + ' (cierre automático a las 23:59 hrs).';
+  }
+  return 'Inscripciones del ' + a + ' al ' + b + ' (cierre automático a las 23:59 hrs del último día).';
+}
+
+/** Fecha actual America/Lima como YYYY-MM-DD. */
+function fechaHoyLima() {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Lima',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date());
+    const map = {};
+    for (let i = 0; i < parts.length; i++) {
+      if (parts[i].type !== 'literal') map[parts[i].type] = parts[i].value;
+    }
+    if (map.year && map.month && map.day) return map.year + '-' + map.month + '-' + map.day;
+  } catch (e) { /* fallback abajo */ }
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Lima',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+}
+
+/**
+ * Abiertas si hoy (Lima) está entre inicio y cierre inclusive.
+ * El último día permanece abierto hasta las 23:59 hrs (todo el día calendario).
+ */
+function inscripcionesAbiertasPorFechas(inicio, cierre) {
+  const ini = fechaISOSolo(inicio);
+  const fin = fechaISOSolo(cierre);
+  if (!ini || !fin) return false;
+  const hoy = fechaHoyLima();
+  return hoy >= ini && hoy <= fin;
+}
+
+function itemTieneVentanaFechas(item) {
+  return !!(fechaISOSolo(item && item.inscripcion_inicio) && fechaISOSolo(item && item.inscripcion_cierre));
+}
+
+/** Calcula inscripciones_abiertas y aviso para convenios con fechas. */
+function enriquecerItemInscripciones(item) {
+  if (!item || typeof item !== 'object') return item;
+  const out = Object.assign({}, item);
+  out.inscripcion_inicio = fechaISOSolo(out.inscripcion_inicio);
+  out.inscripcion_cierre = fechaISOSolo(out.inscripcion_cierre);
+  if (out.tipo === 'convenio') {
+    if (itemTieneVentanaFechas(out)) {
+      out.inscripciones_abiertas = inscripcionesAbiertasPorFechas(out.inscripcion_inicio, out.inscripcion_cierre);
+      out.ventana_inscripcion = formatearAvisoVentanaInscripcion(out.inscripcion_inicio, out.inscripcion_cierre);
+    } else {
+      out.inscripciones_abiertas = false;
+      out.ventana_inscripcion = '';
+    }
+  } else {
+    out.inscripciones_abiertas = !!out.inscripciones_abiertas;
+  }
+  return out;
+}
+
+function enriquecerItemsInscripciones(rows) {
+  return (rows || []).map(enriquecerItemInscripciones);
+}
+
+/** Expresión SQL: abiertas por fechas (convenio) o booleano (otros). */
+function sqlInscripcionesAbiertasExpr(alias) {
+  const a = alias || 'i';
+  return `(CASE
+    WHEN ${a}.tipo = 'convenio' THEN (
+      ${a}.inscripcion_inicio IS NOT NULL
+      AND ${a}.inscripcion_cierre IS NOT NULL
+      AND (CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima')::date >= ${a}.inscripcion_inicio
+      AND (CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima')::date <= ${a}.inscripcion_cierre
+    )
+    ELSE COALESCE(${a}.inscripciones_abiertas, FALSE)
+  END)`;
+}
+
+/** Alinea el booleano legacy con las fechas reales (convenios). */
+async function sincronizarFlagsInscripcionConvenios() {
+  try {
+    const cerrados = await pool.query(
+      `UPDATE items_portal
+          SET inscripciones_abiertas = FALSE,
+              actualizado = NOW()
+        WHERE tipo = 'convenio'
+          AND COALESCE(inscripciones_abiertas, FALSE) = TRUE
+          AND (
+            inscripcion_inicio IS NULL
+            OR inscripcion_cierre IS NULL
+            OR (CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima')::date < inscripcion_inicio
+            OR (CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima')::date > inscripcion_cierre
+          )
+        RETURNING id`
+    );
+    const abiertos = await pool.query(
+      `UPDATE items_portal
+          SET inscripciones_abiertas = TRUE,
+              ventana_inscripcion = CASE
+                WHEN TRIM(COALESCE(ventana_inscripcion,'')) = '' THEN
+                  'Inscripciones del ' || TO_CHAR(inscripcion_inicio, 'DD/MM/YYYY') ||
+                  ' al ' || TO_CHAR(inscripcion_cierre, 'DD/MM/YYYY') ||
+                  ' (cierre automático a las 23:59 hrs del último día).'
+                ELSE ventana_inscripcion
+              END,
+              actualizado = NOW()
+        WHERE tipo = 'convenio'
+          AND COALESCE(inscripciones_abiertas, FALSE) = FALSE
+          AND inscripcion_inicio IS NOT NULL
+          AND inscripcion_cierre IS NOT NULL
+          AND (CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima')::date >= inscripcion_inicio
+          AND (CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima')::date <= inscripcion_cierre
+        RETURNING id`
+    );
+    const nC = cerrados.rowCount || 0;
+    const nA = abiertos.rowCount || 0;
+    if (nC || nA) {
+      console.log('Inscripciones convenios sincronizadas: abiertas=' + nA + ', cerradas=' + nC);
+      invalidarPortalItemsCache();
+    }
+  } catch (e) {
+    console.warn('Sync flags inscripción:', e.message);
+  }
+}
 const CONTACTOS_CONV_DEFAULT =
   'Oficina de Convenios — REGPOL Callao | WhatsApp: 980 122 452.';
 const UNIFORME_CONV_DEFAULT =
   'Uniforme de faena completo (camisa, pantalón, correa y fornitura reglamentaria).';
-const DIVOPUS_CELADOR_LUGARES = ['DIVOPUS 01', 'DIVOPUS 02', 'DIVOPUS 03'];
-/** Dirección por DIVOPUS (referencia: CIA Callao / Ingunza / Ventanilla). */
-const DIVOPUS_CELADOR_DIR = {
-  'DIVOPUS 01': 'Av. Fernandini / Jr. Supe (CIA Callao)',
-  'DIVOPUS 02': 'Tomás Valle Cuadra 34 (CIA Juan Ingunza)',
-  'DIVOPUS 03': 'Av. Pedro Beltrán N° 138 (CIA Ventanilla)'
-};
+/** 20 comisarías oficiales REGPOL Callao (mismo orden que public/comisarias.js). */
+const COMISARIAS_CELADOR = [
+  'CIA CALLAO',
+  'CIA BELLAVISTA',
+  'CIA CIUDADELA CHALACA',
+  'CIA CIUDAD DEL PESCADOR',
+  'CIA RAMON CASTILLA',
+  'CIA LA LEGUA',
+  'CIA LA PERLA',
+  'CIA LA PUNTA',
+  'CIA JUAN INGUNZA',
+  'CIA BOCANEGRA',
+  'CIA MANUEL DULANTO',
+  'CIA PLAYA RIMAC',
+  'CIA CARMEN DE LA LEGUA',
+  'CIA SARITA COLONIA',
+  'CIA VENTANILLA',
+  'CIA MI PERU',
+  'CIA PACHACUTEC',
+  'CIA VILLA LOS REYES',
+  'CIA MARQUEZ',
+  'CIA OQUENDO'
+];
 
 /** Cupos efectivos: multi-lugar si hay cupos_unidades; si no, un solo lugar (como ficha web). */
 function cuposEfectivosItem(item) {
@@ -5636,9 +6101,9 @@ function cuposEfectivosItem(item) {
   return [{ nombre: nombre, vacantes: totalVac, inscritos: 0, disponibles: totalVac, direccion: '' }];
 }
 
-function plantillaCuposDivopusCelador(vacantesTotales, prevCupos) {
+function plantillaCuposComisariasCelador(vacantesTotales, prevCupos) {
   var total = parseInt(vacantesTotales, 10) || 0;
-  var n = DIVOPUS_CELADOR_LUGARES.length;
+  var n = COMISARIAS_CELADOR.length;
   var base = n ? Math.floor(total / n) : 0;
   var resto = n ? total % n : 0;
   var prevPorNombre = {};
@@ -5646,26 +6111,68 @@ function plantillaCuposDivopusCelador(vacantesTotales, prevCupos) {
     var k = String((c && c.nombre) || '').trim().toUpperCase();
     if (k) prevPorNombre[k] = c;
   });
-  return DIVOPUS_CELADOR_LUGARES.map(function(nombre, idx) {
-    var vac = base + (idx < resto ? 1 : 0);
+  return COMISARIAS_CELADOR.map(function(nombre, idx) {
     var prev = prevPorNombre[nombre];
+    var vacCiaDefault = base + (idx < resto ? 1 : 0);
+    var vacCia;
+    if (prev && Array.isArray(prev.turnos) && prev.turnos.length) {
+      vacCia = sumaVacantesTurnos(prev.turnos);
+    } else if (prev) {
+      vacCia = parseInt(prev.vacantes, 10);
+      if (isNaN(vacCia) || vacCia < 0) vacCia = vacCiaDefault;
+    } else {
+      vacCia = vacCiaDefault;
+    }
+    var turnos = plantillaTurnosCeladorCia(vacCia, prev && prev.turnos);
+    var vac = sumaVacantesTurnos(turnos);
     var insc = prev ? (parseInt(prev.inscritos, 10) || 0) : 0;
     var dirPrev = prev && String(prev.direccion || '').trim();
-    var dirMala = !dirPrev || /^DIVOPUS\s*0[123]$/i.test(dirPrev) || dirPrev === nombre;
-    var dir = dirMala ? (DIVOPUS_CELADOR_DIR[nombre] || '') : dirPrev;
-    return { nombre: nombre, vacantes: vac, inscritos: insc, disponibles: Math.max(0, vac - insc), direccion: dir };
+    var dirMala = !dirPrev || /^DIVOPUS\s*0[123]$/i.test(dirPrev) || dirPrev.toUpperCase() === nombre;
+    var dir = dirMala ? direccionDefaultComisariaCelador(nombre) : dirPrev;
+    return {
+      nombre: nombre,
+      vacantes: vac,
+      inscritos: insc,
+      disponibles: Math.max(0, vac - insc),
+      direccion: dir,
+      turnos: turnos
+    };
   });
 }
 
-/** Celador: solo DIVOPUS 01/02/03; descarta CIAs u otros lugares. */
+/** Celador: conserva matriz CIA × turno × día; solo crea plantilla si falta. */
 function cuposParaGuardarItem(titulo, cupos_unidades, vacantes) {
   var cupos = normalizarCuposUnidades(cupos_unidades);
   if (String(titulo || '').toUpperCase().indexOf('CELADOR') === -1) return cupos;
-  var soloDiv = cupos.filter(function(c) {
-    return /^DIVOPUS\s*0[123]$/i.test(String(c.nombre || '').trim());
+  var prevPorNombre = {};
+  cupos.forEach(function(c) {
+    var k = String((c && c.nombre) || '').trim().toUpperCase();
+    if (k) prevPorNombre[k] = c;
   });
-  if (soloDiv.length) return soloDiv;
-  return plantillaCuposDivopusCelador(vacantes, cupos);
+  var tieneTodas = COMISARIAS_CELADOR.every(function(nombre) {
+    return !!prevPorNombre[nombre];
+  });
+  if (tieneTodas && cuposCeladorTienenMatrizTurnos(
+    COMISARIAS_CELADOR.map(function(nombre) { return prevPorNombre[nombre]; })
+  )) {
+    return COMISARIAS_CELADOR.map(function(nombre) {
+      var prev = prevPorNombre[nombre];
+      var turnos = plantillaTurnosCeladorCia(0, prev.turnos);
+      var vac = sumaVacantesTurnos(turnos);
+      var insc = parseInt(prev.inscritos, 10) || 0;
+      var dirPrev = String(prev.direccion || '').trim();
+      var dirMala = !dirPrev || /^DIVOPUS\s*0[123]$/i.test(dirPrev) || dirPrev.toUpperCase() === nombre;
+      return {
+        nombre: nombre,
+        vacantes: vac,
+        inscritos: insc,
+        disponibles: Math.max(0, vac - insc),
+        direccion: dirMala ? direccionDefaultComisariaCelador(nombre) : dirPrev,
+        turnos: turnos
+      };
+    });
+  }
+  return plantillaCuposComisariasCelador(vacantes, cupos);
 }
 
 function plantillaCupoUnico(nombre, vacantesTotales, direccion) {
@@ -5732,7 +6239,7 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
     [REQS_CONV_OFICIAL]
   );
 
-  // Cupos: Celador = solo DIVOPUS 01/02/03 (nunca por CIA); resto = un solo lugar
+  // Cupos: Celador = 20 comisarías; resto = un solo lugar
   const convs = await db.query(
     `SELECT id, titulo, lugar, vacantes, cupos_unidades, plantilla_pdf, plantilla_nombre, turnos, horario, observaciones
      FROM items_portal WHERE tipo='convenio' AND visible=TRUE`
@@ -5758,71 +6265,79 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
     });
     if (datosHoja) {
       const cfg = CONVENIOS_DATOS_HOJA[datosHoja];
-      const turnos = normalizarTurnos(cfg.turnos);
-      const vacTotal = sumaVacantesTurnos(turnos);
-      const horarioTxt = horarioDesdeTurnos(turnos);
-      await db.query(
-        `UPDATE items_portal SET
-           turnos=$1::jsonb,
-           vacantes=$2,
-           horario=$3,
-           observaciones=CASE
-             WHEN TRIM(COALESCE(observaciones,''))='' OR observaciones ILIKE '%entrega de documentos%'
-             THEN $4 ELSE observaciones END
-         WHERE id=$5`,
-        [JSON.stringify(turnos), vacTotal, horarioTxt, PLAZO_DOCS_HOJA, row.id]
-      );
-      row.vacantes = vacTotal;
-      row.turnos = turnos;
-      turnosCargados++;
-      if (cfg.redistribuirCupos || esCelador) {
-        const nuevos = plantillaCuposDivopusCelador(vacTotal, normalizarCuposUnidades(row.cupos_unidades));
+      if (esCelador) {
+        // Celador: no pisar matriz CIA×turno×día con la hoja genérica
         await db.query(
-          'UPDATE items_portal SET cupos_unidades=$1::jsonb WHERE id=$2',
-          [JSON.stringify(nuevos), row.id]
+          `UPDATE items_portal SET
+             observaciones=CASE
+               WHEN TRIM(COALESCE(observaciones,''))='' OR observaciones ILIKE '%entrega de documentos%'
+               THEN $1 ELSE observaciones END
+           WHERE id=$2`,
+          [PLAZO_DOCS_HOJA, row.id]
         );
-        cuposActualizados++;
-        row.cupos_unidades = nuevos;
+      } else {
+        const turnos = normalizarTurnos(cfg.turnos);
+        const vacTotal = sumaVacantesTurnos(turnos);
+        const horarioTxt = horarioDesdeTurnos(turnos);
+        await db.query(
+          `UPDATE items_portal SET
+             turnos=$1::jsonb,
+             vacantes=$2,
+             horario=$3,
+             observaciones=CASE
+               WHEN TRIM(COALESCE(observaciones,''))='' OR observaciones ILIKE '%entrega de documentos%'
+               THEN $4 ELSE observaciones END
+           WHERE id=$5`,
+          [JSON.stringify(turnos), vacTotal, horarioTxt, PLAZO_DOCS_HOJA, row.id]
+        );
+        row.vacantes = vacTotal;
+        row.turnos = turnos;
+        turnosCargados++;
+        if (cfg.redistribuirCupos) {
+          const nuevos = plantillaCuposComisariasCelador(vacTotal, normalizarCuposUnidades(row.cupos_unidades));
+          await db.query(
+            'UPDATE items_portal SET cupos_unidades=$1::jsonb WHERE id=$2',
+            [JSON.stringify(nuevos), row.id]
+          );
+          cuposActualizados++;
+          row.cupos_unidades = nuevos;
+        }
       }
     }
 
     const cuposActuales = normalizarCuposUnidades(row.cupos_unidades);
     if (esCelador) {
       const vac = parseInt(row.vacantes, 10) || 0;
-      const yaDivopus = cuposActuales.length === DIVOPUS_CELADOR_LUGARES.length
+      const yaComisarias = cuposActuales.length === COMISARIAS_CELADOR.length
         && cuposActuales.every(function(c, i) {
-          return String(c.nombre || '').toUpperCase() === DIVOPUS_CELADOR_LUGARES[i];
+          return String(c.nombre || '').toUpperCase() === COMISARIAS_CELADOR[i];
         });
-      if (!yaDivopus) {
-        const nuevos = plantillaCuposDivopusCelador(vac, cuposActuales);
+      const yaMatriz = yaComisarias && cuposCeladorTienenMatrizTurnos(cuposActuales);
+      if (!yaComisarias || !yaMatriz) {
+        const nuevos = plantillaCuposComisariasCelador(vac || 425, cuposActuales);
+        const turnosAgg = turnosAgregadosCelador(nuevos);
+        const suma = sumaVacantesTurnos(turnosAgg);
+        const horarioTxt = horarioDesdeTurnos(turnosAgg);
         await db.query(
-          'UPDATE items_portal SET cupos_unidades=$1::jsonb WHERE id=$2',
-          [JSON.stringify(nuevos), row.id]
+          'UPDATE items_portal SET cupos_unidades=$1::jsonb, turnos=$2::jsonb, vacantes=$3, horario=$4 WHERE id=$5',
+          [JSON.stringify(nuevos), JSON.stringify(turnosAgg), suma, horarioTxt, row.id]
         );
         cuposActualizados++;
         row.cupos_unidades = nuevos;
+        row.turnos = turnosAgg;
+        row.vacantes = suma;
+        console.log('Celador: matriz CIA×turno×día aplicada (' + nuevos.length + ' CIAs, ' + suma + ' vacantes).');
       } else {
-        // Completar / corregir dirección por DIVOPUS si falta o es inválida
-        let needDir = false;
-        const conDir = cuposActuales.map(function(c) {
-          var nom = String(c.nombre || '').trim().toUpperCase();
-          var dir = String(c.direccion || '').trim();
-          var dirMala = !dir || /^DIVOPUS\s*0[123]$/i.test(dir) || dir.toUpperCase() === nom;
-          var dirOk = DIVOPUS_CELADOR_DIR[nom] || DIVOPUS_CELADOR_DIR[c.nombre] || '';
-          if (dirMala && dirOk) {
-            needDir = true;
-            return Object.assign({}, c, { direccion: dirOk });
-          }
-          return c;
-        });
-        if (needDir) {
-          await db.query(
-            'UPDATE items_portal SET cupos_unidades=$1::jsonb WHERE id=$2',
-            [JSON.stringify(conDir), row.id]
-          );
-          cuposActualizados++;
-          row.cupos_unidades = conDir;
-        }
+        const turnosAgg = turnosAgregadosCelador(cuposActuales);
+        const sumaCupos = sumaVacantesTurnos(turnosAgg);
+        const horarioTxt = horarioDesdeTurnos(turnosAgg);
+        await db.query(
+          'UPDATE items_portal SET turnos=$1::jsonb, vacantes=$2, horario=$3 WHERE id=$4',
+          [JSON.stringify(turnosAgg), sumaCupos, horarioTxt, row.id]
+        );
+        row.turnos = turnosAgg;
+        row.vacantes = sumaCupos;
+        cuposActualizados++;
       }
     } else if (!cuposActuales.length) {
       const vac = parseInt(row.vacantes, 10) || 0;
@@ -5987,7 +6502,7 @@ app.get('/portal/items/:id', async (req, res) => {
     const r = await pool.query(
       'SELECT * FROM items_portal WHERE id=$1 AND visible=TRUE', [req.params.id]);
     if (!r.rows.length) return res.status(404).json({ ok: false, error: 'No encontrado' });
-    const item = Object.assign({}, r.rows[0]);
+    const item = enriquecerItemInscripciones(Object.assign({}, r.rows[0]));
     const tienePlantilla = !!(item.plantilla_pdf && String(item.plantilla_pdf).length > 20);
     delete item.plantilla_pdf;
     item.plantilla_pdf = tienePlantilla;
@@ -6008,13 +6523,17 @@ app.get('/portal/items/:id', async (req, res) => {
 app.post('/portal/items/:id/inscribir', async (req, res) => {
   try {
     const item = await pool.query(
-      'SELECT id,titulo,tipo,inscripciones_abiertas,vacantes,cupos_unidades,lugar FROM items_portal WHERE id=$1 AND visible=TRUE',
+      `SELECT id,titulo,tipo,inscripciones_abiertas,inscripcion_inicio,inscripcion_cierre,
+        vacantes,cupos_unidades,lugar,turnos FROM items_portal WHERE id=$1 AND visible=TRUE`,
       [req.params.id]);
     if (!item.rows.length) return res.json({ ok: false, error: 'Item no encontrado' });
-    const esConvenio = item.rows[0].tipo === 'convenio';
+    const itemRow = enriquecerItemInscripciones(item.rows[0]);
+    itemRow.turnos = normalizarTurnos(item.rows[0].turnos);
+    itemRow.cupos_unidades = cuposEfectivosItem(item.rows[0]);
+    const esConvenio = itemRow.tipo === 'convenio';
     const modoRepechaje = !!(req.body && req.body.modo_repechaje);
     // Preinscripción normal requiere ventana abierta; repechaje solo necesita vacantes liberadas
-    if (!item.rows[0].inscripciones_abiertas && !modoRepechaje)
+    if (!itemRow.inscripciones_abiertas && !modoRepechaje)
       return res.json({ ok: false, error: 'Las inscripciones no están abiertas para esta convocatoria.' });
     const {
       cip, nombres, unidad, cargo, telefono, email,
@@ -6022,7 +6541,7 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       dni, grado, area, arma, disponibilidad, dia_franco,
       fecha_egreso, tiempo_servicio,
       modalidad, modalidad_otro, codifin, region_policial,
-      comisaria_postula
+      comisaria_postula, turno_postula
     } = req.body || {};
     const cipNorm = normalizarCipDigits(cip);
     if (!cipNorm) return res.json({ ok: false, error: 'CIP inválido.' });
@@ -6040,9 +6559,13 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
     const modalidadNorm = conveniosFlujo.limpio(modalidad, 40).toUpperCase();
     const modalidadOtroNorm = conveniosFlujo.limpio(modalidad_otro, 120);
     const codifinNorm = String(codifin || '').replace(/\D/g, '');
-    const comisariaPostulaNorm = conveniosFlujo.limpio(comisaria_postula, 150);
-    const cuposItem = cuposEfectivosItem(item.rows[0]);
-    const cuposConVacante = cuposItem.filter(function(c) { return (c.disponibles || 0) > 0; });
+    const comisariaPostulaRaw = conveniosFlujo.limpio(comisaria_postula, 150);
+    const turnoPostulaRaw = conveniosFlujo.limpio(turno_postula, 40);
+    const cuposItem = itemRow.cupos_unidades;
+    const turnosItem = itemRow.turnos;
+    const esCeladorItem = String(itemRow.titulo || '').toUpperCase().indexOf('CELADOR') !== -1;
+    let comisariaPostulaNorm = comisariaPostulaRaw;
+    let cuposConVacante = cuposItem.filter(function(c) { return (c.disponibles || 0) > 0; });
 
     if (esConvenio) {
       if (!telefono || !soloDigitosTel(telefono)) {
@@ -6066,15 +6589,98 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       if (!/^\d{10,12}$/.test(codifinNorm)) {
         return res.json({ ok: false, error: 'CODIFIN debe tener entre 10 y 12 dígitos numéricos.' });
       }
-      if (cuposConVacante.length) {
-        if (!comisariaPostulaNorm) {
-          return res.json({ ok: false, error: 'Seleccione el lugar / comisaría a la que postula.' });
+      if (esCeladorItem && cuposCeladorTienenMatrizTurnos(cuposItem)) {
+        const partes = comisariaPostulaRaw.split('|').map(function(p) { return String(p || '').trim(); });
+        if (partes.length !== 3 || !partes[0] || !partes[1] || !partes[2]) {
+          return res.json({ ok: false, error: 'Seleccione comisaría, turno y día a los que postula.' });
         }
-        const cupoOk = cuposConVacante.find(function(c) {
-          return String(c.nombre || '').trim().toUpperCase() === comisariaPostulaNorm.toUpperCase();
+        const ciaNom = partes[0].toUpperCase();
+        const turnoNom = partes[1].toUpperCase();
+        const diaNom = partes[2].toUpperCase();
+        const cupoCia = cuposItem.find(function(c) {
+          return String(c.nombre || '').trim().toUpperCase() === ciaNom;
         });
-        if (!cupoOk) {
-          return res.json({ ok: false, error: 'El lugar seleccionado no tiene vacantes disponibles.' });
+        const slotOk = cupoCia && normalizarTurnos(cupoCia.turnos).find(function(t) {
+          return t.turno === turnoNom && t.dia === diaNom && (parseInt(t.vacantes, 10) || 0) > 0;
+        });
+        if (!slotOk) {
+          return res.json({ ok: false, error: 'La comisaría/turno/día seleccionados no tienen vacantes disponibles.' });
+        }
+        comisariaPostulaNorm = conveniosFlujo.limpio(
+          partes[0] + ' — ' + turnoNom + ' / ' + diaNom,
+          150
+        );
+      } else {
+        var parsedPost = conveniosFlujo.parsePostulacionSlot(comisariaPostulaRaw);
+        var lugarCand = parsedPost.lugar || comisariaPostulaRaw;
+        if (cuposConVacante.length) {
+          if (!lugarCand) {
+            return res.json({ ok: false, error: 'Seleccione el lugar / comisaría a la que postula.' });
+          }
+          const cupoOk = cuposConVacante.find(function(c) {
+            return String(c.nombre || '').trim().toUpperCase() === String(lugarCand || '').trim().toUpperCase();
+          });
+          if (!cupoOk) {
+            return res.json({ ok: false, error: 'El lugar seleccionado no tiene vacantes disponibles.' });
+          }
+        }
+
+        // Turnos publicados en la ficha: obligar postulación a un turno válido
+        var turnosConVac = turnosItem.filter(function(t) {
+          return t && t.turno && (parseInt(t.vacantes, 10) || 0) > 0;
+        });
+        if (turnosConVac.length) {
+          var turnoBody = String(turnoPostulaRaw || '').trim().toUpperCase();
+          var turnoNom = parsedPost.turno || '';
+          var diaNom = parsedPost.dia || '';
+          if (turnoBody.indexOf('|') >= 0) {
+            var tp = turnoBody.split('|');
+            turnoNom = String(tp[0] || '').trim().toUpperCase() || turnoNom;
+            diaNom = String(tp[1] || '').trim().toUpperCase() || diaNom;
+          } else if (turnoBody && !turnoNom) {
+            turnoNom = turnoBody;
+          }
+          if (!turnoNom) {
+            return res.json({ ok: false, error: 'Seleccione el turno al que postula (según vacantes publicadas).' });
+          }
+          var slotExact = turnosConVac.find(function(t) {
+            return t.turno === turnoNom && t.dia === diaNom;
+          });
+          var slotByTurnoDiaFlex = turnosConVac.find(function(t) {
+            if (t.turno !== turnoNom) return false;
+            if (!diaNom) return true;
+            if (t.dia === diaNom) return true;
+            if (t.dia === 'PAR/IMPAR' && (diaNom === 'PAR' || diaNom === 'IMPAR' || diaNom === 'PAR/IMPAR')) return true;
+            if (diaNom === 'PAR/IMPAR') return true;
+            return false;
+          });
+          var slotByTurno = turnosConVac.find(function(t) { return t.turno === turnoNom; });
+          var slotTurno = slotExact || slotByTurnoDiaFlex || slotByTurno;
+          if (!slotTurno) {
+            return res.json({ ok: false, error: 'El turno seleccionado no está publicado o no tiene vacantes.' });
+          }
+          var diaFinal = diaNom || slotTurno.dia || 'PAR/IMPAR';
+          if (String(disponibilidad || '').toUpperCase() === 'FRANCO' && dia_franco) {
+            var df = String(dia_franco).toUpperCase();
+            if (slotTurno.dia === 'PAR' || slotTurno.dia === 'IMPAR') {
+              if (df !== slotTurno.dia) {
+                return res.json({ ok: false, error: 'El turno elegido exige día de franco ' + slotTurno.dia + '.' });
+              }
+              diaFinal = slotTurno.dia;
+            } else {
+              diaFinal = df;
+            }
+          } else if (!diaNom || diaNom === 'PAR/IMPAR') {
+            diaFinal = slotTurno.dia || 'PAR/IMPAR';
+          }
+          var lugarBase = parsedPost.lugar
+            || (cuposConVacante[0] && cuposConVacante[0].nombre)
+            || String(itemRow.lugar || '').trim()
+            || 'Convenio';
+          comisariaPostulaNorm = conveniosFlujo.limpio(
+            lugarBase + ' — ' + slotTurno.turno + ' / ' + diaFinal,
+            150
+          );
         }
       }
     }
@@ -6785,6 +7391,7 @@ app.get('/admin/items', requireAuth, async (req, res) => {
     const selectFull =
       `SELECT i.id, i.tipo, i.titulo, i.descripcion, i.estado, i.icono, i.color, i.requisitos, i.horario,
               i.vacantes, i.fecha_inicio, i.duracion, i.lugar, i.observaciones, i.ventana_inscripcion,
+              i.inscripcion_inicio, i.inscripcion_cierre,
               i.formulario_url, i.inscripciones_abiertas, i.visible, i.orden, i.uniforme,
               i.contactos_responsables, i.aviso_sorteo_fb, i.cupos_unidades, i.turnos, i.plantilla_nombre,
               (SELECT COUNT(*) FROM inscripciones n WHERE n.item_id=i.id) AS total_inscritos
@@ -6793,7 +7400,7 @@ app.get('/admin/items', requireAuth, async (req, res) => {
       // Admin de área: lista completa del tipo que puede gestionar (editar web / lugares)
       if (tipo && puedeGestionarItem(req.admin, tipo)) {
         const r = await pool.query(selectFull + ' WHERE i.tipo=$1 ORDER BY i.orden, i.id', [tipo]);
-        return res.json({ ok: true, items: r.rows });
+        return res.json({ ok: true, items: enriquecerItemsInscripciones(r.rows) });
       }
       // Sin ?tipo=: devolver todos los tipos que sí puede gestionar (evita 403 al editar)
       if (!tipo) {
@@ -6804,7 +7411,7 @@ app.get('/admin/items', requireAuth, async (req, res) => {
         const r = await pool.query(
           selectFull + ' WHERE i.tipo = ANY($1::varchar[]) ORDER BY i.tipo, i.orden, i.id',
           [tipos]);
-        return res.json({ ok: true, items: r.rows });
+        return res.json({ ok: true, items: enriquecerItemsInscripciones(r.rows) });
       }
       // Solo para elegir convocatoria al publicar PDF (campos mínimos)
       if (!puedePublicarResultadosPdf(req.admin, tipo))
@@ -6822,7 +7429,7 @@ app.get('/admin/items', requireAuth, async (req, res) => {
     }
     q += ' ORDER BY i.tipo,i.orden,i.id';
     const r = await pool.query(q, args);
-    res.json({ ok: true, items: r.rows });
+    res.json({ ok: true, items: enriquecerItemsInscripciones(r.rows) });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -6832,23 +7439,46 @@ app.post('/admin/items', requireAuth, async (req, res) => {
     const { tipo, titulo, descripcion, estado, icono, color, requisitos, horario,
             vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
             formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables,
-            aviso_sorteo_fb, cupos_unidades, turnos } = req.body;
+            aviso_sorteo_fb, cupos_unidades, turnos, inscripcion_inicio, inscripcion_cierre } = req.body;
     if (!puedeGestionarItem(req.admin, tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     if (!titulo) return res.json({ ok: false, error: 'El título es obligatorio.' });
     const cupos = cuposParaGuardarItem(titulo, cupos_unidades, vacantes);
-    const turnosNorm = normalizarTurnos(turnos);
+    let turnosNorm = normalizarTurnos(turnos);
+    let vacSave = parseInt(vacantes, 10) || 0;
+    let horarioSave = horario || '';
+    if (String(titulo || '').toUpperCase().indexOf('CELADOR') !== -1) {
+      turnosNorm = turnosAgregadosCelador(cupos);
+      vacSave = sumaVacantesTurnos(turnosNorm);
+      horarioSave = horarioDesdeTurnos(turnosNorm) || horarioSave;
+    }
+    const iniIso = fechaISOSolo(inscripcion_inicio);
+    const cieIso = fechaISOSolo(inscripcion_cierre);
+    if (tipo === 'convenio' && iniIso && cieIso && cieIso < iniIso) {
+      return res.json({ ok: false, error: 'La fecha de cierre no puede ser anterior a la de inicio.' });
+    }
+    let ventanaTxt = ventana_inscripcion || '';
+    let inscAbiertas = !!inscripciones_abiertas;
+    if (tipo === 'convenio') {
+      if (iniIso && cieIso) {
+        ventanaTxt = formatearAvisoVentanaInscripcion(iniIso, cieIso);
+        inscAbiertas = inscripcionesAbiertasPorFechas(iniIso, cieIso);
+      } else {
+        ventanaTxt = '';
+        inscAbiertas = false;
+      }
+    }
     const r = await pool.query(
       `INSERT INTO items_portal(tipo,titulo,descripcion,estado,icono,color,requisitos,horario,
-        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden,uniforme,contactos_responsables,aviso_sorteo_fb,cupos_unidades,turnos)
-       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22::jsonb,$23::jsonb) RETURNING id`,
+        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden,uniforme,contactos_responsables,aviso_sorteo_fb,cupos_unidades,turnos,inscripcion_inicio,inscripcion_cierre)
+       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22::jsonb,$23::jsonb,$24,$25) RETURNING id`,
       [tipo, titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
-       horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
-       lugar||'', observaciones||'', ventana_inscripcion||'', formulario_url||'',
-       !!inscripciones_abiertas, visible!==false, parseInt(orden)||0,
+       horarioSave, vacSave, fecha_inicio||'', duracion||'',
+       lugar||'', observaciones||'', ventanaTxt, formulario_url||'',
+       inscAbiertas, visible!==false, parseInt(orden)||0,
        uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'', JSON.stringify(cupos),
-       JSON.stringify(turnosNorm)]);
+       JSON.stringify(turnosNorm), iniIso, cieIso]);
     invalidarPortalItemsCache();
     res.json({ ok: true, id: r.rows[0].id });
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -6861,25 +7491,58 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const tipoCur = cur.rows[0].tipo;
     const { titulo, descripcion, estado, icono, color, requisitos, horario,
             vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
             formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables,
-            aviso_sorteo_fb, cupos_unidades, turnos } = req.body;
+            aviso_sorteo_fb, cupos_unidades, turnos, inscripcion_inicio, inscripcion_cierre } = req.body;
     const cupos = cuposParaGuardarItem(titulo, cupos_unidades, vacantes);
-    const turnosNorm = normalizarTurnos(turnos);
+    let turnosNorm = normalizarTurnos(turnos);
+    let vacSave = parseInt(vacantes, 10) || 0;
+    let horarioSave = horario || '';
+    if (String(titulo || '').toUpperCase().indexOf('CELADOR') !== -1) {
+      turnosNorm = turnosAgregadosCelador(cupos);
+      vacSave = sumaVacantesTurnos(turnosNorm);
+      horarioSave = horarioDesdeTurnos(turnosNorm) || horarioSave;
+    }
+    const body = req.body || {};
+    const curFechas = await pool.query(
+      'SELECT inscripcion_inicio, inscripcion_cierre FROM items_portal WHERE id=$1',
+      [req.params.id]);
+    const prevIni = fechaISOSolo(curFechas.rows[0] && curFechas.rows[0].inscripcion_inicio);
+    const prevCie = fechaISOSolo(curFechas.rows[0] && curFechas.rows[0].inscripcion_cierre);
+    const iniIso = Object.prototype.hasOwnProperty.call(body, 'inscripcion_inicio')
+      ? fechaISOSolo(inscripcion_inicio) : prevIni;
+    const cieIso = Object.prototype.hasOwnProperty.call(body, 'inscripcion_cierre')
+      ? fechaISOSolo(inscripcion_cierre) : prevCie;
+    if (tipoCur === 'convenio' && iniIso && cieIso && cieIso < iniIso) {
+      return res.json({ ok: false, error: 'La fecha de cierre no puede ser anterior a la de inicio.' });
+    }
+    let ventanaTxt = ventana_inscripcion || '';
+    let inscAbiertas = !!inscripciones_abiertas;
+    if (tipoCur === 'convenio') {
+      if (iniIso && cieIso) {
+        ventanaTxt = formatearAvisoVentanaInscripcion(iniIso, cieIso);
+        inscAbiertas = inscripcionesAbiertasPorFechas(iniIso, cieIso);
+      } else {
+        ventanaTxt = '';
+        inscAbiertas = false;
+      }
+    }
     await pool.query(
       `UPDATE items_portal SET titulo=$1,descripcion=$2,estado=$3,icono=$4,color=$5,
         requisitos=$6::jsonb,horario=$7,vacantes=$8,fecha_inicio=$9,duracion=$10,
         lugar=$11,observaciones=$12,ventana_inscripcion=$13,formulario_url=$14,inscripciones_abiertas=$15,
         visible=$16,orden=$17,uniforme=$18,contactos_responsables=$19,aviso_sorteo_fb=$20,
-        cupos_unidades=$21::jsonb,turnos=$22::jsonb,actualizado=NOW() WHERE id=$23`,
+        cupos_unidades=$21::jsonb,turnos=$22::jsonb,inscripcion_inicio=$23,inscripcion_cierre=$24,
+        actualizado=NOW() WHERE id=$25`,
       [titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
-       horario||'', parseInt(vacantes)||0, fecha_inicio||'', duracion||'',
-       lugar||'', observaciones||'', ventana_inscripcion||'', formulario_url||'',
-       !!inscripciones_abiertas, visible!==false, parseInt(orden)||0,
+       horarioSave, vacSave, fecha_inicio||'', duracion||'',
+       lugar||'', observaciones||'', ventanaTxt, formulario_url||'',
+       inscAbiertas, visible!==false, parseInt(orden)||0,
        uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'', JSON.stringify(cupos),
-       JSON.stringify(turnosNorm), req.params.id]);
+       JSON.stringify(turnosNorm), iniIso, cieIso, req.params.id]);
     invalidarPortalItemsCache();
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -6913,7 +7576,9 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
               arma,disponibilidad,dia_franco,fecha_egreso,tiempo_servicio,
               estado,observacion,fecha,modo_ingreso,motivo_observacion,
               fecha_ganador,plazo_expediente,nro_registro,modalidad,modalidad_otro,
-              codifin,region_policial,comisaria_postula,
+              codifin,region_policial,comisaria_postula,bloque_vacaciones,
+              preins_correccion_motivo, preins_correccion_admin, preins_correccion_usuario,
+              preins_correccion_fecha,
               CASE WHEN pdf_requisitos IS NOT NULL AND pdf_requisitos<>'' THEN true ELSE false END AS tiene_pdf,
               pdf_nombre
        FROM inscripciones WHERE item_id=$1 ORDER BY fecha ASC`, [req.params.id]);
@@ -6949,7 +7614,9 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
 app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
   try {
     const cur = await pool.query(
-      'SELECT tipo,titulo,vacantes,horario,duracion,lugar,fecha_inicio,descripcion FROM items_portal WHERE id=$1',
+      `SELECT tipo,titulo,vacantes,horario,duracion,lugar,fecha_inicio,descripcion,
+              turnos,cupos_unidades
+       FROM items_portal WHERE id=$1`,
       [req.params.id]);
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
@@ -6961,16 +7628,40 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
       : ['verificado', 'aprobado', 'ganador', 'reserva'];
     const r = await pool.query(
       `SELECT id,cip,dni,grado,nombres,unidad,area,cargo,disponibilidad,dia_franco,tiempo_servicio,estado,
-              telefono,email,modo_ingreso
+              telefono,email,modo_ingreso,comisaria_postula,bloque_vacaciones
        FROM inscripciones WHERE item_id=$1 AND estado = ANY($2::varchar[])
        ORDER BY fecha ASC`, [req.params.id, estados]);
     const vac = esConvenio ? await conveniosFlujo.vacantesDisponibles(pool, req.params.id) : null;
+    const itemRow = cur.rows[0];
+    itemRow.turnos = normalizarTurnos(itemRow.turnos);
+    itemRow.cupos_unidades = normalizarCuposUnidades(itemRow.cupos_unidades);
+    const slotsBase = esConvenio ? construirSlotsSorteoItem(itemRow) : [];
+    const ocupan = conveniosFlujo.ESTADOS_OCUPAN_VACANTE || [];
+    const slots = slotsBase.map(function(s) {
+      var ocupadas = 0;
+      r.rows.forEach(function(c) {
+        if (ocupan.indexOf(c.estado) < 0) return;
+        if (candidatoCoincideSlotSorteo(c, s, slotsBase)) ocupadas++;
+      });
+      var disponibles = Math.max(0, (parseInt(s.vacantes, 10) || 0) - ocupadas);
+      return Object.assign({}, s, { ocupadas: ocupadas, disponibles: disponibles });
+    });
+    const candidatos = r.rows.map(function(c) {
+      var p = conveniosFlujo.parsePostulacionSlot(c.comisaria_postula);
+      return Object.assign({}, c, {
+        slot_lugar: p.lugar || '',
+        slot_turno: p.turno || '',
+        slot_dia: p.dia || (c.dia_franco || ''),
+        bloque_vacaciones_etiqueta: conveniosFlujo.etiquetaBloqueVacaciones(c.bloque_vacaciones)
+      });
+    });
     res.json({
       ok: true,
-      candidatos: r.rows,
-      item: cur.rows[0],
+      candidatos: candidatos,
+      item: itemRow,
       flujo: esConvenio ? 'convenio_v2' : 'curso',
-      vacantes_info: vac
+      vacantes_info: vac,
+      slots_sorteo: slots
     });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
@@ -6985,11 +7676,11 @@ app.put('/admin/inscripciones/:id', requireAuth, async (req, res) => {
     if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     // Transparencia: preinscritos de convenio no se editan ni observan; solo van a sorteo
-    const estPre = ['preinscrito', 'pendiente', 'aprobado', 'verificado'];
+    const estPre = ['preinscrito', 'pendiente', 'aprobado', 'verificado', 'corregir_preinscripcion', 'anulado_solicitud'];
     if (cur.rows[0].tipo === 'convenio' && estPre.indexOf(cur.rows[0].estado) >= 0) {
       return res.status(403).json({
         ok: false,
-        error: 'Los preinscritos no se editan ni observan. Solo se visualizan y se envían al sorteo (transparencia).'
+        error: 'Los preinscritos no se editan. Use «Devolver a corregir» (turno) o «Eliminar a solicitud» (convenio equivocado).'
       });
     }
     const { estado, observacion, telefono, email } = req.body;
@@ -7028,15 +7719,324 @@ app.delete('/admin/inscripciones/:id', requireAuth, async (req, res) => {
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
-    const estPre = ['preinscrito', 'pendiente', 'aprobado', 'verificado'];
+    const estPre = ['preinscrito', 'pendiente', 'aprobado', 'verificado', 'corregir_preinscripcion', 'anulado_solicitud'];
     if (cur.rows[0].tipo === 'convenio' && estPre.indexOf(cur.rows[0].estado) >= 0) {
       return res.status(403).json({
         ok: false,
-        error: 'No se puede eliminar un preinscrito. Por transparencia solo se envían al sorteo.'
+        error: 'No se puede eliminar así un preinscrito. Use «Eliminar a solicitud» (con motivo) en la lista.'
       });
     }
     await pool.query('DELETE FROM inscripciones WHERE id=$1', [req.params.id]);
     res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── POST /admin/inscripciones/:id/devolver-preinscripcion ─────────────────────
+app.post('/admin/inscripciones/:id/devolver-preinscripcion', requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.json({ ok: false, error: 'ID inválido' });
+    const motivo = conveniosFlujo.limpio((req.body && req.body.motivo) || '', 500);
+    if (!motivo || motivo.length < 5) {
+      return res.json({ ok: false, error: 'Indique el motivo de la devolución (mín. 5 caracteres).' });
+    }
+    const cur = await pool.query(
+      `SELECT n.id, n.cip, n.nombres, n.estado, n.nro_registro, n.comisaria_postula, n.dia_franco,
+              i.tipo, i.titulo
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE n.id=$1`,
+      [id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    const row = cur.rows[0];
+    if (!puedeOperarInscritos(req.admin, row.tipo)) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    }
+    if (row.tipo !== 'convenio') {
+      return res.json({ ok: false, error: 'Solo aplica a preinscripciones de convenio.' });
+    }
+    const aptos = ['preinscrito', 'pendiente', 'aprobado', 'verificado', 'corregir_preinscripcion'];
+    if (aptos.indexOf(row.estado) < 0) {
+      return res.json({ ok: false, error: 'Solo se puede devolver preinscritos pendientes de sorteo.' });
+    }
+    const adminNombre = String(req.admin.nombre || req.admin.usuario || '').trim();
+    const adminUsuario = String(req.admin.usuario || req.admin.cip || '').trim().slice(0, 60);
+    const detalleAud = 'Motivo: ' + motivo
+      + ' | Postulación actual: ' + (row.comisaria_postula || '—')
+      + ' | Día franco: ' + (row.dia_franco || '—')
+      + ' | CIP: ' + (row.cip || '')
+      + ' | N°: ' + (row.nro_registro || '');
+    await pool.query(
+      `UPDATE inscripciones SET
+         estado='corregir_preinscripcion',
+         preins_correccion_motivo=$1,
+         preins_correccion_admin=$2,
+         preins_correccion_usuario=$3,
+         preins_correccion_fecha=NOW(),
+         observacion=$4
+       WHERE id=$5`,
+      [
+        motivo,
+        adminNombre.slice(0, 150),
+        adminUsuario,
+        ('Devuelto a corregir día/turno (solicitud personal). Motivo: ' + motivo).slice(0, 500),
+        id
+      ]
+    );
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: req.admin.cip || adminUsuario,
+      usuario: adminUsuario,
+      nombre: adminNombre,
+      accion: 'devolver_preinscripcion',
+      modulo: 'convenios',
+      entidad: 'inscripcion',
+      entidadId: String(id),
+      detalle: detalleAud,
+      ip: req.ip || '',
+      ok: true
+    });
+    res.json({
+      ok: true,
+      estado: 'corregir_preinscripcion',
+      mensaje: 'Preinscripción devuelta. El usuario debe corregir día y turno en Consulta (CIP + N°).'
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── POST /admin/inscripciones/:id/anular-solicitud — convenio equivocado (Opción A)
+app.post('/admin/inscripciones/:id/anular-solicitud', requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.json({ ok: false, error: 'ID inválido' });
+    const motivo = conveniosFlujo.limpio((req.body && req.body.motivo) || '', 500);
+    if (!motivo || motivo.length < 5) {
+      return res.json({ ok: false, error: 'Indique el motivo de la anulación (mín. 5 caracteres).' });
+    }
+    const cur = await pool.query(
+      `SELECT n.id, n.cip, n.nombres, n.estado, n.nro_registro, n.comisaria_postula, n.item_id,
+              i.tipo, i.titulo
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE n.id=$1`,
+      [id]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    const row = cur.rows[0];
+    if (!puedeOperarInscritos(req.admin, row.tipo)) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    }
+    if (row.tipo !== 'convenio') {
+      return res.json({ ok: false, error: 'Solo aplica a preinscripciones de convenio.' });
+    }
+    const aptos = ['preinscrito', 'pendiente', 'aprobado', 'verificado', 'corregir_preinscripcion'];
+    if (aptos.indexOf(row.estado) < 0) {
+      return res.json({ ok: false, error: 'Solo se puede anular preinscritos pendientes de sorteo.' });
+    }
+    const adminNombre = String(req.admin.nombre || req.admin.usuario || '').trim();
+    const adminUsuario = String(req.admin.usuario || req.admin.cip || '').trim().slice(0, 60);
+    const detalleAud = 'ANULACIÓN A SOLICITUD. Motivo: ' + motivo
+      + ' | Convenio: ' + (row.titulo || '')
+      + ' | Postulación: ' + (row.comisaria_postula || '—')
+      + ' | CIP: ' + (row.cip || '')
+      + ' | N°: ' + (row.nro_registro || '')
+      + ' | Se purgará de BD al culminar el sorteo de este convenio.';
+    await pool.query(
+      `UPDATE inscripciones SET
+         estado='anulado_solicitud',
+         preins_correccion_motivo=$1,
+         preins_correccion_admin=$2,
+         preins_correccion_usuario=$3,
+         preins_correccion_fecha=NOW(),
+         observacion=$4
+       WHERE id=$5`,
+      [
+        motivo,
+        adminNombre.slice(0, 150),
+        adminUsuario,
+        ('Anulada a solicitud personal (convenio equivocado). Motivo: ' + motivo
+          + ' — Se eliminará de la base al culminar el sorteo.').slice(0, 500),
+        id
+      ]
+    );
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: req.admin.cip || adminUsuario,
+      usuario: adminUsuario,
+      nombre: adminNombre,
+      accion: 'anular_preinscripcion_solicitud',
+      modulo: 'convenios',
+      entidad: 'inscripcion',
+      entidadId: String(id),
+      detalle: detalleAud,
+      ip: req.ip || '',
+      ok: true
+    });
+    res.json({
+      ok: true,
+      estado: 'anulado_solicitud',
+      mensaje: 'Preinscripción anulada. El efectivo puede preinscribirse en el convenio correcto. El registro se borrará de la BD al culminar el sorteo.'
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── POST /portal/inscripciones/:id/corregir-turno — usuario corrige solo turno ─
+app.post('/portal/inscripciones/:id/corregir-turno', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.json({ ok: false, error: 'ID inválido' });
+    const cip = normalizarCipConsulta((req.body && req.body.cip) || req.query.cip);
+    const nro = String((req.body && (req.body.nro || req.body.nro_registro)) || req.query.nro || '')
+      .trim().toUpperCase().replace(/\s+/g, '');
+    if (!cip || !nro) {
+      return res.json({ ok: false, error: 'CIP y N° de inscripción son obligatorios.' });
+    }
+    const turnoRaw = conveniosFlujo.limpio((req.body && req.body.turno_postula) || '', 40);
+    const comisariaRaw = conveniosFlujo.limpio((req.body && req.body.comisaria_postula) || '', 150);
+    const diaFrancoBody = String((req.body && req.body.dia_franco) || '').trim().toUpperCase();
+
+    const cur = await pool.query(
+      `SELECT n.*, i.tipo, i.titulo, i.lugar, i.turnos, i.cupos_unidades, i.vacantes
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE n.id=$1
+         AND ${sqlCipIgual('n.cip')} = $2
+         AND UPPER(REPLACE(COALESCE(n.nro_registro,''), ' ', '')) = $3
+         AND i.visible = TRUE`,
+      [id, cip, nro]);
+    if (!cur.rows.length) {
+      return res.json({ ok: false, error: 'No se encontró la preinscripción con ese CIP y N°.' });
+    }
+    const row = cur.rows[0];
+    if (row.tipo !== 'convenio' || row.estado !== 'corregir_preinscripcion') {
+      return res.json({ ok: false, error: 'Esta inscripción no está habilitada para corregir el turno.' });
+    }
+
+    const turnosItem = normalizarTurnos(row.turnos);
+    const cuposItem = cuposEfectivosItem(row);
+    const esCelador = String(row.titulo || '').toUpperCase().indexOf('CELADOR') !== -1
+      && cuposCeladorTienenMatrizTurnos(cuposItem);
+
+    let nuevaPostula = '';
+    let nuevoDiaFranco = row.dia_franco || '';
+
+    if (esCelador) {
+      const partes = String(comisariaRaw || turnoRaw).split('|').map(function(p) { return String(p || '').trim(); });
+      if (partes.length !== 3 || !partes[0] || !partes[1] || !partes[2]) {
+        return res.json({ ok: false, error: 'Seleccione comisaría, turno y día válidos.' });
+      }
+      const ciaNom = partes[0].toUpperCase();
+      const turnoNom = partes[1].toUpperCase();
+      const diaNom = partes[2].toUpperCase();
+      const cupoCia = cuposItem.find(function(c) {
+        return String(c.nombre || '').trim().toUpperCase() === ciaNom;
+      });
+      const slotOk = cupoCia && normalizarTurnos(cupoCia.turnos).find(function(t) {
+        return t.turno === turnoNom && t.dia === diaNom && (parseInt(t.vacantes, 10) || 0) > 0;
+      });
+      if (!slotOk) {
+        return res.json({ ok: false, error: 'La opción elegida no tiene vacantes publicadas.' });
+      }
+      nuevaPostula = conveniosFlujo.limpio(partes[0] + ' — ' + turnoNom + ' / ' + diaNom, 150);
+      if (row.disponibilidad === 'FRANCO') nuevoDiaFranco = (diaNom === 'PAR' || diaNom === 'IMPAR') ? diaNom : nuevoDiaFranco;
+    } else {
+      const turnosConVac = turnosItem.filter(function(t) {
+        return t && t.turno && (parseInt(t.vacantes, 10) || 0) > 0;
+      });
+      if (!turnosConVac.length) {
+        return res.json({ ok: false, error: 'No hay turnos publicados con vacantes.' });
+      }
+      var turnoNom = '';
+      var diaNom = '';
+      if (turnoRaw.indexOf('|') >= 0) {
+        var tp = turnoRaw.split('|');
+        turnoNom = String(tp[0] || '').trim().toUpperCase();
+        diaNom = String(tp[1] || '').trim().toUpperCase();
+      } else {
+        turnoNom = String(turnoRaw || '').trim().toUpperCase();
+      }
+      if (diaFrancoBody === 'PAR' || diaFrancoBody === 'IMPAR') {
+        nuevoDiaFranco = diaFrancoBody;
+        if (!diaNom || diaNom === 'PAR/IMPAR') diaNom = diaFrancoBody;
+      }
+      if (!turnoNom) return res.json({ ok: false, error: 'Seleccione el turno corregido.' });
+      var slotExact = turnosConVac.find(function(t) { return t.turno === turnoNom && t.dia === diaNom; });
+      var slotByTurno = turnosConVac.find(function(t) {
+        if (t.turno !== turnoNom) return false;
+        if (!diaNom) return true;
+        if (t.dia === diaNom || t.dia === 'PAR/IMPAR') return true;
+        if (diaNom === 'PAR/IMPAR') return true;
+        return false;
+      });
+      var slotTurno = slotExact || slotByTurno;
+      if (!slotTurno) {
+        return res.json({ ok: false, error: 'El turno no está publicado o no tiene vacantes.' });
+      }
+      if (row.disponibilidad === 'FRANCO') {
+        if (slotTurno.dia === 'PAR' || slotTurno.dia === 'IMPAR') {
+          if (nuevoDiaFranco && nuevoDiaFranco !== slotTurno.dia) {
+            return res.json({ ok: false, error: 'El turno exige día ' + slotTurno.dia + '.' });
+          }
+          nuevoDiaFranco = slotTurno.dia;
+          diaNom = slotTurno.dia;
+        } else if (!nuevoDiaFranco) {
+          return res.json({ ok: false, error: 'Indique su día de franco (PAR o IMPAR).' });
+        } else {
+          diaNom = nuevoDiaFranco;
+        }
+      } else if (row.disponibilidad === 'VACACIONES') {
+        // Vacaciones también corrige día + turno de postulación
+        if (nuevoDiaFranco === 'PAR' || nuevoDiaFranco === 'IMPAR') {
+          if (slotTurno.dia === 'PAR' || slotTurno.dia === 'IMPAR') {
+            if (nuevoDiaFranco !== slotTurno.dia) {
+              return res.json({ ok: false, error: 'El turno exige día ' + slotTurno.dia + '.' });
+            }
+            diaNom = slotTurno.dia;
+          } else {
+            diaNom = nuevoDiaFranco;
+          }
+        } else if (slotTurno.dia === 'PAR' || slotTurno.dia === 'IMPAR') {
+          diaNom = slotTurno.dia;
+        } else {
+          diaNom = slotTurno.dia || 'PAR/IMPAR';
+        }
+      } else {
+        diaNom = slotTurno.dia || 'PAR/IMPAR';
+      }
+      var parsedOld = conveniosFlujo.parsePostulacionSlot(row.comisaria_postula);
+      var lugarBase = parsedOld.lugar
+        || String(row.lugar || '').trim()
+        || 'Convenio';
+      nuevaPostula = conveniosFlujo.limpio(lugarBase + ' — ' + slotTurno.turno + ' / ' + diaNom, 150);
+    }
+
+    const antes = row.comisaria_postula || '';
+    const diaAntes = row.dia_franco || '';
+    await pool.query(
+      `UPDATE inscripciones SET
+         comisaria_postula=$1,
+         dia_franco=$2,
+         estado='preinscrito',
+         observacion=$3,
+         preins_correccion_motivo='',
+         preins_correccion_admin='',
+         preins_correccion_usuario='',
+         preins_correccion_fecha=NULL
+       WHERE id=$4 AND estado='corregir_preinscripcion'`,
+      [
+        nuevaPostula,
+        row.disponibilidad === 'FRANCO' ? (nuevoDiaFranco || '') : '',
+        ('Turno/día corregidos por el usuario. Antes: ' + antes
+          + (diaAntes ? (' / ' + diaAntes) : '')
+          + ' → Ahora: ' + nuevaPostula).slice(0, 500),
+        id
+      ]
+    );
+    res.json({
+      ok: true,
+      estado: 'preinscrito',
+      comisaria_postula: nuevaPostula,
+      mensaje: 'Turno y día actualizados. Su preinscripción vuelve a la lista de sorteo.'
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 

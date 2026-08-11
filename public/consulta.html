@@ -90,8 +90,17 @@
     .estado-ganador{background:#e8f5f1;color:#004d3d;border:1px solid #a5d6a7;}
     .estado-reserva{background:#e9ecef;color:#495057;}
     .estado-rechazado,.estado-caducado{background:#f8d7da;color:#842029;}
-    .estado-observado{background:#fff8e1;color:#856404;}
+    .estado-observado,.estado-corregir_preinscripcion{background:#fff8e1;color:#856404;}
+    .estado-anulado_solicitud{background:#eee;color:#555;}
     .estado-expediente_ok,.estado-en_revision{background:#d4edda;color:#1a5c32;}
+    .box-corregir-turno{background:#fff8e1;border:1.5px solid #e67e22;border-radius:10px;padding:14px 16px;margin:12px 0 8px;}
+    .box-corregir-turno h4{margin:0 0 8px;color:#9a5b0a;font-size:14px;}
+    .box-corregir-turno p{margin:0 0 10px;font-size:12.5px;color:#6b5420;line-height:1.45;}
+    .box-corregir-turno label{display:block;font-size:11px;font-weight:800;color:#004d3d;margin:8px 0 4px;text-transform:uppercase;}
+    .box-corregir-turno select{width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;}
+    .box-corregir-turno .btn-corregir{margin-top:12px;background:#004d3d;color:#fff;border:none;border-radius:7px;padding:10px 14px;font-weight:800;cursor:pointer;font-size:13px;}
+    .box-corregir-turno .btn-corregir:disabled{opacity:.55;cursor:wait;}
+    .dato-bloqueado{opacity:.85;font-size:12px;color:#666;margin-top:6px;}
     .obs-box{background:#fff8e1;border:1.5px solid #c8a94a;border-radius:10px;padding:12px 14px;font-size:13px;color:#6b5420;margin:4px 0 18px;line-height:1.45;}
     .obs-box.alerta-repechaje{background:#fff5f5;border-color:#e8b4b4;color:#842029;}
     .repechaje-lista-wrap{margin-top:10px;}
@@ -392,6 +401,7 @@
 <script>
 var API_PUBLIC = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var CIP_CONSULTA = '';
+var NRO_CONSULTA = '';
 
 function escC(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -461,6 +471,7 @@ function consultarCip(e) {
     return;
   }
   CIP_CONSULTA = cip;
+  NRO_CONSULTA = nro;
   var btn = document.getElementById('btn-consultar');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
@@ -547,7 +558,72 @@ function renderResultados(lista) {
       + '<span class="' + chipCls + '">' + escC(ins.estado_legible) + '</span>';
 
     // Observado / rechazado primero: mostrar motivo y subsanación (nunca UI de ganador)
-    if (ins.puede_ver_motivos || ins.estado === 'observado' || ins.estado === 'rechazado') {
+    if (ins.estado === 'anulado_solicitud') {
+      html += '<div class="consulta-meta">'
+        + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
+        + '<div><span>CIP</span><strong>' + escC(ins.cip || '—') + '</strong></div>'
+        + '<div><span>Apellidos y nombres</span><strong>' + escC(ins.nombres || '—') + '</strong></div>'
+        + '<div><span>Convenio</span><strong>' + escC(ins.convocatoria || '—') + '</strong></div>'
+        + '</div>'
+        + '<div class="obs-box">'
+        + '<strong>Preinscripción anulada a su solicitud.</strong> Ya no participa en el sorteo de este convenio. '
+        + 'Puede preinscribirse en el <strong>convenio correcto</strong> mientras las inscripciones estén abiertas.'
+        + (ins.preins_correccion_motivo
+          ? ('<br><br><strong>Motivo:</strong> ' + escC(ins.preins_correccion_motivo)
+            + (ins.preins_correccion_fecha_legible ? (' · ' + escC(ins.preins_correccion_fecha_legible)) : ''))
+          : '')
+        + '</div>';
+    } else if (ins.puede_corregir_turno || ins.estado === 'corregir_preinscripcion') {
+      var opts = Array.isArray(ins.opciones_correccion_turno) ? ins.opciones_correccion_turno : [];
+      var esCel = opts.length && opts[0].tipo === 'celador';
+      var labDia = ins.disponibilidad === 'VACACIONES'
+        ? 'Día del turno al que postula *'
+        : 'Día de franco *';
+      html += '<div class="consulta-meta">'
+        + '<div><span>N° de inscripción (no editable)</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
+        + '<div><span>CIP (no editable)</span><strong>' + escC(ins.cip || '—') + '</strong></div>'
+        + '<div><span>Apellidos y nombres (no editable)</span><strong>' + escC(ins.nombres || '—') + '</strong></div>'
+        + '<div><span>Postulación actual</span><strong>' + escC(ins.comisaria_postula || '—') + '</strong></div>'
+        + '<div><span>Situación (no editable)</span><strong>' + escC(labelSituacionConsulta(ins.disponibilidad, ins.dia_franco)) + '</strong></div>'
+        + '</div>'
+        + '<div class="box-corregir-turno" data-ins-id="' + ins.id + '">'
+        + '<h4><i class="fas fa-undo"></i> Corrija turno y día</h4>'
+        + '<p>Convenios devolvió su preinscripción a <strong>solicitud personal</strong>. '
+        + 'Puede corregir el <strong>día</strong> y el <strong>turno</strong>'
+        + (ins.disponibilidad === 'VACACIONES' ? ' (también en vacaciones)' : '')
+        + '. Nombres, CIP y N° de inscripción no se modifican.</p>'
+        + (ins.preins_correccion_motivo
+          ? ('<p><strong>Motivo:</strong> ' + escC(ins.preins_correccion_motivo) + '<br>'
+            + (ins.preins_correccion_fecha_legible ? ('<strong>Fecha:</strong> ' + escC(ins.preins_correccion_fecha_legible) + '<br>') : '')
+            + (ins.preins_correccion_admin ? ('<strong>Admin:</strong> ' + escC(ins.preins_correccion_admin)) : '')
+            + '</p>')
+          : '')
+        + (!esCel
+          ? ('<label>' + labDia + '</label>'
+            + '<select id="corr-dia-' + ins.id + '" onchange="onCambioDiaCorreccion(' + ins.id + ')">'
+            + '<option value="">Seleccionar día</option>'
+            + '<option value="PAR"' + (ins.dia_franco === 'PAR' ? ' selected' : '') + '>DÍA PAR</option>'
+            + '<option value="IMPAR"' + (ins.dia_franco === 'IMPAR' ? ' selected' : '') + '>DÍA IMPAR</option>'
+            + '</select>')
+          : '')
+        + '<label>' + (esCel ? 'Comisaría / turno / día *' : 'Turno al que postula *') + '</label>'
+        + '<select id="corr-turno-' + ins.id + '">'
+        + '<option value="">' + (esCel ? 'Seleccionar' : 'Seleccione el día primero') + '</option>'
+        + (esCel ? opts.map(function(o) {
+          return '<option value="' + escC(o.value) + '">' + escC(o.label) + '</option>';
+        }).join('') : '')
+        + '</select>'
+        + '<button type="button" class="btn-corregir" id="corr-btn-' + ins.id + '" onclick="enviarCorreccionTurno(' + ins.id + ')">'
+        + '<i class="fas fa-save"></i> Guardar corrección</button>'
+        + '<p id="corr-msg-' + ins.id + '" class="dato-bloqueado"></p>'
+        + '</div>';
+      // Rellenar turnos si ya hay día (p. ej. franco PAR/IMPAR)
+      (function(insId, diaIni, esCelador) {
+        setTimeout(function() {
+          if (!esCelador && (diaIni === 'PAR' || diaIni === 'IMPAR')) onCambioDiaCorreccion(insId);
+        }, 0);
+      })(ins.id, ins.dia_franco || '', esCel);
+    } else if (ins.puede_ver_motivos || ins.estado === 'observado' || ins.estado === 'rechazado') {
       var plazoSub = ins.plazo_expediente || '';
       var puedeSub = !!ins.puede_subir_expediente;
       var motivoTxt = (ins.observacion || '').trim();
@@ -607,7 +683,7 @@ function renderResultados(lista) {
         + '<div><span>Grado</span><strong>' + escC(ins.grado || '—') + '</strong></div>'
         + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
         + '<div><span>Nombres</span><strong>' + escC(nombreParts.nombres) + '</strong></div>'
-        + '<div><span>Comisaría a la que postuló</span><strong>' + escC(ins.comisaria_postula || '—') + '</strong></div>'
+        + '<div><span>Postulación (lugar / turno / día)</span><strong>' + escC(ins.comisaria_postula || '—') + '</strong></div>'
         + '<div><span>Horario en el que laborará</span><strong>' + escC(ins.horario || '—') + '</strong></div>'
         + '<div><span>Situación</span><strong>' + escC(labelSituacionConsulta(ins.disponibilidad, ins.dia_franco)) + '</strong></div>'
         + (ins.plazo_expediente
@@ -715,6 +791,106 @@ function fileToDataUrl(file) {
     r.onload = function() { resolve(r.result); };
     r.onerror = reject;
     r.readAsDataURL(file);
+  });
+}
+
+function turnosCorreccionCompatibles(ins, diaSel) {
+  var opts = Array.isArray(ins && ins.opciones_correccion_turno) ? ins.opciones_correccion_turno : [];
+  var dia = String(diaSel || '').trim().toUpperCase();
+  var porTurno = {};
+  var orden = { 'MAÑANA': 1, 'TARDE': 2, 'NOCHE': 3 };
+  opts.forEach(function(o) {
+    if (!o || o.tipo === 'celador') return;
+    var turno = String(o.turno || '').toUpperCase();
+    var d = String(o.dia || 'PAR/IMPAR').toUpperCase();
+    if (!turno) return;
+    if (dia && d !== 'PAR/IMPAR' && d !== dia) return;
+    var prev = porTurno[turno];
+    if (!prev || (d === dia && prev.dia !== dia)) {
+      porTurno[turno] = {
+        value: turno + '|' + (d === 'PAR/IMPAR' && dia ? dia : d),
+        label: turno + ' (' + (o.vacantes || 0) + ' vacantes)'
+      };
+    }
+  });
+  return Object.keys(porTurno).map(function(k) { return porTurno[k]; })
+    .sort(function(a, b) {
+      var ta = String(a.value).split('|')[0];
+      var tb = String(b.value).split('|')[0];
+      return (orden[ta] || 99) - (orden[tb] || 99);
+    });
+}
+
+function onCambioDiaCorreccion(id) {
+  var ins = (CONSULTA_INS_CACHE || []).find(function(x) { return x.id === id; });
+  var selDia = document.getElementById('corr-dia-' + id);
+  var selTurno = document.getElementById('corr-turno-' + id);
+  if (!selTurno) return;
+  var dia = selDia ? String(selDia.value || '').trim().toUpperCase() : '';
+  if (!dia) {
+    selTurno.innerHTML = '<option value="">Seleccione el día primero</option>';
+    return;
+  }
+  var turnos = turnosCorreccionCompatibles(ins, dia);
+  if (!turnos.length) {
+    selTurno.innerHTML = '<option value="">Sin turnos con vacantes para este día</option>';
+    return;
+  }
+  selTurno.innerHTML = (turnos.length === 1 ? '' : '<option value="">Seleccionar turno</option>')
+    + turnos.map(function(t) {
+      var sel = turnos.length === 1 ? ' selected' : '';
+      return '<option value="' + escC(t.value) + '"' + sel + '>' + escC(t.label) + '</option>';
+    }).join('');
+}
+
+function enviarCorreccionTurno(id) {
+  var msg = document.getElementById('corr-msg-' + id);
+  var btn = document.getElementById('corr-btn-' + id);
+  var selTurno = document.getElementById('corr-turno-' + id);
+  var selDia = document.getElementById('corr-dia-' + id);
+  var turno = selTurno ? String(selTurno.value || '').trim() : '';
+  var dia = selDia ? String(selDia.value || '').trim().toUpperCase() : '';
+  if (selDia && !dia) {
+    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Seleccione el día (PAR o IMPAR).'; }
+    return;
+  }
+  if (!turno) {
+    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Seleccione el turno corregido.'; }
+    return;
+  }
+  if (!CIP_CONSULTA || !NRO_CONSULTA) {
+    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Vuelva a consultar con CIP y N° de inscripción.'; }
+    return;
+  }
+  var body = {
+    cip: CIP_CONSULTA,
+    nro: NRO_CONSULTA,
+    dia_franco: dia || ''
+  };
+  if (turno.indexOf('|') >= 0 && turno.split('|').length === 3) {
+    body.comisaria_postula = turno;
+    body.turno_postula = '';
+  } else {
+    body.turno_postula = turno;
+    body.comisaria_postula = '';
+  }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando…'; }
+  if (msg) { msg.style.color = '#666'; msg.textContent = ''; }
+  fetch(API_PUBLIC + '/portal/inscripciones/' + id + '/corregir-turno', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Guardar corrección'; }
+    if (!d.ok) {
+      if (msg) { msg.style.color = '#c0392b'; msg.textContent = d.error || 'No se pudo guardar.'; }
+      return;
+    }
+    if (msg) { msg.style.color = '#1a7a3a'; msg.textContent = d.mensaje || 'Corrección guardada.'; }
+    setTimeout(function() { try { consultarCip(); } catch (e) {} }, 400);
+  }).catch(function() {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Guardar corrección'; }
+    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Error de red.'; }
   });
 }
 
@@ -1110,6 +1286,48 @@ function renderHtmlDetalleRepechaje(item, cache) {
     : '<li>Sin requisitos especificados.</li>';
 
   var bloques = [];
+  var esMatrizCel = /CELADOR/i.test(String(item.titulo || ''))
+    && cupos.length > 1
+    && cupos.some(function(c) { return Array.isArray(c.turnos) && c.turnos.length; });
+  var SLOTS_CEL = [
+    { turno: 'MAÑANA', dia: 'PAR', label: 'Mañana PAR' },
+    { turno: 'MAÑANA', dia: 'IMPAR', label: 'Mañana IMPAR' },
+    { turno: 'TARDE', dia: 'PAR', label: 'Tarde PAR' },
+    { turno: 'TARDE', dia: 'IMPAR', label: 'Tarde IMPAR' }
+  ];
+  function vacSlotCel(c, turno, dia) {
+    var list = Array.isArray(c.turnos) ? c.turnos : [];
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].turno || '').toUpperCase() === turno && String(list[i].dia || '').toUpperCase() === dia) {
+        return parseInt(list[i].vacantes, 10) || 0;
+      }
+    }
+    return 0;
+  }
+  if (esMatrizCel) {
+    bloques.push(
+      '<h4>COMISARÍAS / TURNOS / DÍAS / VACANTES</h4>'
+      + '<div style="overflow-x:auto;"><table class="rd-table"><thead><tr>'
+      + '<th>Comisaría</th>'
+      + SLOTS_CEL.map(function(s) { return '<th>' + escC(s.label) + '</th>'; }).join('')
+      + '<th>Total</th></tr></thead><tbody>'
+      + cupos.map(function(c) {
+        var total = parseInt(c.vacantes, 10) || 0;
+        return '<tr><td style="font-weight:700;">' + escC(c.nombre || '—') + '</td>'
+          + SLOTS_CEL.map(function(s) {
+            return '<td class="num">' + escC(String(vacSlotCel(c, s.turno, s.dia))) + '</td>';
+          }).join('')
+          + '<td class="num">' + escC(String(total)) + '</td></tr>';
+      }).join('')
+      + '</tbody></table></div>'
+    );
+    if (laborTxt) {
+      bloques.push(
+        '<h4 class="rd-sub">LABOR</h4>'
+        + '<p class="rd-labor">' + escC(laborTxt) + '</p>'
+      );
+    }
+  } else {
   if (turnosList.length) {
     bloques.push(
       '<h4>TURNOS / DÍAS / VACANTES</h4>'
@@ -1171,6 +1389,7 @@ function renderHtmlDetalleRepechaje(item, cache) {
         + '<p class="rd-labor">' + escC(laborTxt) + '</p>'
       );
     }
+  }
   }
 
   var derecha = bloques.length
