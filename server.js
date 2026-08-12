@@ -5199,6 +5199,18 @@ function normalizarCipDigits(cip) {
   return d;
 }
 
+/** CIP comparable (8 dígitos, con ceros a la izquierda). */
+function cipKeyInscripcion(cip) {
+  const d = String(cip || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.length > 8) return d.slice(-8);
+  return d.padStart(8, '0');
+}
+
+function sqlCipKeyInscripcion(campo) {
+  return `LPAD(regexp_replace(TRIM(COALESCE(${campo},'')), '[^0-9]', '', 'g'), 8, '0')`;
+}
+
 function normalizarDniDigits(dni) {
   const d = String(dni || '').replace(/\D/g, '');
   return d.length >= 8 ? d : '';
@@ -5215,26 +5227,125 @@ function normalizarNombreInscripcion(nombres) {
     .replace(/\s+/g, ' ');
 }
 
+/** Mismos tokens sin importar el orden (evita «NOMBRE APELLIDO» vs «APELLIDO, NOMBRE»). */
+function nombreTokensOrdenados(nombres) {
+  return normalizarNombreInscripcion(nombres)
+    .split(' ')
+    .filter(Boolean)
+    .sort()
+    .join(' ');
+}
+
+/** Apellidos: texto antes de la coma, o las 2 primeras palabras. */
+function apellidosInscripcion(nombres) {
+  const raw = String(nombres || '');
+  if (raw.indexOf(',') >= 0) {
+    return normalizarNombreInscripcion(raw.split(',')[0]);
+  }
+  const toks = normalizarNombreInscripcion(raw).split(' ').filter(Boolean);
+  if (toks.length >= 2) return toks.slice(0, 2).join(' ');
+  return toks[0] || '';
+}
+
 function sqlNombreInscripcion(campo) {
   return `regexp_replace(upper(trim(translate(${campo}, 'áéíóúàèìòùäëïöüñÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÑ', 'aeiouaeiouaeiouaeiouaeiounAEIOUAEIOUAEIOUAEIOUN'))), '[^A-Z0-9]+', ' ', 'g')`;
 }
 
+function sqlApellidosInscripcion(campo) {
+  return `CASE
+    WHEN position(',' in COALESCE(${campo},'')) > 0 THEN
+      ${sqlNombreInscripcion(`split_part(${campo}, ',', 1)`)}
+    ELSE
+      trim(both ' ' from concat_ws(' ',
+        split_part(${sqlNombreInscripcion(campo)}, ' ', 1),
+        NULLIF(split_part(${sqlNombreInscripcion(campo)}, ' ', 2), '')
+      ))
+  END`;
+}
+
+function esRegionPolicialCallao(region) {
+  const t = String(region || '').toUpperCase();
+  return t.indexOf('CALLAO') >= 0 && t.indexOf('MUNICIPALIDAD') < 0;
+}
+
 /**
- * Evita re-inscripción / fraude: mismo CIP, mismo DNI o mismos nombres
+ * REGIÓN POLICIAL CALLAO: CIP debe existir en nómina RRHH y los datos
+ * (nombres) no pueden contradecir la nómina. Fuerza unidad de nómina.
+ */
+async function validarInscripcionConvenioContraNominaCallao(cipNorm, nombres, unidadDeclarada) {
+  const cipKey = cipKeyInscripcion(cipNorm);
+  if (!/^\d{8}$/.test(cipKey)) {
+    return { ok: false, error: 'fuera_nomina', mensaje: 'CIP inválido para validación en nómina.' };
+  }
+  const rr = await obtenerUnidadNominaPorCip(cipKey);
+  if (!rr) {
+    return {
+      ok: false,
+      error: 'fuera_nomina',
+      mensaje: 'Su CIP no figura en la nómina REGPOL Callao. No puede inscribirse con datos falsos o CIP de otra región. Si pertenece a Callao, consulte con RR.HH.'
+    };
+  }
+  const sit = String(rr.situacion || '').trim().toUpperCase();
+  if (sit === 'BAJA') {
+    return {
+      ok: false,
+      error: 'nomina_baja',
+      mensaje: 'Su CIP figura en situación de BAJA en nómina. No puede inscribirse.'
+    };
+  }
+  const nomNomina = normalizarNombreInscripcion(rr.apellidos_nombres);
+  const nomDecl = normalizarNombreInscripcion(nombres);
+  const tokNomina = nombreTokensOrdenados(rr.apellidos_nombres);
+  const tokDecl = nombreTokensOrdenados(nombres);
+  const apeNomina = apellidosInscripcion(rr.apellidos_nombres);
+  const apeDecl = apellidosInscripcion(nombres);
+  const nombreOk = !nomNomina || !nomDecl
+    ? false
+    : (nomNomina === nomDecl
+      || tokNomina === tokDecl
+      || (apeNomina && apeDecl && apeNomina === apeDecl
+        && tokNomina.split(' ').some(function(t) { return t.length >= 3 && tokDecl.split(' ').indexOf(t) >= 0; })));
+  if (!nombreOk) {
+    return {
+      ok: false,
+      error: 'datos_nomina',
+      mensaje: 'Los apellidos/nombres no coinciden con la nómina REGPOL Callao del CIP indicado. Corrija sus datos (no use CIP ajeno).',
+      nombre_nomina: String(rr.apellidos_nombres || '').trim()
+    };
+  }
+  const uniNomina = String(rr.unidad_nombre || '').trim();
+  return {
+    ok: true,
+    nombres_nomina: String(rr.apellidos_nombres || '').trim(),
+    unidad_nomina: uniNomina,
+    division_nomina: String(rr.division_nombre || '').trim(),
+    grado_nomina: String(rr.grado || '').trim(),
+    // Si declaró otra unidad, se corrige a la de nómina
+    forzar_unidad: !!(uniNomina && normalizarUnidadNomina(unidadDeclarada) !== normalizarUnidadNomina(uniNomina))
+  };
+}
+
+/**
+ * Evita re-inscripción / fraude: mismo CIP, mismo DNI, mismos nombres o mismos apellidos
  * en la convocatoria (nuevo o repechaje).
  */
 async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
+  const cipKey = cipKeyInscripcion(cipNorm);
   const dniNorm = normalizarDniDigits(dni);
   const nombreNorm = normalizarNombreInscripcion(nombres);
+  const tokensNorm = nombreTokensOrdenados(nombres);
+  const apeNorm = apellidosInscripcion(nombres);
 
-  const byCip = await pool.query(
-    `SELECT id, cip, dni, nombres, estado, nro_registro
-     FROM inscripciones
-     WHERE item_id=$1 AND ${sqlCipIgual('cip')}=$2
-     ORDER BY id ASC LIMIT 1`,
-    [itemId, cipNorm]
-  );
-  if (byCip.rows.length) return { row: byCip.rows[0], motivo: 'cip' };
+  if (cipKey) {
+    const byCip = await pool.query(
+      `SELECT id, cip, dni, nombres, estado, nro_registro
+       FROM inscripciones
+       WHERE item_id=$1 AND ${sqlCipKeyInscripcion('cip')}=$2
+       ORDER BY id ASC LIMIT 1`,
+      [itemId, cipKey]
+    );
+    if (byCip.rows.length) return { row: byCip.rows[0], motivo: 'cip' };
+  }
 
   if (dniNorm) {
     const byDni = await pool.query(
@@ -5259,6 +5370,30 @@ async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
     if (byNom.rows.length) return { row: byNom.rows[0], motivo: 'nombres' };
   }
 
+  if (tokensNorm.length >= 8) {
+    const cand = await pool.query(
+      `SELECT id, cip, dni, nombres, estado, nro_registro
+       FROM inscripciones WHERE item_id=$1 ORDER BY id ASC`,
+      [itemId]
+    );
+    for (const row of cand.rows) {
+      if (nombreTokensOrdenados(row.nombres) === tokensNorm) {
+        return { row: row, motivo: 'nombres' };
+      }
+    }
+  }
+
+  if (apeNorm && apeNorm.length >= 8 && apeNorm.indexOf(' ') >= 0) {
+    const byApe = await pool.query(
+      `SELECT id, cip, dni, nombres, estado, nro_registro
+       FROM inscripciones
+       WHERE item_id=$1 AND ${sqlApellidosInscripcion('nombres')} = $2
+       ORDER BY id ASC LIMIT 1`,
+      [itemId, apeNorm]
+    );
+    if (byApe.rows.length) return { row: byApe.rows[0], motivo: 'apellidos' };
+  }
+
   return null;
 }
 
@@ -5266,7 +5401,7 @@ function mensajeDuplicadoInscripcion(motivo) {
   if (motivo === 'dni') {
     return 'Ya existe una inscripción con ese DNI en esta convocatoria. No puede volver a inscribirse (ni en repechaje). Consulte con su CIP y N° de registro.';
   }
-  if (motivo === 'nombres') {
+  if (motivo === 'nombres' || motivo === 'apellidos') {
     return 'Ya existe una inscripción con esos apellidos y nombres en esta convocatoria. No puede volver a inscribirse (ni en repechaje). Consulte con su CIP y N° de registro.';
   }
   return 'Ya existe una inscripción con ese CIP en esta convocatoria. No puede volver a inscribirse (ni en repechaje). Consulte con su CIP y N° de registro.';
@@ -5274,26 +5409,35 @@ function mensajeDuplicadoInscripcion(motivo) {
 
 /**
  * Regla operativa: un efectivo solo puede preinscribirse en UN convenio por mes calendario (Lima).
- * Aplica a todos los convenios (no a cursos).
+ * Cruce por CIP, DNI, nombres o apellidos. Se conserva la primera inscripción.
+ * Solo «anulado_solicitud» libera el cupo del mes (convenio equivocado).
+ * Al mes siguiente (nueva convocatoria) puede inscribirse de nuevo.
  */
 async function buscarInscripcionConvenioEnMes(cipNorm, dni, nombres) {
+  const cipKey = cipKeyInscripcion(cipNorm);
   const dniNorm = normalizarDniDigits(dni);
   const nombreNorm = normalizarNombreInscripcion(nombres);
-  const mesSql = `date_trunc('month', COALESCE(n.fecha, NOW()) AT TIME ZONE 'America/Lima')
-    = date_trunc('month', (NOW() AT TIME ZONE 'America/Lima'))`;
+  const tokensNorm = nombreTokensOrdenados(nombres);
+  const apeNorm = apellidosInscripcion(nombres);
+  const mesSql = `to_char(timezone('America/Lima', COALESCE(n.fecha::timestamptz, NOW())), 'YYYY-MM')
+    = to_char(timezone('America/Lima', NOW()), 'YYYY-MM')`;
+  // Cualquier inscripción activa del mes bloquea (incl. reserva/ganador/caducado/rechazado).
+  const excluye = `n.estado NOT IN ('anulado_solicitud')`;
 
-  const byCip = await pool.query(
-    `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id
-     FROM inscripciones n
-     JOIN items_portal i ON i.id = n.item_id
-     WHERE i.tipo = 'convenio'
-       AND ${sqlCipIgual('n.cip')} = $1
-       AND n.estado NOT IN ('anulado_solicitud','caducado','rechazado','reserva')
-       AND ${mesSql}
-     ORDER BY n.id ASC LIMIT 1`,
-    [cipNorm]
-  );
-  if (byCip.rows.length) return { row: byCip.rows[0], motivo: 'cip' };
+  if (cipKey) {
+    const byCip = await pool.query(
+      `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE i.tipo = 'convenio'
+         AND ${sqlCipKeyInscripcion('n.cip')} = $1
+         AND ${excluye}
+         AND ${mesSql}
+       ORDER BY n.id ASC LIMIT 1`,
+      [cipKey]
+    );
+    if (byCip.rows.length) return { row: byCip.rows[0], motivo: 'cip' };
+  }
 
   if (dniNorm) {
     const byDni = await pool.query(
@@ -5302,7 +5446,7 @@ async function buscarInscripcionConvenioEnMes(cipNorm, dni, nombres) {
        JOIN items_portal i ON i.id = n.item_id
        WHERE i.tipo = 'convenio'
          AND regexp_replace(COALESCE(n.dni,''), '[^0-9]', '', 'g') = $1
-         AND n.estado NOT IN ('anulado_solicitud','caducado','rechazado','reserva')
+         AND ${excluye}
          AND ${mesSql}
        ORDER BY n.id ASC LIMIT 1`,
       [dniNorm]
@@ -5317,12 +5461,44 @@ async function buscarInscripcionConvenioEnMes(cipNorm, dni, nombres) {
        JOIN items_portal i ON i.id = n.item_id
        WHERE i.tipo = 'convenio'
          AND ${sqlNombreInscripcion('n.nombres')} = $1
-         AND n.estado NOT IN ('anulado_solicitud','caducado','rechazado','reserva')
+         AND ${excluye}
          AND ${mesSql}
        ORDER BY n.id ASC LIMIT 1`,
       [nombreNorm]
     );
     if (byNom.rows.length) return { row: byNom.rows[0], motivo: 'nombres' };
+  }
+
+  if (tokensNorm.length >= 8) {
+    const cand = await pool.query(
+      `SELECT n.id, n.nro_registro, n.estado, n.nombres, i.titulo, i.id AS item_id
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE i.tipo = 'convenio'
+         AND ${excluye}
+         AND ${mesSql}
+       ORDER BY n.id ASC`
+    );
+    for (const row of cand.rows) {
+      if (nombreTokensOrdenados(row.nombres) === tokensNorm) {
+        return { row: row, motivo: 'nombres' };
+      }
+    }
+  }
+
+  if (apeNorm && apeNorm.length >= 8 && apeNorm.indexOf(' ') >= 0) {
+    const byApe = await pool.query(
+      `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE i.tipo = 'convenio'
+         AND ${sqlApellidosInscripcion('n.nombres')} = $1
+         AND ${excluye}
+         AND ${mesSql}
+       ORDER BY n.id ASC LIMIT 1`,
+      [apeNorm]
+    );
+    if (byApe.rows.length) return { row: byApe.rows[0], motivo: 'apellidos' };
   }
 
   return null;
@@ -5334,7 +5510,7 @@ function mensajeUnConvenioPorMes(row) {
   return 'Solo puede inscribirse en un convenio por mes. Ya figura inscrito en «'
     + titulo + '»'
     + (nro ? (' (N° ' + nro + ')') : '')
-    + '. Consulte su estado con CIP y N° de inscripción.';
+    + '. Se mantiene la primera inscripción. Podrá postular a otro convenio el próximo mes, cuando se abra una nueva convocatoria.';
 }
 
 function normalizarCipConsulta(cip) {
@@ -6555,7 +6731,8 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
     }
 
     const regionNorm = conveniosFlujo.limpio(region_policial, 120);
-    const unidadNorm = conveniosFlujo.limpio(unidad, 150);
+    let unidadNorm = conveniosFlujo.limpio(unidad, 150);
+    let nombresIns = String(nombres || '').trim();
     const modalidadNorm = conveniosFlujo.limpio(modalidad, 40).toUpperCase();
     const modalidadOtroNorm = conveniosFlujo.limpio(modalidad_otro, 120);
     const codifinNorm = String(codifin || '').replace(/\D/g, '');
@@ -6586,9 +6763,29 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       if (modalidadNorm === 'OTROS' && !modalidadOtroNorm) {
         return res.json({ ok: false, error: 'Si eligió OTROS, especifique su modalidad de trabajo.' });
       }
-      if (!/^\d{10,12}$/.test(codifinNorm)) {
-        return res.json({ ok: false, error: 'CODIFIN debe tener entre 10 y 12 dígitos numéricos.' });
+      if (!/^\d{9}$/.test(codifinNorm)) {
+        return res.json({ ok: false, error: 'CODIFIN debe tener exactamente 9 dígitos numéricos.' });
       }
+
+      // Callao: CIP y datos deben coincidir con nómina RRHH (anti CIP falso / datos inventados)
+      if (esRegionPolicialCallao(regionNorm)) {
+        const checkNom = await validarInscripcionConvenioContraNominaCallao(
+          cipNorm, nombresIns, unidadNorm
+        );
+        if (!checkNom.ok) {
+          return res.json({
+            ok: false,
+            error: checkNom.mensaje,
+            codigo: checkNom.error || 'fuera_nomina',
+            nombre_nomina: checkNom.nombre_nomina || ''
+          });
+        }
+        if (checkNom.nombres_nomina) nombresIns = checkNom.nombres_nomina;
+        if (checkNom.unidad_nomina) {
+          unidadNorm = conveniosFlujo.limpio(checkNom.unidad_nomina, 150);
+        }
+      }
+
       if (esCeladorItem && cuposCeladorTienenMatrizTurnos(cuposItem)) {
         const partes = comisariaPostulaRaw.split('|').map(function(p) { return String(p || '').trim(); });
         if (partes.length !== 3 || !partes[0] || !partes[1] || !partes[2]) {
@@ -6700,7 +6897,7 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       }
     }
 
-    const dup = await buscarInscripcionDuplicadaPortal(req.params.id, cipNorm, dniNorm || dni, nombres);
+    const dup = await buscarInscripcionDuplicadaPortal(req.params.id, cipNorm, dniNorm || dni, nombresIns);
     if (dup) {
       return res.json({
         ok: false,
@@ -6711,7 +6908,7 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
     }
 
     if (esConvenio) {
-      const otroMes = await buscarInscripcionConvenioEnMes(cipNorm, dniNorm || dni, nombres);
+      const otroMes = await buscarInscripcionConvenioEnMes(cipNorm, dniNorm || dni, nombresIns);
       if (otroMes) {
         return res.json({
           ok: false,
@@ -6766,7 +6963,7 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
           estado,modo_ingreso,modalidad,modalidad_otro,codifin,region_policial,comisaria_postula)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
        RETURNING id`,
-      [req.params.id, cipNorm, nombres, unidadNorm || unidad || '', cargo||'', telefono||'', email||'',
+      [req.params.id, cipNorm, nombresIns, unidadNorm || unidad || '', cargo||'', telefono||'', email||'',
        pdfSave, pdfNom,
        dniNorm || dni || '', grado||'', area||'', arma||'', disponibilidad||'', dia_franco||'',
        feNorm, tiempo_servicio||'', estado, modo,

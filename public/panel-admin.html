@@ -1270,6 +1270,7 @@
               </select>
             </div>
             <button class="btn btn-o" id="btn-sorteo-live" disabled onclick="abrirSorteoEnVivoConvenio()"><i class="fas fa-random"></i> Sorteo en vivo</button>
+            <button class="btn btn-o" id="btn-sorteo-ensayo" disabled onclick="abrirSorteoEnsayoConvenio()" title="Misma rueda con inscritos reales, sin guardar en BD"><i class="fas fa-flask"></i> Prueba (ensayo)</button>
             <button class="btn btn-v" id="btn-ver-inscritos-sorteo" disabled onclick="irInscritosDesdeSorteo()"><i class="fas fa-users"></i> Ver inscritos</button>
             <button class="btn" style="background:#2980b9;color:#fff;" id="btn-flyer-sorteo" disabled onclick="crearFlyerDesdeConvenio()"><i class="fas fa-bullhorn"></i> Crear flyer</button>
           </div>
@@ -4718,11 +4719,13 @@ function onSelectConvocatoriaSorteo(){
   var id = sel && sel.value ? parseInt(sel.value, 10) : 0;
   SORTEO_CONV_ACTIVO = ITEMS_SORTEO_CACHE.find(function(i){ return i.id === id; }) || null;
   var btnLive = document.getElementById('btn-sorteo-live');
+  var btnEnsayo = document.getElementById('btn-sorteo-ensayo');
   var btnIns = document.getElementById('btn-ver-inscritos-sorteo');
   var btnFlyer = document.getElementById('btn-flyer-sorteo');
   if(!id || !SORTEO_CONV_ACTIVO){
     if(stats) stats.style.display = 'none';
     if(btnLive) btnLive.disabled = true;
+    if(btnEnsayo) btnEnsayo.disabled = true;
     if(btnIns) btnIns.disabled = true;
     if(btnFlyer) btnFlyer.disabled = true;
     return;
@@ -4739,6 +4742,7 @@ function onSelectConvocatoriaSorteo(){
       if(!d.ok){
         if(stats) stats.innerHTML = '<span style="color:#c0392b;">'+escHtml(d.error||'Error al cargar inscritos')+'</span>';
         if(btnLive) btnLive.disabled = true;
+        if(btnEnsayo) btnEnsayo.disabled = true;
         return;
       }
       var list = d.inscritos || [];
@@ -4762,16 +4766,24 @@ function onSelectConvocatoriaSorteo(){
             : '<p style="margin-top:10px;color:#856404;"><i class="fas fa-exclamation-triangle"></i> Aún no hay preinscritos para el sorteo.</p>');
       }
       if(btnLive) btnLive.disabled = preins < 1;
+      if(btnEnsayo) btnEnsayo.disabled = preins < 1;
     })
     .catch(function(){
       if(stats) stats.innerHTML = '<span style="color:#c0392b;">Error de conexión al cargar inscritos.</span>';
       if(btnLive) btnLive.disabled = true;
+      if(btnEnsayo) btnEnsayo.disabled = true;
     });
 }
 
 function abrirSorteoEnVivoConvenio(){
   if(!SORTEO_CONV_ACTIVO) return;
+  if(!confirm('¿Abrir SORTEO REAL?\n\nCada ganador se guarda de inmediato en la base de datos.\nPara ensayo use el botón «Prueba (ensayo)».')) return;
   window.open('sorteo-live.html?item_id='+SORTEO_CONV_ACTIVO.id, 'regpol_sorteo_live', 'noopener,noreferrer');
+}
+
+function abrirSorteoEnsayoConvenio(){
+  if(!SORTEO_CONV_ACTIVO) return;
+  window.open('sorteo-live.html?item_id='+SORTEO_CONV_ACTIVO.id+'&ensayo=1', 'regpol_sorteo_ensayo', 'noopener,noreferrer');
 }
 
 function abrirSorteoLivePanel(itemId, sorteoId, tipo) {

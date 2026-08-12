@@ -854,7 +854,7 @@ function renderFormInscripcion(item){
     +'<input type="text" id="fi-dni" maxlength="12" placeholder="Número de DNI" required/></div>'
     +(esConvenio
       ? ('<div class="fi-group"><label>CODIFIN *</label>'
-        +'<input type="text" id="fi-codifin" inputmode="numeric" pattern="[0-9]{10,12}" maxlength="12" placeholder="10 a 12 dígitos" required/></div>'
+        +'<input type="text" id="fi-codifin" inputmode="numeric" pattern="[0-9]{9}" maxlength="9" placeholder="9 dígitos" required/></div>'
         +'<div class="fi-group"><label>Teléfono / WhatsApp *</label>'
         +'<input type="tel" id="fi-telefono" maxlength="30" placeholder="Ej: 987654321" required/></div>'
         +'<div class="fi-group"><label>Correo electrónico *</label>'
@@ -1191,8 +1191,8 @@ function enviarInscripcion(e){
     alerta.textContent='Especifique su modalidad de trabajo (Otros).';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
-  if(ITEM_TIPO==='convenio' && !/^\d{10,12}$/.test(codifin)){
-    alerta.textContent='CODIFIN debe tener entre 10 y 12 dígitos numéricos.';
+  if(ITEM_TIPO==='convenio' && !/^\d{9}$/.test(codifin)){
+    alerta.textContent='CODIFIN debe tener exactamente 9 dígitos numéricos.';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
   if(ITEM_TIPO==='convenio' && !tel){
@@ -1332,6 +1332,15 @@ function enviarInscripcion(e){
           + (nroDup ? (' N° registrado: ' + nroDup + '.') : '')
           + ' <a href="consulta.html" style="color:#842029;font-weight:700;">Ir a consulta CIP</a>';
         alerta.innerHTML = errMsg;
+      } else if (d.codigo === 'un_convenio_por_mes') {
+        var nroMes = d.nro_registro || '';
+        errMsg = errMsg
+          + (nroMes ? (' N°: ' + nroMes + '.') : '')
+          + ' <a href="consulta.html" style="color:#842029;font-weight:700;">Consultar mi inscripción</a>';
+        alerta.innerHTML = errMsg;
+      } else if (d.codigo === 'fuera_nomina' || d.codigo === 'datos_nomina' || d.codigo === 'nomina_baja') {
+        if (d.nombre_nomina) errMsg += ' Nómina: «' + d.nombre_nomina + '».';
+        alerta.textContent = errMsg;
       } else {
         alerta.textContent = errMsg;
       }

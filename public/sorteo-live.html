@@ -179,9 +179,15 @@
     .resumen-tabla td{padding:7px 8px;border-bottom:1px solid #e8eee8;}
     .resumen-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
     .lock-msg{display:none;background:#fff8e1;border:1px solid #e8d9a8;color:#856404;padding:10px 12px;border-radius:8px;font-size:12.5px;margin-bottom:12px;}
+    .ensayo-banner{display:none;background:#7a3e00;color:#fff;text-align:center;padding:8px 12px;font-size:13px;font-weight:700;letter-spacing:.02em;}
+    .ensayo-banner strong{color:#ffd27a;}
   </style>
 </head>
 <body>
+
+<div id="ensayo-banner" class="ensayo-banner" role="status">
+  MODO ENSAYO — la rueda funciona con datos reales, pero <strong>no guarda ganadores ni reservas en la base de datos</strong>.
+</div>
 
 <div class="sl-header">
   <div class="sl-logo"><i class="fas fa-shield-alt"></i></div>
@@ -326,8 +332,20 @@ var HDR = SESION
   ? { 'Content-Type': 'application/json', 'x-admin-token': SESION.token }
   : { 'Content-Type': 'application/json' };
 
-var ITEM_ID = new URLSearchParams(location.search).get('item_id');
-var SORTEO_ID = new URLSearchParams(location.search).get('sorteo_id') || null;
+var _qs = new URLSearchParams(location.search);
+var ITEM_ID = _qs.get('item_id');
+var SORTEO_ID = _qs.get('sorteo_id') || null;
+var ENSAYO = _qs.get('ensayo') === '1' || _qs.get('ensayo') === 'true';
+if (ENSAYO) {
+  var _ban = document.getElementById('ensayo-banner');
+  if (_ban) _ban.style.display = 'block';
+  var _badge = document.getElementById('badge-live');
+  if (_badge) {
+    _badge.textContent = '● ENSAYO';
+    _badge.style.background = '#7a3e00';
+  }
+  document.title = 'ENSAYO — ' + document.title;
+}
 var ITEM_DATA = null;
 var VACANTES_INFO = null;
 var TODOS_CAND = [];
@@ -644,6 +662,11 @@ function marcarEstadoLocal(id, estado) {
 
 function persistirGanadorUno(g) {
   if (!ITEM_ID || !g || !g.id) return Promise.resolve();
+  if (ENSAYO) {
+    IDS_PERSISTIDOS[g.id] = true;
+    marcarEstadoLocal(g.id, 'ganador');
+    return Promise.resolve({ ok: true, ganadores: 1, ensayo: true });
+  }
   if (IDS_PERSISTIDOS[g.id] && !g.forceBloque) return Promise.resolve({ ok: true, ganadores: 0 });
   return fetch(API + '/admin/items/' + ITEM_ID + '/aplicar-sorteo', {
     method: 'POST', headers: HDR,
@@ -669,6 +692,10 @@ function persistirGanadorUno(g) {
 
 function persistirReservasPendientes() {
   if (RESERVAS_PERSISTIDAS || !ITEM_ID) return Promise.resolve();
+  if (ENSAYO) {
+    RESERVAS_PERSISTIDAS = true;
+    return Promise.resolve({ ok: true, reservas: 0, ensayo: true });
+  }
   var idsGan = GANADORES.map(function(g) { return g.id; });
   var reservas = TODOS_CAND.filter(function(c) {
     return (c.estado === 'aprobado' || c.estado === 'preinscrito' || c.estado === 'pendiente' || c.estado === 'verificado')
@@ -1164,7 +1191,7 @@ function culminarSorteo() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
   sincronizarPendientes().then(function() {
-    if (!SORTEO_ID) return;
+    if (ENSAYO || !SORTEO_ID) return;
     return fetch(API + '/admin/sorteos/' + SORTEO_ID + '/resultados', {
       method: 'POST', headers: HDR,
       body: JSON.stringify({
@@ -1180,9 +1207,17 @@ function culminarSorteo() {
     });
   }).then(function() {
     SORTEO_CULMINADO = true;
-    btn.innerHTML = '<i class="fas fa-check"></i> CULMINADO';
+    btn.innerHTML = ENSAYO
+      ? '<i class="fas fa-check"></i> ENSAYO OK'
+      : '<i class="fas fa-check"></i> CULMINADO';
     document.getElementById('btn-sortear').disabled = true;
     mostrarResumen();
+    if (ENSAYO) {
+      var meta = document.getElementById('resumen-meta');
+      if (meta) {
+        meta.innerHTML += '<br><span style="color:#7a3e00;font-weight:700;">Ensayo: no se modificó la base de datos.</span>';
+      }
+    }
   }).catch(function(e) {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-flag-checkered"></i> CULMINAR SORTEO';
