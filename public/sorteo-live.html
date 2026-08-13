@@ -9,7 +9,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;}
     body{font-family:'Segoe UI',sans-serif;background:#f0f4f0;color:#333;min-height:100vh;}
+    body.modo-sorteo{overflow:hidden;height:100vh;display:flex;flex-direction:column;}
 
     .sl-header{
       background:linear-gradient(135deg,#002d24,#004d3d);color:#fff;
@@ -46,6 +48,10 @@
     .btn-ok{background:#1a7a3a;color:#fff;}
 
     .wrap{max-width:1200px;margin:0 auto;padding:18px 16px 40px;}
+    body.modo-sorteo .wrap{
+      flex:1;min-height:0;width:100%;max-width:none;margin:0;
+      padding:10px 12px;display:flex;flex-direction:column;
+    }
     .card{
       background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,77,61,.07);
       padding:20px;margin-bottom:16px;border:1px solid #e0e8e0;
@@ -88,22 +94,51 @@
     .btn-iniciar:disabled{background:#9bb5ad;cursor:not-allowed;}
 
     #sorteo-panel{display:none;}
+    body.modo-sorteo #sorteo-panel{display:flex;flex:1;min-height:0;flex-direction:column;}
     .sl-grid{display:grid;grid-template-columns:minmax(240px,1fr) minmax(300px,1.15fr) minmax(240px,1fr);gap:14px;}
-    @media(max-width:1100px){.sl-grid{grid-template-columns:1fr;}}
+    body.modo-sorteo .sl-grid{
+      flex:1;min-height:0;height:100%;gap:10px;
+      grid-template-columns:minmax(220px,1fr) minmax(380px,1.3fr) minmax(220px,1fr);
+    }
+    @media(max-width:1100px){
+      .sl-grid{grid-template-columns:1fr;}
+      body.modo-sorteo{overflow:auto;height:auto;display:block;}
+      body.modo-sorteo .wrap{height:auto;}
+      body.modo-sorteo .sl-grid{height:auto;}
+    }
 
     .panel-box{background:#fff;border-radius:10px;border:1.5px solid #c8e6c9;overflow:hidden;box-shadow:0 2px 10px rgba(0,77,61,.06);}
+    body.modo-sorteo .panel-box{display:flex;flex-direction:column;min-height:0;height:100%;}
     .panel-head{
       background:#004d3d;padding:10px 14px;font-size:12px;font-weight:800;color:#fff;
-      display:flex;justify-content:space-between;align-items:center;
+      display:flex;justify-content:space-between;align-items:center;flex-shrink:0;
     }
     .panel-head span:last-child{color:#c8a94a;}
     .panel-body{padding:12px;max-height:calc(100vh - 220px);overflow-y:auto;background:#fff;}
+    body.modo-sorteo .panel-body{flex:1;min-height:0;max-height:none;}
+    body.modo-sorteo .panel-body.rueda-body{overflow:hidden;display:flex;flex-direction:column;}
+
+    .turno-box{
+      background:#e8f5e9;border:1.5px solid #c8e6c9;border-radius:8px;
+      padding:12px 14px;margin-bottom:8px;color:#004d3d;text-align:left;flex-shrink:0;
+    }
+    .turno-box-tit{font-size:17px;font-weight:800;margin-bottom:10px;color:#004d3d;letter-spacing:.2px;}
+    .turno-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;}
+    .turno-stat span{
+      display:block;font-size:11px;font-weight:800;color:#555;
+      text-transform:uppercase;letter-spacing:.4px;line-height:1.2;
+    }
+    .turno-stat strong{display:block;font-size:28px;font-weight:900;color:#004d3d;line-height:1.15;margin-top:2px;}
+    .turno-nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:8px;flex-shrink:0;}
+    .turno-nav .btn{font-size:13px;padding:8px 16px;}
 
     .drum-wrapper{
       position:relative;height:220px;overflow:hidden;margin:12px auto;border-radius:10px;
-      background:#f0f7f0;border:2px solid #c8e6c9;
+      background:#f0f7f0;border:2px solid #c8e6c9;flex:1;min-height:120px;max-height:180px;width:100%;
     }
+    body.modo-sorteo .drum-wrapper{height:auto;margin:8px auto 6px;}
     .drum-overlay-top,.drum-overlay-bot{position:absolute;left:0;right:0;height:70px;z-index:2;pointer-events:none;}
+    body.modo-sorteo .drum-overlay-top,body.modo-sorteo .drum-overlay-bot{height:40px;}
     .drum-overlay-top{top:0;background:linear-gradient(to bottom,#f0f7f0,transparent);}
     .drum-overlay-bot{bottom:0;background:linear-gradient(to top,#f0f7f0,transparent);}
     .drum-highlight{
@@ -119,6 +154,16 @@
 
     .sorteo-aviso{text-align:center;font-size:13px;color:#555;margin:8px 0;}
     .sorteo-nro{font-size:22px;font-weight:900;color:#004d3d;text-align:center;margin:4px 0;}
+    body.modo-sorteo .sorteo-nro{font-size:18px;margin:2px 0;flex-shrink:0;}
+    body.modo-sorteo .sorteo-aviso{font-size:12.5px;margin:4px 0;flex-shrink:0;}
+    body.modo-sorteo .contadores{margin:6px 0 2px;flex-shrink:0;}
+    body.modo-sorteo .progress-bar{flex-shrink:0;margin:6px 0;}
+    body.modo-sorteo .sl-header{flex-shrink:0;padding:8px 16px;}
+    body.modo-sorteo .ensayo-banner{flex-shrink:0;}
+    body.modo-sorteo #lock-msg{flex-shrink:0;margin-bottom:8px;}
+    body.modo-sorteo #btn-sortear,
+    body.modo-sorteo #btn-detener-auto,
+    body.modo-sorteo #btn-bloques-vac{flex-shrink:0;}
     .progress-bar{height:6px;background:#e0e8e0;border-radius:3px;overflow:hidden;margin:8px 0;}
     .progress-fill{height:100%;background:#c8a94a;transition:width .4s;}
     .contadores{
@@ -143,7 +188,7 @@
 
     .rp-ganador{
       background:#f0f7f0;border-radius:8px;padding:10px 12px;margin-bottom:8px;
-      display:flex;gap:10px;border-left:3px solid #c8a94a;animation:slideIn .35s ease;
+      display:flex;gap:10px;border-left:3px solid #c8a94a;animation:slideIn .7s ease;
     }
     .rp-ganador.vacaciones{border-left-color:#1a7a3a;}
     @keyframes slideIn{from{transform:translateX(-12px);opacity:0;}to{transform:translateX(0);opacity:1;}}
@@ -163,10 +208,10 @@
     .gf-inner,.resumen-box{
       background:#fff;border:2px solid #c8a94a;border-radius:14px;padding:28px 32px;
       max-width:640px;width:100%;text-align:center;box-shadow:0 16px 40px rgba(0,0,0,.2);
-      animation:zoomIn .35s ease;
+      animation:zoomIn .7s ease;
     }
     .resumen-box{text-align:left;max-height:90vh;overflow:auto;}
-    @keyframes zoomIn{from{transform:scale(.92);opacity:0;}to{transform:scale(1);opacity:1;}}
+    @keyframes zoomIn{from{transform:scale(.96);opacity:0;}to{transform:scale(1);opacity:1;}}
     .gf-titulo{font-size:12px;color:#004d3d;letter-spacing:1.5px;font-weight:800;margin-bottom:6px;}
     .gf-nro{font-size:48px;font-weight:900;color:#c8a94a;margin-bottom:8px;}
     .gf-nombre{font-size:20px;font-weight:800;color:#004d3d;margin-bottom:6px;line-height:1.25;}
@@ -220,7 +265,7 @@
       <div style="overflow-x:auto;max-height:420px;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">
         <table class="lista-total-tabla">
           <thead><tr>
-            <th>#</th><th>Grado</th><th>Apellidos y Nombres</th><th>CIP</th><th>Unidad</th><th>Postula / Slot</th><th>Situación</th>
+            <th>#</th><th>Grado</th><th>Apellidos y Nombres</th><th>CIP</th><th>Unidad</th><th>Postula / Turno</th><th>Situación</th>
           </tr></thead>
           <tbody id="cfg-lista-total"><tr><td colspan="7" style="text-align:center;padding:20px;color:#888;">Cargando...</td></tr></tbody>
         </table>
@@ -248,14 +293,14 @@
 
       <div class="panel-box">
         <div class="panel-head"><span><i class="fas fa-random"></i> RUEDA DE SORTEO</span><span id="drum-stats">—</span></div>
-        <div class="panel-body" style="text-align:center;">
-          <div id="slot-actual-box" style="background:#e8f5e9;border:1.5px solid #c8e6c9;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:12.5px;color:#004d3d;text-align:left;">
-            <div style="font-weight:800;margin-bottom:6px;">Turno actual: <span id="slot-actual-label">—</span></div>
-            <div id="slot-sync-detalle" style="font-size:11.5px;line-height:1.55;font-weight:600;color:#333;"></div>
+        <div class="panel-body rueda-body" style="text-align:center;">
+          <div id="slot-actual-box" class="turno-box">
+            <div class="turno-box-tit">Turno actual: <span id="slot-actual-label">—</span></div>
+            <div class="turno-stats" id="slot-sync-detalle"></div>
           </div>
-          <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:8px;">
-            <button type="button" class="btn btn-admin" style="background:#004d3d;color:#fff;border:none;" onclick="slotAnterior()" id="btn-slot-prev">← Slot</button>
-            <button type="button" class="btn btn-admin" style="background:#004d3d;color:#fff;border:none;" onclick="slotSiguiente()" id="btn-slot-next">Slot →</button>
+          <div class="turno-nav">
+            <button type="button" class="btn btn-admin" style="background:#004d3d;color:#fff;border:none;" onclick="slotAnterior()" id="btn-slot-prev">← Turno</button>
+            <button type="button" class="btn btn-admin" style="background:#004d3d;color:#fff;border:none;" onclick="slotSiguiente()" id="btn-slot-next">Turno →</button>
           </div>
           <div class="sorteo-nro" id="sorteo-nro-actual">GANADOR N° 1</div>
           <div class="sorteo-aviso" id="sorteo-aviso">Gire la rueda para sortear</div>
@@ -368,8 +413,8 @@ var SLOTS_SORTEO = [];
 var SLOT_IDX = 0;
 var BLOQUES_VAC_HECHO = false;
 var AUTO_SORTEO = false;
-var AUTO_PAUSA_MS = 1600;
-var SPIN_DURATION_MS = 2200;
+var AUTO_PAUSA_MS = 4200;
+var SPIN_DURATION_MS = 2800;
 
 if (!SESION || !SESION.token) {
   document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f0f4f0;">'
@@ -527,7 +572,7 @@ function renderSlotsPreview() {
     + '<strong>Franco / Vacaciones</strong> se cuentan desde el registro (preinscritos) emparejados a ese turno/día. '
     + '<strong>A sortear</strong> = menor entre vacantes libres y francos.</p>'
     + '<table class="lista-total-tabla"><thead><tr>'
-    + '<th>Slot (turno / día)</th><th>Vacantes</th><th>Ocupadas</th><th>Libres</th><th>Franco</th><th>Vacaciones</th><th>A sortear</th>'
+    + '<th>Turno / día</th><th>Vacantes</th><th>Ocupadas</th><th>Libres</th><th>Franco</th><th>Vacaciones</th><th>A sortear</th>'
     + '</tr></thead><tbody>'
     + SLOTS_SORTEO.map(function(s) {
       var nF = LISTA_APROBADOS.filter(function(c) {
@@ -562,7 +607,7 @@ function renderMetaConvenio(containerId) {
     '<div class="conv-meta-item"><span>Cupo total</span><strong>' + cupo + ' efectivos</strong></div>'
     + '<div class="conv-meta-item"><span>Ya ocupadas</span><strong>' + ocup + '</strong></div>'
     + '<div class="conv-meta-item"><span>Disponibles</span><strong>' + disp + '</strong></div>'
-    + '<div class="conv-meta-item"><span>Slots turno/día</span><strong>' + (SLOTS_SORTEO.length || 1) + '</strong></div>'
+    + '<div class="conv-meta-item"><span>Turnos</span><strong>' + (SLOTS_SORTEO.length || 1) + '</strong></div>'
     + '<div class="conv-meta-item"><span>Turnos / Horarios</span><strong>' + escH(ITEM_DATA.horario || 'No especificado') + '</strong></div>'
     + '<div class="conv-meta-item"><span>Fecha inicio</span><strong>' + escH(ITEM_DATA.fecha_inicio || '—') + '</strong></div>'
     + '<div class="conv-meta-item"><span>Duración</span><strong>' + escH(ITEM_DATA.duracion || '—') + '</strong></div>'
@@ -790,7 +835,8 @@ function iniciarSorteo() {
   }
 
   document.getElementById('config-panel').style.display = 'none';
-  document.getElementById('sorteo-panel').style.display = 'block';
+  document.getElementById('sorteo-panel').style.display = '';
+  document.body.classList.add('modo-sorteo');
   document.getElementById('btn-culminar').disabled = false;
   var btnBloq = document.getElementById('btn-bloques-vac');
   if (btnBloq) {
@@ -824,7 +870,7 @@ function buildDrum() {
   var reel = document.getElementById('drum-reel');
   var disponiblesRueda = candidatosRuedaActivos();
   if (!disponiblesRueda.length) {
-    reel.innerHTML = '<div class="drum-item">Sin candidatos en este slot</div>';
+    reel.innerHTML = '<div class="drum-item">Sin candidatos en este turno</div>';
     return;
   }
   var html = '';
@@ -1063,15 +1109,10 @@ function actualizarUI() {
   var det = document.getElementById('slot-sync-detalle');
   if (det) {
     det.innerHTML =
-      'Vacantes del convenio (configuradas): <strong>' + r.vacantes + '</strong><br>'
-      + 'Ya ocupadas / asignadas: <strong>' + r.ocupadas + '</strong> → quedan <strong>' + r.disponibles + '</strong><br>'
-      + 'Preinscritos FRANCO en este turno: <strong>' + r.franco + '</strong><br>'
-      + 'Vacaciones ya asignadas a este turno: <strong>' + (r.vacacionesAsig || 0) + '</strong><br>'
-      + '<span style="color:#004d3d;">Con un clic se sortearán: <strong>' + r.aSortear + '</strong></span>'
-      + ' <span style="color:#666;">(= menor entre vacantes libres y francos en rueda)</span>'
-      + (r.sinTurno > 0
-        ? '<br><span style="color:#856404;">⚠ ' + r.sinTurno + ' preinscrito(s) sin turno en la postulación (entran por día; conviene «Devolver» para asignar turno).</span>'
-        : '');
+      '<div class="turno-stat"><span>Cantidad de vacantes</span><strong>' + r.vacantes + '</strong></div>'
+      + '<div class="turno-stat"><span>Ocupadas</span><strong>' + r.ocupadas + '</strong></div>'
+      + '<div class="turno-stat"><span>Cubierta por vacaciones</span><strong>' + (r.vacacionesAsig || 0) + '</strong></div>'
+      + '<div class="turno-stat"><span>Preinscritos</span><strong>' + r.franco + '</strong></div>';
   }
 
   document.getElementById('sorteo-nro-actual').textContent = AUTO_SORTEO
@@ -1086,7 +1127,7 @@ function actualizarUI() {
       ? (r.disponibles <= 0
         ? 'Este turno ya no tiene vacantes libres.'
         : (LISTA_APROBADOS.length
-          ? ('Hay ' + LISTA_APROBADOS.length + ' preinscritos, pero ninguno calza con este turno/día. Use ← Slot / Slot → o «Devolver» para completar turno.')
+          ? 'Hay preinscritos, pero ninguno calza con este turno. Use ← Turno / Turno →.'
           : 'Hay vacantes libres, pero no hay preinscritos FRANCO emparejados a este turno/día.'))
       : ('Un clic sortea las ' + r.aSortear + ' vacantes de este turno, una tras otra.'));
 
@@ -1110,7 +1151,7 @@ function actualizarUI() {
   document.getElementById('c-ocupadas').textContent = String(GANADORES.length);
   document.getElementById('c-cupo').textContent = String(CUPO_TOTAL);
   document.getElementById('c-faltan').textContent = String(Math.max(0, OBJETIVO - GANADORES.length));
-  document.getElementById('drum-stats').textContent = activos.length + ' en rueda · slot ' + (SLOT_IDX + 1) + '/' + Math.max(1, SLOTS_SORTEO.length);
+  document.getElementById('drum-stats').textContent = activos.length + ' en rueda · turno ' + (SLOT_IDX + 1) + '/' + Math.max(1, SLOTS_SORTEO.length);
 
   document.getElementById('btn-culminar').disabled = SORTEO_CULMINADO || !SORTEO_INICIADO || AUTO_SORTEO;
   var btnBloq = document.getElementById('btn-bloques-vac');
@@ -1157,7 +1198,7 @@ function mostrarResumen() {
   meta.innerHTML = '<strong style="color:#004d3d;">' + escH(ITEM_DATA && ITEM_DATA.titulo || '') + '</strong><br>'
     + 'Cupo total: <strong>' + CUPO_TOTAL + '</strong> · Objetivo sesión: <strong>' + OBJETIVO + '</strong><br>'
     + 'Ganadores: <strong>' + GANADORES.length + '</strong>'
-    + ' · Slots: <strong>' + (SLOTS_SORTEO.length || 1) + '</strong>';
+    + ' · Turnos: <strong>' + (SLOTS_SORTEO.length || 1) + '</strong>';
   document.getElementById('resumen-tbody').innerHTML = GANADORES.map(function(g) {
     return '<tr>'
       + '<td>' + g.nro + '</td>'

@@ -78,6 +78,12 @@
     .tabla-cupos.tabla-celador{min-width:760px;font-size:12px;}
     .tabla-cupos.tabla-celador th{font-size:10.5px;padding:7px 6px;white-space:nowrap;}
     .tabla-cupos.tabla-celador td{padding:7px 6px;white-space:nowrap;}
+    .tabla-cupos.tabla-convenio-turnos{min-width:880px;font-size:12px;}
+    .tabla-cupos.tabla-convenio-turnos th{font-size:10.5px;padding:6px 5px;white-space:nowrap;}
+    .tabla-cupos.tabla-convenio-turnos th.grp-par{background:#0b5c4a;}
+    .tabla-cupos.tabla-convenio-turnos th.grp-impar{background:#1a6b4a;}
+    .tabla-cupos.tabla-convenio-turnos th.sub{font-size:10px;}
+    .tabla-cupos.tabla-convenio-turnos td{padding:6px 5px;white-space:nowrap;}
     .tabla-cupos th,.tabla-cupos td{border:1px solid #b7d4c0;padding:6px 8px;}
     .tabla-cupos th{background:#004d3d;color:#fff;font-weight:700;text-align:center;font-size:11.5px;letter-spacing:.3px;}
     .tabla-cupos th:first-child,.tabla-cupos td:first-child{text-align:left;}
@@ -386,26 +392,48 @@ function renderDetalle(item){
       && cupos.length > 1
       && hayTurnosLugar;
     var SLOTS_CEL = [
-      { turno: 'MAÑANA', dia: 'PAR', label: 'Mañana PAR' },
-      { turno: 'MAÑANA', dia: 'IMPAR', label: 'Mañana IMPAR' },
-      { turno: 'TARDE', dia: 'PAR', label: 'Tarde PAR' },
-      { turno: 'TARDE', dia: 'IMPAR', label: 'Tarde IMPAR' }
+      { turno: 'MAÑANA', dia: 'PAR', label: 'Mañana', grupo: 'PAR' },
+      { turno: 'TARDE', dia: 'PAR', label: 'Tarde', grupo: 'PAR' },
+      { turno: 'NOCHE', dia: 'PAR', label: 'Noche', grupo: 'PAR' },
+      { turno: 'MAÑANA', dia: 'IMPAR', label: 'Mañana', grupo: 'IMPAR' },
+      { turno: 'TARDE', dia: 'IMPAR', label: 'Tarde', grupo: 'IMPAR' },
+      { turno: 'NOCHE', dia: 'IMPAR', label: 'Noche', grupo: 'IMPAR' }
     ];
     function vacSlotCel(c, turno, dia){
       var list = Array.isArray(c.turnos) ? c.turnos : [];
+      var tU = String(turno||'').toUpperCase();
+      var dU = String(dia||'').toUpperCase();
       for(var i=0;i<list.length;i++){
-        if(String(list[i].turno||'').toUpperCase()===turno && String(list[i].dia||'').toUpperCase()===dia)
-          return parseInt(list[i].vacantes,10)||0;
+        var tt = String(list[i].turno||'').toUpperCase();
+        var dd = String(list[i].dia||'').toUpperCase();
+        if (esTurnoSedapalAtencion(turno) && esTurnoSedapalAtencion(list[i].turno)) {
+          if (dd === dU) return parseInt(list[i].vacantes,10)||0;
+          continue;
+        }
+        if(tt===tU && dd===dU) return parseInt(list[i].vacantes,10)||0;
+      }
+      if (dU === 'PAR' || dU === 'IMPAR') {
+        for(var j=0;j<list.length;j++){
+          if(String(list[j].turno||'').toUpperCase()===tU && String(list[j].dia||'').toUpperCase()==='PAR/IMPAR')
+            return parseInt(list[j].vacantes,10)||0;
+        }
       }
       return 0;
     }
     if(esMatrizCel){
       bloques.push(
         '<h3>COMISARÍAS / TURNOS / DÍAS / VACANTES</h3>'
-        +'<div class="tabla-cupos-wrap tabla-celador-wrap"><table class="tabla-cupos tabla-celador">'
-        +'<thead><tr><th>Comisaría</th>'
-        +SLOTS_CEL.map(function(s){ return '<th>'+escHtmlD(s.label)+'</th>'; }).join('')
-        +'<th>Total</th></tr></thead><tbody>'
+        +'<div class="tabla-cupos-wrap tabla-celador-wrap"><table class="tabla-cupos tabla-convenio-turnos">'
+        +'<thead><tr>'
+        +'<th rowspan="2">Comisaría</th>'
+        +'<th class="grp-par" colspan="3">PAR</th>'
+        +'<th class="grp-impar" colspan="3">IMPAR</th>'
+        +'<th rowspan="2">Total</th>'
+        +'</tr><tr>'
+        +SLOTS_CEL.map(function(s){
+          return '<th class="sub '+(s.grupo==='PAR'?'grp-par':'grp-impar')+'">'+escHtmlD(s.label)+'</th>';
+        }).join('')
+        +'</tr></thead><tbody>'
         +cupos.map(function(c){
           var total = parseInt(c.vacantes,10)||0;
           return '<tr><td style="text-align:left;font-weight:700;">'+escHtmlD(c.nombre||'—')+'</td>'
@@ -425,22 +453,46 @@ function renderDetalle(item){
       );
     }
     } else if (hayTurnosLugar) {
+      var SLOTS_CONV = [
+        { turno: 'MAÑANA', dia: 'PAR', label: 'Mañana', grupo: 'PAR' },
+        { turno: 'TARDE', dia: 'PAR', label: 'Tarde', grupo: 'PAR' },
+        { turno: 'NOCHE', dia: 'PAR', label: 'Noche', grupo: 'PAR' },
+        { turno: 'MAÑANA', dia: 'IMPAR', label: 'Mañana', grupo: 'IMPAR' },
+        { turno: 'TARDE', dia: 'IMPAR', label: 'Tarde', grupo: 'IMPAR' },
+        { turno: 'NOCHE', dia: 'IMPAR', label: 'Noche', grupo: 'IMPAR' }
+      ];
       bloques.push(
-        '<h3>LUGAR / TURNO / DÍA / VACANTES</h3>'
-        +'<div class="tabla-cupos-wrap"><table class="tabla-cupos">'
-        +'<thead><tr><th>Lugar</th><th>Turno</th><th>Día</th><th>Vacantes</th></tr></thead><tbody>'
+        '<h3>LUGAR / TURNOS / VACANTES</h3>'
+        +'<div class="tabla-cupos-wrap tabla-celador-wrap"><table class="tabla-cupos tabla-convenio-turnos">'
+        +'<thead><tr>'
+        +'<th rowspan="2">Lugar</th>'
+        +'<th class="grp-par" colspan="3">PAR</th>'
+        +'<th class="grp-impar" colspan="3">IMPAR</th>'
+        +'<th rowspan="2">Total</th>'
+        +'<th rowspan="2">Dirección</th>'
+        +'</tr><tr>'
+        +SLOTS_CONV.map(function(s){
+          return '<th class="sub '+(s.grupo==='PAR'?'grp-par':'grp-impar')+'">'+escHtmlD(s.label)+'</th>';
+        }).join('')
+        +'</tr></thead><tbody>'
         +cupos.map(function(c){
-          var list = Array.isArray(c.turnos) ? c.turnos : [];
-          if (!list.length) {
-            return '<tr><td style="text-align:left;font-weight:700;">'+escHtmlD(c.nombre||'—')+'</td>'
-              +'<td>—</td><td>—</td><td class="num">'+escHtmlD(String(parseInt(c.vacantes,10)||0))+'</td></tr>';
+          var dir = String(c.direccion||'').trim();
+          var total = parseInt(c.vacantes,10)||0;
+          var celdas;
+          if (esLugarSedapalAtencion(c.nombre)) {
+            var vacParA = vacSlotCel(c, 'ATENCION AL CLIENTE', 'PAR');
+            var vacImparA = vacSlotCel(c, 'ATENCION AL CLIENTE', 'IMPAR');
+            celdas = '<td colspan="3" class="num">09:00 a 17:00 · '+escHtmlD(String(vacParA))+'</td>'
+              + '<td colspan="3" class="num">09:00 a 17:00 · '+escHtmlD(String(vacImparA))+'</td>';
+          } else {
+            celdas = SLOTS_CONV.map(function(s){
+              return '<td class="num">'+escHtmlD(String(vacSlotCel(c,s.turno,s.dia)))+'</td>';
+            }).join('');
           }
-          return list.map(function(t){
-            return '<tr><td style="text-align:left;font-weight:700;">'+escHtmlD(c.nombre||'—')+'</td>'
-              +'<td>'+escHtmlD(labelTurnoHumano(t.turno))+'</td>'
-              +'<td>'+escHtmlD(String(t.dia||'PAR/IMPAR').toUpperCase())+'</td>'
-              +'<td class="num">'+escHtmlD(String(parseInt(t.vacantes,10)||0))+'</td></tr>';
-          }).join('');
+          return '<tr><td style="text-align:left;font-weight:700;">'+escHtmlD(c.nombre||'—')+'</td>'
+            +celdas
+            +'<td class="num">'+escHtmlD(String(total))+'</td>'
+            +'<td style="text-align:left;line-height:1.35;">'+escHtmlD(dir||'—')+'</td></tr>';
         }).join('')
         +'</tbody></table></div>'
       );
@@ -685,6 +737,11 @@ function esTurnoSedapalAtencion(turno){
   return n === 'ATENCION AL CLIENTE';
 }
 
+function esLugarSedapalAtencion(nombre){
+  var n = String(nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+  return n === 'ATENCION AL CLIENTE' || n.indexOf('ATENCION AL CLIENTE') === 0;
+}
+
 function labelTurnoHumano(turno){
   if (esTurnoSedapalAtencion(turno)) return 'Atención al cliente (09:00 a 17:00 hrs)';
   var t = String(turno || '').trim().toUpperCase();
@@ -697,7 +754,11 @@ function labelTurnoHumano(turno){
 function labelSlotHumano(turno, dia){
   var tLab = labelTurnoHumano(turno);
   var d = String(dia || '').trim().toUpperCase();
-  if (esTurnoSedapalAtencion(turno)) return tLab;
+  if (esTurnoSedapalAtencion(turno)) {
+    if (d === 'PAR') return tLab + ' PAR';
+    if (d === 'IMPAR') return tLab + ' IMPAR';
+    return tLab;
+  }
   if (d === 'PAR') return tLab + ' PAR';
   if (d === 'IMPAR') return tLab + ' IMPAR';
   if (d === 'PAR/IMPAR') return tLab + ' PAR/IMPAR';
@@ -751,7 +812,9 @@ function obtenerCuposConVacante(item){
       { turno: 'MAÑANA', dia: 'PAR', label: 'Mañana PAR' },
       { turno: 'MAÑANA', dia: 'IMPAR', label: 'Mañana IMPAR' },
       { turno: 'TARDE', dia: 'PAR', label: 'Tarde PAR' },
-      { turno: 'TARDE', dia: 'IMPAR', label: 'Tarde IMPAR' }
+      { turno: 'TARDE', dia: 'IMPAR', label: 'Tarde IMPAR' },
+      { turno: 'NOCHE', dia: 'PAR', label: 'Noche PAR' },
+      { turno: 'NOCHE', dia: 'IMPAR', label: 'Noche IMPAR' }
     ];
     var opts = [];
     cupos.forEach(function(c){

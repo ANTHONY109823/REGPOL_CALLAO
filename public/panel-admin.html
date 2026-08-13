@@ -202,7 +202,8 @@
       border-radius:12px;display:flex;flex-direction:column;overflow-x:hidden!important;overflow-y:hidden;
       padding:16px 16px 10px;box-sizing:border-box;
     }
-    #modal-item.modal-item-celador .modal-box{
+    #modal-item.modal-item-celador .modal-box,
+    #modal-item.modal-item-matriz .modal-box{
       width:min(1320px,97vw)!important;max-width:97vw!important;
     }
     #modal-item.modal-item-celador .mi-item-body{overflow-x:auto;}
@@ -224,12 +225,15 @@
     .cupo-lugar-card .cupo-turnos-h{display:flex;flex-direction:row;flex-wrap:nowrap;gap:8px;align-items:center;overflow-x:auto;}
     table.tabla-convenio-cupos{width:100%;margin:0;font-size:11.5px;table-layout:auto;}
     table.tabla-convenio-cupos th{text-align:center;font-size:10.5px;white-space:nowrap;padding:6px 5px;}
-    table.tabla-convenio-cupos td{vertical-align:middle;padding:5px 6px;}
+    table.tabla-convenio-cupos th.grp-par{background:#0b5c4a;color:#fff;}
+    table.tabla-convenio-cupos th.grp-impar{background:#1a6b4a;color:#fff;}
+    table.tabla-convenio-cupos th.sub{font-size:10px;font-weight:700;}
+    table.tabla-convenio-cupos td{vertical-align:middle;padding:5px 4px;}
     #modal-item table.tabla-convenio-cupos input,
     #modal-item table.tabla-convenio-cupos select{margin-bottom:0;max-width:none;}
-    #modal-item table.tabla-convenio-cupos .td-lugar input{width:100%;min-width:130px;font-weight:700;font-size:12px;padding:4px 6px;}
-    #modal-item table.tabla-convenio-cupos .td-dir input{width:100%;min-width:110px;font-size:11.5px;padding:4px 6px;}
-    #modal-item table.tabla-convenio-cupos input[type=number]{width:58px;text-align:center;font-weight:700;padding:3px 4px;}
+    #modal-item table.tabla-convenio-cupos .td-lugar input{width:100%;min-width:120px;font-weight:700;font-size:12px;padding:4px 6px;}
+    #modal-item table.tabla-convenio-cupos .td-dir input{width:100%;min-width:100px;font-size:11.5px;padding:4px 6px;}
+    #modal-item table.tabla-convenio-cupos input[type=number]{width:52px;text-align:center;font-weight:700;padding:3px 4px;}
     table.tabla-convenio-cupos .td-total{font-weight:800;color:#004d3d;text-align:center;white-space:nowrap;}
     table.tabla-convenio-cupos .td-del{width:36px;text-align:center;}
     .modal-box h3{margin:0 0 18px;color:#004d3d;font-size:15px;
@@ -1751,7 +1755,7 @@
                    style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;"
                    onkeydown="if(event.key==='Enter'){event.preventDefault();agregarCupoUnidadUI();}"/>
           </div>
-          <div style="width:118px;" id="mi-cupo-add-turno-wrap">
+          <div style="width:118px;display:none;" id="mi-cupo-add-turno-wrap">
             <label style="font-size:10px;margin:0;">Turno</label>
             <select id="mi-cupo-add-turno" style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;" onchange="onCambioTurnoSedapal(this)">
               <option value="MAÑANA">MAÑANA</option>
@@ -1759,7 +1763,7 @@
               <option value="NOCHE">NOCHE</option>
             </select>
           </div>
-          <div style="width:118px;">
+          <div style="width:118px;display:none;" id="mi-cupo-add-dia-wrap">
             <label style="font-size:10px;margin:0;">Día</label>
             <select id="mi-cupo-add-dia" style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;">
               <option value="PAR/IMPAR" selected>PAR/IMPAR</option>
@@ -1767,11 +1771,11 @@
               <option value="IMPAR">IMPAR</option>
             </select>
           </div>
-          <div style="width:88px;">
+          <div style="width:88px;display:none;" id="mi-cupo-add-vac-wrap">
             <label style="font-size:10px;margin:0;">Vacantes</label>
             <input type="number" id="mi-cupo-add-vac" min="0" value="0" style="width:100%;padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;"/>
           </div>
-          <button type="button" class="btn-mini btn-mini-ok" style="padding:5px 10px;" onclick="agregarCupoUnidadUI()" title="Agregar lugar con turno y vacantes"><i class="fas fa-plus"></i> Agregar</button>
+          <button type="button" class="btn-mini btn-mini-ok" style="padding:5px 10px;" onclick="agregarCupoUnidadUI()" title="Agregar lugar"><i class="fas fa-plus"></i> Agregar</button>
         </div>
         <div id="mi-cupos-lista" style="margin-bottom:4px;"></div>
         <textarea id="mi-cupos-unidades" rows="2" style="display:none;"></textarea>
@@ -5878,6 +5882,7 @@ function esTituloSedapal(titulo){
 
 var TURNO_SEDAPAL_ATENCION = 'ATENCION AL CLIENTE';
 var LUGAR_SEDAPAL_ATENCION = 'ATENCIÓN AL CLIENTE';
+var SEDAPAL_ATENCION_VAC_DIA = 4;
 
 function esTurnoSedapalAtencion(turno){
   var n = String(turno || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
@@ -5947,6 +5952,36 @@ function onCambioTurnoSedapal(sel){
   }
 }
 
+function asegurarTurnosSedapalAtencionEnCupo(cupo){
+  var c = cupo || { nombre: LUGAR_SEDAPAL_ATENCION, vacantes: 0, inscritos: 0, disponibles: 0, direccion: '', turnos: [] };
+  var prevMap = {};
+  (Array.isArray(c.turnos) ? c.turnos : []).forEach(function(t){
+    if (!esTurnoSedapalAtencion(t && t.turno)) return;
+    prevMap[String(t.dia || 'PAR/IMPAR').toUpperCase()] = parseInt(t.vacantes, 10) || 0;
+  });
+  var vacPar;
+  var vacImpar;
+  if (Object.prototype.hasOwnProperty.call(prevMap, 'PAR')
+      || Object.prototype.hasOwnProperty.call(prevMap, 'IMPAR')) {
+    vacPar = Object.prototype.hasOwnProperty.call(prevMap, 'PAR') ? prevMap.PAR : SEDAPAL_ATENCION_VAC_DIA;
+    vacImpar = Object.prototype.hasOwnProperty.call(prevMap, 'IMPAR') ? prevMap.IMPAR : SEDAPAL_ATENCION_VAC_DIA;
+  } else {
+    vacPar = SEDAPAL_ATENCION_VAC_DIA;
+    vacImpar = SEDAPAL_ATENCION_VAC_DIA;
+  }
+  return recalcCupoTurnos({
+    nombre: LUGAR_SEDAPAL_ATENCION,
+    vacantes: 0,
+    inscritos: parseInt(c.inscritos, 10) || 0,
+    disponibles: 0,
+    direccion: String(c.direccion || '').trim(),
+    turnos: [
+      { turno: TURNO_SEDAPAL_ATENCION, dia: 'PAR', vacantes: vacPar },
+      { turno: TURNO_SEDAPAL_ATENCION, dia: 'IMPAR', vacantes: vacImpar }
+    ]
+  });
+}
+
 function separarLugarSedapalAtencion(cupos){
   var list = (cupos || []).map(function(c){
     return Object.assign({}, c, { turnos: Array.isArray(c.turnos) ? c.turnos.slice() : [] });
@@ -5966,23 +6001,17 @@ function separarLugarSedapalAtencion(cupos){
     if (esLugarSedapalAtencion(list[i].nombre)) { idxA = i; break; }
   }
   if (idxA < 0) {
-    list.push({
-      nombre: LUGAR_SEDAPAL_ATENCION,
-      vacantes: 0,
-      inscritos: 0,
-      disponibles: 0,
-      direccion: '',
-      turnos: [{ turno: TURNO_SEDAPAL_ATENCION, dia: 'PAR/IMPAR', vacantes: vacExtra }]
-    });
+    list.push(asegurarTurnosSedapalAtencionEnCupo({
+      nombre: LUGAR_SEDAPAL_ATENCION, vacantes: 0, inscritos: 0, disponibles: 0, direccion: '', turnos: []
+    }));
   } else {
-    var prev = 0;
-    (list[idxA].turnos || []).forEach(function(t){
-      if (esTurnoSedapalAtencion(t && t.turno)) prev += parseInt(t.vacantes, 10) || 0;
-    });
-    list[idxA].nombre = LUGAR_SEDAPAL_ATENCION;
-    list[idxA].turnos = [{ turno: TURNO_SEDAPAL_ATENCION, dia: 'PAR/IMPAR', vacantes: prev + vacExtra }];
+    list[idxA] = asegurarTurnosSedapalAtencionEnCupo(Object.assign({}, list[idxA], {
+      nombre: LUGAR_SEDAPAL_ATENCION
+    }));
   }
-  return list.map(recalcCupoTurnos);
+  return list.map(function(c){
+    return esLugarSedapalAtencion(c.nombre) ? c : recalcCupoTurnos(c);
+  });
 }
 
 function asegurarTurnoSedapalAtencionCliente(){
@@ -6003,19 +6032,31 @@ function listaComisariasCelador(){
 }
 
 var CELADOR_TURNOS_SLOTS = [
-  { turno: 'MAÑANA', dia: 'PAR', label: 'Mañana PAR' },
-  { turno: 'MAÑANA', dia: 'IMPAR', label: 'Mañana IMPAR' },
-  { turno: 'TARDE', dia: 'PAR', label: 'Tarde PAR' },
-  { turno: 'TARDE', dia: 'IMPAR', label: 'Tarde IMPAR' }
+  { turno: 'MAÑANA', dia: 'PAR', label: 'Mañana', grupo: 'PAR' },
+  { turno: 'TARDE', dia: 'PAR', label: 'Tarde', grupo: 'PAR' },
+  { turno: 'NOCHE', dia: 'PAR', label: 'Noche', grupo: 'PAR' },
+  { turno: 'MAÑANA', dia: 'IMPAR', label: 'Mañana', grupo: 'IMPAR' },
+  { turno: 'TARDE', dia: 'IMPAR', label: 'Tarde', grupo: 'IMPAR' },
+  { turno: 'NOCHE', dia: 'IMPAR', label: 'Noche', grupo: 'IMPAR' }
+];
+
+/** Todos los convenios: 6 celdas fijas — PAR (Mañana/Tarde/Noche) e IMPAR (Mañana/Tarde/Noche). */
+var CONVENIO_TURNOS_SLOTS = [
+  { turno: 'MAÑANA', dia: 'PAR', label: 'Mañana', grupo: 'PAR' },
+  { turno: 'TARDE', dia: 'PAR', label: 'Tarde', grupo: 'PAR' },
+  { turno: 'NOCHE', dia: 'PAR', label: 'Noche', grupo: 'PAR' },
+  { turno: 'MAÑANA', dia: 'IMPAR', label: 'Mañana', grupo: 'IMPAR' },
+  { turno: 'TARDE', dia: 'IMPAR', label: 'Tarde', grupo: 'IMPAR' },
+  { turno: 'NOCHE', dia: 'IMPAR', label: 'Noche', grupo: 'IMPAR' }
 ];
 
 function claveTurnoDia(turno, dia){
   var tNom = (typeof esTurnoSedapalAtencion === 'function' && esTurnoSedapalAtencion(turno))
     ? TURNO_SEDAPAL_ATENCION
     : String(turno || '').trim().toUpperCase();
-  var tDia = (typeof esTurnoSedapalAtencion === 'function' && esTurnoSedapalAtencion(tNom))
-    ? 'PAR/IMPAR'
-    : (String(dia || 'PAR/IMPAR').trim().toUpperCase() || 'PAR/IMPAR');
+  var tDia = String(dia || 'PAR/IMPAR').trim().toUpperCase() || 'PAR/IMPAR';
+  if (typeof esTurnoSedapalAtencion === 'function' && esTurnoSedapalAtencion(tNom)
+      && tDia !== 'PAR' && tDia !== 'IMPAR') tDia = 'PAR/IMPAR';
   return tNom + '|' + tDia;
 }
 
@@ -6042,13 +6083,61 @@ function slotsTurnosDesdeCupos(cupos){
 
 function vacTurnoCelador(cupo, turno, dia){
   var list = (cupo && Array.isArray(cupo.turnos)) ? cupo.turnos : [];
+  var tU = String(turno || '').toUpperCase();
+  var dU = String(dia || '').toUpperCase();
   for (var i = 0; i < list.length; i++) {
-    if (String(list[i].turno || '').toUpperCase() === turno
-        && String(list[i].dia || '').toUpperCase() === dia) {
+    if (String(list[i].turno || '').toUpperCase() === tU
+        && String(list[i].dia || '').toUpperCase() === dU) {
       return parseInt(list[i].vacantes, 10) || 0;
     }
   }
+  if (dU === 'PAR' || dU === 'IMPAR') {
+    for (var j = 0; j < list.length; j++) {
+      if (String(list[j].turno || '').toUpperCase() === tU
+          && String(list[j].dia || '').toUpperCase() === 'PAR/IMPAR') {
+        return parseInt(list[j].vacantes, 10) || 0;
+      }
+    }
+  }
   return 0;
+}
+
+function asegurarTurnosConvenioEnCupo(cupo){
+  if (esLugarSedapalAtencion(cupo && cupo.nombre)) {
+    return asegurarTurnosSedapalAtencionEnCupo(cupo);
+  }
+  var c = cupo || { nombre: '', vacantes: 0, inscritos: 0, disponibles: 0, direccion: '' };
+  var prevMap = {};
+  (Array.isArray(c.turnos) ? c.turnos : []).forEach(function(t){
+    if (esTurnoSedapalAtencion(t && t.turno)) return;
+    prevMap[String(t.turno||'').toUpperCase()+'|'+String(t.dia||'').toUpperCase()] = t;
+  });
+  var turnos = CONVENIO_TURNOS_SLOTS.map(function(s){
+    var exact = prevMap[s.turno+'|'+s.dia];
+    var vac = exact ? (parseInt(exact.vacantes, 10) || 0) : 0;
+    if (!exact && s.dia === 'PAR') {
+      var ambos = prevMap[s.turno+'|PAR/IMPAR'];
+      if (ambos) vac = parseInt(ambos.vacantes, 10) || 0;
+    }
+    return { turno: s.turno, dia: s.dia, vacantes: vac };
+  });
+  var suma = turnos.reduce(function(a, t){ return a + (parseInt(t.vacantes, 10) || 0); }, 0);
+  if (suma === 0) {
+    var prevTotal = parseInt(c.vacantes, 10) || 0;
+    if (prevTotal > 0) {
+      turnos[1].vacantes = prevTotal;
+      suma = prevTotal;
+    }
+  }
+  var insc = parseInt(c.inscritos, 10) || 0;
+  return {
+    nombre: c.nombre,
+    vacantes: suma,
+    inscritos: insc,
+    disponibles: Math.max(0, suma - insc),
+    direccion: String(c.direccion || '').trim(),
+    turnos: turnos
+  };
 }
 
 function asegurarTurnosCeladorEnCupo(cupo){
@@ -6057,23 +6146,24 @@ function asegurarTurnosCeladorEnCupo(cupo){
   (Array.isArray(c.turnos) ? c.turnos : []).forEach(function(t){
     prevMap[String(t.turno||'').toUpperCase()+'|'+String(t.dia||'').toUpperCase()] = t;
   });
-  var completo = CELADOR_TURNOS_SLOTS.every(function(s){
-    return !!prevMap[s.turno+'|'+s.dia];
-  });
+  var hayPrev = Object.keys(prevMap).length > 0;
   var turnos;
-  if (completo) {
+  if (hayPrev) {
     turnos = CELADOR_TURNOS_SLOTS.map(function(s){
       var prev = prevMap[s.turno+'|'+s.dia];
-      return { turno: s.turno, dia: s.dia, vacantes: parseInt(prev.vacantes, 10) || 0 };
+      return { turno: s.turno, dia: s.dia, vacantes: prev ? (parseInt(prev.vacantes, 10) || 0) : 0 };
     });
   } else {
     var total = parseInt(c.vacantes, 10) || 0;
-    var n = CELADOR_TURNOS_SLOTS.length;
+    var slotsDia = CELADOR_TURNOS_SLOTS.filter(function(s){ return s.turno !== 'NOCHE'; });
+    var n = slotsDia.length || 1;
     var base = Math.floor(total / n);
     var resto = total % n;
-    turnos = CELADOR_TURNOS_SLOTS.map(function(s, idx){
-      var prev = prevMap[s.turno+'|'+s.dia];
-      var vac = prev ? (parseInt(prev.vacantes, 10) || 0) : (base + (idx < resto ? 1 : 0));
+    var i = 0;
+    turnos = CELADOR_TURNOS_SLOTS.map(function(s){
+      if (s.turno === 'NOCHE') return { turno: s.turno, dia: s.dia, vacantes: 0 };
+      var vac = base + (i < resto ? 1 : 0);
+      i += 1;
       return { turno: s.turno, dia: s.dia, vacantes: vac };
     });
   }
@@ -6121,8 +6211,8 @@ function adaptarCuposUIPorTitulo(){
   if (wrapVac) wrapVac.style.display = 'none';
   if (labCupos) {
     labCupos.innerHTML = esCel
-      ? '<i class="fas fa-map-marker-alt"></i> Comisarías × turnos (Mañana/Tarde · Par/Impar)'
-      : '<i class="fas fa-map-marker-alt"></i> Lugares × turno × día × vacantes';
+      ? '<i class="fas fa-map-marker-alt"></i> Comisarías × PAR (Mañana/Tarde/Noche) × IMPAR (Mañana/Tarde/Noche)'
+      : '<i class="fas fa-map-marker-alt"></i> Lugares × PAR (Mañana/Tarde/Noche) × IMPAR (Mañana/Tarde/Noche)';
   }
   if (addBar) addBar.style.display = esCel ? 'none' : 'flex';
   if (turnoAdd) turnoAdd.style.display = 'none';
@@ -6143,13 +6233,13 @@ function adaptarCuposUIPorTitulo(){
   if (turnoAyuda) {
     if (esCel) {
       turnoAyuda.style.display = '';
-      turnoAyuda.textContent = 'Edite las vacantes en la tabla de comisarías (Mañana/Tarde × Par/Impar). El total se calcula solo.';
+      turnoAyuda.textContent = 'Edite las 6 celdas (PAR/IMPAR × Mañana/Tarde/Noche). Noche queda en 0 hasta que se asigne.';
     } else if (esTituloSedapal((document.getElementById('mi-titulo-val') || {}).value)) {
       turnoAyuda.style.display = '';
-      turnoAyuda.textContent = 'SEDAPAL tiene dos lugares: el operativo y Atención al cliente (09:00 a 17:00, PAR/IMPAR).';
+      turnoAyuda.textContent = 'SEDAPAL: 6 celdas en el lugar operativo. Atención al cliente: 4 vacantes PAR y 4 IMPAR (09:00 a 17:00).';
     } else {
-      turnoAyuda.style.display = 'none';
-      turnoAyuda.textContent = '';
+      turnoAyuda.style.display = '';
+      turnoAyuda.textContent = 'Cada lugar tiene 6 celdas: PAR (Mañana, Tarde, Noche) e IMPAR (Mañana, Tarde, Noche). El total se calcula solo.';
     }
   }
   if (vacLab) vacLab.textContent = esCel
@@ -6168,12 +6258,12 @@ function adaptarCuposUIPorTitulo(){
   }
   var turnoAddSel = document.getElementById('mi-cupo-add-turno');
   var turnoWrap = document.getElementById('mi-cupo-add-turno-wrap');
+  var diaWrap = document.getElementById('mi-cupo-add-dia-wrap');
+  var vacWrap = document.getElementById('mi-cupo-add-vac-wrap');
   rellenarSelectTurnoConvenio(turnoAddSel);
-  if (turnoWrap) {
-    turnoWrap.style.width = '118px';
-    turnoWrap.style.minWidth = '118px';
-    turnoWrap.style.flex = '';
-  }
+  if (turnoWrap) turnoWrap.style.display = 'none';
+  if (diaWrap) diaWrap.style.display = 'none';
+  if (vacWrap) vacWrap.style.display = 'none';
   sincronizarTotalDesdeTurnosConvenio();
   renderListaCuposUnidadesUI();
   renderListaTurnosUI();
@@ -6269,7 +6359,7 @@ function redistribuirComisariasCeladorDesdeTotal(total){
     var vacCia = prev && Array.isArray(prev.turnos) && prev.turnos.length
       ? (parseInt(prev.vacantes, 10) || 0)
       : (porCia + (idx < resto ? 1 : 0));
-    if (!prev || !(Array.isArray(prev.turnos) && prev.turnos.length === CELADOR_TURNOS_SLOTS.length)) {
+    if (!prev || !(Array.isArray(prev.turnos) && prev.turnos.length)) {
       vacCia = porCia + (idx < resto ? 1 : 0);
     }
     var base = Object.assign({}, prev || {}, { nombre: nombre, vacantes: vacCia });
@@ -6323,6 +6413,7 @@ function aplicarTamanoModalItem(tipo){
   if (tipo === 'convenio') {
     var esCel = esTituloCelador((document.getElementById('mi-titulo-val') || {}).value);
     modal.classList.add('modal-item-full');
+    modal.classList.add('modal-item-matriz');
     if (esCel) modal.classList.add('modal-item-celador');
     else modal.classList.remove('modal-item-celador');
     box.style.width = '';
@@ -6331,6 +6422,7 @@ function aplicarTamanoModalItem(tipo){
   } else {
     modal.classList.remove('modal-item-full');
     modal.classList.remove('modal-item-celador');
+    modal.classList.remove('modal-item-matriz');
     box.style.width = '560px';
     box.style.maxHeight = '90vh';
     box.style.overflowY = 'auto';
@@ -6597,7 +6689,7 @@ function parseTurnosTexto(txt){
     if(!parts[0]) return null;
     var turno = esTurnoSedapalAtencion(parts[0]) ? TURNO_SEDAPAL_ATENCION : parts[0].toUpperCase();
     var dia = (parts[1]||'PAR/IMPAR').toUpperCase();
-    if (esTurnoSedapalAtencion(turno)) dia = 'PAR/IMPAR';
+    if (esTurnoSedapalAtencion(turno) && dia !== 'PAR' && dia !== 'IMPAR') dia = 'PAR/IMPAR';
     var vac=parseInt(parts[2],10); if(isNaN(vac)||vac<0) vac=0;
     return { turno: turno, dia: dia, vacantes: vac };
   }).filter(Boolean);
@@ -6725,33 +6817,25 @@ function asegurarTurnosEnCuposConvenio(){
   if (esTituloCelador((document.getElementById('mi-titulo-val') || {}).value)) return;
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
   if (!cupos.length) return;
-  var hayTurnosLugar = cupos.some(function(c){ return Array.isArray(c.turnos) && c.turnos.length; });
-  if (hayTurnosLugar) {
-    var taOk = document.getElementById('mi-cupos-unidades');
-    if (taOk) taOk.value = serializarCuposUnidades(cupos.map(recalcCupoTurnos));
-    return;
-  }
-  var glob = parseTurnosTexto((document.getElementById('mi-turnos') || {}).value);
-  if (glob.length && cupos.length === 1) {
-    cupos[0].turnos = glob.map(function(t){
-      return { turno: t.turno, dia: t.dia || 'PAR/IMPAR', vacantes: parseInt(t.vacantes, 10) || 0 };
-    });
-    cupos[0] = recalcCupoTurnos(cupos[0]);
-  } else if (glob.length && cupos.length > 1) {
-    cupos[0].turnos = glob.map(function(t){
-      return { turno: t.turno, dia: t.dia || 'PAR/IMPAR', vacantes: parseInt(t.vacantes, 10) || 0 };
-    });
-    cupos[0] = recalcCupoTurnos(cupos[0]);
-    for (var i = 1; i < cupos.length; i++) {
-      var vac = parseInt(cupos[i].vacantes, 10) || 0;
-      if (vac > 0 && !(cupos[i].turnos && cupos[i].turnos.length)) {
-        cupos[i].turnos = [{ turno: 'TARDE', dia: 'PAR/IMPAR', vacantes: vac }];
-        cupos[i] = recalcCupoTurnos(cupos[i]);
+  var hayTurnosLugar = cupos.some(function(c){
+    return !esLugarSedapalAtencion(c.nombre) && Array.isArray(c.turnos) && c.turnos.length;
+  });
+  if (!hayTurnosLugar) {
+    var glob = parseTurnosTexto((document.getElementById('mi-turnos') || {}).value);
+    if (glob.length) {
+      for (var g = 0; g < cupos.length; g++) {
+        if (esLugarSedapalAtencion(cupos[g].nombre)) continue;
+        cupos[g].turnos = glob.map(function(t){
+          return { turno: t.turno, dia: t.dia || 'PAR/IMPAR', vacantes: parseInt(t.vacantes, 10) || 0 };
+        });
+        break;
       }
     }
   }
   var ta = document.getElementById('mi-cupos-unidades');
-  if (ta) ta.value = serializarCuposUnidades(cupos);
+  if (ta) ta.value = serializarCuposUnidades(cupos.map(function(c){
+    return esLugarSedapalAtencion(c.nombre) ? asegurarTurnosSedapalAtencionEnCupo(c) : asegurarTurnosConvenioEnCupo(c);
+  }));
 }
 
 function htmlSelectTurno(id, valor){
@@ -6782,20 +6866,24 @@ function renderListaCuposUnidadesUI(){
     lista.innerHTML = '<p style="font-size:12px;color:#888;margin:0;padding:8px;background:#fafafa;border:1px dashed #ccc;border-radius:6px;">'
       + (esCel
         ? 'Cargando comisarías…'
-        : 'Sin lugares. Escriba el lugar, elija turno y vacantes, y pulse <strong>Agregar</strong>.')
+        : 'Sin lugares. Escriba el nombre y pulse <strong>Agregar</strong>. Luego complete las 6 celdas.')
       + '</p>';
     return;
   }
   if(esCel){
     cupos = cupos.map(asegurarTurnosCeladorEnCupo);
-    lista.innerHTML = '<div><table class="t tabla-celador-edit" style="margin:0;font-size:11.5px;width:100%;"><thead><tr>'
-      +'<th>Comisaría</th>'
-      +CELADOR_TURNOS_SLOTS.map(function(s){
-        return '<th style="width:72px;text-align:center;">'+escHtml(s.label)+'</th>';
+    lista.innerHTML = '<div><table class="t tabla-celador-edit tabla-convenio-cupos" style="margin:0;font-size:11.5px;width:100%;"><thead>'
+      + '<tr>'
+      + '<th rowspan="2" style="text-align:left;vertical-align:middle;">Comisaría</th>'
+      + '<th class="grp-par" colspan="3">PAR</th>'
+      + '<th class="grp-impar" colspan="3">IMPAR</th>'
+      + '<th rowspan="2" style="vertical-align:middle;">Total</th>'
+      + '<th rowspan="2" style="text-align:left;vertical-align:middle;">Dirección</th>'
+      + '</tr><tr>'
+      + CELADOR_TURNOS_SLOTS.map(function(s){
+        return '<th class="sub '+(s.grupo==='PAR'?'grp-par':'grp-impar')+'">'+escHtml(s.label)+'</th>';
       }).join('')
-      +'<th style="width:64px;text-align:center;">Total</th>'
-      +'<th>Dirección</th>'
-      +'</tr></thead><tbody>'
+      + '</tr></thead><tbody>'
       +cupos.map(function(c, idx){
         var dir = String(c.direccion || '').trim();
         if (/^DIVOPUS\s*0[123]$/i.test(dir)) dir = '';
@@ -6803,13 +6891,13 @@ function renderListaCuposUnidadesUI(){
         var celdas = CELADOR_TURNOS_SLOTS.map(function(s, sIdx){
           var vac = vacTurnoCelador(c, s.turno, s.dia);
           return '<td style="text-align:center;"><input type="number" min="0" value="'+vac+'" '
-            +'style="width:64px;padding:3px 4px;border:1px solid #ccc;border-radius:4px;font-size:12px;font-weight:700;color:#004d3d;text-align:center;" '
+            +'style="width:52px;padding:3px 4px;border:1px solid #ccc;border-radius:4px;font-size:12px;font-weight:700;color:#004d3d;text-align:center;" '
             +'onchange="actualizarCupoTurnoCeladorUI('+idx+','+sIdx+',this.value)"/></td>';
         }).join('');
         return '<tr>'
           +'<td style="font-weight:600;">'+escHtml(c.nombre)+'</td>'
           +celdas
-          +'<td style="font-weight:800;color:#004d3d;text-align:center;">'+(c.vacantes||0)+'</td>'
+          +'<td class="td-total">'+(c.vacantes||0)+'</td>'
           +'<td><input type="text" value="'+dirAttr+'" maxlength="200" placeholder="Dirección (opcional)" '
           +'style="width:100%;min-width:100px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:11.5px;" '
           +'onchange="actualizarCupoUnidadUI('+idx+',\'direccion\',this.value)"/></td>'
@@ -6817,14 +6905,22 @@ function renderListaCuposUnidadesUI(){
       }).join('')
       +'</tbody></table></div>';
   } else {
-    cupos = cupos.map(recalcCupoTurnos);
-    var slots = slotsTurnosDesdeCupos(cupos);
-    lista.innerHTML = '<div><table class="t tabla-convenio-cupos"><thead><tr>'
-      + '<th style="text-align:left;">Lugar</th>'
+    cupos = cupos.map(function(c){
+      return esLugarSedapalAtencion(c.nombre) ? asegurarTurnosSedapalAtencionEnCupo(c) : asegurarTurnosConvenioEnCupo(c);
+    });
+    var slots = CONVENIO_TURNOS_SLOTS;
+    lista.innerHTML = '<div><table class="t tabla-convenio-cupos"><thead>'
+      + '<tr>'
+      + '<th rowspan="2" style="text-align:left;vertical-align:middle;">Lugar</th>'
+      + '<th class="grp-par" colspan="3">PAR</th>'
+      + '<th class="grp-impar" colspan="3">IMPAR</th>'
+      + '<th rowspan="2" style="vertical-align:middle;">Total</th>'
+      + '<th rowspan="2" style="text-align:left;vertical-align:middle;">Dirección</th>'
+      + '<th rowspan="2"></th>'
+      + '</tr><tr>'
       + slots.map(function(s){
-        return '<th>'+escHtml(s.label)+'</th>';
+        return '<th class="sub '+(s.grupo==='PAR'?'grp-par':'grp-impar')+'">'+escHtml(s.label)+'</th>';
       }).join('')
-      + '<th>Total</th><th style="text-align:left;">Dirección</th><th></th>'
       + '</tr></thead><tbody>'
       + cupos.map(function(c, idx){
         var nomAttr = escHtml(c.nombre||'').replace(/"/g, '&quot;');
@@ -6832,11 +6928,15 @@ function renderListaCuposUnidadesUI(){
         var esAtencion = esLugarSedapalAtencion(c.nombre);
         var celdas;
         if (esAtencion) {
-          var vacA = vacTurnoCelador(c, TURNO_SEDAPAL_ATENCION, 'PAR/IMPAR');
-          var span = Math.max(slots.length, 1);
-          celdas = '<td colspan="'+span+'" style="text-align:center;white-space:nowrap;">'
-            + '<span style="font-size:10.5px;font-weight:700;color:#004d3d;margin-right:8px;">09:00 a 17:00 · PAR/IMPAR</span>'
-            + '<input type="number" min="0" value="'+vacA+'" onchange="actualizarVacAtencionLugarUI('+idx+',this.value)"/>'
+          var vacParA = vacTurnoCelador(c, TURNO_SEDAPAL_ATENCION, 'PAR');
+          var vacImparA = vacTurnoCelador(c, TURNO_SEDAPAL_ATENCION, 'IMPAR');
+          celdas = '<td colspan="3" style="text-align:center;white-space:nowrap;">'
+            + '<span style="font-size:10.5px;font-weight:700;color:#004d3d;margin-right:6px;">09:00 a 17:00</span>'
+            + '<input type="number" min="0" value="'+vacParA+'" onchange="actualizarVacAtencionDiaUI('+idx+',\'PAR\',this.value)"/>'
+            + '</td>'
+            + '<td colspan="3" style="text-align:center;white-space:nowrap;">'
+            + '<span style="font-size:10.5px;font-weight:700;color:#004d3d;margin-right:6px;">09:00 a 17:00</span>'
+            + '<input type="number" min="0" value="'+vacImparA+'" onchange="actualizarVacAtencionDiaUI('+idx+',\'IMPAR\',this.value)"/>'
             + '</td>';
         } else {
           celdas = slots.map(function(s, sIdx){
@@ -6865,9 +6965,10 @@ function renderListaCuposUnidadesUI(){
 function setCuposUnidadesDesdeArray(cupos){
   var ta = document.getElementById('mi-cupos-unidades');
   var list = (cupos || []).map(function(c){
-    return esTituloCelador((document.getElementById('mi-titulo-val') || {}).value)
-      ? asegurarTurnosCeladorEnCupo(c)
-      : recalcCupoTurnos(c);
+    if (esTituloCelador((document.getElementById('mi-titulo-val') || {}).value))
+      return asegurarTurnosCeladorEnCupo(c);
+    if (esLugarSedapalAtencion(c && c.nombre)) return asegurarTurnosSedapalAtencionEnCupo(c);
+    return asegurarTurnosConvenioEnCupo(c);
   });
   if(ta) ta.value = serializarCuposUnidades(list);
   renderListaCuposUnidadesUI();
@@ -6883,13 +6984,12 @@ function agregarTurnoEnCupo(cupo, turno, dia, vac){
   var c = recalcCupoTurnos(cupo);
   var tNom = esTurnoSedapalAtencion(turno) ? TURNO_SEDAPAL_ATENCION : String(turno || '').trim().toUpperCase();
   var tDia = String(dia || 'PAR/IMPAR').trim().toUpperCase() || 'PAR/IMPAR';
-  if (esTurnoSedapalAtencion(tNom)) tDia = 'PAR/IMPAR';
+  if (esTurnoSedapalAtencion(tNom) && tDia !== 'PAR' && tDia !== 'IMPAR') tDia = 'PAR';
   var n = parseInt(vac, 10) || 0;
   if (!tNom) return c;
   if (!Array.isArray(c.turnos)) c.turnos = [];
   var found = c.turnos.find(function(t){
     var tn = esTurnoSedapalAtencion(t.turno) ? TURNO_SEDAPAL_ATENCION : String(t.turno||'').toUpperCase();
-    if (esTurnoSedapalAtencion(tNom)) return tn === tNom;
     return tn===tNom && String(t.dia||'').toUpperCase()===tDia;
   });
   if (found) found.vacantes = n;
@@ -6902,17 +7002,9 @@ function agregarCupoUnidadUI(){
   var txt = document.getElementById('mi-cupo-add-nombre-txt');
   var nombre = txt ? String(txt.value || '').trim() : '';
   if(!nombre){ alert('Escriba el nombre del lugar.'); return; }
-  var turnoEl = document.getElementById('mi-cupo-add-turno');
-  var diaEl = document.getElementById('mi-cupo-add-dia');
-  var vacEl = document.getElementById('mi-cupo-add-vac');
-  var turno = turnoEl ? String(turnoEl.value || 'TARDE').trim().toUpperCase() : 'TARDE';
-  var dia = diaEl ? String(diaEl.value || 'PAR/IMPAR').trim().toUpperCase() : 'PAR/IMPAR';
-  var vac = vacEl ? (parseInt(vacEl.value, 10) || 0) : 0;
   if (esTituloSedapal((document.getElementById('mi-titulo-val') || {}).value)
-      && (esLugarSedapalAtencion(nombre) || esTurnoSedapalAtencion(turno))) {
+      && esLugarSedapalAtencion(nombre)) {
     nombre = LUGAR_SEDAPAL_ATENCION;
-    turno = TURNO_SEDAPAL_ATENCION;
-    dia = 'PAR/IMPAR';
   }
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
   var key = nombre.toUpperCase();
@@ -6921,13 +7013,21 @@ function agregarCupoUnidadUI(){
     if (esLugarSedapalAtencion(nombre) && esLugarSedapalAtencion(cupos[i].nombre)) { idx = i; break; }
     if (String(cupos[i].nombre || '').toUpperCase() === key) { idx = i; break; }
   }
-  if (idx < 0) {
-    cupos.push({ nombre: nombre, vacantes: 0, inscritos: 0, disponibles: 0, direccion: '', turnos: [] });
-    idx = cupos.length - 1;
+  if (idx >= 0) {
+    alert('Ese lugar ya está en la lista. Edite las vacantes en las 6 celdas.');
+    return;
   }
-  cupos[idx] = agregarTurnoEnCupo(cupos[idx], turno, dia, vac);
+  if (esLugarSedapalAtencion(nombre)) {
+    cupos.push(asegurarTurnosSedapalAtencionEnCupo({
+      nombre: LUGAR_SEDAPAL_ATENCION, vacantes: 0, inscritos: 0, disponibles: 0, direccion: '', turnos: []
+    }));
+  } else {
+    cupos.push(asegurarTurnosConvenioEnCupo({
+      nombre: nombre, vacantes: 0, inscritos: 0, disponibles: 0, direccion: '', turnos: []
+    }));
+  }
   setCuposUnidadesDesdeArray(cupos);
-  if(vacEl) vacEl.value = '0';
+  if (txt) txt.value = '';
 }
 
 function agregarTurnoALugarUI(idx){
@@ -6944,23 +7044,32 @@ function agregarTurnoALugarUI(idx){
   setCuposUnidadesDesdeArray(cupos);
 }
 
-function actualizarVacAtencionLugarUI(idx, valor){
+function actualizarVacAtencionDiaUI(idx, dia, valor){
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
   if (!cupos[idx]) return;
   var n = parseInt(valor, 10);
   if (isNaN(n) || n < 0) n = 0;
+  var d = String(dia || 'PAR').toUpperCase() === 'IMPAR' ? 'IMPAR' : 'PAR';
   cupos[idx].nombre = LUGAR_SEDAPAL_ATENCION;
-  cupos[idx] = agregarTurnoEnCupo(cupos[idx], TURNO_SEDAPAL_ATENCION, 'PAR/IMPAR', n);
+  cupos[idx] = asegurarTurnosSedapalAtencionEnCupo(cupos[idx]);
+  cupos[idx] = agregarTurnoEnCupo(cupos[idx], TURNO_SEDAPAL_ATENCION, d, n);
+  cupos[idx] = asegurarTurnosSedapalAtencionEnCupo(cupos[idx]);
   setCuposUnidadesDesdeArray(cupos);
+}
+
+function actualizarVacAtencionLugarUI(idx, valor){
+  actualizarVacAtencionDiaUI(idx, 'PAR', valor);
 }
 
 function actualizarTurnoSlotLugarUI(idx, slotIdx, valor){
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
-  var slots = slotsTurnosDesdeCupos(cupos);
+  var slots = CONVENIO_TURNOS_SLOTS;
   if (!cupos[idx] || !slots[slotIdx]) return;
   var n = parseInt(valor, 10);
   if (isNaN(n) || n < 0) n = 0;
+  cupos[idx] = asegurarTurnosConvenioEnCupo(cupos[idx]);
   cupos[idx] = agregarTurnoEnCupo(cupos[idx], slots[slotIdx].turno, slots[slotIdx].dia, n);
+  cupos[idx] = asegurarTurnosConvenioEnCupo(cupos[idx]);
   setCuposUnidadesDesdeArray(cupos);
 }
 
@@ -7178,7 +7287,9 @@ function guardarItem(){
       })();
       lugarTxt = '';
     } else {
-      cuposGuardar = cuposGuardar.map(recalcCupoTurnos);
+      cuposGuardar = cuposGuardar.map(function(c){
+        return esLugarSedapalAtencion(c.nombre) ? asegurarTurnosSedapalAtencionEnCupo(c) : asegurarTurnosConvenioEnCupo(c);
+      });
       var hayTurnosLugar = cuposGuardar.some(function(c){ return Array.isArray(c.turnos) && c.turnos.length; });
       if (hayTurnosLugar) {
         turnos = turnosAgregadosDesdeCupos(cuposGuardar);
