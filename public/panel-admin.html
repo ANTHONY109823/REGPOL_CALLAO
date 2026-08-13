@@ -270,14 +270,14 @@
     table.t-inscritos td.col-nombres,table.t-inscritos td.col-postula,table.t-inscritos td.col-unidad{
       white-space:normal;word-break:break-word;line-height:1.4;max-width:260px;
     }
-    table.t-inscritos td.col-nombres{min-width:170px;max-width:280px;}
-    table.t-inscritos td.col-unidad{min-width:140px;max-width:220px;}
-    table.t-inscritos td.col-postula{min-width:210px;max-width:300px;font-weight:600;color:#004d3d;}
+    table.t-inscritos td.col-nombres{min-width:150px;max-width:240px;}
+    table.t-inscritos td.col-unidad{min-width:120px;max-width:200px;}
+    table.t-inscritos td.col-postula{min-width:160px;max-width:240px;font-weight:600;color:#004d3d;}
     table.t-inscritos td.col-grado{white-space:nowrap;font-weight:800;font-size:12px;color:#004d3d;}
     table.t-inscritos td.col-region{white-space:nowrap;font-size:11.5px;}
     table.t-inscritos td.col-dni,table.t-inscritos td.col-tel{white-space:nowrap;font-size:12px;}
     table.t-inscritos .badge-estado{padding:5px 11px;font-size:11.5px;font-weight:700;border-radius:12px;display:inline-block;}
-    table.t-inscritos td.col-acciones{min-width:230px;white-space:normal;}
+    table.t-inscritos td.col-acciones{min-width:180px;white-space:normal;}
     table.t-inscritos td.col-acciones .btn-mini{margin:2px 3px 2px 0;white-space:nowrap;}
     .plazo-countdown{display:block;margin-top:5px;font-size:11px;font-weight:800;font-family:ui-monospace,Consolas,monospace;letter-spacing:.3px;padding:4px 8px;border-radius:6px;white-space:nowrap;}
     .plazo-countdown.ok{background:#e8f5f1;color:#004d3d;border:1px solid #a5d6a7;}
@@ -7694,13 +7694,20 @@ function renderInscritos(list, tipo){
     : '<th class="col-acciones">Acciones</th>';
 
   document.getElementById('inscritos-tabla').innerHTML=
-    '<div style="overflow-x:auto;"><table class="t t-inscritos" style="min-width:'+(esPreins?'1180':'1320')+'px;"><thead><tr>'
-    +'<th>#</th><th>Grado</th><th>CIP</th><th>DNI</th><th>CODIFIN</th><th>Apellidos y Nombres</th>'
+    '<div style="overflow-x:auto;"><table class="t t-inscritos" style="width:100%;min-width:'+(esPreins?'0':'1320')+'px;"><thead><tr>'
+    +'<th>#</th><th>Grado</th><th>CIP</th><th>DNI</th>'
+    +(esPreins?'':'<th>CODIFIN</th>')
+    +'<th>Apellidos y Nombres</th>'
     +(esConvenio?'<th>Región</th>':'')
-    +'<th>Unidad</th>'+(esConvenio?'<th>Postula a</th>':'')+'<th>Área</th>'
-    +(esConvenio?'<th>Tel.</th>':'')
-    +(esConvenio?'<th>Mod.</th><th>Disp.</th>':'<th>T. Servicio</th>')
-    +(esPreins?'':'<th>PDF</th>')+'<th>Origen</th><th>Estado</th><th>Fecha</th>'+colAccion
+    +'<th>Unidad</th>'+(esConvenio?'<th>Postula a</th>':'')
+    +(esPreins?'':'<th>Área</th>')
+    +(esConvenio && !esPreins?'<th>Tel.</th>':'')
+    +(esConvenio
+      ? (esPreins?'<th>Disp.</th>':'<th>Mod.</th><th>Disp.</th>')
+      : '<th>T. Servicio</th>')
+    +(esPreins?'':'<th>PDF</th>')+'<th>Origen</th><th>Estado</th>'
+    +(esPreins?'': '<th>Fecha</th>')
+    +colAccion
     +'</tr></thead><tbody>'
     +list.map(function(ins,idx){
       var c=colorEst[ins.estado]||'#1a1a1a';
@@ -7764,15 +7771,17 @@ function renderInscritos(list, tipo){
         +'<td class="col-grado" title="'+escHtml(ins.grado||'')+'">'+escHtml(siglaGradoPnp(ins.grado))+'</td>'
         +'<td style="font-weight:800;color:#004d3d;white-space:nowrap;">'+escHtml(ins.cip||'')+'</td>'
         +'<td class="col-dni">'+escHtml(ins.dni||'—')+'</td>'
-        +'<td style="font-size:12px;">'+escHtml(ins.codifin||'—')+'</td>'
+        +(esPreins?'':('<td style="font-size:12px;">'+escHtml(ins.codifin||'—')+'</td>'))
         +'<td class="col-nombres" style="font-weight:600;">'+escHtml(ins.nombres||'')+'</td>'
         +(esConvenio?'<td class="col-region" title="'+escHtml(ins.region_policial||'')+'">'+escHtml(siglaRegionPolicial(ins.region_policial))+'</td>':'')
         +'<td class="col-unidad">'+escHtml(ins.unidad||'')+'</td>'
         +(esConvenio?'<td class="col-postula">'+escHtml(ins.comisaria_postula||'—')+'</td>':'')
-        +'<td>'+escHtml(ins.area||'—')+'</td>'
-        +(esConvenio?'<td class="col-tel">'+escHtml(ins.telefono||'—')+'</td>':'')
+        +(esPreins?'':('<td>'+escHtml(ins.area||'—')+'</td>'))
+        +(esConvenio && !esPreins?'<td class="col-tel">'+escHtml(ins.telefono||'—')+'</td>':'')
         +(esConvenio
-          ? ('<td style="font-size:11.5px;">'+escHtml(modLabel)+'</td><td>'+dispBadge+'</td>')
+          ? (esPreins
+            ? ('<td>'+dispBadge+'</td>')
+            : ('<td style="font-size:11.5px;">'+escHtml(modLabel)+'</td><td>'+dispBadge+'</td>'))
           : ('<td>'+dispBadge+'</td>'))
         +(esPreins?'':('<td style="text-align:center;">'+(ins.tiene_pdf
           ?'<button type="button" class="btn-mini btn-mini-pdf" title="Ver PDF del expediente" onclick="verPdfInscripcion('+ins.id+')"><i class="fas fa-file-pdf"></i> PDF</button>'
@@ -7781,7 +7790,7 @@ function renderInscritos(list, tipo){
         +'<td><span class="badge badge-estado" style="background:'+bg+';color:'+c+';">'+escHtml(etiquetaEstadoFlujoInscripcion(ins.estado, esConvenio))+'</span>'
         +htmlPlazoCountdownInscripcion(ins, esConvenio)
         +'</td>'
-        +'<td class="col-fecha">'+fecha+'</td>'
+        +(esPreins?'':('<td class="col-fecha">'+fecha+'</td>'))
         +'<td class="col-acciones">'+acciones+'</td>'
         +'</tr>';
     }).join('')
