@@ -195,17 +195,21 @@
       z-index:1000;align-items:center;justify-content:center;}
     .modal.open{display:flex;}
     .modal-box{background:#fff;border-radius:12px;padding:28px;width:520px;
-      max-width:96vw;max-height:90vh;overflow-y:auto;}
-    #modal-item.modal-item-full{padding:0;align-items:stretch;justify-content:stretch;}
+      max-width:96vw;max-height:90vh;overflow-y:auto;overflow-x:hidden;box-sizing:border-box;}
+    #modal-item.modal-item-full{padding:12px;align-items:center;justify-content:center;}
     #modal-item.modal-item-full .modal-box{
-      width:100vw!important;max-width:100vw!important;height:100vh!important;max-height:100vh!important;
-      border-radius:0;display:flex;flex-direction:column;overflow:hidden;padding:14px 18px 10px;box-sizing:border-box;
+      width:min(720px,96vw)!important;max-width:96vw!important;height:auto!important;max-height:90vh!important;
+      border-radius:12px;display:flex;flex-direction:column;overflow-x:hidden!important;overflow-y:hidden;
+      padding:16px 16px 10px;box-sizing:border-box;
     }
-    #modal-item.modal-item-full .mi-item-body{flex:1;overflow:auto;min-height:0;padding-right:4px;}
+    #modal-item.modal-item-full .mi-item-body{flex:1;overflow:auto;overflow-x:hidden;min-height:0;max-width:100%;}
     #modal-item.modal-item-full .modal-footer{
       flex-shrink:0;background:#fff;border-top:1px solid #e0e8e0;padding-top:10px;margin-top:8px;
     }
-    .cupo-lugar-card{border:1.5px solid #d7e5df;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#f7fbf9;}
+    #modal-item .mi-grid-campos{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:100%;}
+    #modal-item input,#modal-item select,#modal-item textarea{max-width:100%;box-sizing:border-box;}
+    #mi-cupo-add-bar{max-width:100%;}
+    .cupo-lugar-card{border:1.5px solid #d7e5df;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#f7fbf9;max-width:100%;box-sizing:border-box;overflow-x:auto;}
     .cupo-lugar-card .cupo-lugar-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;}
     .cupo-lugar-card .cupo-turno-row{display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;margin-bottom:4px;}
     .modal-box h3{margin:0 0 18px;color:#004d3d;font-size:15px;
@@ -419,6 +423,9 @@
       table.t-inscritos td.col-region{max-width:72px;}
       table.t-inscritos td.col-acciones .btn-mini{padding:4px 6px;font-size:10.5px;}
       .card{padding:14px;}
+      #modal-item .mi-grid-campos{grid-template-columns:1fr;}
+      #modal-item.modal-item-full{padding:8px;}
+      #modal-item.modal-item-full .modal-box{width:100%!important;max-width:100vw!important;max-height:96vh!important;padding:12px 12px 8px;}
       .modal-box{padding:18px;width:min(520px,96vw);}
     }
     @media(max-width:560px){
@@ -1554,13 +1561,13 @@
 </div>
 
 <div id="modal-item" class="modal">
-  <div class="modal-box" style="width:560px;max-height:90vh;overflow-y:auto;">
+  <div class="modal-box" style="width:560px;max-width:96vw;max-height:90vh;overflow-y:auto;overflow-x:hidden;">
     <h3 style="font-size:15px;"><i class="fas fa-edit"></i> <span id="mi-titulo">Nuevo convenio</span></h3>
     <input type="hidden" id="mi-id"/>
     <input type="hidden" id="mi-tipo"/>
     <div id="mi-item-body" class="mi-item-body">
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div class="mi-grid-campos">
       <div style="grid-column:1/-1;">
         <label>Título *</label>
         <input type="text" id="mi-titulo-val" placeholder="Ej: PLAN CELADOR" maxlength="200" oninput="adaptarCuposUIPorTitulo()"/>
@@ -2422,8 +2429,11 @@ window.addEventListener('DOMContentLoaded',function(){
   SESION.permisos = normalizarPermisosPanel(s.permisos);
   aplicarPermisosSidebar(SESION);
   cargarDashboard(false);
+  PANEL_NAV_SKIP = true;
   iniciarPanel(SESION);
   mostrarPanelListo();
+  PANEL_NAV_SKIP = false;
+  panelInitHistorial();
 
   fetch(API+'/admin/perfil',{headers:{'x-admin-token':s.token}})
     .then(function(r){return r.json();})
@@ -3820,6 +3830,7 @@ function irGestionItems(tipo, el){
   if (el) el.classList.add('on');
   scrollPanelAlInicio();
   cargarItems(tipo);
+  panelNavPush();
 }
 
 function irGestionSorteos(el){
@@ -3869,6 +3880,63 @@ function scrollPanelAlInicio(){
     var pg = document.querySelector('.page.on');
     if (pg) pg.scrollTop = 0;
   } catch (e) {}
+}
+
+var PANEL_NAV_SKIP = false;
+
+function panelPaginaActiva(){
+  var p = document.querySelector('.page.on');
+  return (p && p.id) ? p.id.replace(/^page-/, '') : 'dashboard';
+}
+
+function panelNavPush(){
+  if (PANEL_NAV_SKIP) return;
+  var page = panelPaginaActiva();
+  try {
+    if (history.state && history.state.panel && history.state.page === page && !history.state.modal) return;
+    history.pushState({ panel: 1, page: page }, '', location.pathname + location.search);
+  } catch (e) {}
+}
+
+function panelCerrarModalesAbiertos(){
+  var hubo = false;
+  document.querySelectorAll('.modal.open, .modal-pre.open, .modal-editar-datos.open').forEach(function(el){
+    el.classList.remove('open');
+    hubo = true;
+  });
+  return hubo;
+}
+
+function panelInitHistorial(){
+  try {
+    var page = panelPaginaActiva();
+    history.replaceState({ panel: 1, page: page, root: true }, '', location.pathname + location.search);
+    history.pushState({ panel: 1, page: page }, '', location.pathname + location.search);
+  } catch (e) {}
+  window.addEventListener('popstate', onPanelPopState);
+}
+
+function onPanelPopState(ev){
+  PANEL_NAV_SKIP = true;
+  try {
+    if (panelCerrarModalesAbiertos()) {
+      try { history.pushState({ panel: 1, page: panelPaginaActiva() }, '', location.pathname + location.search); } catch (e) {}
+      return;
+    }
+    var st = ev.state;
+    if (st && st.panel && st.page && !st.root) {
+      if (st.page !== panelPaginaActiva()) {
+        var el = document.querySelector('[data-page="' + st.page + '"]')
+          || document.querySelector('[data-cms-tab="' + st.page + '"]');
+        if (st.page === 'cms') irCMS(primerTabCmsPermitido(), el);
+        else ir(st.page, el || null);
+      }
+      return;
+    }
+    try { history.pushState({ panel: 1, page: panelPaginaActiva() }, '', location.pathname + location.search); } catch (e) {}
+  } finally {
+    PANEL_NAV_SKIP = false;
+  }
 }
 
 function ir(page, el){
@@ -3928,6 +3996,7 @@ function ir(page, el){
   panelPaginasCargadas[page] = true;
   setTimeout(scrollPanelAlInicio, 0);
   setTimeout(scrollPanelAlInicio, 50);
+  panelNavPush();
 }
 
 function puedeEditarPortalCMS(){
@@ -3960,6 +4029,7 @@ function irCMS(tab, el){
   scrollPanelAlInicio();
   if(!CMS_INICIADO){CMS_INICIADO=true; initCMS();}
   setTimeout(function(){cambiarTabCMS(tab); scrollPanelAlInicio();},150);
+  panelNavPush();
 }
 
 function toggleGrupo(header){
@@ -4618,8 +4688,15 @@ function cargarAuditoria(){
 
 var DIVISIONES_DATA = [];
 
-function cerrarModal(id){document.getElementById(id).classList.remove('open');}
-document.addEventListener('click',function(e){if(e.target.classList.contains('modal'))e.target.classList.remove('open');});
+function cerrarModal(id){
+  var el=document.getElementById(id);
+  if(el) el.classList.remove('open');
+}
+document.addEventListener('click',function(e){
+  if(e.target.classList.contains('modal') && e.target.classList.contains('open')){
+    e.target.classList.remove('open');
+  }
+});
 
 function cargarDivisiones(){
   fetch(API+'/admin/divisiones',{headers:hdr()}).then(function(r){return r.json();}).then(function(d){
@@ -5986,7 +6063,11 @@ function adaptarCuposUIPorTitulo(){
   var turnoAddSel = document.getElementById('mi-cupo-add-turno');
   var turnoWrap = document.getElementById('mi-cupo-add-turno-wrap');
   rellenarSelectTurnoConvenio(turnoAddSel);
-  if (turnoWrap) turnoWrap.style.width = esTituloSedapal((document.getElementById('mi-titulo-val') || {}).value) ? '240px' : '118px';
+  if (turnoWrap) {
+    turnoWrap.style.width = esTituloSedapal((document.getElementById('mi-titulo-val') || {}).value) ? 'auto' : '118px';
+    turnoWrap.style.minWidth = esTituloSedapal((document.getElementById('mi-titulo-val') || {}).value) ? '180px' : '118px';
+    turnoWrap.style.flex = esTituloSedapal((document.getElementById('mi-titulo-val') || {}).value) ? '1 1 180px' : '';
+  }
   sincronizarTotalDesdeTurnosConvenio();
   renderListaCuposUnidadesUI();
   renderListaTurnosUI();
@@ -6136,7 +6217,7 @@ function aplicarTamanoModalItem(tipo){
     modal.classList.add('modal-item-full');
     box.style.width = '';
     box.style.maxHeight = '';
-    box.style.overflowY = 'hidden';
+    box.style.overflowY = '';
   } else {
     modal.classList.remove('modal-item-full');
     box.style.width = '560px';
