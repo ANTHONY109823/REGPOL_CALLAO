@@ -1243,6 +1243,20 @@ function abrirModalRepDetalle(itemId) {
     });
 }
 
+function esTurnoSedapalAtencion(turno) {
+  var n = String(turno || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+  return n === 'ATENCION AL CLIENTE';
+}
+
+function labelTurnoHumano(turno) {
+  if (esTurnoSedapalAtencion(turno)) return 'Atención al cliente (09:00 a 17:00 hrs)';
+  var t = String(turno || '').trim().toUpperCase();
+  if (t === 'MAÑANA') return 'Mañana';
+  if (t === 'TARDE') return 'Tarde';
+  if (t === 'NOCHE') return 'Noche';
+  return t || '—';
+}
+
 function renderHtmlDetalleRepechaje(item, cache) {
   var reqs = Array.isArray(item.requisitos) ? item.requisitos : [];
   var cupos = Array.isArray(item.cupos_unidades) ? item.cupos_unidades.slice() : [];
@@ -1268,9 +1282,10 @@ function renderHtmlDetalleRepechaje(item, cache) {
     : '<li>Sin requisitos especificados.</li>';
 
   var bloques = [];
+  var hayTurnosLugar = cupos.some(function(c) { return Array.isArray(c.turnos) && c.turnos.length; });
   var esMatrizCel = /CELADOR/i.test(String(item.titulo || ''))
     && cupos.length > 1
-    && cupos.some(function(c) { return Array.isArray(c.turnos) && c.turnos.length; });
+    && hayTurnosLugar;
   var SLOTS_CEL = [
     { turno: 'MAÑANA', dia: 'PAR', label: 'Mañana PAR' },
     { turno: 'MAÑANA', dia: 'IMPAR', label: 'Mañana IMPAR' },
@@ -1303,6 +1318,34 @@ function renderHtmlDetalleRepechaje(item, cache) {
       }).join('')
       + '</tbody></table></div>'
     );
+    );
+    if (laborTxt) {
+      bloques.push(
+        '<h4 class="rd-sub">LABOR</h4>'
+        + '<p class="rd-labor">' + escC(laborTxt) + '</p>'
+      );
+    }
+  } else if (hayTurnosLugar) {
+    bloques.push(
+      '<h4>LUGAR / TURNO / DÍA / VACANTES</h4>'
+      + '<div style="overflow-x:auto;"><table class="rd-table"><thead><tr>'
+      + '<th>Lugar</th><th>Turno</th><th>Día</th><th>Vacantes</th>'
+      + '</tr></thead><tbody>'
+      + cupos.map(function(c) {
+        var list = Array.isArray(c.turnos) ? c.turnos : [];
+        if (!list.length) {
+          return '<tr><td style="font-weight:700;">' + escC(c.nombre || '—') + '</td><td>—</td><td>—</td>'
+            + '<td class="num">' + escC(String(parseInt(c.vacantes, 10) || 0)) + '</td></tr>';
+        }
+        return list.map(function(t) {
+          return '<tr><td style="font-weight:700;">' + escC(c.nombre || '—') + '</td>'
+            + '<td>' + escC(labelTurnoHumano(t.turno)) + '</td>'
+            + '<td>' + escC(String(t.dia || 'PAR/IMPAR').toUpperCase()) + '</td>'
+            + '<td class="num">' + escC(String(parseInt(t.vacantes, 10) || 0)) + '</td></tr>';
+        }).join('');
+      }).join('')
+      + '</tbody></table></div>'
+    );
     if (laborTxt) {
       bloques.push(
         '<h4 class="rd-sub">LABOR</h4>'
@@ -1319,7 +1362,7 @@ function renderHtmlDetalleRepechaje(item, cache) {
       + turnosList.map(function(t) {
         var vacT = parseInt(t.vacantes, 10);
         if (isNaN(vacT) || vacT < 0) vacT = 0;
-        return '<tr><td>' + escC(String(t.turno || '').toUpperCase()) + '</td>'
+        return '<tr><td>' + escC(labelTurnoHumano(t.turno)) + '</td>'
           + '<td>' + escC(String(t.dia || 'PAR/IMPAR').toUpperCase()) + '</td>'
           + '<td class="num">' + escC(String(vacT)) + '</td></tr>';
       }).join('')

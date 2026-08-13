@@ -195,10 +195,16 @@
     .modal-pre.open{display:flex!important;}
     html.embed-form-root .modal-pre{display:none!important;}
     .modal-pre-box{background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.28);border:2px solid #c8a94a;}
-    .modal-pre-box.modal-celador{max-width:min(980px,96vw);}
+    .modal-pre-box.modal-celador{
+      max-width:100vw;width:100%;height:100vh;max-height:100vh;border-radius:0;
+      display:flex;flex-direction:column;
+    }
+    .modal-pre.open:has(.modal-celador){padding:0;align-items:stretch;}
+    .modal-pre-box.modal-celador #preinscripcion-constancia{flex:1;overflow:auto;min-height:0;}
+    .modal-pre-box.modal-celador .modal-pre-acciones{flex-shrink:0;}
     @media(max-width:700px){
       .modal-pre{padding:8px;align-items:flex-start;}
-      .modal-pre-box.modal-celador{max-width:100%;max-height:96vh;border-radius:10px;}
+      .modal-pre-box.modal-celador{max-width:100%;max-height:100vh;height:100vh;border-radius:0;}
       .modal-pre-box.modal-celador .pre-grid{grid-template-columns:1fr;}
       .modal-pre-box.modal-celador .pre-nro{font-size:18px;word-break:break-all;}
       .modal-pre-box.modal-celador #preinscripcion-constancia{padding:14px 14px 10px;}
@@ -375,9 +381,10 @@ function renderDetalle(item){
   var ciasCard = '';
   if(esConvenio){
     var bloques = [];
+    var hayTurnosLugar = cupos.some(function(c){ return Array.isArray(c.turnos) && c.turnos.length; });
     var esMatrizCel = /CELADOR/i.test(String(item.titulo||''))
       && cupos.length > 1
-      && cupos.some(function(c){ return Array.isArray(c.turnos) && c.turnos.length; });
+      && hayTurnosLugar;
     var SLOTS_CEL = [
       { turno: 'MAÑANA', dia: 'PAR', label: 'Mañana PAR' },
       { turno: 'MAÑANA', dia: 'IMPAR', label: 'Mañana IMPAR' },
@@ -415,6 +422,34 @@ function renderDetalle(item){
           '<h3 style="margin-top:14px;">LABOR</h3>'
           +'<p style="margin:0;padding:10px 12px;background:#f4f8f6;border:1px solid #d5e5dc;border-radius:7px;font-size:13.5px;color:#004d3d;line-height:1.45;text-align:left;">'
           +escHtmlD(laborTxtM)+'</p>'
+      );
+    }
+    } else if (hayTurnosLugar) {
+      bloques.push(
+        '<h3>LUGAR / TURNO / DÍA / VACANTES</h3>'
+        +'<div class="tabla-cupos-wrap"><table class="tabla-cupos">'
+        +'<thead><tr><th>Lugar</th><th>Turno</th><th>Día</th><th>Vacantes</th></tr></thead><tbody>'
+        +cupos.map(function(c){
+          var list = Array.isArray(c.turnos) ? c.turnos : [];
+          if (!list.length) {
+            return '<tr><td style="text-align:left;font-weight:700;">'+escHtmlD(c.nombre||'—')+'</td>'
+              +'<td>—</td><td>—</td><td class="num">'+escHtmlD(String(parseInt(c.vacantes,10)||0))+'</td></tr>';
+          }
+          return list.map(function(t){
+            return '<tr><td style="text-align:left;font-weight:700;">'+escHtmlD(c.nombre||'—')+'</td>'
+              +'<td>'+escHtmlD(labelTurnoHumano(t.turno))+'</td>'
+              +'<td>'+escHtmlD(String(t.dia||'PAR/IMPAR').toUpperCase())+'</td>'
+              +'<td class="num">'+escHtmlD(String(parseInt(t.vacantes,10)||0))+'</td></tr>';
+          }).join('');
+        }).join('')
+        +'</tbody></table></div>'
+      );
+      var laborTxtL = String(item.descripcion || '').trim();
+      if(laborTxtL){
+        bloques.push(
+          '<h3 style="margin-top:14px;">LABOR</h3>'
+          +'<p style="margin:0;padding:10px 12px;background:#f4f8f6;border:1px solid #d5e5dc;border-radius:7px;font-size:13.5px;color:#004d3d;line-height:1.45;text-align:left;">'
+          +escHtmlD(laborTxtL)+'</p>'
         );
       }
     } else {
@@ -426,7 +461,7 @@ function renderDetalle(item){
         +turnosList.map(function(t){
           var vacT = parseInt(t.vacantes, 10);
           if(isNaN(vacT) || vacT < 0) vacT = 0;
-          return '<tr><td>'+escHtmlD(String(t.turno||'').toUpperCase())+'</td>'
+          return '<tr><td>'+escHtmlD(labelTurnoHumano(t.turno))+'</td>'
             +'<td>'+escHtmlD(String(t.dia||'PAR/IMPAR').toUpperCase())+'</td>'
             +'<td class="num">'+escHtmlD(String(vacT))+'</td></tr>';
         }).join('')
@@ -642,14 +677,27 @@ function textoBtnEnviar(){
 
 function esCeladorMatrizItem(item){
   var cupos = Array.isArray(item && item.cupos_unidades) ? item.cupos_unidades : [];
-  return /CELADOR/i.test(String((item && item.titulo) || ''))
-    && cupos.some(function(c){ return Array.isArray(c.turnos) && c.turnos.length; });
+  return cupos.some(function(c){ return Array.isArray(c.turnos) && c.turnos.length; });
+}
+
+function esTurnoSedapalAtencion(turno){
+  var n = String(turno || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+  return n === 'ATENCION AL CLIENTE';
+}
+
+function labelTurnoHumano(turno){
+  if (esTurnoSedapalAtencion(turno)) return 'Atención al cliente (09:00 a 17:00 hrs)';
+  var t = String(turno || '').trim().toUpperCase();
+  if (t === 'MAÑANA') return 'Mañana';
+  if (t === 'TARDE') return 'Tarde';
+  if (t === 'NOCHE') return 'Noche';
+  return t || '—';
 }
 
 function labelSlotHumano(turno, dia){
-  var t = String(turno || '').trim().toUpperCase();
+  var tLab = labelTurnoHumano(turno);
   var d = String(dia || '').trim().toUpperCase();
-  var tLab = t === 'MAÑANA' ? 'Mañana' : (t === 'TARDE' ? 'Tarde' : (t === 'NOCHE' ? 'Noche' : t));
+  if (esTurnoSedapalAtencion(turno)) return tLab;
   if (d === 'PAR') return tLab + ' PAR';
   if (d === 'IMPAR') return tLab + ' IMPAR';
   if (d === 'PAR/IMPAR') return tLab + ' PAR/IMPAR';
@@ -680,7 +728,7 @@ function obtenerTurnosPublicados(item){
       turno: turno,
       dia: dia,
       vacantes: vac,
-      label: turno + ' — ' + dia + ' (' + vac + ' vacantes)'
+      label: labelSlotHumano(turno, dia) + ' (' + vac + ' vacantes)'
     });
   });
   return out;
@@ -806,7 +854,7 @@ function htmlSelectorTurnoPostula(item){
     +'<select id="fi-turno-postula">'
     +'<option value="">Seleccione día de franco primero</option>'
     +'</select>'
-    +'<small class="fi-hint" id="fi-turno-hint">Al elegir PAR o IMPAR aparecerán MAÑANA, TARDE y/o NOCHE según las vacantes publicadas.</small>'
+    +'<small class="fi-hint" id="fi-turno-hint">Al elegir PAR o IMPAR aparecerán los turnos y lugares con vacantes publicadas.</small>'
     +'</div>';
 }
 
@@ -827,13 +875,17 @@ function turnosCompatiblesConDia(diaFranco){
         turno: t.turno,
         dia: d === 'PAR/IMPAR' ? dia : d,
         vacantes: t.vacantes,
-        label: t.turno + ' (' + t.vacantes + ' vacantes)'
+        label: labelTurnoHumano(t.turno) + ' (' + t.vacantes + ' vacantes)'
       };
     }
   });
-  var orden = { 'MAÑANA': 1, 'TARDE': 2, 'NOCHE': 3 };
+  var orden = { 'MAÑANA': 1, 'ATENCION AL CLIENTE': 2, 'TARDE': 3, 'NOCHE': 4 };
   return Object.keys(porTurno).map(function(k){ return porTurno[k]; })
-    .sort(function(a, b){ return (orden[a.turno] || 99) - (orden[b.turno] || 99); });
+    .sort(function(a, b){
+      var oa = esTurnoSedapalAtencion(a.turno) ? 2 : (orden[a.turno] || 99);
+      var ob = esTurnoSedapalAtencion(b.turno) ? 2 : (orden[b.turno] || 99);
+      return oa - ob;
+    });
 }
 
 function filtrarSelectorPostulaPorDia(diaFranco, forzarMostrar){
@@ -1045,7 +1097,7 @@ function onCambioDisponibilidad(val){
       aviso.textContent = 'Ocupa vacante automáticamente. Luego, en el sorteo público se le asigna por sorteo el Bloque 1 (días 1–15) o el Bloque 2 (días 16–fin de mes). Elija también el lugar, turno y día.';
     } else if(val === 'FRANCO'){
       aviso.style.display = 'block';
-      aviso.textContent = 'Elija PAR o IMPAR. Luego seleccione el lugar con su turno (MAÑANA / TARDE / NOCHE), igual que en Celador.';
+      aviso.textContent = 'Elija PAR o IMPAR. Luego seleccione el lugar con su turno según las vacantes publicadas.';
     } else {
       aviso.style.display = 'none';
       aviso.textContent = '';

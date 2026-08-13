@@ -355,6 +355,7 @@ async function asegurarNroRegistro(pool, inscripcionId) {
 
 async function initColumnasFlujoConvenios(pool) {
   await pool.query(`
+    ALTER TABLE inscripciones ALTER COLUMN estado TYPE VARCHAR(40);
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS modo_ingreso VARCHAR(20) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS fecha_ganador TIMESTAMPTZ;
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS plazo_expediente TIMESTAMPTZ;
@@ -511,6 +512,13 @@ function plazoDesdeAhora() {
   return d;
 }
 
+function canonTurnoPostulacion(turno) {
+  var s = String(turno || '').trim().toUpperCase();
+  var n = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+  if (n === 'ATENCION AL CLIENTE') return 'ATENCION AL CLIENTE';
+  return s;
+}
+
 /** Parsea postulación: "CIA — MAÑANA / PAR", "CIA|MAÑANA|PAR" o solo lugar. */
 function parsePostulacionSlot(texto) {
   var s = String(texto || '').trim();
@@ -519,15 +527,15 @@ function parsePostulacionSlot(texto) {
     var p = s.split('|').map(function(x) { return String(x || '').trim(); });
     return {
       lugar: p[0] || '',
-      turno: String(p[1] || '').toUpperCase(),
+      turno: canonTurnoPostulacion(p[1]),
       dia: String(p[2] || '').toUpperCase()
     };
   }
-  var m = s.match(/^(.+?)\s*[—\-]\s*([A-ZÁÉÍÓÚÑÜ]+)\s*\/\s*([A-ZÁÉÍÓÚÑÜ\/]+)\s*$/i);
+  var m = s.match(/^(.+?)\s*[—\-]\s*([A-ZÁÉÍÓÚÑÜ0-9 ]+?)\s*\/\s*([A-ZÁÉÍÓÚÑÜ\/]+)\s*$/i);
   if (m) {
     return {
       lugar: String(m[1] || '').trim(),
-      turno: String(m[2] || '').toUpperCase(),
+      turno: canonTurnoPostulacion(m[2]),
       dia: String(m[3] || '').toUpperCase()
     };
   }

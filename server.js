@@ -573,7 +573,7 @@ async function initDB() {
       cargo       VARCHAR(80),
       telefono    VARCHAR(30),
       email       VARCHAR(100),
-      estado      VARCHAR(20) DEFAULT 'pendiente',
+      estado      VARCHAR(40) DEFAULT 'pendiente',
       observacion TEXT DEFAULT '',
       fecha       TIMESTAMP DEFAULT NOW()
     );
@@ -4938,13 +4938,41 @@ function normalizarCuposUnidades(raw) {
   }).filter(Boolean);
 }
 
+const TURNO_SEDAPAL_ATENCION = 'ATENCION AL CLIENTE';
+
+function esTituloSedapal(titulo) {
+  return String(titulo || '').toUpperCase().indexOf('SEDAPAL') !== -1;
+}
+
+function esTurnoSedapalAtencion(turno) {
+  var n = String(turno || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+  return n === 'ATENCION AL CLIENTE';
+}
+
+function canonNombreTurno(turno) {
+  var s = String(turno || '').trim().toUpperCase();
+  if (esTurnoSedapalAtencion(s)) return TURNO_SEDAPAL_ATENCION;
+  return s;
+}
+
+function etiquetaTurnoHorario(turno) {
+  if (esTurnoSedapalAtencion(turno)) return 'ATENCIÓN AL CLIENTE (09:00 a 17:00 hrs)';
+  return String(turno || '').trim();
+}
+
 function normalizarTurnos(raw) {
   if (!Array.isArray(raw)) return [];
   return raw.map(function(t) {
     if (!t || typeof t !== 'object') return null;
-    var turno = String(t.turno || t.nombre || '').trim().toUpperCase();
+    var turno = canonNombreTurno(t.turno || t.nombre || '');
     if (!turno) return null;
     var dia = String(t.dia || t.dias || 'PAR/IMPAR').trim().toUpperCase() || 'PAR/IMPAR';
+    if (esTurnoSedapalAtencion(turno)) dia = 'PAR/IMPAR';
     var vacantes = parseInt(t.vacantes, 10);
     if (isNaN(vacantes) || vacantes < 0) vacantes = 0;
     return { turno: turno, dia: dia, vacantes: vacantes };
@@ -4957,11 +4985,51 @@ function horarioDesdeTurnos(turnos) {
   var nombres = [];
   var dias = {};
   list.forEach(function(t) {
-    if (nombres.indexOf(t.turno) === -1) nombres.push(t.turno);
+    var lab = etiquetaTurnoHorario(t.turno);
+    if (nombres.indexOf(lab) === -1) nombres.push(lab);
     dias[t.dia] = true;
   });
   var diasTxt = Object.keys(dias).join(' / ');
   return nombres.join(' / ') + (diasTxt ? ' — días ' + diasTxt : '');
+}
+
+function turnosAgregadosDesdeCupos(cupos) {
+  var map = {};
+  (Array.isArray(cupos) ? cupos : []).forEach(function(c) {
+    normalizarTurnos(c && c.turnos).forEach(function(t) {
+      var k = t.turno + '|' + t.dia;
+      if (!map[k]) map[k] = { turno: t.turno, dia: t.dia, vacantes: 0 };
+      map[k].vacantes += parseInt(t.vacantes, 10) || 0;
+    });
+  });
+  return Object.keys(map).map(function(k) { return map[k]; });
+}
+
+/** SEDAPAL: turno único Atención al cliente 09:00–17:00, sin tocar otros convenios. */
+function asegurarTurnoSedapalEnCupos(titulo, cupos) {
+  var list = Array.isArray(cupos) ? cupos.slice() : [];
+  if (!esTituloSedapal(titulo)) return { cupos: list, changed: false };
+  var hayLugarConTurnos = list.some(function(c) {
+    return c && Array.isArray(c.turnos) && c.turnos.length;
+  });
+  if (!hayLugarConTurnos) return { cupos: list, changed: false };
+  var yaEsta = list.some(function(c) {
+    return normalizarTurnos(c && c.turnos).some(function(t) {
+      return esTurnoSedapalAtencion(t.turno);
+    });
+  });
+  if (yaEsta) return { cupos: list, changed: false };
+  var idx = -1;
+  for (var i = 0; i < list.length; i++) {
+    if (list[i] && Array.isArray(list[i].turnos) && list[i].turnos.length) { idx = i; break; }
+  }
+  if (idx < 0) return { cupos: list, changed: false };
+  var c0 = Object.assign({}, list[idx]);
+  c0.turnos = normalizarTurnos(c0.turnos).concat([
+    { turno: TURNO_SEDAPAL_ATENCION, dia: 'PAR/IMPAR', vacantes: 0 }
+  ]);
+  list[idx] = c0;
+  return { cupos: normalizarCuposUnidades(list), changed: true };
 }
 
 function sumaVacantesTurnos(turnos) {
@@ -5039,11 +5107,17 @@ function cuposCeladorTienenMatrizTurnos(cupos) {
   });
 }
 
-/** Slots de sorteo: Celador = CIA×turno×día; resto = turnos del convenio. */
+function cuposTienenTurnosPorLugar(cupos) {
+  var list = Array.isArray(cupos) ? cupos : [];
+  return list.some(function(c) {
+    return c && Array.isArray(c.turnos) && c.turnos.length;
+  });
+}
+
 function construirSlotsSorteoItem(item) {
   var cupos = normalizarCuposUnidades(item && item.cupos_unidades);
   var slots = [];
-  if (cuposCeladorTienenMatrizTurnos(cupos)) {
+  if (cuposCeladorTienenMatrizTurnos(cupos) || cuposTienenTurnosPorLugar(cupos)) {
     cupos.forEach(function(c) {
       normalizarTurnos(c.turnos).forEach(function(t) {
         var vac = parseInt(t.vacantes, 10) || 0;
@@ -5054,11 +5128,11 @@ function construirSlotsSorteoItem(item) {
           turno: t.turno,
           dia: t.dia,
           vacantes: vac,
-          label: c.nombre + ' — ' + t.turno + ' / ' + t.dia
+          label: c.nombre + ' — ' + etiquetaTurnoHorario(t.turno) + ' / ' + t.dia
         });
       });
     });
-    return slots;
+    if (slots.length) return slots;
   }
   var turnos = normalizarTurnos(item && item.turnos);
   turnos.forEach(function(t) {
@@ -5070,7 +5144,7 @@ function construirSlotsSorteoItem(item) {
       turno: t.turno,
       dia: t.dia,
       vacantes: vac,
-      label: t.turno + ' — ' + t.dia
+      label: etiquetaTurnoHorario(t.turno) + ' — ' + t.dia
     });
   });
   if (!slots.length) {
@@ -5782,8 +5856,7 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
         };
       });
       const cuposNorm = normalizarCuposUnidades(row.cupos_unidades);
-      const esCelMatriz = String(row.titulo || '').toUpperCase().indexOf('CELADOR') !== -1
-        && cuposCeladorTienenMatrizTurnos(cuposNorm);
+      const esCelMatriz = cuposTienenTurnosPorLugar(cuposNorm);
       let opcionesCorreccion = [];
       if (esCelMatriz) {
         cuposNorm.forEach(function(c) {
@@ -6576,6 +6649,24 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
         [JSON.stringify(nuevos), row.id]
       );
       cuposActualizados++;
+      row.cupos_unidades = nuevos;
+    }
+
+    if (esTituloSedapal(row.titulo)) {
+      const cuposSed = normalizarCuposUnidades(row.cupos_unidades);
+      const mergedSed = asegurarTurnoSedapalEnCupos(row.titulo, cuposSed);
+      if (mergedSed.changed) {
+        const turnosSed = turnosAgregadosDesdeCupos(mergedSed.cupos);
+        const horarioSed = horarioDesdeTurnos(turnosSed);
+        await db.query(
+          'UPDATE items_portal SET cupos_unidades=$1::jsonb, turnos=$2::jsonb, horario=$3 WHERE id=$4',
+          [JSON.stringify(mergedSed.cupos), JSON.stringify(turnosSed), horarioSed, row.id]
+        );
+        row.cupos_unidades = mergedSed.cupos;
+        row.turnos = turnosSed;
+        cuposActualizados++;
+        console.log('SEDAPAL: turno Atención al cliente (09:00 a 17:00) agregado.');
+      }
     }
     const sinPlantilla = !(row.plantilla_pdf && String(row.plantilla_pdf).length > 20);
     if (sinPlantilla && celadorPlantilla) {
@@ -6839,7 +6930,7 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
         }
       }
 
-      if (esCeladorItem && cuposCeladorTienenMatrizTurnos(cuposItem)) {
+      if ((esCeladorItem && cuposCeladorTienenMatrizTurnos(cuposItem)) || cuposTienenTurnosPorLugar(cuposItem)) {
         const partes = comisariaPostulaRaw.split('|').map(function(p) { return String(p || '').trim(); });
         if (partes.length !== 3 || !partes[0] || !partes[1] || !partes[2]) {
           return res.json({ ok: false, error: 'Seleccione comisaría, turno y día a los que postula.' });
@@ -7697,6 +7788,8 @@ app.post('/admin/items', requireAuth, async (req, res) => {
       turnosNorm = turnosAgregadosCelador(cupos);
       vacSave = sumaVacantesTurnos(turnosNorm);
       horarioSave = horarioDesdeTurnos(turnosNorm) || horarioSave;
+    } else if (esTituloSedapal(titulo) && turnosNorm.length) {
+      horarioSave = horarioDesdeTurnos(turnosNorm) || horarioSave;
     }
     const iniIso = fechaISOSolo(inscripcion_inicio);
     const cieIso = fechaISOSolo(inscripcion_cierre);
@@ -7749,6 +7842,8 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
     if (String(titulo || '').toUpperCase().indexOf('CELADOR') !== -1) {
       turnosNorm = turnosAgregadosCelador(cupos);
       vacSave = sumaVacantesTurnos(turnosNorm);
+      horarioSave = horarioDesdeTurnos(turnosNorm) || horarioSave;
+    } else if (esTituloSedapal(titulo) && turnosNorm.length) {
       horarioSave = horarioDesdeTurnos(turnosNorm) || horarioSave;
     }
     const body = req.body || {};
@@ -8138,8 +8233,7 @@ app.post('/portal/inscripciones/:id/corregir-turno', async (req, res) => {
 
     const turnosItem = normalizarTurnos(row.turnos);
     const cuposItem = cuposEfectivosItem(row);
-    const esCelador = String(row.titulo || '').toUpperCase().indexOf('CELADOR') !== -1
-      && cuposCeladorTienenMatrizTurnos(cuposItem);
+    const esCelador = cuposTienenTurnosPorLugar(cuposItem);
 
     let nuevaPostula = '';
     let nuevoDiaFranco = row.dia_franco || '';
