@@ -10,13 +10,16 @@
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     html,body{height:100%;}
-    body{font-family:'Segoe UI',sans-serif;background:#f0f4f0;color:#333;min-height:100vh;}
+    body{
+      font-family:'Segoe UI',sans-serif;background:#f0f4f0;color:#333;
+      height:100vh;overflow:hidden;display:flex;flex-direction:column;
+    }
     body.modo-sorteo{overflow:hidden;height:100vh;display:flex;flex-direction:column;}
 
     .sl-header{
       background:linear-gradient(135deg,#002d24,#004d3d);color:#fff;
-      padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
-      box-shadow:0 2px 8px rgba(0,0,0,.2);position:sticky;top:0;z-index:50;
+      padding:8px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+      box-shadow:0 2px 8px rgba(0,0,0,.2);position:sticky;top:0;z-index:50;flex-shrink:0;
     }
     .sl-logo{
       width:44px;height:44px;border-radius:50%;background:#c8a94a;color:#002d24;
@@ -47,7 +50,10 @@
     .btn-danger.spinning{background:#e67e22;}
     .btn-ok{background:#1a7a3a;color:#fff;}
 
-    .wrap{max-width:1200px;margin:0 auto;padding:18px 16px 40px;}
+    .wrap{
+      flex:1;min-height:0;width:100%;max-width:none;margin:0;
+      padding:10px 12px;display:flex;flex-direction:column;overflow:hidden;
+    }
     body.modo-sorteo .wrap{
       flex:1;min-height:0;width:100%;max-width:none;margin:0;
       padding:10px 12px;display:flex;flex-direction:column;
@@ -56,15 +62,47 @@
       background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,77,61,.07);
       padding:20px;margin-bottom:16px;border:1px solid #e0e8e0;
     }
+    #config-panel{
+      flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+    }
+    #config-panel .card{
+      flex:1;min-height:0;margin:0;padding:12px 14px 10px;
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    .cfg-grid{
+      flex:1;min-height:0;display:grid;gap:12px;
+      grid-template-columns:minmax(380px,.95fr) minmax(420px,1.25fr);
+    }
+    .cfg-col{min-height:0;display:flex;flex-direction:column;overflow:hidden;}
+    .cfg-col-izq{overflow:hidden;}
+    .cfg-slots{flex:1 1 auto;min-height:0;overflow:auto;border:1px solid #e0e8e0;border-radius:8px;}
+    .cfg-lista-wrap{
+      flex:1;min-height:0;overflow:auto;border:1px solid #e0e8e0;border-radius:8px;
+    }
+    .cfg-lista-wrap thead th{position:sticky;top:0;z-index:1;}
+    .cfg-lista-wrap .lista-total-tabla th,
+    .cfg-lista-wrap .lista-total-tabla td,
+    .cfg-slots .lista-total-tabla th,
+    .cfg-slots .lista-total-tabla td{padding:5px 7px;font-size:11.5px;}
+    @media(max-width:1100px){
+      body{overflow:auto;height:auto;display:block;}
+      .wrap{height:auto;overflow:visible;}
+      #config-panel,.cfg-grid,.cfg-col{height:auto;overflow:visible;}
+      .cfg-grid{grid-template-columns:1fr;}
+      .cfg-lista-wrap{max-height:50vh;}
+    }
     .card h2{
       color:#004d3d;font-size:15px;margin:0 0 12px;padding-bottom:8px;
       border-bottom:2px solid #c8a94a;display:flex;align-items:center;gap:8px;
     }
-    .cfg-convenio{font-size:18px;font-weight:800;color:#004d3d;margin-bottom:14px;text-align:center;}
+    #config-panel .card h2{font-size:13.5px;margin:0 0 6px;padding-bottom:6px;flex-shrink:0;}
+    .cfg-leyenda{font-size:11px;color:#666;margin-top:6px;flex-shrink:0;line-height:1.4;}
+    body.modo-sorteo #config-panel{display:none !important;}
+    .cfg-convenio{font-size:18px;font-weight:800;color:#004d3d;margin-bottom:8px;text-align:center;flex-shrink:0;}
 
-    .conv-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
+    .conv-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;flex-shrink:0;}
     .conv-meta-item{
-      background:#f0f7f0;border:1.5px solid #c8e6c9;border-radius:8px;padding:10px 12px;
+      background:#f0f7f0;border:1.5px solid #c8e6c9;border-radius:8px;padding:7px 10px;
     }
     .conv-meta-item span{
       display:block;font-size:10px;color:#666;text-transform:uppercase;
@@ -73,8 +111,8 @@
     .conv-meta-item strong{font-size:13.5px;color:#004d3d;}
 
     .lista-total-titulo{
-      font-size:13px;font-weight:800;color:#004d3d;margin:16px 0 10px;
-      text-transform:uppercase;letter-spacing:.3px;
+      font-size:12.5px;font-weight:800;color:#004d3d;margin:10px 0 6px;
+      text-transform:uppercase;letter-spacing:.3px;flex-shrink:0;
     }
     .lista-total-tabla{width:100%;border-collapse:collapse;font-size:12.5px;}
     .lista-total-tabla th{
@@ -85,11 +123,12 @@
     .lista-total-tabla tr.vac-auto{background:#e8f8ee;}
     .tag-vac{background:#1a7a3a;color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:8px;}
     .tag-rueda{background:#004d3d;color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:8px;}
-    .hint{font-size:12px;color:#666;margin-top:10px;line-height:1.5;}
+    .hint{font-size:11.5px;color:#666;margin-top:8px;line-height:1.4;flex-shrink:0;}
 
     .btn-iniciar{
-      background:#004d3d;color:#fff;border:none;padding:14px 32px;border-radius:10px;
-      font-size:15px;font-weight:800;cursor:pointer;display:block;margin:18px auto 0;
+      background:#004d3d;color:#fff;border:none;padding:12px 28px;border-radius:10px;
+      font-size:14px;font-weight:800;cursor:pointer;display:block;margin:10px auto 0;
+      flex-shrink:0;
     }
     .btn-iniciar:disabled{background:#9bb5ad;cursor:not-allowed;}
 
@@ -223,7 +262,8 @@
     .resumen-tabla th{background:#e8f5e9;color:#004d3d;padding:7px 8px;text-align:left;font-size:11px;}
     .resumen-tabla td{padding:7px 8px;border-bottom:1px solid #e8eee8;}
     .resumen-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
-    .lock-msg{display:none;background:#fff8e1;border:1px solid #e8d9a8;color:#856404;padding:10px 12px;border-radius:8px;font-size:12.5px;margin-bottom:12px;}
+    #lock-msg{flex-shrink:0;}
+    .lock-msg{display:none;background:#fff8e1;border:1px solid #e8d9a8;color:#856404;padding:8px 12px;border-radius:8px;font-size:12.5px;margin-bottom:8px;}
     .ensayo-banner{display:none;background:#7a3e00;color:#fff;text-align:center;padding:8px 12px;font-size:13px;font-weight:700;letter-spacing:.02em;}
     .ensayo-banner strong{color:#ffd27a;}
   </style>
@@ -258,29 +298,37 @@
     <div class="card">
       <h2><i class="fas fa-clipboard-list"></i> Datos del convenio y sorteo</h2>
       <div class="cfg-convenio" id="cfg-nombre">Cargando...</div>
-      <div class="conv-meta" id="cfg-meta"></div>
-      <div class="lista-total-titulo"><i class="fas fa-layer-group"></i> Cupos por turno / día</div>
-      <div id="cfg-slots" style="overflow-x:auto;margin-bottom:14px;border:1px solid #e0e8e0;border-radius:8px;"></div>
-      <div class="lista-total-titulo"><i class="fas fa-users"></i> Efectivos preinscritos para el sorteo</div>
-      <div style="overflow-x:auto;max-height:420px;overflow-y:auto;border:1px solid #e0e8e0;border-radius:8px;">
-        <table class="lista-total-tabla">
-          <thead><tr>
-            <th>#</th><th>Grado</th><th>Apellidos y Nombres</th><th>CIP</th><th>Unidad</th><th>Postula / Turno</th><th>Situación</th>
-          </tr></thead>
-          <tbody id="cfg-lista-total"><tr><td colspan="7" style="text-align:center;padding:20px;color:#888;">Cargando...</td></tr></tbody>
-        </table>
+      <div class="cfg-grid">
+        <div class="cfg-col cfg-col-izq">
+          <div class="conv-meta" id="cfg-meta"></div>
+          <div class="lista-total-titulo"><i class="fas fa-layer-group"></i> Cupos por turno / día</div>
+          <div id="cfg-slots" class="cfg-slots"></div>
+          <p class="hint">
+            <i class="fas fa-info-circle" style="color:#c8a94a;"></i>
+            Sorteo <strong>por turno y día</strong>.
+            <span class="tag-vac">VACACIONES</span> cubren vacante.
+            <span class="tag-rueda">FRANCO</span> entra a la rueda.
+          </p>
+          <button class="btn-iniciar" id="btn-iniciar" onclick="iniciarSorteo()" disabled>
+            <i class="fas fa-play"></i> INICIAR SORTEO EN VIVO
+          </button>
+        </div>
+        <div class="cfg-col">
+          <div class="lista-total-titulo"><i class="fas fa-users"></i> Efectivos preinscritos <span id="cfg-lista-count"></span></div>
+          <div class="cfg-lista-wrap">
+            <table class="lista-total-tabla">
+              <thead><tr>
+                <th>#</th><th>Grado</th><th>Apellidos y Nombres</th><th>CIP</th><th>Unidad</th><th>Postula / Turno</th><th>Situación</th>
+              </tr></thead>
+              <tbody id="cfg-lista-total"><tr><td colspan="7" style="text-align:center;padding:20px;color:#888;">Cargando...</td></tr></tbody>
+            </table>
+          </div>
+          <p class="cfg-leyenda">
+            <span class="tag-vac">VACACIONES</span> cubren vacante automática ·
+            <span class="tag-rueda">FRANCO</span> participan en la rueda
+          </p>
+        </div>
       </div>
-      <p class="hint">
-        <i class="fas fa-info-circle" style="color:#c8a94a;"></i>
-        El sorteo se hace <strong>por turno y día</strong> (y comisaría en Celador).
-        <span class="tag-vac">VACACIONES</span> ocupan vacante automáticamente y luego se sortean en
-        <strong>Bloque 1 (días 1–15)</strong> o <strong>Bloque 2 (días 16–fin)</strong>.
-        <span class="tag-rueda">FRANCO</span>: un clic en <strong>Sortear este turno</strong> hace girar la rueda
-        y saca automáticamente todos los ganadores del cupo de ese turno/día, uno tras otro.
-      </p>
-      <button class="btn-iniciar" id="btn-iniciar" onclick="iniciarSorteo()" disabled>
-        <i class="fas fa-play"></i> INICIAR SORTEO EN VIVO
-      </button>
     </div>
   </div>
 
@@ -606,11 +654,7 @@ function renderSlotsPreview() {
     el.innerHTML = '<p style="padding:10px;font-size:12px;color:#888;margin:0;">Sin desglose de turnos: se usará el cupo general.</p>';
     return;
   }
-  el.innerHTML = '<p style="padding:8px 10px 4px;font-size:11.5px;color:#555;margin:0;">'
-    + 'Las <strong>vacantes</strong> salen de la ficha del convenio (admin). '
-    + '<strong>Franco / Vacaciones</strong> se cuentan desde el registro (preinscritos) emparejados a ese turno/día. '
-    + '<strong>A sortear</strong> = menor entre vacantes libres y francos.</p>'
-    + '<table class="lista-total-tabla"><thead><tr>'
+  el.innerHTML = '<table class="lista-total-tabla"><thead><tr>'
     + '<th>Turno / día</th><th>Vacantes</th><th>Ocupadas</th><th>Libres</th><th>Franco</th><th>Vacaciones</th><th>A sortear</th>'
     + '</tr></thead><tbody>'
     + SLOTS_SORTEO.map(function(s) {
@@ -700,6 +744,8 @@ function cargarCandidatos() {
 
 function renderListaTotalPreview() {
   var tbody = document.getElementById('cfg-lista-total');
+  var countEl = document.getElementById('cfg-lista-count');
+  if (countEl) countEl.textContent = LISTA_APROBADOS.length ? '(' + LISTA_APROBADOS.length + ')' : '';
   if (!LISTA_APROBADOS.length) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#c0392b;">No hay preinscritos para el sorteo.</td></tr>';
     return;
