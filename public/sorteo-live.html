@@ -413,7 +413,7 @@ var SLOTS_SORTEO = [];
 var SLOT_IDX = 0;
 var BLOQUES_VAC_HECHO = false;
 var AUTO_SORTEO = false;
-var AUTO_PAUSA_MS = 4200;
+var AUTO_PAUSA_MS = 10000;
 var SPIN_DURATION_MS = 2800;
 
 if (!SESION || !SESION.token) {
@@ -428,7 +428,46 @@ if (!SESION || !SESION.token) {
 }
 
 function escH(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-function nombreCompleto(c) { return ((c.grado || '') + ' ' + c.nombres).trim(); }
+
+function siglaGradoPnp(grado) {
+  var raw = String(grado || '').trim();
+  if (!raw) return '';
+  var g = raw.toUpperCase()
+    .replace(/Á/g, 'A').replace(/É/g, 'E').replace(/Í/g, 'I').replace(/Ó/g, 'O').replace(/Ú/g, 'U')
+    .replace(/\./g, '')
+    .replace(/\bPNP\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!g) return '';
+  if (g === 'CAS' || g === 'EC' || /EMPLEADO\s*CIVIL/.test(g)) return raw.toUpperCase();
+  var reglas = [
+    [/^GRAL|^GENERAL/, 'GRAL PNP'],
+    [/^CRNEL|^CRNL|^CORONEL/, 'CRNEL PNP'],
+    [/^CMDTE|^COMANDANTE/, 'CMDTE PNP'],
+    [/^MAYOR\b|^MAY$/, 'MAY PNP'],
+    [/^CAPITAN|^CAP$/, 'CAP PNP'],
+    [/^TENIENTE|^TNTE/, 'TNTE PNP'],
+    [/^ALFEREZ|^ALFZ/, 'ALFZ PNP'],
+    [/^SO\s*SUP|^SUPERIOR|^SS$/, 'SS PNP'],
+    [/^SO\s*BRIG|^BRIGADIER|^SB$/, 'SB PNP'],
+    [/^ST1|^SO1|^T1\b|^TECNICO\s*(DE\s*)?1/, 'ST1 PNP'],
+    [/^ST2|^SO2|^T2\b|^TECNICO\s*(DE\s*)?2/, 'ST2 PNP'],
+    [/^ST3|^SO3|^T3\b|^TECNICO\s*(DE\s*)?3/, 'ST3 PNP'],
+    [/^S1$|^SUBOF(ICIAL)?\s*(DE\s*)?1/, 'S1 PNP'],
+    [/^S2$|^SUBOF(ICIAL)?\s*(DE\s*)?2/, 'S2 PNP'],
+    [/^S3$|^SUBOF(ICIAL)?\s*(DE\s*)?3/, 'S3 PNP']
+  ];
+  for (var i = 0; i < reglas.length; i++) {
+    if (reglas[i][0].test(g)) return reglas[i][1];
+  }
+  return raw.toUpperCase();
+}
+
+function nombreCompleto(c) {
+  var g = siglaGradoPnp(c && c.grado);
+  var n = String((c && c.nombres) || '').trim();
+  return (g ? (g + ' ' + n) : n).trim();
+}
 
 function adminUrl() {
   var base = 'panel-admin.html';
@@ -669,7 +708,7 @@ function renderListaTotalPreview() {
     var cls = c.disponibilidad === 'VACACIONES' ? ' class="vac-auto"' : '';
     return '<tr' + cls + '>'
       + '<td>' + (i + 1) + '</td>'
-      + '<td>' + escH(c.grado || '') + '</td>'
+      + '<td>' + escH(siglaGradoPnp(c.grado) || '—') + '</td>'
       + '<td><strong>' + escH(c.nombres) + '</strong></td>'
       + '<td>' + escH(c.cip || '') + '</td>'
       + '<td>' + escH(c.unidad || '') + '</td>'
