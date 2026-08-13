@@ -2413,7 +2413,7 @@
 <script src="portal-data.js?v=10"></script>
 <script src="portal.js?v=85"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=41"></script>
+<script src="panel-cms.js?v=42"></script>
 <script src="panel-descansos.js?v=4"></script>
 <script src="panel-faltos.js?v=1"></script>
 <script src="panel-rrhh.js?v=3"></script>
@@ -5823,7 +5823,7 @@ function abrirAvisoConveniosFront(){
     ? cmsDataActual.conveniosBarra : {};
   document.getElementById('acf-titulo').value = barra.titulo || '¿Ya se inscribió?';
   document.getElementById('acf-texto').value = barra.texto
-    || 'Ingrese su CIP para consultar su estado del mes, ver el aviso del sorteo en Facebook o subir su expediente si resultó ganador.';
+    || 'Ingrese su CIP para consultar su estado, ver el aviso del sorteo en Facebook o subir su expediente si resultó ganador.';
   var avisoDef = 'El sorteo en vivo se realizará por la página de Facebook REGPOL Callao. Se notificará al cerrar preinscripciones.';
   var aviso = barra.avisoSorteoFb || '';
   if(!aviso && typeof ITEMS_CACHE !== 'undefined' && ITEMS_CACHE && ITEMS_CACHE.length){

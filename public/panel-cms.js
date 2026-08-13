@@ -128,7 +128,7 @@ function initCMS() {
     if (!cmsDataActual.descansosPortal) cmsDataActual.descansosPortal = descansosPortalDefault();
     if (!cmsDataActual.conveniosBarra) cmsDataActual.conveniosBarra = {
       titulo: '¿Ya se inscribió?',
-      texto: 'Ingrese su CIP para consultar su estado del mes, ver el aviso del sorteo en Facebook o subir su expediente si resultó ganador.',
+      texto: 'Ingrese su CIP para consultar su estado, ver el aviso del sorteo en Facebook o subir su expediente si resultó ganador.',
       avisoSorteoFb: 'El sorteo en vivo se realizará por la página de Facebook REGPOL Callao. Se notificará al cerrar preinscripciones.'
     };
     cmsDataActual.navOcultos = normalizarNavOcultosLista(cmsDataActual.navOcultos);

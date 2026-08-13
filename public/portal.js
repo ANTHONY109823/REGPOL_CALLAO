@@ -472,6 +472,19 @@ function obtenerSiteDataSync() {
   return null;
 }
 
+var TEXTO_BARRA_CONVENIOS = 'Ingrese su CIP para consultar su estado, ver el aviso del sorteo en Facebook o subir su expediente si resultó ganador.';
+
+function textoBarraConveniosLimpio(texto) {
+  var t = String(texto || '').trim();
+  var n = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (!t || /n\.?\s*o?\s*(de\s+)?inscripcion/.test(n) || n.indexOf('numero de inscripcion') !== -1
+      || n.indexOf('nro de inscripcion') !== -1 || n.indexOf('codigo de registro') !== -1
+      || n.indexOf('n de registro') !== -1 || n.indexOf('cip y n') !== -1) {
+    return TEXTO_BARRA_CONVENIOS;
+  }
+  return t;
+}
+
 function aplicarConveniosBarra(data) {
   var barra = (data && data.conveniosBarra) || {};
   var tit = document.getElementById('convenios-barra-titulo');
@@ -479,8 +492,8 @@ function aplicarConveniosBarra(data) {
   if (tit && barra.titulo) {
     tit.innerHTML = '<i class="fas fa-search"></i> ' + String(barra.titulo).replace(/</g, '&lt;');
   }
-  if (txt && barra.texto) {
-    txt.textContent = barra.texto;
+  if (txt) {
+    txt.textContent = textoBarraConveniosLimpio(barra.texto);
   }
 }
 

@@ -4290,6 +4290,30 @@ app.delete('/admin/unidades/:id', requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+const TEXTO_BARRA_CONVENIOS = 'Ingrese su CIP para consultar su estado, ver el aviso del sorteo en Facebook o subir su expediente si resultó ganador.';
+
+function textoBarraConveniosLimpio(texto) {
+  var t = String(texto || '').trim();
+  var n = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (!t || /n\.?\s*o?\s*(de\s+)?inscripcion/.test(n) || n.indexOf('numero de inscripcion') !== -1
+      || n.indexOf('nro de inscripcion') !== -1 || n.indexOf('codigo de registro') !== -1
+      || n.indexOf('n de registro') !== -1 || n.indexOf('cip y n') !== -1) {
+    return TEXTO_BARRA_CONVENIOS;
+  }
+  return t;
+}
+
+function asegurarBarraConveniosEnConfig(data) {
+  var d = data && typeof data === 'object' ? data : {};
+  var barra = d.conveniosBarra && typeof d.conveniosBarra === 'object' ? d.conveniosBarra : {};
+  var texto = textoBarraConveniosLimpio(barra.texto);
+  var titulo = String(barra.titulo || '').trim() || '¿Ya se inscribió?';
+  var next = Object.assign({}, barra, { titulo: titulo, texto: texto });
+  var changed = JSON.stringify(barra) !== JSON.stringify(next);
+  d.conveniosBarra = next;
+  return { data: d, changed: changed };
+}
+
 // ── GET /portal/configuracion — datos CMS del portal ─────────────────────────
 app.get('/portal/configuracion', async (req, res) => {
   try {
@@ -4307,6 +4331,14 @@ app.get('/portal/configuracion', async (req, res) => {
       }
       if (data.fotosEncabezado) data.fotosEncabezado = sanitizarFotosEncabezadoList(data.fotosEncabezado);
       if (!Array.isArray(data.navOcultos)) data.navOcultos = [];
+      var barraFix = asegurarBarraConveniosEnConfig(data);
+      data = barraFix.data;
+      if (barraFix.changed) {
+        await pool.query(
+          'UPDATE portal_configuracion SET data_json=$1, updated_at=NOW() WHERE id=1',
+          [JSON.stringify(data)]
+        );
+      }
       if (!data.descansosPortal) {
         data.descansosPortal = {
           tituloSeccion: 'DESCANSOS MÉDICOS',
@@ -7741,7 +7773,7 @@ app.put('/admin/convenios/aviso-frontend', requireAuth, async (req, res) => {
           : (cmsR.rows[0].data_json || {});
         data.conveniosBarra = {
           titulo: titulo || '¿Ya se inscribió?',
-          texto: texto || ((data.conveniosBarra && data.conveniosBarra.texto) || ''),
+          texto: textoBarraConveniosLimpio(texto || ((data.conveniosBarra && data.conveniosBarra.texto) || '')),
           avisoSorteoFb: aviso
         };
         await pool.query(
