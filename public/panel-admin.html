@@ -264,7 +264,7 @@
     .btn-mini-azul:hover{background:#2471a3;color:#fff;}
     .btn-mini-pdf{background:#c0392b;color:#fff;border-color:#c0392b;min-width:38px;justify-content:center;}
     .btn-mini-pdf:hover{background:#a93226;color:#fff;}
-    table.t-inscritos td{color:#1a1a1a;font-size:12.5px;vertical-align:top;}
+    table.t-inscritos td{color:#1a1a1a;font-size:12.5px;vertical-align:middle;}
     table.t-inscritos td.col-num{color:#555;font-size:12px;}
     table.t-inscritos td.col-fecha{color:#1a1a1a;font-weight:600;font-size:12.5px;white-space:nowrap;}
     table.t-inscritos td.col-nombres,table.t-inscritos td.col-postula,table.t-inscritos td.col-unidad{
@@ -277,8 +277,10 @@
     table.t-inscritos td.col-region{white-space:nowrap;font-size:11.5px;}
     table.t-inscritos td.col-dni,table.t-inscritos td.col-tel{white-space:nowrap;font-size:12px;}
     table.t-inscritos .badge-estado{padding:5px 11px;font-size:11.5px;font-weight:700;border-radius:12px;display:inline-block;}
-    table.t-inscritos td.col-acciones{min-width:180px;white-space:normal;}
-    table.t-inscritos td.col-acciones .btn-mini{margin:2px 3px 2px 0;white-space:nowrap;}
+    table.t-inscritos td.col-acciones{width:1%;white-space:nowrap;vertical-align:middle;min-width:0;}
+    table.t-inscritos td.col-acciones .btn-mini{margin:0;padding:4px 8px;font-size:11px;min-height:28px;white-space:nowrap;flex:0 0 auto;}
+    table.t-inscritos td.col-acciones .acc-preins{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:5px;}
+    table.t-inscritos td.col-acciones .acc-preins-nota{display:inline;font-size:10px;color:#e67e22;margin-left:4px;white-space:nowrap;}
     .plazo-countdown{display:block;margin-top:5px;font-size:11px;font-weight:800;font-family:ui-monospace,Consolas,monospace;letter-spacing:.3px;padding:4px 8px;border-radius:6px;white-space:nowrap;}
     .plazo-countdown.ok{background:#e8f5f1;color:#004d3d;border:1px solid #a5d6a7;}
     .plazo-countdown.warn{background:#fff3cd;color:#856404;border:1px solid #ffe082;}
@@ -7690,7 +7692,7 @@ function renderInscritos(list, tipo){
 
   var esPreins = esConvenio && INSCRITOS_MODO==='preinscripcion';
   var colAccion = esPreins
-    ? '<th class="col-acciones">Ver completo</th>'
+    ? '<th class="col-acciones">Acciones</th>'
     : '<th class="col-acciones">Acciones</th>';
 
   document.getElementById('inscritos-tabla').innerHTML=
@@ -7749,10 +7751,12 @@ function renderInscritos(list, tipo){
           acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'expediente_ok\')" title="Avisar constancia"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Avisar</button> ';
         }
         if(INSCRITOS_MODO==='preinscripcion'){
-          acciones='<button type="button" class="btn-mini btn-mini-solid" title="Ver constancia completa" onclick="abrirConstanciaAdmin('+ins.id+')"><i class="fas fa-file-alt"></i> Ver completo</button> '
-            +'<button type="button" class="btn-mini" style="border-color:#c0392b;color:#c0392b;" title="Devolver a corregir o eliminar de la lista y la base" onclick="abrirGestionPreinscripcion('+ins.id+')"><i class="fas fa-exchange-alt"></i> Devolver / Eliminar</button>';
+          acciones='<span class="acc-preins">'
+            +'<button type="button" class="btn-mini btn-mini-solid" title="Ver constancia completa" onclick="abrirConstanciaAdmin('+ins.id+')"><i class="fas fa-file-alt"></i> Ver</button>'
+            +'<button type="button" class="btn-mini" style="border-color:#c0392b;color:#c0392b;" title="Devolver a corregir o eliminar de la lista y la base" onclick="abrirGestionPreinscripcion('+ins.id+')"><i class="fas fa-exchange-alt"></i> Devolver</button>'
+            +'</span>';
           if(ins.estado==='corregir_preinscripcion'){
-            acciones+=' <span style="display:block;font-size:10px;color:#e67e22;margin-top:4px;" title="'+escHtml(ins.preins_correccion_motivo||'')+'">En corrección</span>';
+            acciones+='<span class="acc-preins-nota" title="'+escHtml(ins.preins_correccion_motivo||'')+'">A corregir</span>';
           }
         } else if(!sinEditar){
           acciones+='<button type="button" class="btn-mini btn-mini-solid" title="Editar inscripción" onclick="abrirModalInscripcion('+ins.id+')"><i class="fas fa-edit"></i></button>';
