@@ -7797,23 +7797,18 @@ function renderInscritos(list, tipo){
       ? (esPreins?'':'<th>Mod.</th><th>Disp.</th>')
       : '<th>T. Servicio</th>')
     +(esPreins?'':'<th>PDF</th>')
-    +(esPreins?'':'<th>Origen</th><th>Estado</th>')
-    +(esPreins?'<th>Registro</th>':'<th>Fecha</th>')
+    +(esPreins?'':'<th>Origen</th>')
+    +'<th>Estado</th>'
+    +(esPreins?'<th>Fecha registro</th>':'<th>Fecha</th>')
     +colAccion
     +'</tr></thead><tbody>'
     +list.map(function(ins,idx){
       var c=colorEst[ins.estado]||'#1a1a1a';
       var bg=bgEst[ins.estado]||'#fff';
       var fecha=ins.fecha?new Date(ins.fecha).toLocaleDateString('es-PE'):'—';
-      var fechaHora='—';
-      if(ins.fecha){
-        var df=new Date(ins.fecha);
-        if(!isNaN(df.getTime())){
-          fechaHora = (typeof formatearFechaHoraLocal==='function')
-            ? formatearFechaHoraLocal({ fecha_iso: ins.fecha }, 'fecha_iso', 'fecha')
-            : df.toLocaleString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
-        }
-      }
+      var fechaHora=(typeof formatearFechaHoraLocal==='function')
+        ? formatearFechaHoraLocal(ins,'fecha','fecha')
+        : (ins.fecha?new Date(ins.fecha).toLocaleString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—');
       var origenLbl = (String(ins.modo_ingreso||'').toLowerCase()==='repechaje')
         ? '<span class="badge" style="background:#f5eef8;color:#8e44ad;">Repechaje</span>'
         : (String(ins.modo_ingreso||'').toLowerCase()==='sorteo'
@@ -7882,18 +7877,18 @@ function renderInscritos(list, tipo){
         +(esPreins?'':('<td>'+escHtml(ins.area||'—')+'</td>'))
         +(esConvenio && !esPreins?'<td class="col-tel">'+escHtml(ins.telefono||'—')+'</td>':'')
         +(esConvenio
-          ? (esPreins
-            ? ''
-            : ('<td style="font-size:11.5px;">'+escHtml(modLabel)+'</td><td>'+dispBadge+'</td>'))
+          ? (esPreins ? '' : ('<td style="font-size:11.5px;">'+escHtml(modLabel)+'</td><td>'+dispBadge+'</td>'))
           : ('<td>'+dispBadge+'</td>'))
         +(esPreins?'':('<td style="text-align:center;">'+(ins.tiene_pdf
           ?'<button type="button" class="btn-mini btn-mini-pdf" title="Ver PDF del expediente" onclick="verPdfInscripcion('+ins.id+')"><i class="fas fa-file-pdf"></i> PDF</button>'
           :'<span style="color:#888;font-size:12px;">—</span>')+'</td>'))
         +(esPreins?'':('<td style="text-align:center;">'+origenLbl+'</td>'))
-        +(esPreins?'':('<td><span class="badge badge-estado" style="background:'+bg+';color:'+c+';">'+escHtml(etiquetaEstadoFlujoInscripcion(ins.estado, esConvenio))+'</span>'
+        +'<td><span class="badge badge-estado" style="background:'+bg+';color:'+c+';">'+escHtml(etiquetaEstadoFlujoInscripcion(ins.estado, esConvenio))+'</span>'
         +htmlPlazoCountdownInscripcion(ins, esConvenio)
-        +'</td>'))
-        +'<td class="col-fecha" title="Fecha y hora de registro">'+escHtml(esPreins?fechaHora:fecha)+'</td>'
+        +'</td>'
+        +(esPreins
+          ? ('<td class="col-fecha" title="Fecha y hora de registro">'+escHtml(fechaHora)+'</td>')
+          : ('<td class="col-fecha">'+fecha+'</td>'))
         +'<td class="col-acciones">'+acciones+'</td>'
         +'</tr>';
     }).join('')
