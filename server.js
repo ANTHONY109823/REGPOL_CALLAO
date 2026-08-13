@@ -1265,11 +1265,14 @@ app.get('/health', function(req, res) {
   res.status(200).type('text/plain').send('ok');
 });
 
-app.get(['/LOGIN.html', '/Login.html', '/LOGIN.HTML', '/Login.HTML'], function(req, res) {
-  res.redirect(301, '/login.html');
-});
-app.get(['/PANEL-ADMIN.html', '/Panel-Admin.html', '/PANEL-ADMIN.HTML'], function(req, res) {
-  res.redirect(301, '/panel-admin.html');
+/** Express no distingue mayúsculas: no usar app.get('/LOGIN.html') porque también captura /login.html y genera bucle. */
+app.use(function(req, res, next) {
+  var p = String((req.path || '').split('?')[0]);
+  var low = p.toLowerCase();
+  if (p !== low && (low === '/login.html' || low === '/panel-admin.html' || low === '/panel-usuario.html')) {
+    return res.redirect(301, low);
+  }
+  next();
 });
 
 app.use(cors());
