@@ -1206,6 +1206,13 @@ function onCambioRegionInscripcion(){
   }
 }
 
+function etiquetaRegionInscripcion(region) {
+  var r = String(region || '').trim();
+  var n = r.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  if (n.indexOf('OTRA DEPENDENCIA') !== -1 || n === 'OTRO' || n === 'OTRA') return 'OTRO';
+  return r.replace(/^REGI[OÓ]N\s+POLICIAL\s+/i, 'RP ');
+}
+
 var _divCargaPromise = null;
 function cargarDivisionesPublico(){
   if (_divCargaPromise) {
@@ -1259,7 +1266,7 @@ function aplicarDivisionesAlForm() {
     regiones.forEach(function(r) {
       var o = document.createElement('option');
       o.value = r;
-      o.textContent = r;
+      o.textContent = etiquetaRegionInscripcion(r);
       selR.appendChild(o);
     });
     if (cur) selR.value = cur;
