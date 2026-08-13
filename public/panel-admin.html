@@ -266,6 +266,8 @@
     .cms-panel.activo{display:block;}
     #page-cms .card{width:100%;max-width:none;}
     #cms-lista-convenios,#cms-panel-convenios{width:100%;max-width:none;}
+    .cms-exp-modelos-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    @media(max-width:700px){.cms-exp-modelos-grid{grid-template-columns:1fr;}}
     .cms-conv-head{margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;width:100%;}
     .cms-conv-tabla-wrap{border:1px solid #e0e8e0;border-radius:8px;overflow:visible;width:100%;max-width:none;}
     table.cms-conv-tabla{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
@@ -625,6 +627,9 @@
           </div>
           <div class="sb-item" data-page="conv-auditoria-cip" onclick="irConvAuditoriaCip(this)">
             <i class="fas fa-history"></i> 4. AUDITORÍA CIP
+          </div>
+          <div class="sb-item" data-page="conv-plantillas" onclick="irConvPlantillas(this)">
+            <i class="fas fa-file-alt"></i> 5. PLANTILLAS
           </div>
         </div>
       </div>
@@ -1341,6 +1346,44 @@
       </div>
     </div>
 
+    <div id="page-conv-plantillas" class="page">
+      <div class="card">
+        <h3><i class="fas fa-file-alt"></i> 5. Plantillas de expediente</h3>
+        <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
+          Un solo <strong>Modelo PDF</strong> y una sola <strong>Plantilla Word</strong> para <strong>todos los convenios</strong>.
+          El ganador los descarga en consulta por CIP.
+        </p>
+        <div id="cms-exp-modelos">
+          <div class="cms-exp-modelos-grid">
+            <div style="background:#fff;border:1.5px solid #e8e0c8;border-radius:10px;padding:16px;">
+              <div style="font-size:13px;font-weight:800;color:#8a7340;margin-bottom:8px;"><i class="fas fa-file-pdf"></i> Modelo PDF</div>
+              <div id="cms-exp-pdf-meta" style="font-size:13px;color:#555;margin-bottom:12px;">Cargando...</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                <label class="btn-mini btn-mini-ok" style="margin:0;cursor:pointer;">
+                  <i class="fas fa-upload"></i> Subir PDF
+                  <input type="file" id="cms-exp-pdf-file" accept="application/pdf" style="display:none;" onchange="subirExpModeloGlobal('pdf', this)"/>
+                </label>
+                <button type="button" class="btn-mini" id="cms-exp-pdf-ver" style="display:none;" onclick="window.open((typeof API!=='undefined'?API:'')+'/portal/expediente-modelo-pdf','_blank')"><i class="fas fa-download"></i> Ver / descargar</button>
+                <button type="button" class="btn-mini btn-mini-danger" id="cms-exp-pdf-del" style="display:none;" onclick="quitarExpModeloGlobal('pdf')"><i class="fas fa-trash"></i> Quitar</button>
+              </div>
+            </div>
+            <div style="background:#fff;border:1.5px solid #c5d4ea;border-radius:10px;padding:16px;">
+              <div style="font-size:13px;font-weight:800;color:#2b579a;margin-bottom:8px;"><i class="fas fa-file-word"></i> Plantilla Word</div>
+              <div id="cms-exp-word-meta" style="font-size:13px;color:#555;margin-bottom:12px;">Cargando...</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                <label class="btn-mini btn-mini-ok" style="margin:0;cursor:pointer;">
+                  <i class="fas fa-upload"></i> Subir Word
+                  <input type="file" id="cms-exp-word-file" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none;" onchange="subirExpModeloGlobal('word', this)"/>
+                </label>
+                <button type="button" class="btn-mini" id="cms-exp-word-ver" style="display:none;" onclick="window.open((typeof API!=='undefined'?API:'')+'/portal/expediente-plantilla-word','_blank')"><i class="fas fa-download"></i> Ver / descargar</button>
+                <button type="button" class="btn-mini btn-mini-danger" id="cms-exp-word-del" style="display:none;" onclick="quitarExpModeloGlobal('word')"><i class="fas fa-trash"></i> Quitar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     
     <div id="page-resultados-pdf" class="page">
       <div class="card">
@@ -1802,19 +1845,10 @@
       </div>
     </div>
 
-    <div id="mi-plantilla-wrap" style="margin-top:8px;padding:6px 8px;border:1px solid #e8e0c8;border-radius:6px;background:#fffcf5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
-      <span style="font-size:11px;font-weight:700;color:#8a7340;white-space:nowrap;"><i class="fas fa-file-pdf"></i> Plantilla PDF</span>
-      <div id="mi-plantilla-actual" style="display:none;align-items:center;gap:6px;flex:1;min-width:120px;">
-        <i class="fas fa-file-pdf" style="color:#e74c3c;font-size:12px;"></i>
-        <span id="mi-plantilla-nombre" style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;"></span>
-        <button type="button" class="btn-mini btn-mini-danger" style="padding:2px 5px;font-size:10px;" onclick="quitarPlantillaItem()" title="Quitar"><i class="fas fa-trash"></i></button>
-      </div>
-      <label style="font-size:10px;color:#888;margin:0;"><span id="mi-plantilla-label">Subir</span></label>
-      <input type="file" id="mi-plantilla-file" accept="application/pdf" onchange="cargarPlantillaItem(this)"
-             style="flex:1;min-width:140px;max-width:220px;padding:2px;border:1px solid #ccc;border-radius:4px;font-size:11px;"/>
-      <input type="hidden" id="mi-plantilla-data"/>
-      <span id="mi-plantilla-ayuda" style="display:none;"></span>
-    </div>
+    <p id="mi-plantillas-expediente-hint" style="margin-top:8px;font-size:11px;color:#666;line-height:1.35;">
+      La <strong>plantilla Word</strong> y el <strong>modelo PDF</strong> son únicos para todos los convenios.
+      Súbalos en <strong>Convenios → 5. Plantillas</strong>.
+    </p>
     </div>
 
     <div class="modal-footer" style="margin-top:12px;gap:6px;">
@@ -3990,7 +4024,7 @@ function ir(page, el){
   if(page==='sorteos'&&!puedeGestionarSorteosConvenio()){alert('Sin acceso a sorteos de convenios.');return;}
   if(page==='resultados-pdf'&&!puedePublicarResultadosPdf(RESULTADOS_PDF_TIPO)){alert('Sin acceso a publicación de resultados.');return;}
   if(page==='inscritos'&&!puedeOperarInscritosConvenio()&&!esUnitic()){alert('Sin acceso a inscritos de convenios.');return;}
-  if((page==='conv-ganadores'||page==='conv-repechaje'||page==='conv-preinscritos'||page==='conv-auditoria-cip')&&!puedeOperarInscritosConvenio()){alert('Sin acceso al flujo de convenios.');return;}
+  if((page==='conv-ganadores'||page==='conv-repechaje'||page==='conv-preinscritos'||page==='conv-auditoria-cip'||page==='conv-plantillas')&&!puedeOperarInscritosConvenio()){alert('Sin acceso al flujo de convenios.');return;}
   if(page==='consulta-cip'&&!puedeConsultarCip()){alert('Sin acceso a consulta por CIP.');return;}
   if((page==='descansos'||page==='descansos-dash'||page==='descansos-import')&&!puedeGestionDescansos()){alert('Sin acceso a Descansos médicos.');return;}
   if((page==='faltos'||page==='faltos-dash'||page==='faltos-import')&&!puedeGestionFaltos()){alert('Sin acceso a Faltos.');return;}
@@ -4024,6 +4058,7 @@ function ir(page, el){
   if(page==='conv-preinscritos')   { cargarConvFlujoResumen('preinscritos'); }
   if(page==='conv-ganadores')      { cargarConvFlujoResumen('ganadores'); }
   if(page==='conv-repechaje')      { cargarConvFlujoResumen('repechaje'); }
+  if(page==='conv-plantillas')     { if(typeof cargarExpModelosGlobales==='function') cargarExpModelosGlobales(); }
   if(page==='descansos' || page==='descansos-dash' || page==='descansos-import'){
     if(typeof dmInit === 'function') dmInit();
   }
@@ -5240,26 +5275,98 @@ function eliminarSorteo(id){
     });
 }
 
-function cargarPlantillaItem(input){
-  var file=input.files&&input.files[0];
-  if(!file)return;
-  if(file.size>10*1024*1024){alert('El PDF no debe superar 10 MB.');input.value='';return;}
-  if(file.type!=='application/pdf'){alert('Solo se aceptan archivos PDF.');input.value='';return;}
-  var reader=new FileReader();
-  reader.onload=function(e){
-    document.getElementById('mi-plantilla-data').value=e.target.result;
-    document.getElementById('mi-plantilla-nombre').textContent=file.name+' ('+Math.round(file.size/1024)+' KB)';
-    document.getElementById('mi-plantilla-actual').style.display='flex';
-    document.getElementById('mi-plantilla-label').textContent='Cambiar';
-  };
-  reader.readAsDataURL(file);
+function kbExpModelo(bytes){
+  var n=parseInt(bytes,10)||0;
+  if(n<1024) return n+' B';
+  return Math.round(n/1024)+' KB';
 }
 
-function quitarPlantillaItem(){
-  document.getElementById('mi-plantilla-data').value='__QUITAR__';
-  document.getElementById('mi-plantilla-file').value='';
-  document.getElementById('mi-plantilla-actual').style.display='none';
-  document.getElementById('mi-plantilla-label').textContent='Subir';
+function pintarExpModeloSlot(tipo, meta){
+  var esWord=tipo==='word';
+  var elMeta=document.getElementById(esWord?'cms-exp-word-meta':'cms-exp-pdf-meta');
+  var btnVer=document.getElementById(esWord?'cms-exp-word-ver':'cms-exp-pdf-ver');
+  var btnDel=document.getElementById(esWord?'cms-exp-word-del':'cms-exp-pdf-del');
+  if(!elMeta) return;
+  if(meta && meta.nombre){
+    elMeta.textContent=meta.nombre+' ('+kbExpModelo(meta.bytes)+')';
+    if(btnDel) btnDel.style.display='inline-flex';
+  } else {
+    elMeta.textContent='Aún no hay archivo. Se usará el modelo general.';
+    if(btnDel) btnDel.style.display='none';
+  }
+  if(btnVer) btnVer.style.display='inline-flex';
+}
+
+function cargarExpModelosGlobales(){
+  var box=document.getElementById('cms-exp-modelos');
+  if(!box) return;
+  fetch(API+'/admin/expediente-modelos',{headers:hdr()})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d || !d.ok){
+        pintarExpModeloSlot('pdf', null);
+        pintarExpModeloSlot('word', null);
+        return;
+      }
+      pintarExpModeloSlot('pdf', d.pdf);
+      pintarExpModeloSlot('word', d.word);
+    })
+    .catch(function(){
+      pintarExpModeloSlot('pdf', null);
+      pintarExpModeloSlot('word', null);
+    });
+}
+
+function esArchivoWordPlantilla(file){
+  var n=String(file&&file.name||'').toLowerCase();
+  var t=String(file&&file.type||'').toLowerCase();
+  return n.endsWith('.docx')||n.endsWith('.doc')||t.indexOf('word')>=0
+    ||t==='application/msword'
+    ||t==='application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+}
+
+function subirExpModeloGlobal(tipo, input){
+  var file=input && input.files && input.files[0];
+  if(!file) return;
+  if(file.size>10*1024*1024){ alert('El archivo no debe superar 10 MB.'); input.value=''; return; }
+  if(tipo==='pdf' && file.type!=='application/pdf' && !/\.pdf$/i.test(file.name)){
+    alert('Solo se aceptan archivos PDF.'); input.value=''; return;
+  }
+  if(tipo==='word' && !esArchivoWordPlantilla(file)){
+    alert('Solo se aceptan archivos Word (.doc o .docx).'); input.value=''; return;
+  }
+  fetch(API+'/admin/expediente-modelos/'+encodeURIComponent(tipo),{
+    method:'POST',
+    headers:{
+      'Content-Type': file.type || (tipo==='word' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf'),
+      'x-admin-token': TOKEN,
+      'x-filename': file.name
+    },
+    body: file
+  })
+    .then(function(r){ return r.json().then(function(d){ return {status:r.status, data:d}; }); })
+    .then(function(res){
+      input.value='';
+      if(!res.data || !res.data.ok){
+        alert((res.data && res.data.error) || 'No se pudo subir el archivo.');
+        return;
+      }
+      cargarExpModelosGlobales();
+      if(typeof mostrarAlertaCMS==='function') mostrarAlertaCMS('Archivo guardado. Ya aplica a todos los convenios.','ok');
+      else alert('Archivo guardado. Ya aplica a todos los convenios.');
+    })
+    .catch(function(){ alert('Error de conexión al subir el archivo.'); input.value=''; });
+}
+
+function quitarExpModeloGlobal(tipo){
+  if(!confirm('¿Quitar este archivo? Los ganadores volverán al modelo general.')) return;
+  fetch(API+'/admin/expediente-modelos/'+encodeURIComponent(tipo),{method:'DELETE',headers:hdr()})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d || !d.ok){ alert((d && d.error) || 'No se pudo quitar.'); return; }
+      cargarExpModelosGlobales();
+    })
+    .catch(function(){ alert('Error de conexión.'); });
 }
 
 var INSCRITOS_CACHE = [];
@@ -5393,7 +5500,6 @@ function syncConveniosOficiales(){
       if(!d.ok){ mostrarAlertaItems(d.error||'Error al sincronizar','error'); return; }
       var extra = '';
       if(d.cupos_actualizados) extra += ' Lugares configurados: '+d.cupos_actualizados+'.';
-      if(d.plantillas_copiadas) extra += ' Plantillas PDF: '+d.plantillas_copiadas+'.';
       mostrarAlertaItems((d.mensaje||('Listos los '+d.total+' convenios con flujo Celador.'))+extra,'ok');
       var tipo=document.getElementById('items-filtro-tipo');
       cargarItems(tipo?tipo.value:'convenio');
@@ -5792,17 +5898,6 @@ function poblarModalItem(item){
   document.getElementById('mi-visible').checked=item.visible!==false;
   document.getElementById('mi-orden').value=item.orden||0;
   document.getElementById('mi-titulo').textContent='Editar: '+item.titulo;
-  
-  document.getElementById('mi-plantilla-data').value='';
-  document.getElementById('mi-plantilla-file').value='';
-  if(item.plantilla_nombre){
-    document.getElementById('mi-plantilla-nombre').textContent=item.plantilla_nombre;
-    document.getElementById('mi-plantilla-actual').style.display='flex';
-    document.getElementById('mi-plantilla-label').textContent='Cambiar';
-  } else {
-    document.getElementById('mi-plantilla-actual').style.display='none';
-    document.getElementById('mi-plantilla-label').textContent='Subir';
-  }
   renderListaCuposUnidadesUI();
   renderListaTurnosUI();
   adaptarModalItemPorTipo(item.tipo || 'curso');
@@ -6500,8 +6595,8 @@ function adaptarModalItemPorTipo(tipo){
   }
   if(esConv) actualizarAvisoInscripcionModal();
 
-  var plantilla = document.getElementById('mi-plantilla-wrap');
-  if(plantilla) plantilla.style.display = '';
+  var hintPlant = document.getElementById('mi-plantillas-expediente-hint');
+  if(hintPlant) hintPlant.style.display = esConv ? '' : 'none';
   if (esConv) adaptarCuposUIPorTitulo();
 }
 
@@ -7389,17 +7484,6 @@ function guardarItem(){
           try { renderGestionConvocatoriasCMS('cms-lista-cursos','curso'); } catch(e){}
         }
       }
-      var pdfData=document.getElementById('mi-plantilla-data').value;
-      if(pdfData==='__QUITAR__'){
-        return fetch(API+'/admin/items/'+itemId+'/plantilla',{
-          method:'PUT',headers:hdr(),body:JSON.stringify({plantilla_pdf:'',plantilla_nombre:''})
-        }).then(function(){finOk('Convocatoria actualizada.');});
-      } else if(pdfData){
-        var pdfNombre=(document.getElementById('mi-plantilla-file').files[0]||{}).name||'plantilla.pdf';
-        return fetch(API+'/admin/items/'+itemId+'/plantilla',{
-          method:'PUT',headers:hdr(),body:JSON.stringify({plantilla_pdf:pdfData,plantilla_nombre:pdfNombre})
-        }).then(function(){finOk('Convocatoria y plantilla guardadas.');});
-      }
       finOk((id?'Ficha web actualizada':'Convocatoria creada')+' correctamente. Ya se ve en el portal.');
     });
 }
@@ -7637,6 +7721,10 @@ function irConvRepechaje(el){
 
 function irConvAuditoriaCip(el){
   ir('conv-auditoria-cip', el);
+}
+
+function irConvPlantillas(el){
+  ir('conv-plantillas', el);
 }
 
 function volverDesdeInscritos(){

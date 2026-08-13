@@ -407,6 +407,18 @@ function escC(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+function htmlBotonesModeloExp() {
+  var base = API_PUBLIC || '';
+  var wordHref = base + '/portal/expediente-plantilla-word';
+  var pdfHref = base + '/portal/expediente-modelo-pdf';
+  return '<div class="expediente-dl">'
+    + '<a class="btn-exp-dl btn-exp-dl-word" href="' + wordHref + '" target="_blank" rel="noopener">'
+    + '<i class="fas fa-file-word"></i> Plantilla en Word</a>'
+    + '<a class="btn-exp-dl btn-exp-dl-pdf" href="' + pdfHref + '" target="_blank" rel="noopener">'
+    + '<i class="fas fa-file-pdf"></i> Modelo PDF</a>'
+    + '</div>';
+}
+
 function getParamCip() {
   return new URLSearchParams(window.location.search).get('cip') || '';
 }
@@ -657,12 +669,8 @@ function renderResultados(lista) {
             ? 'Plazo vencido — no puede subir expediente.'
             : 'Sin plazo de subsanación activo.'))
         + '</p>'
-        + '<div class="expediente-dl">'
-        + '<a class="btn-exp-dl btn-exp-dl-word" href="plantillas/modelo-inscripcion-regpol.docx?v=2" download="MODELO-INSCRIPCION-REGPOL.docx">'
-        + '<i class="fas fa-file-word"></i> Plantilla Word</a>'
-        + '<a class="btn-exp-dl btn-exp-dl-pdf" href="plantillas/modelo-inscripcion-regpol.pdf?v=2" download="MODELO-INSCRIPCION-REGPOL.pdf">'
-        + '<i class="fas fa-file-pdf"></i> Modelo PDF</a>'
-        + '</div></div>'
+        + htmlBotonesModeloExp()
+        + '</div>'
         + (plazoSub
           ? '<div class="plazo-countdown" data-plazo-exp="' + escC(plazoSub) + '">—</div>'
           : '')
@@ -697,12 +705,8 @@ function renderResultados(lista) {
         + '<div class="expediente-box">'
         + '<div class="expediente-box-top">'
         + '<p><i class="fas fa-cloud-upload-alt" style="color:#004d3d;"></i> Suba su expediente PDF — documentación completa en un solo archivo.</p>'
-        + '<div class="expediente-dl">'
-        + '<a class="btn-exp-dl btn-exp-dl-word" href="plantillas/modelo-inscripcion-regpol.docx?v=2" download="MODELO-INSCRIPCION-REGPOL.docx">'
-        + '<i class="fas fa-file-word"></i> Plantilla en Word</a>'
-        + '<a class="btn-exp-dl btn-exp-dl-pdf" href="plantillas/modelo-inscripcion-regpol.pdf?v=2" download="MODELO-INSCRIPCION-REGPOL.pdf">'
-        + '<i class="fas fa-file-pdf"></i> Modelo PDF</a>'
-        + '</div></div>'
+        + htmlBotonesModeloExp()
+        + '</div>'
         + (plazoIso
           ? '<div class="plazo-countdown" data-plazo-exp="' + escC(plazoIso) + '">—</div>'
           : '<div class="plazo-countdown vencido">Sin plazo registrado</div>')

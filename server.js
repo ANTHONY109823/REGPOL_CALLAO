@@ -4718,13 +4718,135 @@ app.get('/portal/sorteos', async (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
-// ── GET /portal/items/:id/plantilla — público ─────────────────────────────────
-app.get('/portal/items/:id/plantilla', async (req, res) => {
+const PLANTILLA_PDF_DEFAULT = path.join(PUBLIC_DIR, 'plantillas', 'modelo-inscripcion-regpol.pdf');
+const PLANTILLA_WORD_DEFAULT = path.join(PUBLIC_DIR, 'plantillas', 'modelo-inscripcion-regpol.docx');
+
+function nombreArchivoSeguro(nombre, fallback) {
+  const raw = String(nombre || fallback || 'archivo').replace(/[\r\n"]/g, '_').trim();
+  return raw || fallback || 'archivo';
+}
+
+function mimePlantillaWord(nombre) {
+  const n = String(nombre || '').toLowerCase();
+  if (n.endsWith('.doc')) return 'application/msword';
+  return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+}
+
+function enviarArchivoDescarga(res, buf, mime, nombre) {
+  res.setHeader('Content-Type', mime);
+  res.setHeader('Content-Disposition', 'attachment; filename="' + nombreArchivoSeguro(nombre, 'archivo') + '"');
+  res.setHeader('Cache-Control', 'no-store');
+  return res.send(buf);
+}
+
+const EXP_MODELO_PDF_CLAVE = 'expediente_modelo_pdf';
+const EXP_PLANTILLA_WORD_CLAVE = 'expediente_plantilla_word';
+const EXP_MODELO_MAX_BYTES = 10 * 1024 * 1024;
+
+async function metaExpedienteModelo(clave) {
+  const r = await pool.query(
+    'SELECT mime, nombre, octet_length(data) AS bytes, updated_at FROM portal_archivos WHERE clave=$1',
+    [clave]
+  );
+  if (!r.rows.length || !r.rows[0].bytes) return null;
+  return {
+    nombre: r.rows[0].nombre || '',
+    mime: r.rows[0].mime || '',
+    bytes: parseInt(r.rows[0].bytes, 10) || 0,
+    updated_at: r.rows[0].updated_at
+  };
+}
+
+async function servirModeloExpedienteGlobal(res, tipo) {
+  const esWord = tipo === 'word';
+  const clave = esWord ? EXP_PLANTILLA_WORD_CLAVE : EXP_MODELO_PDF_CLAVE;
+  const r = await pool.query('SELECT mime, nombre, data FROM portal_archivos WHERE clave=$1', [clave]);
+  if (r.rows.length && r.rows[0].data && r.rows[0].data.length) {
+    const mime = r.rows[0].mime || (esWord ? mimePlantillaWord(r.rows[0].nombre) : 'application/pdf');
+    const nombre = r.rows[0].nombre || (esWord ? 'PLANTILLA-INSCRIPCION.docx' : 'MODELO-INSCRIPCION.pdf');
+    return enviarArchivoDescarga(res, r.rows[0].data, mime, nombre);
+  }
+  const fallback = esWord ? PLANTILLA_WORD_DEFAULT : PLANTILLA_PDF_DEFAULT;
+  if (fs.existsSync(fallback)) return res.sendFile(fallback);
+  return res.status(404).json({ ok: false, error: esWord ? 'Sin plantilla Word' : 'Sin modelo PDF' });
+}
+
+app.get('/portal/expediente-modelo-pdf', async (req, res) => {
+  try { await servirModeloExpedienteGlobal(res, 'pdf'); }
+  catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.get('/portal/expediente-plantilla-word', async (req, res) => {
+  try { await servirModeloExpedienteGlobal(res, 'word'); }
+  catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.get('/admin/expediente-modelos', requireAuth, async (req, res) => {
   try {
-    const r = await pool.query('SELECT plantilla_pdf,plantilla_nombre FROM items_portal WHERE id=$1 AND visible=TRUE', [req.params.id]);
-    if (!r.rows.length || !r.rows[0].plantilla_pdf)
-      return res.status(404).json({ ok: false, error: 'Sin plantilla' });
-    res.json({ ok: true, pdf: r.rows[0].plantilla_pdf, nombre: r.rows[0].plantilla_nombre || 'plantilla.pdf' });
+    if (!puedeGestionarItem(req.admin, 'convenio'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const pdf = await metaExpedienteModelo(EXP_MODELO_PDF_CLAVE);
+    const word = await metaExpedienteModelo(EXP_PLANTILLA_WORD_CLAVE);
+    res.json({ ok: true, pdf: pdf, word: word });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.post('/admin/expediente-modelos/:tipo', requireAuth,
+  express.raw({ limit: EXP_MODELO_MAX_BYTES, type: function() { return true; } }),
+  async (req, res) => {
+    try {
+      if (!puedeGestionarItem(req.admin, 'convenio'))
+        return res.status(403).json({ ok: false, error: 'Sin permiso' });
+      const tipo = String(req.params.tipo || '').toLowerCase();
+      const esWord = tipo === 'word';
+      const esPdf = tipo === 'pdf';
+      if (!esWord && !esPdf) return res.status(400).json({ ok: false, error: 'Tipo inválido.' });
+      const buf = req.body;
+      if (!buf || !Buffer.isBuffer(buf) || !buf.length)
+        return res.status(400).json({ ok: false, error: 'Archivo vacío o no recibido.' });
+      if (buf.length > EXP_MODELO_MAX_BYTES)
+        return res.status(400).json({ ok: false, error: 'El archivo no debe superar 10 MB.' });
+      const nombre = String(req.headers['x-filename'] || (esWord ? 'plantilla.docx' : 'modelo.pdf')).trim().slice(0, 255);
+      let mime = String(req.headers['content-type'] || '').split(';')[0].trim();
+      if (esPdf) {
+        if (buf.slice(0, 4).toString('latin1') !== '%PDF')
+          return res.status(400).json({ ok: false, error: 'El archivo no es un PDF válido.' });
+        mime = 'application/pdf';
+      } else {
+        const n = nombre.toLowerCase();
+        const okExt = n.endsWith('.docx') || n.endsWith('.doc');
+        const okMime = /word|officedocument/i.test(mime);
+        if (!okExt && !okMime)
+          return res.status(400).json({ ok: false, error: 'Solo se aceptan archivos Word (.doc o .docx).' });
+        mime = mimePlantillaWord(nombre);
+      }
+      const clave = esWord ? EXP_PLANTILLA_WORD_CLAVE : EXP_MODELO_PDF_CLAVE;
+      await pool.query(
+        `INSERT INTO portal_archivos (clave, mime, nombre, data, updated_at)
+         VALUES ($1, $2, $3, $4, NOW())
+         ON CONFLICT (clave) DO UPDATE SET
+           mime = EXCLUDED.mime,
+           nombre = EXCLUDED.nombre,
+           data = EXCLUDED.data,
+           updated_at = NOW()`,
+        [clave, mime, nombre || (esWord ? 'plantilla.docx' : 'modelo.pdf'), buf]
+      );
+      res.json({ ok: true, nombre: nombre, bytes: buf.length });
+    } catch (e) {
+      res.status(500).json({ ok: false, error: e.message || 'Error al guardar el archivo.' });
+    }
+  }
+);
+
+app.delete('/admin/expediente-modelos/:tipo', requireAuth, async (req, res) => {
+  try {
+    if (!puedeGestionarItem(req.admin, 'convenio'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const tipo = String(req.params.tipo || '').toLowerCase();
+    const clave = tipo === 'word' ? EXP_PLANTILLA_WORD_CLAVE : (tipo === 'pdf' ? EXP_MODELO_PDF_CLAVE : '');
+    if (!clave) return res.status(400).json({ ok: false, error: 'Tipo inválido.' });
+    await pool.query('DELETE FROM portal_archivos WHERE clave=$1', [clave]);
+    res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -4871,21 +4993,6 @@ app.post('/admin/sorteos/:id/importar-inscritos', requireAuth, async (req, res) 
         [req.params.id, r.cip, r.nombres, r.unidad, r.cargo, i]);
     }
     res.json({ ok: true, importados: insc.rows.length });
-  } catch (e) { res.json({ ok: false, error: e.message }); }
-});
-
-// ── PUT /admin/items/:id/plantilla — subir plantilla PDF ───────────────────────
-app.put('/admin/items/:id/plantilla', requireAuth, async (req, res) => {
-  try {
-    const cur = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [req.params.id]);
-    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
-    if (!puedeGestionarItem(req.admin, cur.rows[0].tipo))
-      return res.status(403).json({ ok: false, error: 'Sin permiso' });
-    const { plantilla_pdf, plantilla_nombre } = req.body;
-    await pool.query(
-      'UPDATE items_portal SET plantilla_pdf=$1,plantilla_nombre=$2 WHERE id=$3',
-      [plantilla_pdf||'', plantilla_nombre||'plantilla.pdf', req.params.id]);
-    res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -6477,6 +6584,8 @@ function enriquecerItemInscripciones(item) {
   } else {
     out.inscripciones_abiertas = !!out.inscripciones_abiertas;
   }
+  delete out.plantilla_pdf;
+  delete out.plantilla_word;
   return out;
 }
 
@@ -6746,21 +6855,10 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
 
   // Cupos: Celador = 20 comisarías; resto = un solo lugar
   const convs = await db.query(
-    `SELECT id, titulo, lugar, vacantes, cupos_unidades, plantilla_pdf, plantilla_nombre, turnos, horario, observaciones
+    `SELECT id, titulo, lugar, vacantes, cupos_unidades, turnos, horario, observaciones
      FROM items_portal WHERE tipo='convenio' AND visible=TRUE`
   );
-  let celadorPlantilla = null;
-  let celadorPlantillaNombre = '';
-  for (const row of convs.rows) {
-    if (String(row.titulo || '').toUpperCase().indexOf('CELADOR') !== -1
-        && row.plantilla_pdf && String(row.plantilla_pdf).length > 20) {
-      celadorPlantilla = row.plantilla_pdf;
-      celadorPlantillaNombre = row.plantilla_nombre || 'plantilla-convenio.pdf';
-      break;
-    }
-  }
   let cuposActualizados = 0;
-  let plantillasCopiadas = 0;
   let turnosCargados = 0;
   for (const row of convs.rows) {
     const tituloKey = String(row.titulo || '').trim().toUpperCase();
@@ -6892,21 +6990,12 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
         }
       }
     }
-    const sinPlantilla = !(row.plantilla_pdf && String(row.plantilla_pdf).length > 20);
-    if (sinPlantilla && celadorPlantilla) {
-      await db.query(
-        'UPDATE items_portal SET plantilla_pdf=$1, plantilla_nombre=$2 WHERE id=$3',
-        [celadorPlantilla, celadorPlantillaNombre, row.id]
-      );
-      plantillasCopiadas++;
-    }
   }
 
   if (invalidarCache) invalidarPortalItemsCache();
   return {
     total: CONVENIOS_OFICIALES.length,
     cupos_actualizados: cuposActualizados,
-    plantillas_copiadas: plantillasCopiadas,
     turnos_cargados: turnosCargados
   };
 }
@@ -7047,10 +7136,6 @@ app.get('/portal/items/:id', async (req, res) => {
       'SELECT * FROM items_portal WHERE id=$1 AND visible=TRUE', [req.params.id]);
     if (!r.rows.length) return res.status(404).json({ ok: false, error: 'No encontrado' });
     const item = enriquecerItemInscripciones(Object.assign({}, r.rows[0]));
-    const tienePlantilla = !!(item.plantilla_pdf && String(item.plantilla_pdf).length > 20);
-    delete item.plantilla_pdf;
-    item.plantilla_pdf = tienePlantilla;
-    item.tiene_plantilla = tienePlantilla;
     // Mismo criterio que la ficha web: cupos explícitos o un solo lugar
     if (item.tipo === 'convenio') {
       item.cupos_unidades = cuposEfectivosItem(item);
@@ -7937,7 +8022,6 @@ app.post('/admin/sync-convenios', requireAuth, async (req, res) => {
       ok: true,
       total: r.total,
       cupos_actualizados: r.cupos_actualizados || 0,
-      plantillas_copiadas: r.plantillas_copiadas || 0,
       turnos_cargados: r.turnos_cargados || 0,
       mensaje: 'Los ' + r.total + ' convenios quedaron visibles. Turnos/vacantes de hoja cargados: ' + (r.turnos_cargados || 0) + '.'
     });
@@ -7954,7 +8038,7 @@ app.get('/admin/items', requireAuth, async (req, res) => {
               i.vacantes, i.fecha_inicio, i.duracion, i.lugar, i.observaciones, i.ventana_inscripcion,
               i.inscripcion_inicio, i.inscripcion_cierre,
               i.formulario_url, i.inscripciones_abiertas, i.visible, i.orden, i.uniforme,
-              i.contactos_responsables, i.aviso_sorteo_fb, i.cupos_unidades, i.turnos, i.plantilla_nombre,
+              i.contactos_responsables, i.aviso_sorteo_fb, i.cupos_unidades, i.turnos,
               (SELECT COUNT(*) FROM inscripciones n WHERE n.item_id=i.id) AS total_inscritos
        FROM items_portal i`;
     if (!esU) {

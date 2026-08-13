@@ -333,6 +333,10 @@ var DETALLE_APLICADO = false;
 
 function escHtmlD(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
+function hrefModeloExp(tipo){
+  return (API_PUBLIC||'')+(tipo==='word'?'/portal/expediente-plantilla-word':'/portal/expediente-modelo-pdf');
+}
+
 function getParam(k){return new URLSearchParams(window.location.search).get(k);}
 
 function estadoBadge(estado){
@@ -1132,8 +1136,8 @@ function renderFormInscripcion(item){
     +((!esConvenio || esRepechaje)
     ? ('<div class="pdf-upload-box pdf-upload-compact">'
     +'<div class="pdf-exp-acciones">'
-    +'<a class="btn-exp-accion btn-exp-word" href="plantillas/modelo-inscripcion-regpol.docx?v=2" download="MODELO-INSCRIPCION-REGPOL.docx">Plantilla Word</a>'
-    +'<a class="btn-exp-accion btn-exp-pdf" href="plantillas/modelo-inscripcion-regpol.pdf?v=2" download="MODELO-INSCRIPCION-REGPOL.pdf">Modelo PDF</a>'
+    +'<a class="btn-exp-accion btn-exp-word" href="'+hrefModeloExp('word')+'" target="_blank" rel="noopener">Plantilla Word</a>'
+    +'<a class="btn-exp-accion btn-exp-pdf" href="'+hrefModeloExp('pdf')+'" target="_blank" rel="noopener">Modelo PDF</a>'
     +'<button type="button" class="btn-exp-accion btn-exp-subir" onclick="document.getElementById(\'fi-pdf-file\').click()">Subir PDF</button>'
     +'</div>'
     +'<input type="file" id="fi-pdf-file" accept="application/pdf" onchange="cargarPdfInscripcion(this)" required style="display:none;"/>'
@@ -1200,26 +1204,6 @@ function calcularTiempoServicio(val){
   if(mes < 0){ anios--; mes += 12; }
   el.value = anios+' años '+mes+' meses de servicio';
   document.getElementById('fi-tiempo-servicio').setAttribute('data-val', anios+' años '+mes+' meses');
-}
-
-function descargarPlantilla(itemId){
-  fetch(API_PUBLIC + '/portal/items/'+itemId+'/plantilla')
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(!d.ok){alert('No hay plantilla disponible para esta convocatoria.');return;}
-      descargarBase64(d.pdf, d.nombre||'plantilla.pdf');
-    });
-}
-
-function descargarBase64(base64, nombre){
-  var byteStr = atob(base64.split(',').pop());
-  var buf = new Uint8Array(byteStr.length);
-  for(var i=0;i<byteStr.length;i++) buf[i]=byteStr.charCodeAt(i);
-  var blob = new Blob([buf], {type:'application/pdf'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = nombre;
-  a.click();
 }
 
 function cargarPdfInscripcion(input){
