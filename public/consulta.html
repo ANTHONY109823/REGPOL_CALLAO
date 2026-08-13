@@ -303,10 +303,6 @@
           <label for="input-cip">CIP</label>
           <input type="text" id="input-cip" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="Ej: 31590992" required autocomplete="off">
         </div>
-        <div>
-          <label for="input-nro">N° de inscripción</label>
-          <input type="text" id="input-nro" maxlength="30" placeholder="Ej: C202600003" required autocomplete="off" style="letter-spacing:0.5px;text-transform:uppercase;">
-        </div>
         <button type="submit" class="btn-consultar" id="btn-consultar"><i class="fas fa-search"></i> CONSULTAR</button>
       </div>
     </form>
@@ -347,7 +343,7 @@
       <div class="modal-estado-head"><i class="fas fa-hourglass-half"></i> Documentación recibida</div>
       <div class="modal-estado-body" id="modal-verificacion-body">
         Su expediente fue enviado correctamente y se encuentra <strong>en verificación y aprobación</strong> a cargo del área de Convenios.
-        Puede consultar el avance con <strong>CIP + N° de inscripción</strong>.
+        Puede consultar el avance solo con su <strong>CIP</strong>.
       </div>
       <div class="modal-estado-foot">
         <button type="button" class="btn-est-ok" onclick="cerrarModalVerificacion()">Entendido</button>
@@ -401,7 +397,6 @@
 <script>
 var API_PUBLIC = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
 var CIP_CONSULTA = '';
-var NRO_CONSULTA = '';
 
 function escC(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -409,9 +404,6 @@ function escC(s) {
 
 function getParamCip() {
   return new URLSearchParams(window.location.search).get('cip') || '';
-}
-function getParamNro() {
-  return new URLSearchParams(window.location.search).get('nro') || '';
 }
 
 function mostrarAlerta(msg, tipo) {
@@ -461,17 +453,11 @@ function cerrarModalConsultaRes() {
 function consultarCip(e) {
   if (e) e.preventDefault();
   var cip = (document.getElementById('input-cip').value || '').trim().replace(/\s/g, '');
-  var nro = (document.getElementById('input-nro').value || '').trim().toUpperCase().replace(/\s/g, '');
   if (!/^\d{6,12}$/.test(cip)) {
     mostrarAlerta('Ingrese un CIP válido (solo números, 6 a 12 dígitos).', 'error');
     return;
   }
-  if (!nro || nro.length < 6) {
-    mostrarAlerta('Ingrese su N° de inscripción (ej: C202600003).', 'error');
-    return;
-  }
   CIP_CONSULTA = cip;
-  NRO_CONSULTA = nro;
   var btn = document.getElementById('btn-consultar');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
@@ -479,7 +465,7 @@ function consultarCip(e) {
   document.getElementById('consulta-resultados').innerHTML = '<p class="loading-msg" style="text-align:center;padding:24px;color:#666;"><i class="fas fa-spinner fa-spin"></i> Buscando...</p>';
   abrirModalConsultaRes();
 
-  fetch(API_PUBLIC + '/portal/consulta-inscripcion?cip=' + encodeURIComponent(cip) + '&nro=' + encodeURIComponent(nro))
+  fetch(API_PUBLIC + '/portal/consulta-inscripcion?cip=' + encodeURIComponent(cip))
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (!d.ok) {
@@ -488,11 +474,11 @@ function consultarCip(e) {
         document.getElementById('consulta-resultados').innerHTML = '';
         return;
       }
-      mostrarAlerta('Consulta correcta — CIP ' + cip + ' / N° ' + nro + '.', 'info');
+      mostrarAlerta('Consulta del mes actual — CIP ' + cip + '.', 'info');
       renderResultados(d.inscripciones || []);
       abrirModalConsultaRes();
       if (history.replaceState) {
-        history.replaceState(null, '', 'consulta.html?cip=' + encodeURIComponent(cip) + '&nro=' + encodeURIComponent(nro));
+        history.replaceState(null, '', 'consulta.html?cip=' + encodeURIComponent(cip));
       }
     })
     .catch(function() {
@@ -546,7 +532,7 @@ function renderResultados(lista) {
   CONSULTA_INS_CACHE = lista || [];
   if (!lista || !lista.length) {
     wrap.innerHTML = '<div class="sin-resultados"><i class="fas fa-inbox" style="font-size:32px;color:#ccc;display:block;margin-bottom:12px;"></i>'
-      + 'No se encontraron inscripciones con ese CIP y N° de registro.</div>';
+      + 'No se encontraron inscripciones de este mes con ese CIP.</div>';
     return;
   }
   wrap.innerHTML = lista.map(function(ins) {
@@ -560,7 +546,6 @@ function renderResultados(lista) {
     // Observado / rechazado primero: mostrar motivo y subsanación (nunca UI de ganador)
     if (ins.estado === 'anulado_solicitud') {
       html += '<div class="consulta-meta">'
-        + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
         + '<div><span>CIP</span><strong>' + escC(ins.cip || '—') + '</strong></div>'
         + '<div><span>Apellidos y nombres</span><strong>' + escC(ins.nombres || '—') + '</strong></div>'
         + '<div><span>Convenio</span><strong>' + escC(ins.convocatoria || '—') + '</strong></div>'
@@ -580,18 +565,17 @@ function renderResultados(lista) {
         ? 'Día del turno al que postula *'
         : 'Día de franco *';
       html += '<div class="consulta-meta">'
-        + '<div><span>N° de inscripción (no editable)</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
         + '<div><span>CIP (no editable)</span><strong>' + escC(ins.cip || '—') + '</strong></div>'
         + '<div><span>Apellidos y nombres (no editable)</span><strong>' + escC(ins.nombres || '—') + '</strong></div>'
         + '<div><span>Postulación actual</span><strong>' + escC(ins.comisaria_postula || '—') + '</strong></div>'
         + '<div><span>Situación (no editable)</span><strong>' + escC(labelSituacionConsulta(ins.disponibilidad, ins.dia_franco)) + '</strong></div>'
         + '</div>'
         + '<div class="box-corregir-turno" data-ins-id="' + ins.id + '">'
-        + '<h4><i class="fas fa-undo"></i> Corrija turno y día</h4>'
+        + '<h4><i class="fas fa-undo"></i> Corrija lugar, turno y día</h4>'
         + '<p>Convenios devolvió su preinscripción a <strong>solicitud personal</strong>. '
-        + 'Puede corregir el <strong>día</strong> y el <strong>turno</strong>'
+        + 'Puede corregir el <strong>lugar, día y turno</strong>'
         + (ins.disponibilidad === 'VACACIONES' ? ' (también en vacaciones)' : '')
-        + '. Nombres, CIP y N° de inscripción no se modifican.</p>'
+        + '. Nombres y CIP no se modifican.</p>'
         + (ins.preins_correccion_motivo
           ? ('<p><strong>Motivo:</strong> ' + escC(ins.preins_correccion_motivo) + '<br>'
             + (ins.preins_correccion_fecha_legible ? ('<strong>Fecha:</strong> ' + escC(ins.preins_correccion_fecha_legible) + '<br>') : '')
@@ -606,7 +590,7 @@ function renderResultados(lista) {
             + '<option value="IMPAR"' + (ins.dia_franco === 'IMPAR' ? ' selected' : '') + '>DÍA IMPAR</option>'
             + '</select>')
           : '')
-        + '<label>' + (esCel ? 'Comisaría / turno / día *' : 'Turno al que postula *') + '</label>'
+        + '<label>' + (esCel ? 'Lugar / turno / día *' : 'Turno al que postula *') + '</label>'
         + '<select id="corr-turno-' + ins.id + '">'
         + '<option value="">' + (esCel ? 'Seleccionar' : 'Seleccione el día primero') + '</option>'
         + (esCel ? opts.map(function(o) {
@@ -630,7 +614,7 @@ function renderResultados(lista) {
       var motivoTitulo = (ins.motivo_observacion_label || '').trim();
       if (!motivoTxt && motivoTitulo) motivoTxt = motivoTitulo;
       html += '<div class="consulta-meta">'
-        + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
+        + '<div><span>CIP</span><strong>' + escC(ins.cip || '—') + '</strong></div>'
         + '<div><span>Origen</span><strong>' + escC(ins.modo_ingreso_label || '—') + '</strong></div>'
         + '<div><span>Grado</span><strong>' + escC(ins.grado || '—') + '</strong></div>'
         + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
@@ -712,7 +696,7 @@ function renderResultados(lista) {
         + '</div></div>';
     } else {
       html += '<div class="consulta-meta">'
-        + '<div><span>N° de inscripción</span><strong style="color:#004d3d;">' + escC(ins.nro_registro || '—') + '</strong></div>'
+        + '<div><span>CIP</span><strong>' + escC(ins.cip || '—') + '</strong></div>'
         + '<div><span>Origen</span><strong>' + escC(ins.modo_ingreso_label || (ins.modo_ingreso === 'repechaje' ? 'Por repechaje' : (ins.modo_ingreso === 'sorteo' ? 'Por sorteo' : '—'))) + '</strong></div>'
         + '<div><span>Área gestora</span>' + escC(ins.oficina_gestora) + '</div>'
         + '<div><span>Ubicación del trámite</span>' + escC(ins.ubicacion_tramite) + '</div>'
@@ -858,13 +842,12 @@ function enviarCorreccionTurno(id) {
     if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Seleccione el turno corregido.'; }
     return;
   }
-  if (!CIP_CONSULTA || !NRO_CONSULTA) {
-    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Vuelva a consultar con CIP y N° de inscripción.'; }
+  if (!CIP_CONSULTA) {
+    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Vuelva a consultar con su CIP.'; }
     return;
   }
   var body = {
     cip: CIP_CONSULTA,
-    nro: NRO_CONSULTA,
     dia_franco: dia || ''
   };
   if (turno.indexOf('|') >= 0 && turno.split('|').length === 3) {
@@ -959,7 +942,7 @@ function mostrarModalVerificacion(msg) {
   if (body) {
     body.innerHTML = (msg ? (escC(msg) + '<br><br>') : '')
       + 'Su expediente se encuentra <strong>en verificación y aprobación</strong> a cargo del área de Convenios. '
-      + 'Consulte el avance con <strong>CIP + N° de inscripción</strong>.';
+      + 'Consulte el avance solo con su <strong>CIP</strong>.';
   }
   var m = document.getElementById('modal-verificacion');
   if (m) {
@@ -1025,7 +1008,6 @@ function htmlConstanciaSheet(ins) {
     + fila('CODIFIN', ins.codifin || '—')
     + fila('Celular', ins.telefono || '—')
     + fila('Unidad de origen', ins.unidad || '—')
-    + fila('N° de registro', ins.nro_registro || '—')
     + '</div></div>'
 
     + '<div class="c-sec"><div class="c-sec-tit">2. Datos del convenio / vacante</div><div class="c-grid">'
@@ -1122,7 +1104,7 @@ function descargarConstanciaJpg() {
   html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(function(canvas) {
     var a = document.createElement('a');
     a.href = canvas.toDataURL('image/jpeg', 0.92);
-    a.download = 'constancia-' + ((CONSTANCIA_ACTUAL && CONSTANCIA_ACTUAL.nro_registro) || 'vacante') + '.jpg';
+    a.download = 'constancia-' + ((CONSTANCIA_ACTUAL && CONSTANCIA_ACTUAL.cip) || 'vacante') + '.jpg';
     a.click();
   }).catch(function() { alert('No se pudo generar la imagen.'); });
 }
@@ -1144,7 +1126,7 @@ function descargarConstanciaPdfHtml() {
       w = canvas.width * h / canvas.height;
     }
     doc.addImage(img, 'JPEG', margin, margin, w, h);
-    doc.save('constancia-' + ((CONSTANCIA_ACTUAL && CONSTANCIA_ACTUAL.nro_registro) || 'vacante') + '.pdf');
+    doc.save('constancia-' + ((CONSTANCIA_ACTUAL && CONSTANCIA_ACTUAL.cip) || 'vacante') + '.pdf');
   }).catch(function() { alert('No se pudo generar el PDF.'); });
 }
 
@@ -1571,10 +1553,8 @@ function invalidarIframeRepForm() {
 initPortalPagina({ activeNav: 'convenios', showPageHero: false });
 
 var cipIni = getParamCip();
-var nroIni = getParamNro();
 if (cipIni) document.getElementById('input-cip').value = cipIni;
-if (nroIni) document.getElementById('input-nro').value = nroIni;
-if (cipIni && nroIni && location.hash !== '#repechaje') consultarCip();
+if (cipIni && location.hash !== '#repechaje') consultarCip();
 if (location.hash === '#repechaje') mostrarRepechaje();
 window.addEventListener('hashchange', function() {
   if (location.hash === '#repechaje') mostrarRepechaje();
@@ -1598,12 +1578,10 @@ window.addEventListener('message', function(ev) {
   if (data.mostrar_modal_verificacion || data.estado === 'repechaje') {
     mostrarModalVerificacion(data.mensaje || '');
   } else {
-    var nro = data.nro || '';
     var cip = data.cip || '';
     alert((data.mensaje || 'Repechaje registrado correctamente.')
-      + (nro ? ('\nN° de registro: ' + nro) : '')
       + (cip ? ('\nCIP: ' + cip) : '')
-      + '\nConsulte con CIP + N° de inscripción.');
+      + '\nConsulte solo con su CIP.');
   }
 });
 document.getElementById('modal-rep-form').addEventListener('click', function(e) {

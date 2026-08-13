@@ -90,11 +90,9 @@ function mensajeNotificacion(tipo, ins, itemTitulo, item) {
   const conv = limpio(itemTitulo || (item && item.titulo), 120) || 'convenio';
   const num = limpio(ins.cip, 20);
   const datos = bloqueDatosConvenio(item || {});
-  const nro = limpio(ins.nro_registro, 30);
   const grado = limpio(ins.grado, 60);
   const unidad = limpio(ins.unidad, 120);
   const cabeceraPersona = 'Sr(a). ' + (grado ? grado + ' ' : '') + nombre + ' (CIP ' + num + ')'
-    + (nro ? (' — N° ' + nro) : '')
     + (unidad ? ('\nUnidad: ' + unidad) : '');
 
   if (tipo === 'ganador') {

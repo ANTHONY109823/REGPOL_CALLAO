@@ -72,8 +72,12 @@
     .info-item span{font-size:11px;font-weight:800;color:#004d3d;letter-spacing:.5px;display:block;text-transform:uppercase;}
     .info-item p{font-size:14px;color:#444;margin:2px 0 0;}
     .price{font-size:22px;font-weight:900;color:#c8a94a;margin:4px 0 2px;}
-    .tabla-cupos-wrap{width:100%;overflow-x:auto;}
+    .tabla-cupos-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .tabla-cupos-wrap.tabla-celador-wrap{margin:0 -2px;padding-bottom:6px;}
     .tabla-cupos{width:100%;border-collapse:collapse;font-size:12.5px;}
+    .tabla-cupos.tabla-celador{min-width:760px;font-size:12px;}
+    .tabla-cupos.tabla-celador th{font-size:10.5px;padding:7px 6px;white-space:nowrap;}
+    .tabla-cupos.tabla-celador td{padding:7px 6px;white-space:nowrap;}
     .tabla-cupos th,.tabla-cupos td{border:1px solid #b7d4c0;padding:6px 8px;}
     .tabla-cupos th{background:#004d3d;color:#fff;font-weight:700;text-align:center;font-size:11.5px;letter-spacing:.3px;}
     .tabla-cupos th:first-child,.tabla-cupos td:first-child{text-align:left;}
@@ -191,6 +195,15 @@
     .modal-pre.open{display:flex!important;}
     html.embed-form-root .modal-pre{display:none!important;}
     .modal-pre-box{background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.28);border:2px solid #c8a94a;}
+    .modal-pre-box.modal-celador{max-width:min(980px,96vw);}
+    @media(max-width:700px){
+      .modal-pre{padding:8px;align-items:flex-start;}
+      .modal-pre-box.modal-celador{max-width:100%;max-height:96vh;border-radius:10px;}
+      .modal-pre-box.modal-celador .pre-grid{grid-template-columns:1fr;}
+      .modal-pre-box.modal-celador .pre-nro{font-size:18px;word-break:break-all;}
+      .modal-pre-box.modal-celador #preinscripcion-constancia{padding:14px 14px 10px;}
+      .modal-pre-box.modal-celador .pre-item strong{font-size:13px;}
+    }
     .modal-pre-acciones{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:12px 16px 16px;border-top:1px solid #e8eee9;background:#f7faf7;position:sticky;bottom:0;}
     .modal-pre-acciones button{border:none;border-radius:8px;padding:10px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;}
     .btn-pre-pdf{background:#004d3d;color:#fff;}
@@ -253,7 +266,7 @@ if (!window.__REGPOL_EMBED__) {
   if (window.__REGPOL_EMBED__) return;
   document.write(
     '<div id="modal-preinscripcion" class="modal-pre" role="dialog" aria-modal="true" aria-labelledby="pre-titulo">'
-    + '<div class="modal-pre-box"><div id="preinscripcion-constancia"></div>'
+    + '<div class="modal-pre-box" id="modal-pre-box"><div id="preinscripcion-constancia"></div>'
     + '<div class="modal-pre-acciones">'
     + '<button type="button" class="btn-pre-pdf" onclick="descargarPreinscripcionPdf()">Descargar PDF</button>'
     + '<button type="button" class="btn-pre-jpg" onclick="descargarPreinscripcionJpg()">Descargar JPG</button>'
@@ -261,11 +274,10 @@ if (!window.__REGPOL_EMBED__) {
     + '</div></div></div>'
     + '<div id="modal-alerta-pre" class="modal-pre modal-alerta-pre" role="dialog" aria-modal="true">'
     + '<div class="modal-pre-box"><div class="alerta-pre-body">'
-    + '<h3>Guarde su N° de registro</h3>'
-    + '<p>Es importante para consultas y futuros accesos. Anote o copie estos datos antes de salir:</p>'
+    + '<h3>Guarde su CIP</h3>'
+    + '<p>Es el único dato que necesita para consultar. Anótelo antes de salir:</p>'
     + '<div class="alerta-pre-dato" id="alerta-pre-cip">CIP: —</div>'
-    + '<div class="alerta-pre-dato" id="alerta-pre-nro">N° registro: —</div>'
-    + '<p style="font-size:12px;color:#666;">Consulte en el portal con <strong>CIP + N° de inscripción</strong>.</p>'
+    + '<p style="font-size:12px;color:#666;">Consulte en el portal <strong>solo con su CIP</strong> (inscripción del mes actual).</p>'
     + '</div><div class="modal-pre-acciones">'
     + '<button type="button" class="btn-pre-copiar" onclick="copiarDatosPreinscripcion()">Copiar datos</button>'
     + '<button type="button" class="btn-pre-cerrar" onclick="confirmarCierreAlertaPre()">Entendido</button>'
@@ -383,7 +395,7 @@ function renderDetalle(item){
     if(esMatrizCel){
       bloques.push(
         '<h3>COMISARÍAS / TURNOS / DÍAS / VACANTES</h3>'
-        +'<div class="tabla-cupos-wrap"><table class="tabla-cupos">'
+        +'<div class="tabla-cupos-wrap tabla-celador-wrap"><table class="tabla-cupos tabla-celador">'
         +'<thead><tr><th>Comisaría</th>'
         +SLOTS_CEL.map(function(s){ return '<th>'+escHtmlD(s.label)+'</th>'; }).join('')
         +'<th>Total</th></tr></thead><tbody>'
@@ -584,13 +596,11 @@ function initCamposInscripcion(){
     }
   });
   var selTurno = document.getElementById('fi-turno-postula');
-  if (selTurno) {
-    var disp = document.getElementById('fi-disponibilidad');
-    var dia = document.getElementById('fi-dia-franco');
-    if (disp && disp.value === 'VACACIONES') actualizarSelectorTurnos('PAR/IMPAR', true);
-    else if (disp && disp.value === 'FRANCO' && dia && dia.value) onCambioDiaFranco(dia.value);
-    else actualizarSelectorTurnos('', false);
-  }
+  var disp = document.getElementById('fi-disponibilidad');
+  var dia = document.getElementById('fi-dia-franco');
+  if (disp && disp.value === 'VACACIONES') actualizarSelectorTurnos('PAR/IMPAR', true);
+  else if (disp && disp.value === 'FRANCO' && dia && dia.value) onCambioDiaFranco(dia.value);
+  else if (selTurno || document.getElementById('fi-comisaria-postula')) actualizarSelectorTurnos('', false);
 }
 
 var GRADOS_PNP = [
@@ -634,6 +644,20 @@ function esCeladorMatrizItem(item){
   var cupos = Array.isArray(item && item.cupos_unidades) ? item.cupos_unidades : [];
   return /CELADOR/i.test(String((item && item.titulo) || ''))
     && cupos.some(function(c){ return Array.isArray(c.turnos) && c.turnos.length; });
+}
+
+function labelSlotHumano(turno, dia){
+  var t = String(turno || '').trim().toUpperCase();
+  var d = String(dia || '').trim().toUpperCase();
+  var tLab = t === 'MAÑANA' ? 'Mañana' : (t === 'TARDE' ? 'Tarde' : (t === 'NOCHE' ? 'Noche' : t));
+  if (d === 'PAR') return tLab + ' PAR';
+  if (d === 'IMPAR') return tLab + ' IMPAR';
+  if (d === 'PAR/IMPAR') return tLab + ' PAR/IMPAR';
+  return (tLab + (d ? (' ' + d) : '')).trim();
+}
+
+function esOpcionCombinada(nombre){
+  return String(nombre || '').split('|').filter(Boolean).length === 3;
 }
 
 /** Turnos publicados en la ficha (no Celador-matriz: ahí el selector ya incluye CIA×turno×día). */
@@ -690,17 +714,19 @@ function obtenerCuposConVacante(item){
         var turno = String(t.turno || '').toUpperCase();
         var dia = String(t.dia || '').toUpperCase();
         var lab = slots.filter(function(s){ return s.turno === turno && s.dia === dia; })[0];
-        var label = lab ? lab.label : (turno + ' ' + dia);
+        var label = lab ? lab.label : labelSlotHumano(turno, dia);
         opts.push({
           nombre: nom + '|' + turno + '|' + dia,
           label: nom + ' — ' + label,
-          disponibles: vac
+          disponibles: vac,
+          turno: turno,
+          dia: dia
         });
       });
     });
     return opts;
   }
-  return cupos.filter(function(c){
+  var lugares = cupos.filter(function(c){
     var disp = parseInt(c.disponibles, 10);
     if(isNaN(disp)) disp = Math.max(0, (parseInt(c.vacantes,10)||0) - (parseInt(c.inscritos,10)||0));
     return disp > 0;
@@ -709,41 +735,71 @@ function obtenerCuposConVacante(item){
     if(isNaN(disp)) disp = Math.max(0, (parseInt(c.vacantes,10)||0) - (parseInt(c.inscritos,10)||0));
     return { nombre: String(c.nombre||'').trim(), label: String(c.nombre||'').trim(), disponibles: disp };
   }).filter(function(c){ return !!c.nombre; });
+
+  var turnos = obtenerTurnosPublicados(item);
+  if (turnos.length) {
+    if (!lugares.length) {
+      var lugarFb = String((item && item.lugar) || '').trim() || 'Convenio';
+      lugares = [{ nombre: lugarFb, label: lugarFb, disponibles: parseInt(item && item.vacantes, 10) || 0 }];
+    }
+    var combo = [];
+    lugares.forEach(function(lugar){
+      turnos.forEach(function(t){
+        combo.push({
+          nombre: lugar.nombre + '|' + t.turno + '|' + t.dia,
+          label: lugar.nombre + ' — ' + labelSlotHumano(t.turno, t.dia),
+          disponibles: t.vacantes,
+          turno: t.turno,
+          dia: t.dia
+        });
+      });
+    });
+    return combo;
+  }
+  return lugares;
 }
 
 function htmlSelectorComisariaPostula(item){
   var disponibles = obtenerCuposConVacante(item);
-  var label = disponibles.length > 1
+  var combinado = disponibles.some(function(c){ return esOpcionCombinada(c.nombre); });
+  var label = combinado
     ? (esCeladorMatrizItem(item)
       ? 'Comisaría, turno y día a los que postula *'
-      : 'Lugar / comisaría a la que postula *')
-    : 'Lugar al que postula *';
+      : 'Lugar, turno y día a los que postula *')
+    : (disponibles.length > 1 ? 'Lugar / comisaría a la que postula *' : 'Lugar al que postula *');
+  var wrapCls = 'fi-group' + (combinado ? ' fi-full' : '');
   if(!disponibles.length){
-    return '<div class="fi-group">'
+    return '<div class="'+wrapCls+'">'
       +'<label>'+label.replace(' *','')+'</label>'
       +'<select id="fi-comisaria-postula" disabled><option value="">Sin vacantes disponibles</option></select>'
       +'</div>';
   }
+  var hint = combinado
+    ? '<small class="fi-hint">Misma lógica que Celador: elija el lugar junto con el turno y el día (PAR / IMPAR) según las vacantes publicadas.</small>'
+    : '';
   if(disponibles.length === 1){
-    return '<div class="fi-group">'
+    return '<div class="'+wrapCls+'">'
       +'<label>'+label+'</label>'
       +'<select id="fi-comisaria-postula" required>'
       +'<option value="'+escHtmlD(disponibles[0].nombre)+'" selected>'
       +escHtmlD(disponibles[0].label || disponibles[0].nombre)+' ('+disponibles[0].disponibles+')</option>'
-      +'</select></div>';
+      +'</select>'+hint+'</div>';
   }
-  return '<div class="fi-group">'
+  return '<div class="'+wrapCls+'">'
     +'<label>'+label+'</label>'
     +'<select id="fi-comisaria-postula" required>'
     +'<option value="">Seleccionar</option>'
     +disponibles.map(function(c){
-      return '<option value="'+escHtmlD(c.nombre)+'">'+escHtmlD(c.label || c.nombre)+' ('+c.disponibles+')</option>';
+      return '<option value="'+escHtmlD(c.nombre)+'" data-dia="'+escHtmlD(c.dia||'')+'">'
+        +escHtmlD(c.label || c.nombre)+' ('+c.disponibles+')</option>';
     }).join('')
-    +'</select></div>';
+    +'</select>'+hint+'</div>';
 }
 
 function htmlSelectorTurnoPostula(item){
-  // Contenedor vacío: se llena al elegir PAR/IMPAR (o Vacaciones)
+  // Si el selector de lugar ya incluye turno/día (estilo Celador), no duplicar.
+  var cupos = obtenerCuposConVacante(item);
+  if (cupos.some(function(c){ return esOpcionCombinada(c.nombre); })) return '';
   if (!obtenerTurnosPublicados(item).length) return '';
   return '<div class="fi-group" id="fi-turno-postula-box" style="display:none;">'
     +'<label>Turno al que postula *</label>'
@@ -780,7 +836,35 @@ function turnosCompatiblesConDia(diaFranco){
     .sort(function(a, b){ return (orden[a.turno] || 99) - (orden[b.turno] || 99); });
 }
 
+function filtrarSelectorPostulaPorDia(diaFranco, forzarMostrar){
+  var sel = document.getElementById('fi-comisaria-postula');
+  if (!sel || sel.disabled) return;
+  var todos = obtenerCuposConVacante(ITEM_DATA);
+  if (!todos.some(function(o){ return esOpcionCombinada(o.nombre); })) return;
+  var dia = String(diaFranco || '').trim().toUpperCase();
+  var filtrados = todos.filter(function(o){
+    if (!esOpcionCombinada(o.nombre)) return true;
+    var d = String(o.dia || o.nombre.split('|')[2] || '').toUpperCase();
+    if (!dia || dia === 'PAR/IMPAR') return true;
+    return d === dia || d === 'PAR/IMPAR';
+  });
+  var prev = sel.value;
+  var html = (filtrados.length === 1 ? '' : '<option value="">Seleccionar</option>');
+  html += filtrados.map(function(c){
+    var selAttr = (filtrados.length === 1 || c.nombre === prev) ? ' selected' : '';
+    return '<option value="'+escHtmlD(c.nombre)+'"'+selAttr+'>'
+      +escHtmlD(c.label || c.nombre)+' ('+c.disponibles+')</option>';
+  }).join('');
+  if (!filtrados.length) {
+    html = '<option value="">Sin opciones para este día</option>';
+  }
+  sel.innerHTML = html;
+  if (prev && filtrados.some(function(c){ return c.nombre === prev; })) sel.value = prev;
+  sel.required = true;
+}
+
 function actualizarSelectorTurnos(diaFranco, forzarMostrar){
+  filtrarSelectorPostulaPorDia(diaFranco, forzarMostrar);
   var box = document.getElementById('fi-turno-postula-box');
   var sel = document.getElementById('fi-turno-postula');
   var hint = document.getElementById('fi-turno-hint');
@@ -958,10 +1042,10 @@ function onCambioDisponibilidad(val){
   if(aviso){
     if(val === 'VACACIONES'){
       aviso.style.display = 'block';
-      aviso.textContent = 'Ocupa vacante automáticamente. Luego, en el sorteo público se le asigna por sorteo el Bloque 1 (días 1–15) o el Bloque 2 (días 16–fin de mes). Elija también el turno.';
+      aviso.textContent = 'Ocupa vacante automáticamente. Luego, en el sorteo público se le asigna por sorteo el Bloque 1 (días 1–15) o el Bloque 2 (días 16–fin de mes). Elija también el lugar, turno y día.';
     } else if(val === 'FRANCO'){
       aviso.style.display = 'block';
-      aviso.textContent = 'Elija PAR o IMPAR y luego el turno (MAÑANA / TARDE / NOCHE) según las vacantes publicadas.';
+      aviso.textContent = 'Elija PAR o IMPAR. Luego seleccione el lugar con su turno (MAÑANA / TARDE / NOCHE), igual que en Celador.';
     } else {
       aviso.style.display = 'none';
       aviso.textContent = '';
@@ -1204,10 +1288,11 @@ function enviarInscripcion(e){
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
   if(ITEM_TIPO==='convenio' && obtenerCuposConVacante(ITEM_DATA).length && !comisariaPostula){
-    alerta.textContent='Seleccione la comisaría a la que postula (solo con vacantes disponibles).';
+    alerta.textContent='Seleccione el lugar, turno y día a los que postula (solo con vacantes disponibles).';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
-  if(ITEM_TIPO==='convenio' && turnosPub.length && !turnoPostula){
+  var esComboPostula = esOpcionCombinada(comisariaPostula);
+  if(ITEM_TIPO==='convenio' && turnosPub.length && !turnoPostula && !esComboPostula){
     alerta.textContent='Seleccione el turno al que postula (según las vacantes publicadas).';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
@@ -1220,7 +1305,15 @@ function enviarInscripcion(e){
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
   // Empaquetar lugar + turno publicado → "Lugar — TURNO / DÍA" (sorteo por slot)
-  if(ITEM_TIPO==='convenio' && turnosPub.length && turnoPostula){
+  if(ITEM_TIPO==='convenio' && esComboPostula){
+    var pc = comisariaPostula.split('|');
+    var diaCombo = String(pc[2] || '').trim().toUpperCase();
+    if (disponibilidad === 'FRANCO' && dia_franco && (diaCombo === 'PAR' || diaCombo === 'IMPAR') && dia_franco !== diaCombo) {
+      alerta.textContent='El turno elegido exige día ' + diaCombo + '. Ajuste su día de franco.';
+      alerta.className='fi-alerta error'; alerta.style.display='block'; return;
+    }
+    turnoPostula = '';
+  } else if(ITEM_TIPO==='convenio' && turnosPub.length && turnoPostula){
     var tp = turnoPostula.split('|');
     var turnoNom = String(tp[0] || '').trim().toUpperCase();
     var diaSlot = String(tp[1] || 'PAR/IMPAR').trim().toUpperCase() || 'PAR/IMPAR';
@@ -1270,13 +1363,11 @@ function enviarInscripcion(e){
     })
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok){
-      var nro = d.nro_registro || '';
       var aviso = d.aviso_sorteo_fb || (ITEM_DATA && ITEM_DATA.aviso_sorteo_fb) || '';
       if (EMBED_FORM && esRepechaje && window.parent && window.parent !== window) {
         try {
           window.parent.postMessage({
             type: 'regpol-repechaje-ok',
-            nro: nro,
             cip: cip,
             mensaje: d.mensaje || '',
             estado: d.estado || 'repechaje',
@@ -1287,7 +1378,6 @@ function enviarInscripcion(e){
       if(ITEM_TIPO==='convenio' && !esRepechaje){
         mostrarModalPreinscripcion({
           cip: cip,
-          nro: nro,
           grado: grado,
           nombres: nombres,
           dni: dni,
@@ -1307,10 +1397,9 @@ function enviarInscripcion(e){
           aviso_sorteo: aviso
         });
       } else {
-        var msg = '<strong>Registro correcto.</strong> '
-          +(nro ? ('Su N° de inscripción es <strong style="font-size:16px;color:#004d3d;">'+escHtmlD(nro)+'</strong>. Consérvelo.<br/>') : '')
+        var msg = '<strong>Registro correcto.</strong> Consulte su estado <strong>solo con su CIP</strong>.<br/>'
           +(aviso ? ('<span style="display:block;margin:8px 0;padding:8px;background:#e8f5f1;border-radius:6px;"><i class="fab fa-facebook"></i> '+escHtmlD(aviso)+'</span>') : '')
-          +'<a href="consulta.html?cip='+encodeURIComponent(cip)+(nro?'&nro='+encodeURIComponent(nro):'')+'" style="color:#004d3d;font-weight:700;">Consultar con CIP + N° de inscripción</a>.';
+          +'<a href="consulta.html?cip='+encodeURIComponent(cip)+'" style="color:#004d3d;font-weight:700;">Consultar con CIP</a>.';
         alerta.innerHTML=msg;
         alerta.className='fi-alerta ok'; alerta.style.display='block';
       }
@@ -1327,15 +1416,11 @@ function enviarInscripcion(e){
     } else {
       var errMsg = d.error || 'Error al procesar la inscripción.';
       if (d.codigo && String(d.codigo).indexOf('duplicado_') === 0) {
-        var nroDup = d.nro_registro || '';
         errMsg = errMsg
-          + (nroDup ? (' N° registrado: ' + nroDup + '.') : '')
           + ' <a href="consulta.html" style="color:#842029;font-weight:700;">Ir a consulta CIP</a>';
         alerta.innerHTML = errMsg;
       } else if (d.codigo === 'un_convenio_por_mes') {
-        var nroMes = d.nro_registro || '';
         errMsg = errMsg
-          + (nroMes ? (' N°: ' + nroMes + '.') : '')
           + ' <a href="consulta.html" style="color:#842029;font-weight:700;">Consultar mi inscripción</a>';
         alerta.innerHTML = errMsg;
       } else if (d.codigo === 'fuera_nomina' || d.codigo === 'datos_nomina' || d.codigo === 'nomina_baja') {
@@ -1389,8 +1474,8 @@ function mostrarModalPreinscripcion(datos){
     '<div class="pre-head">'
     +'<h3 id="pre-titulo">CONSTANCIA DE PREINSCRIPCIÓN</h3>'
     +'<p>REGIÓN POLICIAL CALLAO — UNITIC</p>'
-    +'<div class="pre-nro" title="Seleccione para copiar">'+escHtmlD(datos.nro || '—')+'</div>'
-    +'<p style="margin:6px 0 0;font-size:11px;color:#666;">N° de registro (cópielo completo)</p>'
+    +'<div class="pre-nro" title="Seleccione para copiar">'+escHtmlD(datos.cip || '—')+'</div>'
+    +'<p style="margin:6px 0 0;font-size:11px;color:#666;">CIP (consulte solo con este dato)</p>'
     +'</div>'
     +'<div class="pre-grid">'
     +'<div class="pre-item"><span>CIP</span><strong>'+escHtmlD(datos.cip||'—')+'</strong></div>'
@@ -1421,9 +1506,15 @@ function mostrarModalPreinscripcion(datos){
       : '<strong>Fecha:</strong> Se publicará por el área de Convenios.<br/>')
     +'<strong>Plataforma:</strong> Facebook en vivo — página Región Policial Callao'
     +'</div>'
-    +'<div class="pre-aviso">Conserve este documento. Para consultar su estado use CIP + N° de inscripción.</div>'
+    +'<div class="pre-aviso">Conserve este documento. Para consultar su estado use solo su CIP (mes actual).</div>'
     +'</div>';
   var modal = document.getElementById('modal-preinscripcion');
+  var box = document.getElementById('modal-pre-box');
+  if (box) {
+    var esCelModal = /CELADOR/i.test(String(item.titulo || ''));
+    if (esCelModal) box.classList.add('modal-celador');
+    else box.classList.remove('modal-celador');
+  }
   if(modal) modal.classList.add('open');
 }
 
@@ -1439,7 +1530,7 @@ function descargarPreinscripcionJpg(){
   capturarConstanciaCanvas().then(function(canvas){
     var a = document.createElement('a');
     a.href = canvas.toDataURL('image/jpeg', 0.92);
-    a.download = 'preinscripcion_'+(PREINSCRIPCION_DATOS && PREINSCRIPCION_DATOS.nro ? PREINSCRIPCION_DATOS.nro : 'regpol')+'.jpg';
+    a.download = 'preinscripcion_'+(PREINSCRIPCION_DATOS && PREINSCRIPCION_DATOS.cip ? PREINSCRIPCION_DATOS.cip : 'regpol')+'.jpg';
     a.click();
     PREINSCRIPCION_DESCARGADA = true;
   }).catch(function(){
@@ -1473,7 +1564,7 @@ function descargarPreinscripcionPdf(){
       imgW = canvas.width * imgH / canvas.height;
     }
     pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', margin, margin, imgW, imgH);
-    pdf.save('preinscripcion_'+(PREINSCRIPCION_DATOS && PREINSCRIPCION_DATOS.nro ? PREINSCRIPCION_DATOS.nro : 'regpol')+'.pdf');
+    pdf.save('preinscripcion_'+(PREINSCRIPCION_DATOS && PREINSCRIPCION_DATOS.cip ? PREINSCRIPCION_DATOS.cip : 'regpol')+'.pdf');
     PREINSCRIPCION_DESCARGADA = true;
   }).catch(function(){
     alert('No se pudo generar el PDF. Intente nuevamente.');
@@ -1485,9 +1576,7 @@ function cerrarModalPreinscripcion(){
   if(modal) modal.classList.remove('open');
   if(!PREINSCRIPCION_DESCARGADA && PREINSCRIPCION_DATOS){
     var cipEl = document.getElementById('alerta-pre-cip');
-    var nroEl = document.getElementById('alerta-pre-nro');
     if(cipEl) cipEl.textContent = 'CIP: '+(PREINSCRIPCION_DATOS.cip||'—');
-    if(nroEl) nroEl.textContent = 'N° registro: '+(PREINSCRIPCION_DATOS.nro||'—');
     var alerta = document.getElementById('modal-alerta-pre');
     if(alerta) alerta.classList.add('open');
   }
@@ -1495,7 +1584,7 @@ function cerrarModalPreinscripcion(){
 
 function copiarDatosPreinscripcion(){
   var d = PREINSCRIPCION_DATOS || {};
-  var texto = 'CIP: '+(d.cip||'')+'\n'+(d.nro||'');
+  var texto = 'CIP: '+(d.cip||'');
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(texto).then(function(){
       alert('Copiado:\n'+texto);
