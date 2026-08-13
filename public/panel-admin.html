@@ -5877,10 +5877,16 @@ function esTituloSedapal(titulo){
 }
 
 var TURNO_SEDAPAL_ATENCION = 'ATENCION AL CLIENTE';
+var LUGAR_SEDAPAL_ATENCION = 'ATENCIÓN AL CLIENTE';
 
 function esTurnoSedapalAtencion(turno){
   var n = String(turno || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
   return n === 'ATENCION AL CLIENTE';
+}
+
+function esLugarSedapalAtencion(nombre){
+  var n = String(nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+  return n === 'ATENCION AL CLIENTE' || n.indexOf('ATENCION AL CLIENTE') === 0;
 }
 
 function etiquetaTurnoHorario(turno){
@@ -5894,7 +5900,7 @@ function opcionesTurnoConvenio(titulo, valorActual){
     { value: 'TARDE', label: 'TARDE' },
     { value: 'NOCHE', label: 'NOCHE' }
   ];
-  if (esTituloSedapal(titulo) || esTurnoSedapalAtencion(valorActual)) {
+  if (esTurnoSedapalAtencion(valorActual)) {
     ops.push({ value: TURNO_SEDAPAL_ATENCION, label: 'ATENCIÓN AL CLIENTE (09:00–17:00)' });
   }
   return ops;
@@ -5919,7 +5925,6 @@ function rellenarSelectTurnoConvenio(sel, valorPreferido){
   }).join('');
   var values = ops.map(function(op){ return op.value; });
   if (cur && values.indexOf(cur) >= 0) sel.value = cur;
-  else if (esTituloSedapal(titulo)) sel.value = TURNO_SEDAPAL_ATENCION;
   else sel.value = 'TARDE';
   onCambioTurnoSedapal(sel);
 }
@@ -5942,24 +5947,53 @@ function onCambioTurnoSedapal(sel){
   }
 }
 
+function separarLugarSedapalAtencion(cupos){
+  var list = (cupos || []).map(function(c){
+    return Object.assign({}, c, { turnos: Array.isArray(c.turnos) ? c.turnos.slice() : [] });
+  });
+  var vacExtra = 0;
+  list.forEach(function(c){
+    if (esLugarSedapalAtencion(c.nombre)) return;
+    var keep = [];
+    (c.turnos || []).forEach(function(t){
+      if (esTurnoSedapalAtencion(t && t.turno)) vacExtra += parseInt(t.vacantes, 10) || 0;
+      else keep.push(t);
+    });
+    c.turnos = keep;
+  });
+  var idxA = -1;
+  for (var i = 0; i < list.length; i++) {
+    if (esLugarSedapalAtencion(list[i].nombre)) { idxA = i; break; }
+  }
+  if (idxA < 0) {
+    list.push({
+      nombre: LUGAR_SEDAPAL_ATENCION,
+      vacantes: 0,
+      inscritos: 0,
+      disponibles: 0,
+      direccion: '',
+      turnos: [{ turno: TURNO_SEDAPAL_ATENCION, dia: 'PAR/IMPAR', vacantes: vacExtra }]
+    });
+  } else {
+    var prev = 0;
+    (list[idxA].turnos || []).forEach(function(t){
+      if (esTurnoSedapalAtencion(t && t.turno)) prev += parseInt(t.vacantes, 10) || 0;
+    });
+    list[idxA].nombre = LUGAR_SEDAPAL_ATENCION;
+    list[idxA].turnos = [{ turno: TURNO_SEDAPAL_ATENCION, dia: 'PAR/IMPAR', vacantes: prev + vacExtra }];
+  }
+  return list.map(recalcCupoTurnos);
+}
+
 function asegurarTurnoSedapalAtencionCliente(){
   if (!esTituloSedapal((document.getElementById('mi-titulo-val') || {}).value)) return;
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
   var hayLugarConTurnos = cupos.some(function(c){ return Array.isArray(c.turnos) && c.turnos.length; });
-  if (!hayLugarConTurnos) return;
-  var yaEsta = cupos.some(function(c){
-    return (Array.isArray(c.turnos) ? c.turnos : []).some(function(t){ return esTurnoSedapalAtencion(t && t.turno); });
-  });
-  if (yaEsta) return;
-  var idx = -1;
-  for (var i = 0; i < cupos.length; i++) {
-    if (cupos[i] && Array.isArray(cupos[i].turnos) && cupos[i].turnos.length) { idx = i; break; }
-  }
-  if (idx < 0) return;
-  cupos[idx] = agregarTurnoEnCupo(cupos[idx], TURNO_SEDAPAL_ATENCION, 'PAR/IMPAR', 0);
+  if (!hayLugarConTurnos && !cupos.some(function(c){ return esLugarSedapalAtencion(c.nombre); })) return;
+  var next = separarLugarSedapalAtencion(cupos);
   var ta = document.getElementById('mi-cupos-unidades');
-  if (ta) ta.value = serializarCuposUnidades(cupos);
-  setTurnosDesdeArraySinSync(turnosAgregadosDesdeCupos(cupos));
+  if (ta) ta.value = serializarCuposUnidades(next);
+  setTurnosDesdeArraySinSync(turnosAgregadosDesdeCupos(next));
 }
 
 function listaComisariasCelador(){
@@ -5991,6 +6025,7 @@ function slotsTurnosDesdeCupos(cupos){
   var out = [];
   (cupos || []).forEach(function(c){
     (Array.isArray(c.turnos) ? c.turnos : []).forEach(function(t){
+      if (esLugarSedapalAtencion(c.nombre) || esTurnoSedapalAtencion(t.turno)) return;
       var k = claveTurnoDia(t.turno, t.dia);
       if (!k || k.charAt(0) === '|' || seen[k]) return;
       seen[k] = true;
@@ -6111,7 +6146,7 @@ function adaptarCuposUIPorTitulo(){
       turnoAyuda.textContent = 'Edite las vacantes en la tabla de comisarías (Mañana/Tarde × Par/Impar). El total se calcula solo.';
     } else if (esTituloSedapal((document.getElementById('mi-titulo-val') || {}).value)) {
       turnoAyuda.style.display = '';
-      turnoAyuda.textContent = 'SEDAPAL incluye el turno Atención al cliente (único, 09:00 a 17:00 hrs). No aplica a otros convenios.';
+      turnoAyuda.textContent = 'SEDAPAL tiene dos lugares: el operativo y Atención al cliente (09:00 a 17:00, PAR/IMPAR).';
     } else {
       turnoAyuda.style.display = 'none';
       turnoAyuda.textContent = '';
@@ -6135,9 +6170,9 @@ function adaptarCuposUIPorTitulo(){
   var turnoWrap = document.getElementById('mi-cupo-add-turno-wrap');
   rellenarSelectTurnoConvenio(turnoAddSel);
   if (turnoWrap) {
-    turnoWrap.style.width = esTituloSedapal((document.getElementById('mi-titulo-val') || {}).value) ? 'auto' : '118px';
-    turnoWrap.style.minWidth = esTituloSedapal((document.getElementById('mi-titulo-val') || {}).value) ? '180px' : '118px';
-    turnoWrap.style.flex = esTituloSedapal((document.getElementById('mi-titulo-val') || {}).value) ? '1 1 180px' : '';
+    turnoWrap.style.width = '118px';
+    turnoWrap.style.minWidth = '118px';
+    turnoWrap.style.flex = '';
   }
   sincronizarTotalDesdeTurnosConvenio();
   renderListaCuposUnidadesUI();
@@ -6794,14 +6829,28 @@ function renderListaCuposUnidadesUI(){
       + cupos.map(function(c, idx){
         var nomAttr = escHtml(c.nombre||'').replace(/"/g, '&quot;');
         var dirAttr = escHtml(c.direccion||'').replace(/"/g, '&quot;');
-        var celdas = slots.map(function(s, sIdx){
-          var vac = vacTurnoCelador(c, s.turno, s.dia);
-          return '<td style="text-align:center;"><input type="number" min="0" value="'+vac+'" '
-            + 'onchange="actualizarTurnoSlotLugarUI('+idx+','+sIdx+',this.value)"/></td>';
-        }).join('');
+        var esAtencion = esLugarSedapalAtencion(c.nombre);
+        var celdas;
+        if (esAtencion) {
+          var vacA = vacTurnoCelador(c, TURNO_SEDAPAL_ATENCION, 'PAR/IMPAR');
+          var span = Math.max(slots.length, 1);
+          celdas = '<td colspan="'+span+'" style="text-align:center;white-space:nowrap;">'
+            + '<span style="font-size:10.5px;font-weight:700;color:#004d3d;margin-right:8px;">09:00 a 17:00 · PAR/IMPAR</span>'
+            + '<input type="number" min="0" value="'+vacA+'" onchange="actualizarVacAtencionLugarUI('+idx+',this.value)"/>'
+            + '</td>';
+        } else {
+          celdas = slots.map(function(s, sIdx){
+            var vac = vacTurnoCelador(c, s.turno, s.dia);
+            return '<td style="text-align:center;"><input type="number" min="0" value="'+vac+'" '
+              + 'onchange="actualizarTurnoSlotLugarUI('+idx+','+sIdx+',this.value)"/></td>';
+          }).join('');
+        }
+        var celdaNombre = esAtencion
+          ? '<td class="td-lugar" style="font-weight:800;color:#004d3d;">'+escHtml(LUGAR_SEDAPAL_ATENCION)+'</td>'
+          : '<td class="td-lugar"><input type="text" value="'+nomAttr+'" maxlength="150" placeholder="Nombre del lugar" '
+            + 'onchange="actualizarCupoUnidadUI('+idx+',\'nombre\',this.value)"/></td>';
         return '<tr>'
-          + '<td class="td-lugar"><input type="text" value="'+nomAttr+'" maxlength="150" placeholder="Nombre del lugar" '
-          + 'onchange="actualizarCupoUnidadUI('+idx+',\'nombre\',this.value)"/></td>'
+          + celdaNombre
           + celdas
           + '<td class="td-total">'+(c.vacantes||0)+'</td>'
           + '<td class="td-dir"><input type="text" value="'+dirAttr+'" maxlength="200" placeholder="Dirección (opcional)" '
@@ -6859,10 +6908,17 @@ function agregarCupoUnidadUI(){
   var turno = turnoEl ? String(turnoEl.value || 'TARDE').trim().toUpperCase() : 'TARDE';
   var dia = diaEl ? String(diaEl.value || 'PAR/IMPAR').trim().toUpperCase() : 'PAR/IMPAR';
   var vac = vacEl ? (parseInt(vacEl.value, 10) || 0) : 0;
+  if (esTituloSedapal((document.getElementById('mi-titulo-val') || {}).value)
+      && (esLugarSedapalAtencion(nombre) || esTurnoSedapalAtencion(turno))) {
+    nombre = LUGAR_SEDAPAL_ATENCION;
+    turno = TURNO_SEDAPAL_ATENCION;
+    dia = 'PAR/IMPAR';
+  }
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
   var key = nombre.toUpperCase();
   var idx = -1;
   for (var i = 0; i < cupos.length; i++) {
+    if (esLugarSedapalAtencion(nombre) && esLugarSedapalAtencion(cupos[i].nombre)) { idx = i; break; }
     if (String(cupos[i].nombre || '').toUpperCase() === key) { idx = i; break; }
   }
   if (idx < 0) {
@@ -6885,6 +6941,16 @@ function agregarTurnoALugarUI(idx){
   var vac = vacEl ? (parseInt(vacEl.value, 10) || 0) : 0;
   if (!turno) { alert('Seleccione un turno.'); return; }
   cupos[idx] = agregarTurnoEnCupo(cupos[idx], turno, dia, vac);
+  setCuposUnidadesDesdeArray(cupos);
+}
+
+function actualizarVacAtencionLugarUI(idx, valor){
+  var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
+  if (!cupos[idx]) return;
+  var n = parseInt(valor, 10);
+  if (isNaN(n) || n < 0) n = 0;
+  cupos[idx].nombre = LUGAR_SEDAPAL_ATENCION;
+  cupos[idx] = agregarTurnoEnCupo(cupos[idx], TURNO_SEDAPAL_ATENCION, 'PAR/IMPAR', n);
   setCuposUnidadesDesdeArray(cupos);
 }
 
@@ -7060,6 +7126,9 @@ function guardarItem(){
   var laborTxt = (document.getElementById('mi-labor') ? val('mi-labor') : '').trim();
   var descripcionTxt = tipo === 'convenio' ? laborTxt : val('mi-descripcion');
   var cuposGuardar = parseCuposUnidadesTexto(document.getElementById('mi-cupos-unidades').value);
+  if(tipo === 'convenio' && esTituloSedapal(titulo)){
+    cuposGuardar = separarLugarSedapalAtencion(cuposGuardar);
+  }
   if(tipo === 'convenio'){
     vacantes = sumaTurnos > 0 ? sumaTurnos : sumaVacantesTurnosUI(turnos);
     if(!turnos.length && vacantes > 0){

@@ -745,7 +745,8 @@ function obtenerCuposConVacante(item){
     }
   }
   var esCelMatriz = esCeladorMatrizItem(item);
-  if (esCelMatriz) {
+  var hayTurnosPorCupa = cupos.some(function(c){ return Array.isArray(c.turnos) && c.turnos.length; });
+  if (esCelMatriz || hayTurnosPorCupa) {
     var slots = [
       { turno: 'MAÑANA', dia: 'PAR', label: 'Mañana PAR' },
       { turno: 'MAÑANA', dia: 'IMPAR', label: 'Mañana IMPAR' },

@@ -4939,6 +4939,7 @@ function normalizarCuposUnidades(raw) {
 }
 
 const TURNO_SEDAPAL_ATENCION = 'ATENCION AL CLIENTE';
+const LUGAR_SEDAPAL_ATENCION = 'ATENCIÓN AL CLIENTE';
 
 function esTituloSedapal(titulo) {
   return String(titulo || '').toUpperCase().indexOf('SEDAPAL') !== -1;
@@ -4952,6 +4953,16 @@ function esTurnoSedapalAtencion(turno) {
     .replace(/\s+/g, ' ')
     .trim();
   return n === 'ATENCION AL CLIENTE';
+}
+
+function esLugarSedapalAtencion(nombre) {
+  var n = String(nombre || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+  return n === 'ATENCION AL CLIENTE' || n.indexOf('ATENCION AL CLIENTE') === 0;
 }
 
 function canonNombreTurno(turno) {
@@ -5005,31 +5016,57 @@ function turnosAgregadosDesdeCupos(cupos) {
   return Object.keys(map).map(function(k) { return map[k]; });
 }
 
-/** SEDAPAL: turno único Atención al cliente 09:00–17:00, sin tocar otros convenios. */
+/** SEDAPAL: Atención al cliente es un segundo lugar, no un turno del lugar operativo. */
+function separarLugarSedapalAtencion(cupos) {
+  var list = (Array.isArray(cupos) ? cupos : []).map(function(c) {
+    return Object.assign({}, c, { turnos: Array.isArray(c.turnos) ? c.turnos.slice() : [] });
+  });
+  var vacExtra = 0;
+  list.forEach(function(c) {
+    if (esLugarSedapalAtencion(c.nombre)) return;
+    var keep = [];
+    normalizarTurnos(c.turnos).forEach(function(t) {
+      if (esTurnoSedapalAtencion(t.turno)) vacExtra += parseInt(t.vacantes, 10) || 0;
+      else keep.push(t);
+    });
+    c.turnos = keep;
+  });
+  var idxA = -1;
+  for (var i = 0; i < list.length; i++) {
+    if (esLugarSedapalAtencion(list[i].nombre)) { idxA = i; break; }
+  }
+  if (idxA < 0) {
+    list.push({
+      nombre: LUGAR_SEDAPAL_ATENCION,
+      vacantes: vacExtra,
+      inscritos: 0,
+      disponibles: vacExtra,
+      direccion: '',
+      turnos: [{ turno: TURNO_SEDAPAL_ATENCION, dia: 'PAR/IMPAR', vacantes: vacExtra }]
+    });
+  } else {
+    var prev = 0;
+    normalizarTurnos(list[idxA].turnos).forEach(function(t) {
+      if (esTurnoSedapalAtencion(t.turno)) prev += parseInt(t.vacantes, 10) || 0;
+    });
+    list[idxA] = Object.assign({}, list[idxA], {
+      nombre: LUGAR_SEDAPAL_ATENCION,
+      turnos: [{ turno: TURNO_SEDAPAL_ATENCION, dia: 'PAR/IMPAR', vacantes: prev + vacExtra }]
+    });
+  }
+  return list;
+}
+
 function asegurarTurnoSedapalEnCupos(titulo, cupos) {
   var list = Array.isArray(cupos) ? cupos.slice() : [];
   if (!esTituloSedapal(titulo)) return { cupos: list, changed: false };
-  var hayLugarConTurnos = list.some(function(c) {
-    return c && Array.isArray(c.turnos) && c.turnos.length;
+  var hayAlgo = list.some(function(c) {
+    return (c && Array.isArray(c.turnos) && c.turnos.length) || esLugarSedapalAtencion(c && c.nombre);
   });
-  if (!hayLugarConTurnos) return { cupos: list, changed: false };
-  var yaEsta = list.some(function(c) {
-    return normalizarTurnos(c && c.turnos).some(function(t) {
-      return esTurnoSedapalAtencion(t.turno);
-    });
-  });
-  if (yaEsta) return { cupos: list, changed: false };
-  var idx = -1;
-  for (var i = 0; i < list.length; i++) {
-    if (list[i] && Array.isArray(list[i].turnos) && list[i].turnos.length) { idx = i; break; }
-  }
-  if (idx < 0) return { cupos: list, changed: false };
-  var c0 = Object.assign({}, list[idx]);
-  c0.turnos = normalizarTurnos(c0.turnos).concat([
-    { turno: TURNO_SEDAPAL_ATENCION, dia: 'PAR/IMPAR', vacantes: 0 }
-  ]);
-  list[idx] = c0;
-  return { cupos: normalizarCuposUnidades(list), changed: true };
+  if (!hayAlgo) return { cupos: list, changed: false };
+  var next = normalizarCuposUnidades(separarLugarSedapalAtencion(list));
+  var changed = JSON.stringify(normalizarCuposUnidades(list)) !== JSON.stringify(next);
+  return { cupos: next, changed: changed };
 }
 
 function sumaVacantesTurnos(turnos) {
@@ -6439,6 +6476,9 @@ function plantillaCuposComisariasCelador(vacantesTotales, prevCupos) {
 /** Celador: conserva matriz CIA × turno × día; solo crea plantilla si falta. */
 function cuposParaGuardarItem(titulo, cupos_unidades, vacantes) {
   var cupos = normalizarCuposUnidades(cupos_unidades);
+  if (esTituloSedapal(titulo)) {
+    cupos = asegurarTurnoSedapalEnCupos(titulo, cupos).cupos;
+  }
   if (String(titulo || '').toUpperCase().indexOf('CELADOR') === -1) return cupos;
   var prevPorNombre = {};
   cupos.forEach(function(c) {
@@ -6659,7 +6699,7 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
         row.cupos_unidades = mergedSed.cupos;
         row.turnos = turnosSed;
         cuposActualizados++;
-        console.log('SEDAPAL: turno Atención al cliente (09:00 a 17:00) agregado.');
+        console.log('SEDAPAL: Atención al cliente separado como segundo lugar.');
       }
     }
     const sinPlantilla = !(row.plantilla_pdf && String(row.plantilla_pdf).length > 20);
