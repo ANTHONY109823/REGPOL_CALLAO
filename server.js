@@ -5792,6 +5792,8 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
   try {
     const cip = normalizarCipConsulta(req.query.cip);
     if (!cip) return res.json({ ok: false, error: 'Ingrese un CIP válido (solo números, 6 a 12 dígitos).' });
+    const cipKey = cipKeyInscripcion(cip);
+    if (!cipKey) return res.json({ ok: false, error: 'Ingrese un CIP válido (solo números, 6 a 12 dígitos).' });
     const r = await pool.query(
       `SELECT n.id, n.cip, n.nombres, n.unidad, n.cargo, n.grado, n.estado, n.observacion,
               TO_CHAR(n.fecha, 'DD/MM/YYYY HH24:MI') AS fecha,
@@ -5809,14 +5811,12 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
               i.turnos, i.cupos_unidades
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
-       WHERE ${sqlCipIgual('n.cip')} = $1
+       WHERE ${sqlCipKeyInscripcion('n.cip')} = $1
+         AND i.tipo = 'convenio'
          AND i.visible = TRUE
-         AND (
-           i.tipo <> 'convenio'
-           OR ${sqlMesActualLima('n.fecha')}
-         )
+         AND ${sqlMesActualLima('n.fecha')}
        ORDER BY n.fecha DESC`,
-      [cip]);
+      [cipKey]);
     // No bloquear la consulta con caducidad masiva
     setImmediate(function() {
       conveniosFlujo.caducarExpedientesVencidos(pool).catch(function() {});
@@ -5959,12 +5959,6 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
         aprobado_por_usuario: row.aprobado_por_usuario || '',
         fecha_aprobacion: row.fecha_aprobacion || null,
         fecha_aprobacion_legible: formatearFechaAprobacionPe(row.fecha_aprobacion)
-      });
-    }
-    if (!inscripciones.length) {
-      return res.json({
-        ok: false,
-        error: 'No se encontró inscripción de este mes con ese CIP.'
       });
     }
     res.json({ ok: true, cip, total: inscripciones.length, inscripciones });

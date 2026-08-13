@@ -475,7 +475,16 @@ function consultarCip(e) {
         return;
       }
       mostrarAlerta('Consulta del mes actual — CIP ' + cip + '.', 'info');
-      renderResultados(d.inscripciones || []);
+      var lista = (d.inscripciones || []).filter(function(ins) {
+        return !ins.tipo || ins.tipo === 'convenio';
+      });
+      renderResultados(lista);
+      var tit = document.getElementById('modal-consulta-res-titulo');
+      if (tit) {
+        tit.innerHTML = lista.length
+          ? '<i class="fas fa-search"></i> Resultado de la consulta'
+          : '<i class="fas fa-info-circle"></i> Sin inscripción este mes';
+      }
       abrirModalConsultaRes();
       if (history.replaceState) {
         history.replaceState(null, '', 'consulta.html?cip=' + encodeURIComponent(cip));
@@ -531,8 +540,11 @@ function renderResultados(lista) {
   var wrap = document.getElementById('consulta-resultados');
   CONSULTA_INS_CACHE = lista || [];
   if (!lista || !lista.length) {
-    wrap.innerHTML = '<div class="sin-resultados"><i class="fas fa-inbox" style="font-size:32px;color:#ccc;display:block;margin-bottom:12px;"></i>'
-      + 'No se encontraron inscripciones de este mes con ese CIP.</div>';
+    wrap.innerHTML = '<div class="sin-resultados" style="text-align:center;padding:28px 14px;">'
+      + '<i class="fas fa-user-times" style="font-size:42px;color:#c8a94a;display:block;margin-bottom:12px;"></i>'
+      + '<strong style="display:block;font-size:16px;color:#004d3d;margin-bottom:8px;">No está inscrito</strong>'
+      + '<p style="margin:0;color:#555;font-size:14px;line-height:1.45;">Este CIP no figura en ningún convenio del <strong>mes actual</strong>.</p>'
+      + '</div>';
     return;
   }
   wrap.innerHTML = lista.map(function(ins) {
@@ -1317,7 +1329,6 @@ function renderHtmlDetalleRepechaje(item, cache) {
           + '<td class="num">' + escC(String(total)) + '</td></tr>';
       }).join('')
       + '</tbody></table></div>'
-    );
     );
     if (laborTxt) {
       bloques.push(
