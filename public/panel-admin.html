@@ -220,7 +220,18 @@
     #mi-cupo-add-bar{max-width:100%;}
     .cupo-lugar-card{border:1.5px solid #d7e5df;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#f7fbf9;max-width:100%;box-sizing:border-box;overflow-x:auto;}
     .cupo-lugar-card .cupo-lugar-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;}
-    .cupo-lugar-card .cupo-turno-row{display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;margin-bottom:4px;}
+    .cupo-lugar-card .cupo-turno-row{display:flex;gap:6px;align-items:center;flex-wrap:nowrap;margin:0;}
+    .cupo-lugar-card .cupo-turnos-h{display:flex;flex-direction:row;flex-wrap:nowrap;gap:8px;align-items:center;overflow-x:auto;}
+    table.tabla-convenio-cupos{width:100%;margin:0;font-size:11.5px;table-layout:auto;}
+    table.tabla-convenio-cupos th{text-align:center;font-size:10.5px;white-space:nowrap;padding:6px 5px;}
+    table.tabla-convenio-cupos td{vertical-align:middle;padding:5px 6px;}
+    #modal-item table.tabla-convenio-cupos input,
+    #modal-item table.tabla-convenio-cupos select{margin-bottom:0;max-width:none;}
+    #modal-item table.tabla-convenio-cupos .td-lugar input{width:100%;min-width:130px;font-weight:700;font-size:12px;padding:4px 6px;}
+    #modal-item table.tabla-convenio-cupos .td-dir input{width:100%;min-width:110px;font-size:11.5px;padding:4px 6px;}
+    #modal-item table.tabla-convenio-cupos input[type=number]{width:58px;text-align:center;font-weight:700;padding:3px 4px;}
+    table.tabla-convenio-cupos .td-total{font-weight:800;color:#004d3d;text-align:center;white-space:nowrap;}
+    table.tabla-convenio-cupos .td-del{width:36px;text-align:center;}
     .modal-box h3{margin:0 0 18px;color:#004d3d;font-size:15px;
       border-bottom:2px solid #c8a94a;padding-bottom:8px;}
     .modal-box label{font-size:12px;color:#555;font-weight:600;display:block;margin-bottom:4px;}
@@ -5964,6 +5975,36 @@ var CELADOR_TURNOS_SLOTS = [
   { turno: 'TARDE', dia: 'IMPAR', label: 'Tarde IMPAR' }
 ];
 
+function claveTurnoDia(turno, dia){
+  var tNom = (typeof esTurnoSedapalAtencion === 'function' && esTurnoSedapalAtencion(turno))
+    ? TURNO_SEDAPAL_ATENCION
+    : String(turno || '').trim().toUpperCase();
+  var tDia = (typeof esTurnoSedapalAtencion === 'function' && esTurnoSedapalAtencion(tNom))
+    ? 'PAR/IMPAR'
+    : (String(dia || 'PAR/IMPAR').trim().toUpperCase() || 'PAR/IMPAR');
+  return tNom + '|' + tDia;
+}
+
+/** Columnas horizontales (como Celador): un slot por turno × día usado. */
+function slotsTurnosDesdeCupos(cupos){
+  var seen = {};
+  var out = [];
+  (cupos || []).forEach(function(c){
+    (Array.isArray(c.turnos) ? c.turnos : []).forEach(function(t){
+      var k = claveTurnoDia(t.turno, t.dia);
+      if (!k || k.charAt(0) === '|' || seen[k]) return;
+      seen[k] = true;
+      var parts = k.split('|');
+      out.push({
+        turno: parts[0],
+        dia: parts[1] || 'PAR/IMPAR',
+        label: etiquetaTurnoHorario(parts[0]) + ' ' + (parts[1] || '')
+      });
+    });
+  });
+  return out;
+}
+
 function vacTurnoCelador(cupo, turno, dia){
   var list = (cupo && Array.isArray(cupo.turnos)) ? cupo.turnos : [];
   for (var i = 0; i < list.length; i++) {
@@ -6741,38 +6782,34 @@ function renderListaCuposUnidadesUI(){
       }).join('')
       +'</tbody></table></div>';
   } else {
-    lista.innerHTML = cupos.map(function(c, idx){
-      var cupo = recalcCupoTurnos(c);
-      var nomAttr = escHtml(cupo.nombre||'').replace(/"/g, '&quot;');
-      var dirAttr = escHtml(cupo.direccion||'').replace(/"/g, '&quot;');
-      var turnos = Array.isArray(cupo.turnos) ? cupo.turnos : [];
-      var filas = turnos.map(function(t, tIdx){
-        return '<div class="cupo-turno-row">'
-          + '<span style="min-width:88px;font-weight:800;color:#004d3d;font-size:12px;">'+escHtml(etiquetaTurnoHorario(t.turno||''))+'</span>'
-          + '<span style="min-width:88px;font-size:12px;">'+escHtml(t.dia||'PAR/IMPAR')+'</span>'
-          + '<input type="number" min="0" value="'+(parseInt(t.vacantes,10)||0)+'" '
-          + 'style="width:72px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-weight:700;color:#004d3d;" '
-          + 'onchange="actualizarTurnoDeLugarUI('+idx+','+tIdx+',this.value)"/>'
-          + '<button type="button" class="btn-mini btn-mini-danger" style="padding:3px 7px;" title="Quitar turno" onclick="quitarTurnoDeLugarUI('+idx+','+tIdx+')"><i class="fas fa-times"></i></button>'
-          + '</div>';
-      }).join('');
-      if (!filas) {
-        filas = '<p style="font-size:11.5px;color:#888;margin:0;">Sin turnos. Use <strong>Agregar</strong> arriba.</p>';
-      }
-      return '<div class="cupo-lugar-card">'
-        + '<div class="cupo-lugar-head">'
-        + '<input type="text" value="'+nomAttr+'" maxlength="150" placeholder="Nombre del lugar" '
-        + 'style="flex:1;min-width:160px;padding:5px 8px;border:1px solid #ccc;border-radius:5px;font-size:12.5px;font-weight:700;" '
-        + 'onchange="actualizarCupoUnidadUI('+idx+',\'nombre\',this.value)"/>'
-        + '<span style="font-size:12px;font-weight:800;color:#004d3d;white-space:nowrap;">Total: '+(cupo.vacantes||0)+'</span>'
-        + '<button type="button" class="btn-mini btn-mini-danger" style="padding:3px 7px;" title="Quitar lugar" onclick="quitarCupoUnidadUI('+idx+')"><i class="fas fa-times"></i></button>'
-        + '</div>'
-        + '<input type="text" value="'+dirAttr+'" maxlength="200" placeholder="Dirección (opcional)" '
-        + 'style="width:100%;padding:5px 8px;border:1px solid #ccc;border-radius:5px;font-size:12px;margin-bottom:8px;" '
-        + 'onchange="actualizarCupoUnidadUI('+idx+',\'direccion\',this.value)"/>'
-        + filas
-        + '</div>';
-    }).join('');
+    cupos = cupos.map(recalcCupoTurnos);
+    var slots = slotsTurnosDesdeCupos(cupos);
+    lista.innerHTML = '<div><table class="t tabla-convenio-cupos"><thead><tr>'
+      + '<th style="text-align:left;">Lugar</th>'
+      + slots.map(function(s){
+        return '<th>'+escHtml(s.label)+'</th>';
+      }).join('')
+      + '<th>Total</th><th style="text-align:left;">Dirección</th><th></th>'
+      + '</tr></thead><tbody>'
+      + cupos.map(function(c, idx){
+        var nomAttr = escHtml(c.nombre||'').replace(/"/g, '&quot;');
+        var dirAttr = escHtml(c.direccion||'').replace(/"/g, '&quot;');
+        var celdas = slots.map(function(s, sIdx){
+          var vac = vacTurnoCelador(c, s.turno, s.dia);
+          return '<td style="text-align:center;"><input type="number" min="0" value="'+vac+'" '
+            + 'onchange="actualizarTurnoSlotLugarUI('+idx+','+sIdx+',this.value)"/></td>';
+        }).join('');
+        return '<tr>'
+          + '<td class="td-lugar"><input type="text" value="'+nomAttr+'" maxlength="150" placeholder="Nombre del lugar" '
+          + 'onchange="actualizarCupoUnidadUI('+idx+',\'nombre\',this.value)"/></td>'
+          + celdas
+          + '<td class="td-total">'+(c.vacantes||0)+'</td>'
+          + '<td class="td-dir"><input type="text" value="'+dirAttr+'" maxlength="200" placeholder="Dirección (opcional)" '
+          + 'onchange="actualizarCupoUnidadUI('+idx+',\'direccion\',this.value)"/></td>'
+          + '<td class="td-del"><button type="button" class="btn-mini btn-mini-danger" style="padding:3px 7px;" title="Quitar lugar" onclick="quitarCupoUnidadUI('+idx+')"><i class="fas fa-times"></i></button></td>'
+          + '</tr>';
+      }).join('')
+      + '</tbody></table></div>';
   }
 }
 
@@ -6834,7 +6871,6 @@ function agregarCupoUnidadUI(){
   }
   cupos[idx] = agregarTurnoEnCupo(cupos[idx], turno, dia, vac);
   setCuposUnidadesDesdeArray(cupos);
-  if(txt) txt.value = '';
   if(vacEl) vacEl.value = '0';
 }
 
@@ -6849,6 +6885,16 @@ function agregarTurnoALugarUI(idx){
   var vac = vacEl ? (parseInt(vacEl.value, 10) || 0) : 0;
   if (!turno) { alert('Seleccione un turno.'); return; }
   cupos[idx] = agregarTurnoEnCupo(cupos[idx], turno, dia, vac);
+  setCuposUnidadesDesdeArray(cupos);
+}
+
+function actualizarTurnoSlotLugarUI(idx, slotIdx, valor){
+  var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
+  var slots = slotsTurnosDesdeCupos(cupos);
+  if (!cupos[idx] || !slots[slotIdx]) return;
+  var n = parseInt(valor, 10);
+  if (isNaN(n) || n < 0) n = 0;
+  cupos[idx] = agregarTurnoEnCupo(cupos[idx], slots[slotIdx].turno, slots[slotIdx].dia, n);
   setCuposUnidadesDesdeArray(cupos);
 }
 
