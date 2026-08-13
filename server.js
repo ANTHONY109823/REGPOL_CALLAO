@@ -1248,8 +1248,8 @@ function staticBufferado(req, res, next) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   var urlPath = (req.path || '/').split('?')[0];
   if (urlPath === '/') urlPath = '/index.html';
-  var rel = urlPath.replace(/^\//, '').replace(/\.\./g, '');
-  var entry = staticCache.get(rel) || staticCache.get(rel.toLowerCase());
+  var rel = urlPath.replace(/^\//, '').replace(/\.\./g, '').toLowerCase();
+  var entry = staticCache.get(rel);
   if (entry) return enviarEstatico(req, res, entry, req.method);
   leerEstaticoAsync(rel, function(err, loaded) {
     if (err || !loaded) return next();
@@ -1263,16 +1263,6 @@ app.disable('x-powered-by');
 
 app.get('/health', function(req, res) {
   res.status(200).type('text/plain').send('ok');
-});
-
-/** Express no distingue mayúsculas: no usar app.get('/LOGIN.html') porque también captura /login.html y genera bucle. */
-app.use(function(req, res, next) {
-  var p = String((req.path || '').split('?')[0]);
-  var low = p.toLowerCase();
-  if (p !== low && (low === '/login.html' || low === '/panel-admin.html' || low === '/panel-usuario.html')) {
-    return res.redirect(301, low);
-  }
-  next();
 });
 
 app.use(cors());
