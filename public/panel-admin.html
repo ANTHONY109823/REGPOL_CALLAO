@@ -7766,7 +7766,13 @@ function verInscritos(itemId, titulo, modo){
   var icon = INSCRITOS_MODO==='ganadores' ? 'fa-trophy' : (INSCRITOS_MODO==='repechaje' ? 'fa-redo' : 'fa-users');
   var pref = INSCRITOS_MODO==='ganadores' ? 'Ganadores / expedientes' : (INSCRITOS_MODO==='repechaje' ? 'Repechaje' : 'Preinscritos');
   document.getElementById('inscritos-titulo').innerHTML='<i class="fas '+icon+'"></i> '+pref+' — '+escHtml(titulo);
-  document.getElementById('inscritos-buscar').value='';
+  var busEl=document.getElementById('inscritos-buscar');
+  if(busEl){
+    busEl.value='';
+    busEl.placeholder=(INSCRITOS_MODO==='ganadores'||INSCRITOS_MODO==='repechaje')
+      ? 'CIP, nombre o postulación...'
+      : 'CIP, DNI, CODIFIN, nombre o postulación...';
+  }
   var selUni=document.getElementById('inscritos-filtro-unidad');
   if(selUni) selUni.innerHTML='<option value="">Todas las unidades</option>';
   var selReg=document.getElementById('inscritos-filtro-region');
@@ -8035,19 +8041,20 @@ function renderInscritos(list, tipo){
   var bgEst   ={pendiente:'#fff3cd',preinscrito:'#fff3cd',corregir_preinscripcion:'#fef5e7',anulado_solicitud:'#eee',verificado:'#d4edda',ganador:'#fff8e1',aprobado:'#fff8e1',rechazado:'#f8d7da',reserva:'#e9ecef',en_revision:'#eaf2fb',observado:'#fef5e7',expediente_ok:'#d4edda',caducado:'#eee',repechaje:'#f5eef8'};
 
   var esPreins = esConvenio && INSCRITOS_MODO==='preinscripcion';
+  var esListaGanadoresConv = esConvenio && !esPreins;
   var colAccion = esPreins
     ? '<th class="col-acciones">Acciones</th>'
     : '<th class="col-acciones">Acciones</th>';
 
   document.getElementById('inscritos-tabla').innerHTML=
-    '<div style="overflow-x:auto;"><table class="t t-inscritos" style="width:100%;min-width:'+(esPreins?'0':'1320')+'px;"><thead><tr>'
-    +'<th>#</th><th>Grado</th><th>CIP</th><th>DNI</th>'
-    +(esPreins?'':'<th>CODIFIN</th>')
+    '<div style="overflow-x:auto;"><table class="t t-inscritos" style="width:100%;min-width:'+(esPreins||esListaGanadoresConv?'0':'1320')+'px;"><thead><tr>'
+    +'<th>#</th><th>Grado</th><th>CIP</th>'
+    +(esListaGanadoresConv?'':'<th>DNI</th>')
+    +(esPreins||esListaGanadoresConv?'':'<th>CODIFIN</th>')
     +'<th>Apellidos y Nombres</th>'
     +(esConvenio?'<th>Región</th>':'')
     +'<th>Unidad</th>'+(esConvenio?'<th>Postula a</th>':'')
-    +(esPreins?'':'<th>Área</th>')
-    +(esConvenio && !esPreins?'<th>Tel.</th>':'')
+    +(esPreins||esListaGanadoresConv?'':'<th>Área</th>')
     +(esConvenio
       ? (esPreins?'':'<th>Mod.</th><th>Disp.</th>')
       : '<th>T. Servicio</th>')
@@ -8123,14 +8130,13 @@ function renderInscritos(list, tipo){
         +'<td class="col-num">'+(idx+1)+'</td>'
         +'<td class="col-grado" title="'+escHtml(ins.grado||'')+'">'+escHtml(siglaGradoPnp(ins.grado))+'</td>'
         +'<td style="font-weight:800;color:#004d3d;white-space:nowrap;">'+escHtml(ins.cip||'')+'</td>'
-        +'<td class="col-dni">'+escHtml(ins.dni||'—')+'</td>'
-        +(esPreins?'':('<td style="font-size:12px;">'+escHtml(ins.codifin||'—')+'</td>'))
+        +(esListaGanadoresConv?'':('<td class="col-dni">'+escHtml(ins.dni||'—')+'</td>'))
+        +(esPreins||esListaGanadoresConv?'':('<td style="font-size:12px;">'+escHtml(ins.codifin||'—')+'</td>'))
         +'<td class="col-nombres" style="font-weight:600;">'+escHtml(ins.nombres||'')+'</td>'
         +(esConvenio?'<td class="col-region" title="'+escHtml(ins.region_policial||'')+'">'+escHtml(siglaRegionPolicial(ins.region_policial))+'</td>':'')
         +'<td class="col-unidad">'+escHtml(ins.unidad||'')+'</td>'
         +(esConvenio?'<td class="col-postula">'+escHtml(ins.comisaria_postula||'—')+'</td>':'')
-        +(esPreins?'':('<td>'+escHtml(ins.area||'—')+'</td>'))
-        +(esConvenio && !esPreins?'<td class="col-tel">'+escHtml(ins.telefono||'—')+'</td>':'')
+        +(esPreins||esListaGanadoresConv?'':('<td>'+escHtml(ins.area||'—')+'</td>'))
         +(esConvenio
           ? (esPreins ? '' : ('<td style="font-size:11.5px;">'+escHtml(modLabel)+'</td><td>'+dispBadge+'</td>'))
           : ('<td>'+dispBadge+'</td>'))
