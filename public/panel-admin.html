@@ -202,6 +202,15 @@
       border-radius:12px;display:flex;flex-direction:column;overflow-x:hidden!important;overflow-y:hidden;
       padding:16px 16px 10px;box-sizing:border-box;
     }
+    #modal-item.modal-item-celador .modal-box{
+      width:min(1080px,96vw)!important;max-width:96vw!important;
+    }
+    #modal-item.modal-item-celador .mi-item-body{overflow-x:auto;}
+    #modal-item.modal-item-celador .tabla-celador-edit{width:100%;min-width:0;}
+    #modal-item.modal-item-celador .tabla-celador-edit th,
+    #modal-item.modal-item-celador .tabla-celador-edit td{padding:5px 6px;font-size:11.5px;}
+    #modal-item.modal-item-celador .tabla-celador-edit td:first-child{white-space:normal;min-width:130px;max-width:180px;}
+    #modal-item.modal-item-celador .tabla-celador-edit input[type="number"]{width:58px!important;}
     #modal-item.modal-item-full .mi-item-body{flex:1;overflow:auto;overflow-x:hidden;min-height:0;max-width:100%;}
     #modal-item.modal-item-full .modal-footer{
       flex-shrink:0;background:#fff;border-top:1px solid #e0e8e0;padding-top:10px;margin-top:8px;
@@ -6013,6 +6022,8 @@ function adaptarCuposUIPorTitulo(){
   var turnosLista = document.getElementById('mi-turnos-lista');
   var vacLab = document.getElementById('mi-lab-vacantes');
   var vacEl = document.getElementById('mi-vacantes');
+  var wrapVac = document.getElementById('mi-wrap-vacantes');
+  if (wrapVac) wrapVac.style.display = 'none';
   if (labCupos) {
     labCupos.innerHTML = esCel
       ? '<i class="fas fa-map-marker-alt"></i> Comisarías × turnos (Mañana/Tarde · Par/Impar)'
@@ -6071,6 +6082,7 @@ function adaptarCuposUIPorTitulo(){
   sincronizarTotalDesdeTurnosConvenio();
   renderListaCuposUnidadesUI();
   renderListaTurnosUI();
+  aplicarTamanoModalItem('convenio');
 }
 
 function sumaVacantesCupos(cupos){
@@ -6214,12 +6226,16 @@ function aplicarTamanoModalItem(tipo){
   var box = modal ? modal.querySelector('.modal-box') : null;
   if (!modal || !box) return;
   if (tipo === 'convenio') {
+    var esCel = esTituloCelador((document.getElementById('mi-titulo-val') || {}).value);
     modal.classList.add('modal-item-full');
+    if (esCel) modal.classList.add('modal-item-celador');
+    else modal.classList.remove('modal-item-celador');
     box.style.width = '';
     box.style.maxHeight = '';
     box.style.overflowY = '';
   } else {
     modal.classList.remove('modal-item-full');
+    modal.classList.remove('modal-item-celador');
     box.style.width = '560px';
     box.style.maxHeight = '90vh';
     box.style.overflowY = 'auto';
@@ -6248,7 +6264,7 @@ function adaptarModalItemPorTipo(tipo){
   show('mi-wrap-horario', !esConv);
   show('mi-wrap-ventana', !esConv);
   show('mi-wrap-inscripcion-fechas', esConv);
-  show('mi-wrap-vacantes', true);
+  show('mi-wrap-vacantes', !esConv);
   show('mi-cupos-wrap', esConv);
   show('mi-turnos-wrap', !esConv);
   show('mi-aviso-sorteo-wrap', false);
@@ -6677,10 +6693,10 @@ function renderListaCuposUnidadesUI(){
   }
   if(esCel){
     cupos = cupos.map(asegurarTurnosCeladorEnCupo);
-    lista.innerHTML = '<div style="overflow-x:auto;"><table class="t" style="margin:0;font-size:11.5px;min-width:720px;"><thead><tr>'
+    lista.innerHTML = '<div><table class="t tabla-celador-edit" style="margin:0;font-size:11.5px;width:100%;"><thead><tr>'
       +'<th>Comisaría</th>'
       +CELADOR_TURNOS_SLOTS.map(function(s){
-        return '<th style="width:78px;text-align:center;">'+escHtml(s.label)+'</th>';
+        return '<th style="width:72px;text-align:center;">'+escHtml(s.label)+'</th>';
       }).join('')
       +'<th style="width:64px;text-align:center;">Total</th>'
       +'<th>Dirección</th>'
@@ -6696,11 +6712,11 @@ function renderListaCuposUnidadesUI(){
             +'onchange="actualizarCupoTurnoCeladorUI('+idx+','+sIdx+',this.value)"/></td>';
         }).join('');
         return '<tr>'
-          +'<td style="font-weight:600;white-space:nowrap;">'+escHtml(c.nombre)+'</td>'
+          +'<td style="font-weight:600;">'+escHtml(c.nombre)+'</td>'
           +celdas
           +'<td style="font-weight:800;color:#004d3d;text-align:center;">'+(c.vacantes||0)+'</td>'
           +'<td><input type="text" value="'+dirAttr+'" maxlength="200" placeholder="Dirección (opcional)" '
-          +'style="width:100%;min-width:140px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:11.5px;" '
+          +'style="width:100%;min-width:100px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;font-size:11.5px;" '
           +'onchange="actualizarCupoUnidadUI('+idx+',\'direccion\',this.value)"/></td>'
           +'</tr>';
       }).join('')
@@ -6722,7 +6738,7 @@ function renderListaCuposUnidadesUI(){
           + '</div>';
       }).join('');
       if (!filas) {
-        filas = '<p style="font-size:11.5px;color:#888;margin:0 0 6px;">Sin turnos. Agregue turno y vacantes abajo.</p>';
+        filas = '<p style="font-size:11.5px;color:#888;margin:0;">Sin turnos. Use <strong>Agregar</strong> arriba.</p>';
       }
       return '<div class="cupo-lugar-card">'
         + '<div class="cupo-lugar-head">'
@@ -6736,14 +6752,8 @@ function renderListaCuposUnidadesUI(){
         + 'style="width:100%;padding:5px 8px;border:1px solid #ccc;border-radius:5px;font-size:12px;margin-bottom:8px;" '
         + 'onchange="actualizarCupoUnidadUI('+idx+',\'direccion\',this.value)"/>'
         + filas
-        + '<div class="cupo-turno-row" style="margin-top:6px;padding-top:6px;border-top:1px dashed #c8e6c9;">'
-        + htmlSelectTurno('mi-lt-turno-'+idx, esTituloSedapal((document.getElementById('mi-titulo-val')||{}).value) ? TURNO_SEDAPAL_ATENCION : 'TARDE')
-        + htmlSelectDia('mi-lt-dia-'+idx, 'PAR/IMPAR')
-        + '<input type="number" id="mi-lt-vac-'+idx+'" min="0" value="0" style="width:72px;padding:5px 6px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;" placeholder="Vac."/>'
-        + '<button type="button" class="btn-mini btn-mini-ok" style="padding:4px 8px;" onclick="agregarTurnoALugarUI('+idx+')" title="Agregar turno a este lugar"><i class="fas fa-plus"></i></button>'
-        + '</div></div>';
+        + '</div>';
     }).join('');
-    Array.prototype.forEach.call(lista.querySelectorAll('select[id^="mi-lt-turno-"]'), onCambioTurnoSedapal);
   }
 }
 
