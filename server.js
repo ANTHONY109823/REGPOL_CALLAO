@@ -1172,7 +1172,8 @@ const STATIC_CACHE_ENABLED = !!(process.env.RAILWAY_ENVIRONMENT || process.env.F
 const STATIC_WARM_FILES = [
   'index.html', 'style.css', 'portal.js', 'portal-data.js', 'site-data.json', 'api-config.js',
   'cursos.html', 'convenios.html', 'unidades.html', 'unidades-data.json',
-  'evaluacion.html', 'detalle.html', 'img/regpol-callao.jpg'
+  'evaluacion.html', 'detalle.html', 'img/regpol-callao.jpg',
+  'login.html', 'panel-admin.html', 'panel-admin.css', 'panel-usuario.html'
 ];
 
 function cacheStaticEntry(rel, data) {
@@ -1190,17 +1191,28 @@ function leerEstaticoAsync(rel, cb) {
     pendingStaticReads.get(key).push(cb);
     return;
   }
-  const full = path.join(PUBLIC_DIR, rel);
   pendingStaticReads.set(key, [cb]);
-  fs.readFile(full, function(err, data) {
+  function finish(err, data, usedRel) {
     const waiters = pendingStaticReads.get(key) || [];
     pendingStaticReads.delete(key);
     if (err) {
       waiters.forEach(function(fn) { fn(err); });
       return;
     }
-    const entry = cacheStaticEntry(rel, data);
+    const entry = cacheStaticEntry(usedRel, data);
+    if (usedRel !== rel) cacheStaticEntry(rel, data);
     waiters.forEach(function(fn) { fn(null, entry); });
+  }
+  fs.readFile(path.join(PUBLIC_DIR, rel), function(err, data) {
+    if (!err) return finish(null, data, rel);
+    if (rel !== key) {
+      fs.readFile(path.join(PUBLIC_DIR, key), function(err2, data2) {
+        if (err2) return finish(err2);
+        finish(null, data2, key);
+      });
+      return;
+    }
+    finish(err);
   });
 }
 
@@ -1251,6 +1263,13 @@ app.disable('x-powered-by');
 
 app.get('/health', function(req, res) {
   res.status(200).type('text/plain').send('ok');
+});
+
+app.get(['/LOGIN.html', '/Login.html', '/LOGIN.HTML', '/Login.HTML'], function(req, res) {
+  res.redirect(301, '/login.html');
+});
+app.get(['/PANEL-ADMIN.html', '/Panel-Admin.html', '/PANEL-ADMIN.HTML'], function(req, res) {
+  res.redirect(301, '/panel-admin.html');
 });
 
 app.use(cors());
