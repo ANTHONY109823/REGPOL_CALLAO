@@ -227,7 +227,7 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
       ? '<button type="button" class="btn-mini" onclick="abrirAvisoConveniosFront()" title="Solo Super Admin">'
         + '<i class="fab fa-facebook" style="color:#1877f2;"></i> Aviso frontend</button>'
       : '';
-    el.innerHTML = '<div style="margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;max-width:920px;margin-left:auto;margin-right:auto;">'
+    el.innerHTML = '<div class="cms-conv-head">'
       + '<div style="font-size:14px;font-weight:800;color:#004d3d;"><i class="fas fa-handshake"></i> Convenios en la web</div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">'
       + btnUnitic
@@ -235,7 +235,7 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
         ? '<button type="button" class="btn-mini btn-mini-ok" onclick="abrirNuevoConvenioWeb()"><i class="fas fa-plus"></i> Agregar convenio</button>'
         : '')
       + '</div></div>'
-      + '<div id="cms-live-' + tipo + '" style="border:1px solid #e0e8e0;border-radius:8px;overflow:hidden;max-width:920px;margin:0 auto;">'
+      + '<div id="cms-live-' + tipo + '" class="cms-conv-tabla-wrap">'
       + '<p style="color:#888;font-size:12px;padding:14px;margin:0;">Cargando...</p></div>';
   } else {
     el.innerHTML = '<div style="margin-bottom:14px;">'
@@ -282,22 +282,22 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
           + (puedeEditar && esConv ? 'Pulse «Agregar convenio».' : '') + '</p>';
         return;
       }
-      box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;">'
+      box.innerHTML = '<table class="cms-conv-tabla">'
         + '<colgroup>'
-        + '<col style="width:auto"/>'
-        + '<col style="width:70px"/>'
-        + '<col style="width:58px"/>'
-        + '<col style="width:52px"/>'
-        + '<col style="width:190px"/>'
-        + '<col style="width:160px"/>'
+        + '<col class="col-nombre"/>'
+        + '<col class="col-vac"/>'
+        + '<col class="col-lug"/>'
+        + '<col class="col-act"/>'
+        + '<col class="col-insc"/>'
+        + '<col class="col-acc"/>'
         + '</colgroup>'
-        + '<thead><tr style="background:#f0f7f4;color:#004d3d;text-align:left;">'
-        + '<th style="padding:8px 10px;">Convenio</th>'
-        + '<th style="padding:8px 4px;text-align:center;">Vacantes</th>'
-        + '<th style="padding:8px 4px;text-align:center;">Lugares</th>'
-        + '<th style="padding:8px 4px;text-align:center;">Activo</th>'
-        + '<th style="padding:8px 4px;">Inscripciones</th>'
-        + '<th style="padding:8px 4px;text-align:center;">Acciones</th></tr></thead><tbody>'
+        + '<thead><tr>'
+        + '<th>Convenio</th>'
+        + '<th class="num">Vacantes</th>'
+        + '<th class="num">Lugares</th>'
+        + '<th class="num">Activo</th>'
+        + '<th>Inscripciones</th>'
+        + '<th class="num">Acciones</th></tr></thead><tbody>'
         + items.map(function(it) {
           var activo = String(it.estado || '').toUpperCase() !== 'CERRADO';
           var nLug = Array.isArray(it.cupos_unidades) ? it.cupos_unidades.length : 0;
@@ -309,19 +309,19 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
           var celdaInsc = (typeof htmlCeldaEstadoInscripcion === 'function')
             ? htmlCeldaEstadoInscripcion(st, id)
             : ('<span style="font-size:11px;font-weight:700;color:' + (st.color || '#888') + ';">' + escHtml(st.texto || 'CERRADO') + '</span>');
-          return '<tr style="border-top:1px solid #edf2ef;" id="cv-row-' + id + '">'
-            + '<td style="padding:8px 10px;font-weight:600;color:#004d3d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(it.titulo || '') + '">' + escHtml(it.titulo || '') + '</td>'
-            + '<td style="padding:8px 4px;text-align:center;font-weight:600;">' + escHtml(String(it.vacantes != null ? it.vacantes : 0)) + '</td>'
-            + '<td style="padding:8px 4px;text-align:center;">' + lugTxt + '</td>'
-            + '<td style="padding:8px 4px;text-align:center;">'
+          return '<tr id="cv-row-' + id + '">'
+            + '<td class="td-nombre" title="' + escHtml(it.titulo || '') + '">' + escHtml(it.titulo || '') + '</td>'
+            + '<td class="num">' + escHtml(String(it.vacantes != null ? it.vacantes : 0)) + '</td>'
+            + '<td class="num">' + lugTxt + '</td>'
+            + '<td class="num">'
             + (puedeEditar
               ? '<input type="checkbox" id="cv-activo-' + id + '" ' + (activo ? 'checked' : '') + ' '
                 + 'title="Activo en la web" style="width:16px;height:16px;accent-color:#1a7a3a;cursor:pointer;" '
                 + 'onchange="guardarActivoConvenio(' + id + ')"/>'
               : (activo ? 'Sí' : 'No'))
             + '</td>'
-            + '<td style="padding:6px 8px;">' + celdaInsc + '</td>'
-            + '<td style="padding:6px 4px;text-align:center;white-space:nowrap;">'
+            + '<td class="td-insc">' + celdaInsc + '</td>'
+            + '<td class="td-acc">'
             + (puedeEditar
               ? '<button type="button" class="btn-mini btn-mini-ok" style="padding:4px 8px;font-size:11px;width:auto;min-width:0;height:auto;" onclick="abrirModalItem(' + id + ')"><i class="fas fa-edit"></i> Editar</button>'
               : '')
