@@ -5703,7 +5703,6 @@ async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
   const dniNorm = normalizarDniDigits(dni);
   const nombreNorm = normalizarNombreInscripcion(nombres);
   const tokensNorm = nombreTokensOrdenados(nombres);
-  const apeNorm = apellidosInscripcion(nombres);
   const vigenteMes = `estado NOT IN ('anulado_solicitud')
     AND to_char(timezone('America/Lima', COALESCE(fecha::timestamptz, NOW())), 'YYYY-MM')
       = to_char(timezone('America/Lima', NOW()), 'YYYY-MM')`;
@@ -5758,18 +5757,6 @@ async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
     }
   }
 
-  if (apeNorm && apeNorm.length >= 8 && apeNorm.indexOf(' ') >= 0) {
-    const byApe = await pool.query(
-      `SELECT id, cip, dni, nombres, estado, nro_registro
-       FROM inscripciones
-       WHERE item_id=$1 AND ${sqlApellidosInscripcion('nombres')} = $2
-         AND ${vigenteMes}
-       ORDER BY id ASC LIMIT 1`,
-      [itemId, apeNorm]
-    );
-    if (byApe.rows.length) return { row: byApe.rows[0], motivo: 'apellidos' };
-  }
-
   return null;
 }
 
@@ -5785,7 +5772,7 @@ function mensajeDuplicadoInscripcion(motivo) {
 
 /**
  * Regla operativa: un efectivo solo puede preinscribirse en UN convenio por mes calendario (Lima).
- * Cruce por CIP, DNI, nombres o apellidos. Se conserva la primera inscripción.
+ * Cruce por CIP, DNI o nombre completo (no solo apellidos: hay hermanos homónimos).
  * Solo «anulado_solicitud» libera el cupo del mes (convenio equivocado).
  * Al mes siguiente (nueva convocatoria) puede inscribirse de nuevo.
  */
@@ -5794,7 +5781,6 @@ async function buscarInscripcionConvenioEnMes(cipNorm, dni, nombres) {
   const dniNorm = normalizarDniDigits(dni);
   const nombreNorm = normalizarNombreInscripcion(nombres);
   const tokensNorm = nombreTokensOrdenados(nombres);
-  const apeNorm = apellidosInscripcion(nombres);
   const mesSql = `to_char(timezone('America/Lima', COALESCE(n.fecha::timestamptz, NOW())), 'YYYY-MM')
     = to_char(timezone('America/Lima', NOW()), 'YYYY-MM')`;
   // Cualquier inscripción activa del mes bloquea (incl. reserva/ganador/caducado/rechazado).
@@ -5860,21 +5846,6 @@ async function buscarInscripcionConvenioEnMes(cipNorm, dni, nombres) {
         return { row: row, motivo: 'nombres' };
       }
     }
-  }
-
-  if (apeNorm && apeNorm.length >= 8 && apeNorm.indexOf(' ') >= 0) {
-    const byApe = await pool.query(
-      `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id
-       FROM inscripciones n
-       JOIN items_portal i ON i.id = n.item_id
-       WHERE i.tipo = 'convenio'
-         AND ${sqlApellidosInscripcion('n.nombres')} = $1
-         AND ${excluye}
-         AND ${mesSql}
-       ORDER BY n.id ASC LIMIT 1`,
-      [apeNorm]
-    );
-    if (byApe.rows.length) return { row: byApe.rows[0], motivo: 'apellidos' };
   }
 
   return null;
