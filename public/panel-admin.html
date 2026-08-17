@@ -112,6 +112,23 @@
     table.t th.col-acciones,table.t td.col-acciones{min-width:160px;vertical-align:middle;}
     table.t td{padding:7px 10px;border-bottom:1px solid #eee;}
     table.t tr:nth-child(even){background:#f7faf7;}
+    .tabla-rep-excel-wrap{overflow-x:auto;border:1px solid #c5d4cc;border-radius:8px;}
+    table.tabla-rep-excel{width:100%;border-collapse:collapse;font-size:13px;min-width:640px;}
+    table.tabla-rep-excel th{background:#004d3d;color:#fff;padding:10px 12px;text-align:center;
+      font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-right:1px solid #003d31;white-space:nowrap;}
+    table.tabla-rep-excel th.col-conv{text-align:left;width:42%;}
+    table.tabla-rep-excel th:last-child{border-right:none;}
+    table.tabla-rep-excel td{padding:9px 12px;border-bottom:1px solid #d5e0db;border-right:1px solid #e4eee8;vertical-align:middle;}
+    table.tabla-rep-excel td:last-child{border-right:none;}
+    table.tabla-rep-excel td.td-conv{font-weight:700;color:#004d3d;line-height:1.35;}
+    table.tabla-rep-excel td.num{text-align:center;font-weight:800;font-variant-numeric:tabular-nums;font-size:15px;color:#004d3d;}
+    table.tabla-rep-excel td.num-libres{color:#8e44ad;}
+    table.tabla-rep-excel td.num-libres.cubierto{color:#1a7a3a;}
+    table.tabla-rep-excel td.num-insc{color:#6d3a8a;}
+    table.tabla-rep-excel tbody tr{cursor:pointer;}
+    table.tabla-rep-excel tbody tr:nth-child(even){background:#f4faf6;}
+    table.tabla-rep-excel tbody tr:hover{background:#e8f5e9;}
+    table.tabla-rep-excel tbody tr:last-child td{border-bottom:none;}
     .badge{padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700;}
     .ok{background:#d4edda;color:#1a7a3a;} .pend{background:#fff3cd;color:#856404;}
     .pag-btn{padding:4px 10px;margin:2px;border:1.5px solid #004d3d;background:#fff;
@@ -1257,25 +1274,45 @@
           <h3 id="inscritos-titulo" style="margin:0;border:none;padding:0;"><i class="fas fa-users"></i> Inscritos</h3>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;" id="inscritos-filtros-bar">
-          <input type="text" id="inscritos-buscar" placeholder="CIP, DNI, CODIFIN, nombre o postulación..." oninput="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:260px;"/>
-          <select id="inscritos-filtro-region" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
+          <input type="text" id="inscritos-buscar" class="filtro-solo-preins" placeholder="CIP, DNI, CODIFIN, nombre o postulación..." oninput="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:260px;"/>
+          <select id="inscritos-filtro-region" class="inscritos-filtro-extra filtro-solo-preins" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
             <option value="">Todas las regiones</option>
           </select>
-          <select id="inscritos-filtro-unidad" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
+          <select id="inscritos-filtro-unidad" class="inscritos-filtro-extra filtro-solo-preins" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
             <option value="">Todas las unidades</option>
           </select>
-          <select id="inscritos-filtro-modalidad" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:180px;">
+          <select id="inscritos-filtro-modalidad" class="inscritos-filtro-extra filtro-solo-preins" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:180px;">
             <option value="">Todas las modalidades</option>
           </select>
-          <select id="inscritos-filtro-disp" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
+          <select id="inscritos-filtro-disp" class="inscritos-filtro-extra filtro-solo-preins" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
             <option value="">Disponibilidad</option>
             <option value="VACACIONES">Vacaciones</option>
             <option value="FRANCO">Franco</option>
           </select>
+          <select id="inscritos-filtro-turno" class="inscritos-filtro-extra filtro-solo-ganadores" onchange="filtrarInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:150px;">
+            <option value="">Turno</option>
+          </select>
           <select id="inscritos-filtro-modo" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
-            <option value="">Origen (sorteo/repechaje)</option>
+            <option value="">Origen</option>
             <option value="sorteo">Por sorteo</option>
             <option value="repechaje">Por repechaje</option>
+          </select>
+          <select id="inscritos-filtro-tipo" class="inscritos-filtro-extra filtro-solo-ganadores" onchange="filtrarInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:130px;">
+            <option value="">Tipo</option>
+            <option value="PAR">PAR</option>
+            <option value="IMPAR">IMPAR</option>
+          </select>
+          <select id="inscritos-filtro-vacaciones" class="inscritos-filtro-extra filtro-solo-ganadores" onchange="filtrarInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:150px;">
+            <option value="">Vacaciones</option>
+            <option value="VACACIONES">Todas</option>
+            <option value="B1">Bloque 1</option>
+            <option value="B2">Bloque 2</option>
+          </select>
+          <select id="inscritos-filtro-franco" class="inscritos-filtro-extra filtro-solo-ganadores" onchange="filtrarInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:140px;">
+            <option value="">Franco</option>
+            <option value="FRANCO">Todos</option>
+            <option value="PAR">Día PAR</option>
+            <option value="IMPAR">Día IMPAR</option>
           </select>
         </div>
         <div id="inscritos-stats" style="margin-bottom:10px;"></div>
@@ -1300,8 +1337,8 @@
       <div class="card">
         <h3><i class="fas fa-trophy" style="color:#c8a94a;"></i> Ganadores y expedientes</h3>
         <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
-          Seleccione el convenio. Aquí se avisa a ganadores, se reciben expedientes y se observa.
-          <strong>Sin edición de datos</strong> del efectivo.
+          Clic en el convenio para abrir la lista. Ahí se avisa a ganadores, se reciben expedientes y se observa.
+          <strong>Sin edición de datos</strong> del efectivo. Caducados = no presentaron expediente a tiempo.
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
           <button class="btn btn-v" type="button" onclick="cargarConvFlujoResumen('ganadores')"><i class="fas fa-sync"></i> Actualizar</button>
@@ -1314,7 +1351,8 @@
       <div class="card">
         <h3><i class="fas fa-redo" style="color:#8e44ad;"></i> Repechaje</h3>
         <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
-          Vacantes libres actualizadas. Quienes no presentaron expediente a tiempo pasan automáticamente a caducado / repechaje.
+          <strong>Libres para repechaje</strong> = N° vacantes − cubiertas. Baja cuando se cubre un cupo o alguien se inscribe por repechaje.
+          Los caducados (expediente no presentado) se ven en <strong>2. Ganadores y expedientes</strong>.
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
           <button class="btn btn-v" type="button" onclick="cargarConvFlujoResumen('repechaje')"><i class="fas fa-sync"></i> Actualizar contadores</button>
@@ -4422,7 +4460,7 @@ function pesoJerarquiaGradoResp(codGrado, gradoTexto) {
   if (g === 'CAS' || g === 'EC' || /EMPLEADO\s*CIVIL/.test(g)) return 9000;
   var reglas = [
     [/^GRAL|GENERAL/, 20],
-    [/^CRNL|CORONEL/, 30],
+    [/^CRNEL|^CRNL|^CORONEL/, 30],
     [/^CMDTE|COMANDANTE/, 40],
     [/^MAY$|^MAYOR/, 50],
     [/^CAP$|^CAPITAN|^CAPITÁN/, 60],
@@ -7793,22 +7831,26 @@ function renderConvGanadoresCuadros(list){
     el.innerHTML='<p style="color:#888;text-align:center;padding:24px;">No hay convenios activos.</p>';
     return;
   }
-  el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">'
+  el.innerHTML='<div class="tabla-rep-excel-wrap"><table class="tabla-rep-excel">'
+    +'<thead><tr>'
+    +'<th class="col-conv">Convenio</th>'
+    +'<th>Ganadores</th>'
+    +'<th>En revisión</th>'
+    +'<th>Observados</th>'
+    +'<th>Sin PDF</th>'
+    +'<th>Caducados</th>'
+    +'</tr></thead><tbody>'
     +list.map(function(c){
-      var cola = (c.ganadores||0)+(c.en_revision||0)+(c.observados||0)+(c.expediente_ok||0);
-      return '<div style="background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(0,77,61,.06);">'
-        +'<div style="font-weight:800;color:#004d3d;font-size:14px;margin-bottom:10px;line-height:1.3;">'+escHtml(c.titulo)+'</div>'
-        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'
-        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#c8a94a;">'+c.ganadores+'</div><div class="l">Ganadores</div></div>'
-        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#2980b9;">'+c.en_revision+'</div><div class="l">En revisión</div></div>'
-        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#e67e22;">'+c.observados+'</div><div class="l">Observados</div></div>'
-        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#c0392b;">'+c.pendientes_expediente+'</div><div class="l">Sin PDF</div></div>'
-        +'</div>'
-        +'<button type="button" class="btn btn-v" style="width:100%;justify-content:center;" onclick="abrirConvenioGanadores('+c.id+',\''+escJs(c.titulo)+'\')">'
-        +'<i class="fas fa-folder-open"></i> Abrir ('+cola+' en flujo)</button>'
-        +'</div>';
+      return '<tr onclick="abrirConvenioGanadores('+c.id+',\''+escJs(c.titulo)+'\')" title="Abrir ganadores y expedientes">'
+        +'<td class="td-conv">'+escHtml(c.titulo)+'</td>'
+        +'<td class="num" style="color:#b8860b;">'+(c.ganadores||0)+'</td>'
+        +'<td class="num" style="color:#2980b9;">'+(c.en_revision||0)+'</td>'
+        +'<td class="num" style="color:#e67e22;">'+(c.observados||0)+'</td>'
+        +'<td class="num" style="color:#c0392b;">'+(c.pendientes_expediente||0)+'</td>'
+        +'<td class="num" style="color:#666;">'+(c.caducados||0)+'</td>'
+        +'</tr>';
     }).join('')
-    +'</div>';
+    +'</tbody></table></div>';
 }
 
 function renderConvRepechajeCuadros(list){
@@ -7818,21 +7860,28 @@ function renderConvRepechajeCuadros(list){
     el.innerHTML='<p style="color:#888;text-align:center;padding:24px;">No hay convenios activos.</p>';
     return;
   }
-  el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">'
+  el.innerHTML='<div class="tabla-rep-excel-wrap"><table class="tabla-rep-excel">'
+    +'<thead><tr>'
+    +'<th class="col-conv">Convenio</th>'
+    +'<th>N° vacantes</th>'
+    +'<th>Cubiertas</th>'
+    +'<th>Libres para repechaje</th>'
+    +'<th>Inscritos por repechaje</th>'
+    +'</tr></thead><tbody>'
     +list.map(function(c){
-      return '<div style="background:#fff;border:1.5px solid #e0d4f0;border-radius:12px;padding:16px;">'
-        +'<div style="font-weight:800;color:#004d3d;font-size:14px;margin-bottom:10px;">'+escHtml(c.titulo)+'</div>'
-        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:12px;">'
-        +'<div class="stat" style="padding:8px;"><div class="n" style="font-size:18px;color:#004d3d;">'+c.disponibles+'</div><div class="l">Libres / '+c.vacantes+'</div></div>'
-        +'<div class="stat" style="padding:8px;"><div class="n" style="font-size:18px;color:#c0392b;">'+c.pendientes_expediente+'</div><div class="l">Por presentar</div></div>'
-        +'<div class="stat" style="padding:8px;"><div class="n" style="font-size:18px;">'+c.caducados+'</div><div class="l">Caducados</div></div>'
-        +'<div class="stat" style="padding:8px;"><div class="n" style="font-size:18px;color:#8e44ad;">'+c.repechaje+'</div><div class="l">Repechaje</div></div>'
-        +'</div>'
-        +'<button type="button" class="btn btn-o" style="width:100%;justify-content:center;background:#8e44ad;color:#fff;" onclick="abrirConvenioRepechaje('+c.id+',\''+escJs(c.titulo)+'\')">'
-        +'<i class="fas fa-redo"></i> Ver detalle</button>'
-        +'</div>';
+      var vac = c.vacantes||0;
+      var cub = c.ocupadas||0;
+      var lib = c.disponibles!=null ? c.disponibles : Math.max(0, vac-cub);
+      var insc = c.repechaje||0;
+      return '<tr onclick="abrirConvenioRepechaje('+c.id+',\''+escJs(c.titulo)+'\')" title="Ver inscritos por repechaje">'
+        +'<td class="td-conv">'+escHtml(c.titulo)+'</td>'
+        +'<td class="num">'+vac+'</td>'
+        +'<td class="num">'+cub+'</td>'
+        +'<td class="num num-libres'+(lib<1?' cubierto':'')+'">'+lib+'</td>'
+        +'<td class="num num-insc">'+insc+'</td>'
+        +'</tr>';
     }).join('')
-    +'</div>';
+    +'</tbody></table></div>';
 }
 
 function abrirConvenioPreinscritos(itemId, titulo){
@@ -7847,6 +7896,87 @@ function abrirConvenioRepechaje(itemId, titulo){
   verInscritos(itemId, titulo, 'repechaje');
 }
 
+function aplicarVisibilidadFiltrosInscritos(){
+  var bar=document.getElementById('inscritos-filtros-bar');
+  if(!bar) return;
+  if(INSCRITOS_MODO==='repechaje'){
+    bar.style.display='none';
+    return;
+  }
+  bar.style.display='flex';
+  var esGan=INSCRITOS_MODO==='ganadores';
+  var pre=bar.querySelectorAll('.filtro-solo-preins');
+  var gan=bar.querySelectorAll('.filtro-solo-ganadores');
+  var i;
+  for(i=0;i<pre.length;i++) pre[i].style.display = esGan ? 'none' : '';
+  for(i=0;i<gan.length;i++) gan[i].style.display = esGan ? '' : 'none';
+}
+
+function canonTurnoInscrito(turno){
+  var n=String(turno||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+  if(n==='ATENCION AL CLIENTE') return 'ATENCION AL CLIENTE';
+  return String(turno||'').trim().toUpperCase();
+}
+
+function slotPostulacionInscrito(ins){
+  var s=String((ins&&ins.comisaria_postula)||'').trim();
+  var turno='', dia='', lugar='';
+  if(s.indexOf('|')>=0){
+    var p=s.split('|').map(function(x){return String(x||'').trim();});
+    lugar=p[0]||'';
+    turno=canonTurnoInscrito(p[1]);
+    dia=String(p[2]||'').toUpperCase();
+  } else {
+    var m=s.match(/^(.+?)\s*[—\-]\s*([A-ZÁÉÍÓÚÑÜ0-9 ]+?)\s*\/\s*([A-ZÁÉÍÓÚÑÜ\/]+)\s*$/i);
+    if(m){
+      lugar=String(m[1]||'').trim();
+      turno=canonTurnoInscrito(m[2]);
+      dia=String(m[3]||'').toUpperCase();
+    } else {
+      lugar=s;
+    }
+  }
+  if(!dia) dia=String((ins&&ins.dia_franco)||'').toUpperCase();
+  return {lugar:lugar, turno:turno, dia:dia};
+}
+
+function labelTurnoFiltro(turno){
+  var t=canonTurnoInscrito(turno);
+  if(t==='ATENCION AL CLIENTE') return 'Atención al cliente';
+  if(t==='MAÑANA' || t==='MANANA') return 'Mañana';
+  if(t==='TARDE') return 'Tarde';
+  if(t==='NOCHE') return 'Noche';
+  return t||'—';
+}
+
+function ordenarInscritosPorGrado(list){
+  return (list||[]).slice().sort(function(a,b){
+    var pa=pesoJerarquiaGradoResp('', a&&a.grado);
+    var pb=pesoJerarquiaGradoResp('', b&&b.grado);
+    if(pa!==pb) return pa-pb;
+    return String((a&&a.nombres)||'').localeCompare(String((b&&b.nombres)||''),'es',{sensitivity:'base'});
+  });
+}
+
+function poblarFiltrosGanadoresInscritos(){
+  var selTurno=document.getElementById('inscritos-filtro-turno');
+  if(selTurno){
+    var counts={};
+    INSCRITOS_CACHE.forEach(function(i){
+      var t=slotPostulacionInscrito(i).turno||'(Sin turno)';
+      counts[t]=(counts[t]||0)+1;
+    });
+    var keys=Object.keys(counts).sort();
+    var val=selTurno.value;
+    selTurno.innerHTML='<option value="">Turno</option>'
+      +keys.map(function(k){
+        var v=k==='(Sin turno)'?'':k;
+        return '<option value="'+escHtml(v)+'">'+escHtml(labelTurnoFiltro(k==='(Sin turno)'?'':k))+' ('+counts[k]+')</option>';
+      }).join('');
+    if(val) selTurno.value=val;
+  }
+}
+
 function verInscritos(itemId, titulo, modo){
   INSCRITOS_MODO = modo || 'preinscripcion';
   ITEM_ACTIVO_ID=itemId;
@@ -7854,6 +7984,7 @@ function verInscritos(itemId, titulo, modo){
   var icon = INSCRITOS_MODO==='ganadores' ? 'fa-trophy' : (INSCRITOS_MODO==='repechaje' ? 'fa-redo' : 'fa-users');
   var pref = INSCRITOS_MODO==='ganadores' ? 'Ganadores / expedientes' : (INSCRITOS_MODO==='repechaje' ? 'Repechaje' : 'Preinscritos');
   document.getElementById('inscritos-titulo').innerHTML='<i class="fas '+icon+'"></i> '+pref+' — '+escHtml(titulo);
+  aplicarVisibilidadFiltrosInscritos();
   var busEl=document.getElementById('inscritos-buscar');
   if(busEl){
     busEl.value='';
@@ -7869,6 +8000,12 @@ function verInscritos(itemId, titulo, modo){
   if(selMod) selMod.innerHTML='<option value="">Todas las modalidades</option>';
   var selDisp=document.getElementById('inscritos-filtro-disp');
   if(selDisp) selDisp.value='';
+  var selModo=document.getElementById('inscritos-filtro-modo');
+  if(selModo) selModo.value='';
+  ['inscritos-filtro-turno','inscritos-filtro-tipo','inscritos-filtro-vacaciones','inscritos-filtro-franco'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.value='';
+  });
   document.getElementById('inscritos-tabla').innerHTML='<p style="color:#bbb;text-align:center;padding:24px;"><i class="fas fa-spinner fa-spin"></i></p>';
   fetch(API+'/admin/items/'+itemId+'/inscritos',{headers:hdr()})
     .then(function(r){return r.json();}).then(function(d){
@@ -7895,6 +8032,7 @@ function verInscritos(itemId, titulo, modo){
       poblarFiltroUnidadesInscritos();
       poblarFiltroRegionInscritos();
       poblarFiltroModalidadInscritos();
+      poblarFiltrosGanadoresInscritos();
       renderInscritos(obtenerInscritosFiltrados(), INSCRITOS_TIPO_ACTUAL);
     });
 }
@@ -8000,7 +8138,8 @@ function poblarFiltroAreasInscritos(){
 }
 
 function obtenerInscritosFiltrados(){
-  var txt=(document.getElementById('inscritos-buscar').value||'').toLowerCase();
+  var txt=(document.getElementById('inscritos-buscar')||{}).value||'';
+  txt=txt.toLowerCase();
   var unidEl=document.getElementById('inscritos-filtro-unidad');
   var unid=unidEl?unidEl.value:'';
   var regEl=document.getElementById('inscritos-filtro-region');
@@ -8011,16 +8150,43 @@ function obtenerInscritosFiltrados(){
   var dispF=dispEl?dispEl.value:'';
   var modoEl=document.getElementById('inscritos-filtro-modo');
   var modoF=modoEl?modoEl.value:'';
-  return INSCRITOS_CACHE.filter(function(i){
+  var turnoEl=document.getElementById('inscritos-filtro-turno');
+  var turnoF=turnoEl?turnoEl.value:'';
+  var tipoEl=document.getElementById('inscritos-filtro-tipo');
+  var tipoF=tipoEl?tipoEl.value:'';
+  var vacEl=document.getElementById('inscritos-filtro-vacaciones');
+  var vacF=vacEl?vacEl.value:'';
+  var franEl=document.getElementById('inscritos-filtro-franco');
+  var franF=franEl?franEl.value:'';
+  var esGan=INSCRITOS_MODO==='ganadores';
+  var out=INSCRITOS_CACHE.filter(function(i){
+    var slot=esGan?slotPostulacionInscrito(i):null;
     var blob=((i.cip||'')+' '+(i.nombres||'')+' '+(i.dni||'')+' '+(i.codifin||'')+' '+(i.unidad||'')+' '+(i.comisaria_postula||'')+' '+(i.telefono||'')+' '+(i.grado||'')).toLowerCase();
-    var matchTxt=!txt||blob.indexOf(txt)>=0;
-    var matchUni=!unid||(i.unidad||'')===unid;
-    var matchReg=!regF||(i.region_policial||'')===regF;
-    var matchMod=!modF||(i.modalidad||'')===modF;
-    var matchDisp=!dispF||(i.disponibilidad||'')===dispF;
+    var matchTxt=esGan||!txt||blob.indexOf(txt)>=0;
+    var matchUni=esGan||!unid||(i.unidad||'')===unid;
+    var matchReg=esGan||!regF||(i.region_policial||'')===regF;
+    var matchMod=esGan||!modF||(i.modalidad||'')===modF;
+    var matchDisp=esGan||!dispF||(i.disponibilidad||'')===dispF;
     var matchModo=!modoF||String(i.modo_ingreso||'').toLowerCase()===modoF;
-    return matchTxt&&matchUni&&matchReg&&matchMod&&matchDisp&&matchModo;
+    var matchTurno=!esGan||!turnoF||canonTurnoInscrito(slot.turno)===canonTurnoInscrito(turnoF);
+    var matchTipo=!esGan||!tipoF||String(slot.dia||'').toUpperCase()===tipoF || String(slot.dia||'').toUpperCase()==='PAR/IMPAR';
+    var disp=String(i.disponibilidad||'').toUpperCase();
+    var matchVac=true;
+    if(esGan && vacF){
+      if(vacF==='VACACIONES') matchVac=disp==='VACACIONES';
+      else if(vacF==='B1') matchVac=disp==='VACACIONES' && String(i.bloque_vacaciones||'')==='1';
+      else if(vacF==='B2') matchVac=disp==='VACACIONES' && String(i.bloque_vacaciones||'')==='2';
+    }
+    var matchFran=true;
+    if(esGan && franF){
+      var diaF=String(i.dia_franco||slot.dia||'').toUpperCase();
+      if(franF==='FRANCO') matchFran=disp==='FRANCO';
+      else matchFran=disp==='FRANCO' && diaF===franF;
+    }
+    return matchTxt&&matchUni&&matchReg&&matchMod&&matchDisp&&matchModo&&matchTurno&&matchTipo&&matchVac&&matchFran;
   });
+  if(esGan) return ordenarInscritosPorGrado(out);
+  return out;
 }
 
 function filtrarInscritos(){
