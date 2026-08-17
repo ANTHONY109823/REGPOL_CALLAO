@@ -1173,7 +1173,7 @@ const pendingStaticReads = new Map();
 const STATIC_CACHE_ENABLED = !!(process.env.RAILWAY_ENVIRONMENT || process.env.FORCE_STATIC_CACHE);
 const STATIC_WARM_FILES = [
   'index.html', 'style.css', 'portal.js', 'portal-data.js', 'site-data.json', 'api-config.js',
-  'cursos.html', 'convenios.html', 'unidades.html', 'unidades-data.json',
+  'cursos.html', 'convenios.html', 'consulta.html', 'unidades.html', 'unidades-data.json',
   'evaluacion.html', 'detalle.html', 'img/regpol-callao.jpg',
   'login.html', 'panel-admin.html', 'panel-admin.css', 'panel-usuario.html'
 ];
@@ -1235,8 +1235,10 @@ function enviarEstatico(req, res, entry, method) {
   res.status(200);
   res.setHeader('Content-Type', MIME_TYPES[entry.ext] || 'application/octet-stream');
   res.setHeader('Content-Length', String(entry.data.length));
-  // no-cache (no no-store): permite 304 con ETag y evita HTML/JS viejos 24h
-  if (entry.ext === '.html' || entry.ext === '.css' || entry.ext === '.js' || entry.ext === '.json') {
+  // HTML: no-store para que el portal no quede con consulta.html viejo tras un deploy.
+  if (entry.ext === '.html') {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  } else if (entry.ext === '.css' || entry.ext === '.js' || entry.ext === '.json') {
     res.setHeader('Cache-Control', 'no-cache');
   } else {
     res.setHeader('Cache-Control', 'public, max-age=86400');
@@ -1264,6 +1266,8 @@ app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
 app.get('/health', function(req, res) {
+  var sha = process.env.RAILWAY_GIT_COMMIT_SHA || process.env.RAILWAY_GIT_COMMIT || '';
+  if (sha) res.setHeader('X-Regpol-Sha', sha);
   res.status(200).type('text/plain').send('ok');
 });
 
@@ -1280,7 +1284,7 @@ app.use(express.static(PUBLIC_DIR, {
   setHeaders: function(res, filePath) {
     if (/\.html$/i.test(filePath)) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
     if (/\.css$/i.test(filePath)) {
       res.setHeader('Content-Type', 'text/css; charset=utf-8');
