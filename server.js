@@ -7742,6 +7742,19 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
            AND COALESCE(pdf_requisitos,'')=''`,
         [it.id]
       );
+      const desglose = await pool.query(
+        `SELECT
+           COUNT(*) FILTER (
+             WHERE estado = ANY($2::varchar[])
+               AND UPPER(COALESCE(disponibilidad,'')) = 'VACACIONES'
+           )::int AS vacaciones,
+           COUNT(*) FILTER (
+             WHERE estado = ANY($2::varchar[])
+               AND LOWER(COALESCE(NULLIF(modo_ingreso,''),'sorteo')) = 'sorteo'
+           )::int AS sorteo
+         FROM inscripciones WHERE item_id=$1`,
+        [it.id, ['ganador', 'en_revision', 'observado', 'expediente_ok']]
+      );
       const pre =
         (mapa.preinscrito || 0) + (mapa.pendiente || 0) +
         (mapa.aprobado || 0) + (mapa.verificado || 0);
@@ -7758,6 +7771,8 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
         disponibles: vac.disponibles != null ? vac.disponibles : 0,
         preinscritos: pre,
         ganadores: mapa.ganador || 0,
+        ganadores_vacaciones: (desglose.rows[0] && desglose.rows[0].vacaciones) || 0,
+        ganadores_sorteo: (desglose.rows[0] && desglose.rows[0].sorteo) || 0,
         en_revision: mapa.en_revision || 0,
         observados: mapa.observado || 0,
         expediente_ok: mapa.expediente_ok || 0,

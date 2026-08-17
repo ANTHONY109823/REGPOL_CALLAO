@@ -113,7 +113,7 @@
     table.t td{padding:7px 10px;border-bottom:1px solid #eee;}
     table.t tr:nth-child(even){background:#f7faf7;}
     .tabla-rep-excel-wrap{overflow-x:auto;border:1px solid #c5d4cc;border-radius:8px;}
-    table.tabla-rep-excel{width:100%;border-collapse:collapse;font-size:13px;min-width:640px;}
+    table.tabla-rep-excel{width:100%;border-collapse:collapse;font-size:13px;min-width:860px;}
     table.tabla-rep-excel th{background:#004d3d;color:#fff;padding:10px 12px;text-align:center;
       font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-right:1px solid #003d31;white-space:nowrap;}
     table.tabla-rep-excel th.col-conv{text-align:left;width:42%;}
@@ -7835,6 +7835,8 @@ function renderConvGanadoresCuadros(list){
     +'<thead><tr>'
     +'<th class="col-conv">Convenio</th>'
     +'<th>Ganadores</th>'
+    +'<th>Por vacaciones</th>'
+    +'<th>Por sorteo</th>'
     +'<th>En revisión</th>'
     +'<th>Observados</th>'
     +'<th>Sin PDF</th>'
@@ -7844,6 +7846,8 @@ function renderConvGanadoresCuadros(list){
       return '<tr onclick="abrirConvenioGanadores('+c.id+',\''+escJs(c.titulo)+'\')" title="Abrir ganadores y expedientes">'
         +'<td class="td-conv">'+escHtml(c.titulo)+'</td>'
         +'<td class="num" style="color:#b8860b;">'+(c.ganadores||0)+'</td>'
+        +'<td class="num" style="color:#1a7a3a;">'+(c.ganadores_vacaciones||0)+'</td>'
+        +'<td class="num" style="color:#2980b9;">'+(c.ganadores_sorteo||0)+'</td>'
         +'<td class="num" style="color:#2980b9;">'+(c.en_revision||0)+'</td>'
         +'<td class="num" style="color:#e67e22;">'+(c.observados||0)+'</td>'
         +'<td class="num" style="color:#c0392b;">'+(c.pendientes_expediente||0)+'</td>'
