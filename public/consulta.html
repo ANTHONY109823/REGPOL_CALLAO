@@ -643,7 +643,6 @@ function renderResultados(lista) {
       if (!motivoTxt && motivoTitulo) motivoTxt = motivoTitulo;
       html += '<div class="consulta-meta">'
         + '<div><span>CIP</span><strong>' + escC(ins.cip || '—') + '</strong></div>'
-        + '<div><span>Origen</span><strong>' + escC(ins.modo_ingreso_label || '—') + '</strong></div>'
         + '<div><span>Grado</span><strong>' + escC(ins.grado || '—') + '</strong></div>'
         + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
         + '<div><span>Nombres</span><strong>' + escC(nombreParts.nombres) + '</strong></div>'
@@ -716,9 +715,6 @@ function renderResultados(lista) {
     } else {
       html += '<div class="consulta-meta">'
         + '<div><span>CIP</span><strong>' + escC(ins.cip || '—') + '</strong></div>'
-        + '<div><span>Origen</span><strong>' + escC(ins.modo_ingreso_label || (ins.modo_ingreso === 'repechaje' ? 'Por repechaje' : (ins.modo_ingreso === 'sorteo' ? 'Por sorteo' : '—'))) + '</strong></div>'
-        + '<div><span>Área gestora</span>' + escC(ins.oficina_gestora) + '</div>'
-        + '<div><span>Ubicación del trámite</span>' + escC(ins.ubicacion_tramite) + '</div>'
         + '<div><span>Fecha de inscripción</span>' + escC(ins.fecha || '—') + '</div>'
         + '<div><span>Grado</span><strong>' + escC(ins.grado || '—') + '</strong></div>'
         + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
