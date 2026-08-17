@@ -5692,8 +5692,9 @@ async function validarInscripcionConvenioContraNominaCallao(cipNorm, nombres, un
 }
 
 /**
- * Evita re-inscripción / fraude: mismo CIP, mismo DNI, mismos nombres o mismos apellidos
- * en la convocatoria (nuevo o repechaje).
+ * Evita re-inscripción / fraude en la misma convocatoria durante el mes actual (Lima).
+ * No considera meses anteriores ni «anulado_solicitud», para que puedan inscribirse
+ * de forma normal en una nueva ventana (p. ej. tras un ensayo).
  */
 async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
   const cipKey = cipKeyInscripcion(cipNorm);
@@ -5701,12 +5702,16 @@ async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
   const nombreNorm = normalizarNombreInscripcion(nombres);
   const tokensNorm = nombreTokensOrdenados(nombres);
   const apeNorm = apellidosInscripcion(nombres);
+  const vigenteMes = `estado NOT IN ('anulado_solicitud')
+    AND to_char(timezone('America/Lima', COALESCE(fecha::timestamptz, NOW())), 'YYYY-MM')
+      = to_char(timezone('America/Lima', NOW()), 'YYYY-MM')`;
 
   if (cipKey) {
     const byCip = await pool.query(
       `SELECT id, cip, dni, nombres, estado, nro_registro
        FROM inscripciones
        WHERE item_id=$1 AND ${sqlCipKeyInscripcion('cip')}=$2
+         AND ${vigenteMes}
        ORDER BY id ASC LIMIT 1`,
       [itemId, cipKey]
     );
@@ -5719,6 +5724,7 @@ async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
        FROM inscripciones
        WHERE item_id=$1
          AND regexp_replace(COALESCE(dni,''), '[^0-9]', '', 'g') = $2
+         AND ${vigenteMes}
        ORDER BY id ASC LIMIT 1`,
       [itemId, dniNorm]
     );
@@ -5730,6 +5736,7 @@ async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
       `SELECT id, cip, dni, nombres, estado, nro_registro
        FROM inscripciones
        WHERE item_id=$1 AND ${sqlNombreInscripcion('nombres')} = $2
+         AND ${vigenteMes}
        ORDER BY id ASC LIMIT 1`,
       [itemId, nombreNorm]
     );
@@ -5739,7 +5746,7 @@ async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
   if (tokensNorm.length >= 8) {
     const cand = await pool.query(
       `SELECT id, cip, dni, nombres, estado, nro_registro
-       FROM inscripciones WHERE item_id=$1 ORDER BY id ASC`,
+       FROM inscripciones WHERE item_id=$1 AND ${vigenteMes} ORDER BY id ASC`,
       [itemId]
     );
     for (const row of cand.rows) {
@@ -5754,6 +5761,7 @@ async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
       `SELECT id, cip, dni, nombres, estado, nro_registro
        FROM inscripciones
        WHERE item_id=$1 AND ${sqlApellidosInscripcion('nombres')} = $2
+         AND ${vigenteMes}
        ORDER BY id ASC LIMIT 1`,
       [itemId, apeNorm]
     );
