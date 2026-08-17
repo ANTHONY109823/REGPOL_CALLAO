@@ -541,7 +541,6 @@ function splitApellidosNombres(nombresCompletos) {
 
 function resumenConvenioConsulta(ins) {
   var partes = [];
-  if (ins.horario) partes.push(ins.horario);
   if (ins.comisaria_postula) partes.push('Postula a: ' + ins.comisaria_postula);
   if (ins.vacantes != null && ins.vacantes !== '') partes.push('Vacantes: ' + ins.vacantes);
   return partes.length ? partes.join(' · ') : (ins.convocatoria || '—');
@@ -693,7 +692,6 @@ function renderResultados(lista) {
         + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
         + '<div><span>Nombres</span><strong>' + escC(nombreParts.nombres) + '</strong></div>'
         + '<div><span>Postulación (lugar / turno / día)</span><strong>' + escC(ins.comisaria_postula || '—') + '</strong></div>'
-        + '<div><span>Horario en el que laborará</span><strong>' + escC(ins.horario || '—') + '</strong></div>'
         + '<div><span>Situación</span><strong>' + escC(labelSituacionConsulta(ins.disponibilidad, ins.dia_franco)) + '</strong></div>'
         + (ins.plazo_expediente
           ? '<div><span>Plazo para presentarlo</span><strong>' + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</strong></div>'
@@ -726,7 +724,6 @@ function renderResultados(lista) {
         + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
         + '<div><span>Nombres</span><strong>' + escC(nombreParts.nombres) + '</strong></div>'
         + (ins.comisaria_postula ? '<div><span>Comisaría</span><strong>' + escC(ins.comisaria_postula) + '</strong></div>' : '')
-        + (ins.horario ? '<div><span>Horario</span><strong>' + escC(ins.horario) + '</strong></div>' : '')
         + (ins.unidad ? '<div><span>Unidad</span>' + escC(ins.unidad) + '</div>' : '')
         + '</div>';
       if (ins.en_verificacion || ins.mostrar_modal_verificacion) {
@@ -997,7 +994,6 @@ function htmlConstanciaSheet(ins) {
   var beneficio = (ins.fecha_inicio || '').trim();
   var detalleBen = (ins.duracion || '').trim();
   var lugar = (ins.lugar || '').trim();
-  var horario = (ins.horario || '').trim();
   var cia = (ins.comisaria_postula || '').trim();
   var aprobNombre = (ins.aprobado_por_nombre || '').trim();
   var aprobFecha = (ins.fecha_aprobacion_legible || '').trim();
@@ -1041,7 +1037,6 @@ function htmlConstanciaSheet(ins) {
     + '<div class="c-sec"><div class="c-sec-tit">3. Presentación y turno de trabajo</div><div class="c-grid">'
     + fila('Dónde presentarse', cia || lugar || 'Según indicación de Convenios', true)
     + fila('Punto / lugar de concentración', lugar || (cia ? ('Comisaría ' + cia) : 'Por confirmar'), true)
-    + fila('Horario / turno de trabajo', horario || 'Por confirmar', true)
     + fila('Indicaciones adicionales', (ins.contactos_responsables || '').trim() || 'Consultar con el área de Convenios', true)
     + '</div></div>'
 

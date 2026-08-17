@@ -192,8 +192,10 @@ setInterval(function() {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const sha256 = adminAuth.sha256;
 
-// Timestamps en BD (TIMESTAMP sin tz, servidor UTC). fecha_iso permite hora local en el navegador.
-function sqlFechaTxt(col) { return `TO_CHAR(${col},'DD/MM/YYYY HH24:MI')`; }
+// Timestamps en BD (TIMESTAMP sin tz, servidor UTC). El texto se muestra en hora Lima.
+function sqlFechaTxt(col) {
+  return `TO_CHAR(timezone('America/Lima', (${col})::timestamptz), 'DD/MM/YYYY HH24:MI')`;
+}
 function sqlFechaIso(col) { return `(${col} AT TIME ZONE 'UTC')`; }
 
 function calcularEdadDesdeISO(fecha_nac) {
@@ -2982,7 +2984,7 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
        FROM evaluaciones ORDER BY fecha DESC LIMIT 4`);
     const ultInscR = await pool.query(
       `SELECT 'inscripcion' AS tipo, n.nombres AS titulo, i.titulo AS detalle,
-        TO_CHAR(n.fecha,'DD/MM/YYYY HH24:MI') AS fecha,
+        ${sqlFechaTxt('n.fecha')} AS fecha,
         ${sqlFechaIso('n.fecha')} AS fecha_iso,
         n.estado
        FROM inscripciones n JOIN items_portal i ON i.id=n.item_id
@@ -5039,7 +5041,7 @@ app.get('/admin/stats-gestion', requireAuth, async (req, res) => {
        JOIN items_portal i ON i.id=s.item_id
        WHERE s.tipo='resultado' AND s.publicado=TRUE AND i.tipo=$1`, [tipo]);
     const ultimasR = await pool.query(
-      `SELECT TO_CHAR(n.fecha,'DD/MM/YYYY HH24:MI') AS fecha, n.nombres, n.estado, i.titulo AS convocatoria
+      `SELECT ${sqlFechaTxt('n.fecha')} AS fecha, n.nombres, n.estado, i.titulo AS convocatoria
        FROM inscripciones n JOIN items_portal i ON i.id=n.item_id
        WHERE i.tipo=$1 ORDER BY n.fecha DESC LIMIT 8`, [tipo]);
     const activasR = await pool.query(
@@ -6096,7 +6098,7 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
     if (!cipKey) return res.json({ ok: false, error: 'Ingrese un CIP válido (solo números, 6 a 12 dígitos).' });
     const r = await pool.query(
       `SELECT n.id, n.cip, n.nombres, n.unidad, n.cargo, n.grado, n.estado, n.observacion,
-              TO_CHAR(n.fecha, 'DD/MM/YYYY HH24:MI') AS fecha,
+              ${sqlFechaTxt('n.fecha')} AS fecha,
               n.area AS area_postulante, n.disponibilidad, n.dia_franco,
               n.telefono, n.email, n.modo_ingreso, n.motivo_observacion,
               n.plazo_expediente, n.fecha_ganador, n.modalidad, n.modalidad_otro,
@@ -6277,7 +6279,7 @@ app.get('/admin/convenios/historial-cip', requireAuth, async (req, res) => {
       `SELECT n.id, n.cip, n.nombres, n.dni, n.grado, n.unidad, n.estado,
               n.comisaria_postula, n.disponibilidad, n.dia_franco, n.codifin,
               n.region_policial, n.modalidad, n.telefono, n.email,
-              TO_CHAR(n.fecha, 'DD/MM/YYYY HH24:MI') AS fecha,
+              ${sqlFechaTxt('n.fecha')} AS fecha,
               ${sqlMesLima('n.fecha')} AS mes,
               i.id AS item_id, i.titulo, i.tipo
        FROM inscripciones n
