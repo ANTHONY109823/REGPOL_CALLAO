@@ -213,6 +213,33 @@
     .modal.open{display:flex;}
     .modal-box{background:#fff;border-radius:12px;padding:28px;width:520px;
       max-width:96vw;max-height:90vh;overflow-y:auto;overflow-x:hidden;box-sizing:border-box;}
+    #modal-pdf-preinscritos{padding:12px;z-index:1200;}
+    #modal-pdf-preinscritos .modal-box{
+      width:min(1180px,96vw);max-width:96vw;max-height:94vh;padding:0;
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    .mpp-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;background:#004d3d;color:#fff;flex-shrink:0;}
+    .mpp-head h3{margin:0;font-size:15px;font-weight:800;flex:1;min-width:180px;line-height:1.25;}
+    .mpp-filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 16px;background:#f7faf7;border-bottom:1px solid #e0ebe4;flex-shrink:0;}
+    .mpp-filtros select{padding:7px 10px;border:1.5px solid #c5d9ce;border-radius:6px;font-size:12.5px;min-width:160px;background:#fff;}
+    .mpp-stats{display:flex;gap:8px;flex-wrap:wrap;padding:10px 16px 4px;flex-shrink:0;}
+    .mpp-stat{background:#fff8e1;border:1.5px solid #ffe082;border-radius:8px;padding:8px 14px;min-width:90px;text-align:center;}
+    .mpp-stat .n{font-size:20px;font-weight:900;color:#856404;line-height:1.1;}
+    .mpp-stat .l{font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.3px;}
+    .mpp-tabla-wrap{flex:1;overflow:auto;padding:8px 16px 12px;min-height:180px;}
+    .mpp-tabla{width:100%;border-collapse:collapse;font-size:12px;min-width:760px;}
+    .mpp-tabla th{background:#004d3d;color:#fff;font-weight:700;padding:7px 6px;text-align:left;font-size:10.5px;letter-spacing:.3px;position:sticky;top:0;z-index:1;white-space:nowrap;}
+    .mpp-tabla td{border-bottom:1px solid #e0ebe4;padding:7px 6px;color:#333;vertical-align:middle;}
+    .mpp-tabla tbody tr:nth-child(even){background:#f3f8f4;}
+    .mpp-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fff3cd;color:#856404;}
+    .mpp-badge.gan{background:#fff8e1;color:#856404;}
+    .mpp-badge.rev{background:#eaf2fb;color:#2980b9;}
+    .mpp-badge.obs{background:#fef5e7;color:#e67e22;}
+    .mpp-badge.ok{background:#d4edda;color:#1a7a3a;}
+    .mpp-badge.rep{background:#f5eef8;color:#8e44ad;}
+    .mpp-badge.cad{background:#eee;color:#666;}
+    .mpp-foot{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid #e0ebe4;background:#f7faf7;flex-shrink:0;}
+    .mpp-vacio{text-align:center;padding:28px 16px;color:#888;font-size:13.5px;}
     #modal-item.modal-item-full{padding:12px;align-items:center;justify-content:center;}
     #modal-item.modal-item-full .modal-box{
       width:min(1180px,96vw)!important;max-width:96vw!important;height:auto!important;max-height:94vh!important;
@@ -2477,6 +2504,30 @@
       <button type="button" class="btn-pre-pdf" onclick="descargarConstanciaAdminPdf()">Descargar PDF</button>
       <button type="button" class="btn-pre-jpg" onclick="descargarConstanciaAdminJpg()">Descargar JPG</button>
       <button type="button" class="btn-pre-cerrar" onclick="cerrarModalAdminConstancia()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-pdf-preinscritos" class="modal" role="dialog" aria-modal="true" aria-labelledby="mpp-titulo">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="mpp-head">
+      <h3 id="mpp-titulo"><i class="fas fa-users"></i> Preinscritos</h3>
+      <button type="button" class="btn" style="background:#e8eee9;color:#333;" onclick="cerrarModal('modal-pdf-preinscritos')">Cerrar</button>
+    </div>
+    <div class="mpp-filtros">
+      <select id="mpp-filtro-turno" onchange="filtrarModalPdfPreinscritos()">
+        <option value="">Todos los turnos</option>
+      </select>
+      <select id="mpp-filtro-dia" onchange="filtrarModalPdfPreinscritos()">
+        <option value="">Todos los días</option>
+      </select>
+    </div>
+    <div class="mpp-stats" id="mpp-stats"></div>
+    <div class="mpp-tabla-wrap" id="mpp-cuerpo"><p class="mpp-vacio">Cargando...</p></div>
+    <div class="mpp-foot">
+      <button type="button" class="btn btn-v" id="mpp-btn-imprimir" onclick="imprimirPdfPreinscritosFiltrado()">
+        <i class="fas fa-print"></i> IMPRIMIR PDF
+      </button>
     </div>
   </div>
 </div>
@@ -7745,6 +7796,191 @@ function abrirSorteoDesdeItem(itemId){
   window.open('sorteo-live.html?item_id='+itemId, 'regpol_sorteo_live', 'noopener,noreferrer');
 }
 
+function descargarPdfPreinscritosAdmin(){
+  abrirModalPdfListaConvenio('preinscritos');
+}
+
+var MPP_MODO = 'preinscritos';
+
+function listaBaseListaConvenioPdf(){
+  if(MPP_MODO==='ganadores'){
+    return (INSCRITOS_CACHE||[]).filter(function(i){
+      return ['ganador','en_revision','observado','expediente_ok'].indexOf(i.estado)>=0;
+    });
+  }
+  if(MPP_MODO==='repechaje'){
+    return (INSCRITOS_CACHE||[]).filter(function(i){
+      return ['caducado','repechaje','ganador'].indexOf(i.estado)>=0
+        && (i.estado!=='ganador' || !i.tiene_pdf);
+    });
+  }
+  return (INSCRITOS_CACHE||[]).filter(function(i){
+    return ['preinscrito','pendiente','aprobado','verificado'].indexOf(i.estado)>=0;
+  });
+}
+
+function etiquetaEstadoListaPdf(estado){
+  var e=String(estado||'').toLowerCase();
+  if(e==='preinscrito'||e==='pendiente'||e==='aprobado'||e==='verificado') return {txt:'Preinscrito', cls:''};
+  if(e==='ganador') return {txt:'Ganador', cls:'gan'};
+  if(e==='en_revision') return {txt:'En revisión', cls:'rev'};
+  if(e==='observado') return {txt:'Observado', cls:'obs'};
+  if(e==='expediente_ok') return {txt:'Expediente OK', cls:'ok'};
+  if(e==='repechaje') return {txt:'Repechaje', cls:'rep'};
+  if(e==='caducado') return {txt:'Caducado', cls:'cad'};
+  return {txt:estado||'—', cls:''};
+}
+
+function canonClaveFiltroPdf(v){
+  return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+}
+
+function abrirModalPdfPreinscritos(){
+  abrirModalPdfListaConvenio('preinscritos');
+}
+
+function abrirModalPdfListaConvenio(modo){
+  MPP_MODO = (modo==='ganadores'||modo==='repechaje') ? modo : 'preinscritos';
+  var modal=document.getElementById('modal-pdf-preinscritos');
+  if(!modal) return;
+  var list=listaBaseListaConvenioPdf();
+  var tit=document.getElementById('mpp-titulo');
+  var h=document.getElementById('inscritos-titulo');
+  var nombre=h?h.textContent.replace(/^[^—]+—\s*/,'').trim():'Convenio';
+  var etiqueta=MPP_MODO==='ganadores'?'Ganadores':(MPP_MODO==='repechaje'?'Repechaje':'Preinscritos');
+  var icono=MPP_MODO==='ganadores'?'fa-trophy':(MPP_MODO==='repechaje'?'fa-redo':'fa-users');
+  if(tit) tit.innerHTML='<i class="fas '+icono+'"></i> '+etiqueta+' — '+escHtml(nombre);
+  var turnos={}, dias={};
+  list.forEach(function(ins){
+    var sl=slotPostulacionInscrito(ins);
+    if(sl.turno) turnos[sl.turno]=true;
+    if(sl.dia) dias[sl.dia]=true;
+  });
+  var ordTurno=function(a,b){
+    function peso(t){
+      var n=canonClaveFiltroPdf(t);
+      if(n.indexOf('MANANA')>=0) return 1;
+      if(n==='TARDE') return 2;
+      if(n==='NOCHE') return 3;
+      if(n.indexOf('ATENCION')>=0) return 4;
+      return 10;
+    }
+    return peso(a)-peso(b)||a.localeCompare(b,'es');
+  };
+  var selT=document.getElementById('mpp-filtro-turno');
+  var selD=document.getElementById('mpp-filtro-dia');
+  if(selT){
+    selT.innerHTML='<option value="">Todos los turnos ('+list.length+')</option>'
+      +Object.keys(turnos).sort(ordTurno).map(function(t){
+        return '<option value="'+escHtml(t)+'">'+escHtml(labelTurnoFiltro(t))+'</option>';
+      }).join('');
+  }
+  if(selD){
+    selD.innerHTML='<option value="">Todos los días ('+list.length+')</option>'
+      +Object.keys(dias).sort().map(function(d){
+        return '<option value="'+escHtml(d)+'">'+escHtml(d)+'</option>';
+      }).join('');
+  }
+  modal.classList.add('open');
+  filtrarModalPdfPreinscritos();
+}
+
+function obtenerPreinscritosPdfFiltrados(){
+  var turno=String((document.getElementById('mpp-filtro-turno')||{}).value||'');
+  var dia=String((document.getElementById('mpp-filtro-dia')||{}).value||'');
+  var tKey=canonClaveFiltroPdf(turno);
+  var dKey=canonClaveFiltroPdf(dia);
+  return listaBaseListaConvenioPdf().filter(function(ins){
+    if(!tKey && !dKey) return true;
+    var sl=slotPostulacionInscrito(ins);
+    if(tKey && canonClaveFiltroPdf(sl.turno)!==tKey) return false;
+    if(dKey && canonClaveFiltroPdf(sl.dia)!==dKey) return false;
+    return true;
+  });
+}
+
+function filtrarModalPdfPreinscritos(){
+  var list=obtenerPreinscritosPdfFiltrados();
+  var stats=document.getElementById('mpp-stats');
+  var cuerpo=document.getElementById('mpp-cuerpo');
+  var total=listaBaseListaConvenioPdf().length;
+  if(stats){
+    stats.innerHTML='<div class="mpp-stat"><div class="n">'+total+'</div><div class="l">Total</div></div>'
+      +'<div class="mpp-stat"><div class="n">'+list.length+'</div><div class="l">En este filtro</div></div>';
+  }
+  if(!cuerpo) return;
+  if(!list.length){
+    cuerpo.innerHTML='<p class="mpp-vacio">No hay '+(MPP_MODO==='ganadores'?'ganadores':(MPP_MODO==='repechaje'?'registros de repechaje':'preinscritos'))+' con ese turno o día.</p>';
+    return;
+  }
+  cuerpo.innerHTML='<table class="mpp-tabla"><thead><tr>'
+    +'<th>#</th><th>GRADO</th><th>CIP</th><th>APELLIDOS Y NOMBRES</th>'
+    +'<th>POSTULA A</th><th>TURNO</th><th>DÍA</th><th>ESTADO</th>'
+    +'</tr></thead><tbody>'
+    +list.map(function(ins,idx){
+      var sl=slotPostulacionInscrito(ins);
+      var est=etiquetaEstadoListaPdf(ins.estado);
+      return '<tr>'
+        +'<td>'+(idx+1)+'</td>'
+        +'<td>'+escHtml(siglaGradoPnp(ins.grado))+'</td>'
+        +'<td>'+escHtml(ins.cip||'—')+'</td>'
+        +'<td>'+escHtml(String(ins.nombres||'—').toUpperCase())+'</td>'
+        +'<td>'+escHtml(ins.comisaria_postula||'—')+'</td>'
+        +'<td>'+escHtml(labelTurnoFiltro(sl.turno))+'</td>'
+        +'<td>'+escHtml(sl.dia||'—')+'</td>'
+        +'<td><span class="mpp-badge '+(est.cls||'')+'">'+escHtml(est.txt)+'</span></td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table>';
+}
+
+function imprimirPdfPreinscritosFiltrado(){
+  if(!ITEM_ACTIVO_ID) return;
+  var btn=document.getElementById('mpp-btn-imprimir');
+  if(btn){
+    btn.disabled=true;
+    btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Generando...';
+  }
+  var turno=String((document.getElementById('mpp-filtro-turno')||{}).value||'');
+  var dia=String((document.getElementById('mpp-filtro-dia')||{}).value||'');
+  var q='?t='+Date.now();
+  if(turno) q+='&turno='+encodeURIComponent(turno);
+  if(dia) q+='&dia='+encodeURIComponent(dia);
+  var ruta='/preinscritos.pdf';
+  if(MPP_MODO==='ganadores') ruta='/ganadores.pdf';
+  else if(MPP_MODO==='repechaje') ruta='/repechaje.pdf';
+  fetch(API+'/admin/items/'+ITEM_ACTIVO_ID+ruta+q,{headers:hdr()})
+    .then(function(r){
+      if(!r.ok){
+        return r.json().catch(function(){return {};}).then(function(j){
+          throw new Error((j&&j.error)||'No se pudo generar el PDF.');
+        });
+      }
+      var disp=r.headers.get('Content-Disposition')||'';
+      var m=disp.match(/filename="([^"]+)"/);
+      var nombre=(m&&m[1])||(MPP_MODO==='ganadores'?'Ganadores.pdf':(MPP_MODO==='repechaje'?'Repechaje.pdf':'Preinscritos.pdf'));
+      return r.blob().then(function(blob){ return {blob:blob, nombre:nombre}; });
+    })
+    .then(function(d){
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(d.blob);
+      a.download=d.nombre;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function(){
+        URL.revokeObjectURL(a.href);
+        a.remove();
+      }, 1500);
+    })
+    .catch(function(e){ alert(e.message||'No se pudo imprimir el PDF.'); })
+    .then(function(){
+      if(btn){
+        btn.disabled=false;
+        btn.innerHTML='<i class="fas fa-print"></i> IMPRIMIR PDF';
+      }
+    });
+}
+
 function irConvPreinscritos(el){
   ir('conv-preinscritos', el);
 }
@@ -8257,9 +8493,23 @@ function renderInscritos(list, tipo){
   var vacInfo = window.INSCRITOS_VACANTES_INFO || null;
 
   var btnAccion = '';
-  if(esConvenio && INSCRITOS_MODO==='preinscripcion' && aptos>0){
-    btnAccion='<button type="button" class="btn btn-o" style="margin-left:8px;" onclick="abrirSorteoDesdeItem('+ITEM_ACTIVO_ID+')">'
-      +'<i class="fas fa-random"></i> MANDAR A SORTEO ('+aptos+' preinscritos)</button>';
+  if(esConvenio && INSCRITOS_MODO==='preinscripcion'){
+    btnAccion='<div style="display:flex;flex-direction:column;gap:8px;margin-left:8px;min-width:260px;">'
+      +'<button type="button" class="btn btn-o" style="margin:0;justify-content:center;" onclick="abrirSorteoDesdeItem('+ITEM_ACTIVO_ID+')" '+(aptos<1?'disabled':'')+'>'
+      +'<i class="fas fa-random"></i> MANDAR A SORTEO ('+aptos+' preinscritos)</button>'
+      +'<button type="button" class="btn btn-v" id="btn-pdf-preinscritos" style="margin:0;justify-content:center;background:#004d3d;color:#fff;" onclick="abrirModalPdfListaConvenio(\'preinscritos\')" '+(total<1?'disabled':'')+'>'
+      +'<i class="fas fa-file-pdf"></i> DESCARGAR PDF</button>'
+      +'</div>';
+  } else if(esConvenio && INSCRITOS_MODO==='ganadores'){
+    btnAccion='<div style="display:flex;flex-direction:column;gap:8px;margin-left:8px;min-width:260px;">'
+      +'<button type="button" class="btn btn-v" id="btn-pdf-ganadores" style="margin:0;justify-content:center;background:#004d3d;color:#fff;" onclick="abrirModalPdfListaConvenio(\'ganadores\')" '+(total<1?'disabled':'')+'>'
+      +'<i class="fas fa-file-pdf"></i> DESCARGAR PDF</button>'
+      +'</div>';
+  } else if(esConvenio && INSCRITOS_MODO==='repechaje'){
+    btnAccion='<div style="display:flex;flex-direction:column;gap:8px;margin-left:8px;min-width:260px;">'
+      +'<button type="button" class="btn btn-v" id="btn-pdf-repechaje" style="margin:0;justify-content:center;background:#004d3d;color:#fff;" onclick="abrirModalPdfListaConvenio(\'repechaje\')" '+(total<1?'disabled':'')+'>'
+      +'<i class="fas fa-file-pdf"></i> DESCARGAR PDF</button>'
+      +'</div>';
   } else if(!esConvenio && verif>0){
     btnAccion='<button class="btn btn-v" style="margin-left:8px;" onclick="verAprobadosCurso()">'
       +'<i class="fas fa-list-ol"></i> VER LISTA DE APROBADOS ('+verif+' verificados)</button>';

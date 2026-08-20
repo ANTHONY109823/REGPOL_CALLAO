@@ -7133,6 +7133,167 @@ app.get('/portal/items/:id', async (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
+const ESTADOS_PREINSCRITOS_LISTA = ['preinscrito', 'pendiente', 'aprobado', 'verificado'];
+const ESTADOS_GANADORES_LISTA = ['ganador', 'en_revision', 'observado', 'expediente_ok'];
+const ESTADOS_REPECHAJE_LISTA = ['caducado', 'repechaje', 'ganador'];
+
+function nombreArchivoListaConvenio(prefijo, titulo, extra) {
+  var t = String(titulo || 'convenio').toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 50);
+  var s = String(extra || '').toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 30);
+  return String(prefijo || 'Lista') + '_' + (t || 'convenio') + (s ? '_' + s : '') + '.pdf';
+}
+
+function nombreArchivoPreinscritos(titulo, extra) {
+  return nombreArchivoListaConvenio('Preinscritos', titulo, extra);
+}
+
+function canonFiltroPreinscritos(v) {
+  return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase().replace(/\s+/g, ' ').trim();
+}
+
+async function cargarListaConvenioPdf(itemId, estados) {
+  const id = parseInt(itemId, 10);
+  if (!id) return { ok: false, error: 'Item no válido', status: 400 };
+  const cur = await pool.query(
+    `SELECT id, titulo, tipo, vacantes FROM items_portal WHERE id=$1`,
+    [id]
+  );
+  if (!cur.rows.length) return { ok: false, error: 'No encontrado', status: 404 };
+  if (cur.rows[0].tipo !== 'convenio') {
+    return { ok: false, error: 'Solo aplica a convenios', status: 400 };
+  }
+  const r = await pool.query(
+    `SELECT cip, dni, grado, nombres, unidad, region_policial, comisaria_postula,
+            estado, fecha, modalidad, modalidad_otro, disponibilidad, dia_franco,
+            modo_ingreso, bloque_vacaciones,
+            CASE WHEN pdf_requisitos IS NOT NULL AND pdf_requisitos<>'' THEN true ELSE false END AS tiene_pdf
+     FROM inscripciones
+     WHERE item_id=$1 AND estado = ANY($2::varchar[])
+     ORDER BY fecha ASC`,
+    [id, estados]
+  );
+  const vac = await conveniosFlujo.vacantesDisponibles(pool, id);
+  return {
+    ok: true,
+    item: {
+      id: cur.rows[0].id,
+      titulo: cur.rows[0].titulo || '',
+      vacantes: cur.rows[0].vacantes || 0,
+      tipo: cur.rows[0].tipo
+    },
+    inscritos: r.rows,
+    total: r.rows.length,
+    vacantes_info: vac && vac.ok
+      ? vac
+      : { vacantes: cur.rows[0].vacantes || 0, ocupadas: 0, disponibles: cur.rows[0].vacantes || 0 }
+  };
+}
+
+function filtrarListaPorTurnoDia(filas, turnoQ, diaQ) {
+  const turnoF = canonFiltroPreinscritos(turnoQ);
+  const diaF = canonFiltroPreinscritos(diaQ);
+  let out = filas || [];
+  if (turnoF || diaF) {
+    out = out.filter(function(ins) {
+      const p = conveniosFlujo.parsePostulacionSlot(ins.comisaria_postula);
+      const t = canonFiltroPreinscritos(p.turno);
+      const d = canonFiltroPreinscritos(p.dia || ins.dia_franco);
+      if (turnoF && t !== turnoF) return false;
+      if (diaF && d !== diaF) return false;
+      return true;
+    });
+  }
+  const partesFiltro = [];
+  if (turnoF) partesFiltro.push('Turno ' + String(turnoQ || turnoF).trim());
+  if (diaF) partesFiltro.push('Dia ' + String(diaQ || diaF).trim());
+  return { filas: out, partesFiltro: partesFiltro, filtroTxt: partesFiltro.join(' / ') };
+}
+
+async function responderPdfListaConvenio(req, res, opts) {
+  const data = await cargarListaConvenioPdf(req.params.id, opts.estados);
+  if (!data.ok) return res.status(data.status || 400).json({ ok: false, error: data.error });
+  if (!puedeOperarInscritos(req.admin, data.item.tipo)) {
+    return res.status(403).json({ ok: false, error: 'Sin permiso' });
+  }
+  let filasBase = data.inscritos;
+  if (opts.vistaRepechaje) {
+    filasBase = filasBase.filter(function(ins) {
+      return ins.estado !== 'ganador' || !ins.tiene_pdf;
+    });
+  }
+  const filtrado = filtrarListaPorTurnoDia(filasBase, req.query.turno, req.query.dia);
+  const buf = await generarPDFAsync('generarPDFListaPreinscritos', [
+    filtrado.filas,
+    {
+      titulo: data.item.titulo,
+      total: filtrado.filas.length,
+      vacantesLibres: (data.vacantes_info && data.vacantes_info.disponibles) || 0,
+      filtroTxt: filtrado.filtroTxt,
+      listaLabel: opts.listaLabel,
+      pieTxt: opts.pieTxt
+    }
+  ]);
+  const nombre = nombreArchivoListaConvenio(opts.prefijoArchivo, data.item.titulo, filtrado.partesFiltro.join('_'));
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'attachment; filename="' + nombre + '"');
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(buf);
+}
+
+async function cargarPreinscritosListaPdf(itemId) {
+  return cargarListaConvenioPdf(itemId, ESTADOS_PREINSCRITOS_LISTA);
+}
+
+// ── GET /admin/items/:id/preinscritos.pdf — PDF lista de preinscritos ─────────
+app.get('/admin/items/:id/preinscritos.pdf', requireAuth, async (req, res) => {
+  try {
+    await responderPdfListaConvenio(req, res, {
+      estados: ESTADOS_PREINSCRITOS_LISTA,
+      listaLabel: 'LISTA DE PREINSCRITOS',
+      pieTxt: 'Lista de preinscritos al sorteo',
+      prefijoArchivo: 'Preinscritos'
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.get('/admin/items/:id/ganadores.pdf', requireAuth, async (req, res) => {
+  try {
+    await responderPdfListaConvenio(req, res, {
+      estados: ESTADOS_GANADORES_LISTA,
+      listaLabel: 'LISTA DE GANADORES',
+      pieTxt: 'Lista de ganadores y expedientes',
+      prefijoArchivo: 'Ganadores'
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.get('/admin/items/:id/repechaje.pdf', requireAuth, async (req, res) => {
+  try {
+    await responderPdfListaConvenio(req, res, {
+      estados: ESTADOS_REPECHAJE_LISTA,
+      vistaRepechaje: true,
+      listaLabel: 'LISTA DE REPECHAJE',
+      pieTxt: 'Lista de repechaje y caducados',
+      prefijoArchivo: 'Repechaje'
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // ── POST /portal/items/:id/inscribir — público ────────────────────────────────
 app.post('/portal/items/:id/inscribir', async (req, res) => {
   try {

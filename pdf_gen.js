@@ -1675,10 +1675,236 @@ function generarPDFConstanciaVacante(inscripcion, item) {
   });
 }
 
+function siglaGradoListaPdf(grado) {
+  var raw = String(grado || '').trim();
+  if (!raw) return '—';
+  var g = raw.toUpperCase()
+    .replace(/Á/g, 'A').replace(/É/g, 'E').replace(/Í/g, 'I').replace(/Ó/g, 'O').replace(/Ú/g, 'U')
+    .replace(/\./g, '')
+    .replace(/\bPNP\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!g) return '—';
+  if (g === 'CAS' || g === 'EC' || /EMPLEADO\s*CIVIL/.test(g)) return raw.toUpperCase();
+  var reglas = [
+    [/^GRAL|^GENERAL/, 'GRAL PNP'],
+    [/^CRNEL|^CRNL|^CORONEL/, 'CRNEL PNP'],
+    [/^CMDTE|^COMANDANTE/, 'CMDTE PNP'],
+    [/^MAYOR\b|^MAY$/, 'MAY PNP'],
+    [/^CAPITAN|^CAP$/, 'CAP PNP'],
+    [/^TENIENTE|^TNTE/, 'TNTE PNP'],
+    [/^ALFEREZ|^ALFZ/, 'ALFZ PNP'],
+    [/^SO\s*SUP|^SUPERIOR|^SS$/, 'SS PNP'],
+    [/^SO\s*BRIG|^BRIGADIER|^SB$/, 'SB PNP'],
+    [/^ST1|^SO1|^T1\b|^TECNICO\s*(DE\s*)?1/, 'ST1 PNP'],
+    [/^ST2|^SO2|^T2\b|^TECNICO\s*(DE\s*)?2/, 'ST2 PNP'],
+    [/^ST3|^SO3|^T3\b|^TECNICO\s*(DE\s*)?3/, 'ST3 PNP'],
+    [/^S1$|^SUBOF(ICIAL)?\s*(DE\s*)?1/, 'S1 PNP'],
+    [/^S2$|^SUBOF(ICIAL)?\s*(DE\s*)?2/, 'S2 PNP'],
+    [/^S3$|^SUBOF(ICIAL)?\s*(DE\s*)?3/, 'S3 PNP']
+  ];
+  for (var i = 0; i < reglas.length; i++) {
+    if (reglas[i][0].test(g)) return reglas[i][1];
+  }
+  return raw.toUpperCase();
+}
+
+function siglaRegionListaPdf(region) {
+  var r = String(region || '').trim();
+  if (!r) return '—';
+  var n = r.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  if (n.indexOf('OTRA DEPENDENCIA') !== -1 || n === 'OTRO' || n === 'OTRA') return 'OTRO';
+  return r.replace(/^REGI[OÓ]N\s+POLICIAL\s+/i, 'RP ');
+}
+
+function formatearFechaHoraListaPdf(valor) {
+  if (!valor) return '—';
+  var d = valor instanceof Date ? valor : new Date(valor);
+  if (isNaN(d.getTime())) return formatearFechaPDF(valor);
+  function p(n) { return String(n).padStart(2, '0'); }
+  return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear()
+    + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+function etiquetaEstadoPreinscritoPdf(estado) {
+  var e = String(estado || '').toLowerCase();
+  if (e === 'preinscrito' || e === 'pendiente' || e === 'aprobado' || e === 'verificado') return 'Preinscrito';
+  if (e === 'ganador') return 'Ganador';
+  if (e === 'en_revision') return 'En revision';
+  if (e === 'observado') return 'Observado';
+  if (e === 'expediente_ok') return 'Expediente OK';
+  if (e === 'repechaje') return 'Repechaje';
+  if (e === 'caducado') return 'Caducado';
+  return String(estado || '—');
+}
+
+function generarPDFListaPreinscritos(lista, meta) {
+  return new Promise(function(resolve) {
+    const rows = Array.isArray(lista) ? lista : [];
+    const info = meta || {};
+    const titulo = String(info.titulo || 'Convenio').trim() || 'Convenio';
+    const total = info.total != null ? info.total : rows.length;
+    const vacLibres = info.vacantesLibres != null ? info.vacantesLibres : 0;
+    const filtroTxt = String(info.filtroTxt || '').trim();
+    const listaLabel = String(info.listaLabel || 'LISTA DE PREINSCRITOS').trim() || 'LISTA DE PREINSCRITOS';
+    const pieTxt = String(info.pieTxt || 'Lista de preinscritos al sorteo').trim();
+
+    const doc = new PDFDocument({
+      size: 'A4',
+      layout: 'landscape',
+      margins: { top: 54, bottom: 28, left: 18, right: 18 },
+      autoFirstPage: false,
+      bufferPages: true
+    });
+    const chunks = [];
+    doc.on('data', function(c) { chunks.push(c); });
+    doc.on('end', function() { resolve(Buffer.concat(chunks)); });
+
+    const m = { left: 18, right: 18 };
+    const x0 = m.left;
+    const pageW = 841.89;
+    const pageH = 595.28;
+    const W = pageW - m.left - m.right;
+    const maxY = pageH - 36;
+    const rowH = 15;
+    const headH = 16;
+
+    const cols = [
+      { k: 'n', l: '#', w: 28 },
+      { k: 'grado', l: 'GRADO', w: 70 },
+      { k: 'cip', l: 'CIP', w: 70 },
+      { k: 'nombres', l: 'APELLIDOS Y NOMBRES', w: 230 },
+      { k: 'postula', l: 'POSTULA A', w: 220 },
+      { k: 'turno', l: 'TURNO', w: 70 },
+      { k: 'dia', l: 'DÍA', w: 55 },
+      { k: 'estado', l: 'ESTADO', w: 62 }
+    ];
+
+    function dibujarCabeceraLista() {
+      doc.rect(0, 0, pageW, 48).fill(COLOR_VERDE);
+      doc.rect(0, 48, pageW, 3).fill(COLOR_ORO);
+      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(11)
+        .text('POLICÍA NACIONAL DEL PERÚ — REGPOL CALLAO', x0, 8, {
+          align: 'center', width: W, lineBreak: false
+        });
+      doc.fontSize(9).fillColor(COLOR_ORO)
+        .text(listaLabel + ' — ' + titulo.toUpperCase(), x0, 22, {
+          align: 'center', width: W, lineBreak: false, ellipsis: true
+        });
+      doc.fillColor('#e8f5f1').font('Helvetica').fontSize(7.5)
+        .text('Total: ' + total + (filtroTxt ? ('   |   Filtro: ' + filtroTxt) : '')
+          + '   |   Vacantes libres: ' + vacLibres
+          + '   |   Generado: ' + formatearFechaHoraListaPdf(new Date()),
+          x0, 36, { align: 'center', width: W, lineBreak: false, ellipsis: true });
+    }
+
+    function dibujarEncabezadoTabla(y) {
+      doc.rect(x0, y, W, headH).fill(COLOR_VERDE);
+      var x = x0;
+      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(6.5);
+      cols.forEach(function(c) {
+        doc.text(c.l, x + 2, y + 4, { width: c.w - 4, lineBreak: false, ellipsis: true });
+        x += c.w;
+      });
+      return y + headH;
+    }
+
+    function slotPostulaPdf(texto) {
+      var s = String(texto || '').trim();
+      var turno = '', dia = '';
+      if (s.indexOf('|') >= 0) {
+        var p = s.split('|').map(function(x) { return String(x || '').trim(); });
+        turno = p[1] || '';
+        dia = p[2] || '';
+      } else {
+        var m = s.match(/^(.+?)\s*[—\-]\s*([A-ZÁÉÍÓÚÑÜ0-9 ]+?)\s*\/\s*([A-ZÁÉÍÓÚÑÜ\/]+)\s*$/i);
+        if (m) {
+          turno = String(m[2] || '').trim();
+          dia = String(m[3] || '').trim();
+        }
+      }
+      var t = String(turno || '').toUpperCase();
+      if (/MANANA|MAÑANA/.test(t.normalize('NFD').replace(/[\u0300-\u036f]/g, ''))) t = 'Mañana';
+      else if (t === 'TARDE') t = 'Tarde';
+      else if (t === 'NOCHE') t = 'Noche';
+      else if (!t) t = '—';
+      return { turno: t, dia: String(dia || '').toUpperCase() || '—' };
+    }
+
+    function filaValores(ins, idx) {
+      var sl = slotPostulaPdf(ins.comisaria_postula);
+      if (sl.dia === '—' && ins.dia_franco) sl.dia = String(ins.dia_franco).toUpperCase();
+      return {
+        n: String(idx + 1),
+        grado: siglaGradoListaPdf(ins.grado),
+        cip: String(ins.cip || '—'),
+        nombres: String(ins.nombres || '—').toUpperCase(),
+        postula: String(ins.comisaria_postula || '—'),
+        turno: sl.turno,
+        dia: sl.dia,
+        estado: etiquetaEstadoPreinscritoPdf(ins.estado)
+      };
+    }
+
+    function dibujarFila(y, vals, zebra) {
+      if (zebra) doc.rect(x0, y, W, rowH).fill('#f3f8f4');
+      doc.rect(x0, y, W, rowH).stroke('#c5d9ce');
+      var x = x0;
+      cols.forEach(function(c) {
+        doc.fillColor(COLOR_NEGRO).font(c.k === 'n' ? 'Helvetica-Bold' : 'Helvetica').fontSize(6.2)
+          .text(vals[c.k] || '—', x + 2, y + 4, {
+            width: c.w - 4, lineBreak: false, ellipsis: true
+          });
+        x += c.w;
+      });
+      return y + rowH;
+    }
+
+    function piePaginas() {
+      const range = doc.bufferedPageRange();
+      for (let i = range.start; i < range.start + range.count; i++) {
+        doc.switchToPage(i);
+        const yPie = pageH - 22;
+        doc.rect(0, yPie - 4, pageW, 26).fill('#eeeeee');
+        doc.rect(0, yPie - 4, pageW, 2).fill(COLOR_ORO);
+        doc.fillColor(COLOR_GRIS).font('Helvetica').fontSize(7)
+          .text('REGPOL CALLAO — UNITIC — ' + pieTxt,
+            18, yPie + 2, { align: 'left', width: 520, lineBreak: false });
+        doc.text('Pág. ' + (i - range.start + 1) + ' / ' + range.count,
+          pageW - 90, yPie + 2, { align: 'right', width: 70, lineBreak: false });
+      }
+    }
+
+    doc.addPage();
+    dibujarCabeceraLista();
+    var y = 56;
+    y = dibujarEncabezadoTabla(y);
+
+    if (!rows.length) {
+      doc.fillColor(COLOR_GRIS).font('Helvetica-Oblique').fontSize(10)
+        .text('No hay preinscritos registrados en este convenio.', x0, y + 16, { width: W, align: 'center' });
+    } else {
+      rows.forEach(function(ins, idx) {
+        if (y + rowH > maxY) {
+          doc.addPage();
+          dibujarCabeceraLista();
+          y = 56;
+          y = dibujarEncabezadoTabla(y);
+        }
+        y = dibujarFila(y, filaValores(ins, idx), idx % 2 === 1);
+      });
+    }
+
+    piePaginas();
+    doc.end();
+  });
+}
+
 module.exports = {
   generarPDFIndividual,
   generarPDFComisaria,
   generarPDFConstanciaVacante,
+  generarPDFListaPreinscritos,
   calcularMMPI2,
   normalizarResultadoMMPI,
   interpretarT,
