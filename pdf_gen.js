@@ -1770,14 +1770,15 @@ function generarPDFListaPreinscritos(lista, meta) {
     const headH = 16;
 
     const cols = [
-      { k: 'n', l: '#', w: 28 },
-      { k: 'grado', l: 'GRADO', w: 70 },
-      { k: 'cip', l: 'CIP', w: 70 },
-      { k: 'nombres', l: 'APELLIDOS Y NOMBRES', w: 230 },
-      { k: 'postula', l: 'POSTULA A', w: 220 },
-      { k: 'turno', l: 'TURNO', w: 70 },
-      { k: 'dia', l: 'DÍA', w: 55 },
-      { k: 'estado', l: 'ESTADO', w: 62 }
+      { k: 'n', l: '#', w: 24 },
+      { k: 'grado', l: 'GRADO', w: 52 },
+      { k: 'cip', l: 'CIP', w: 62 },
+      { k: 'nombres', l: 'APELLIDOS Y NOMBRES', w: 188 },
+      { k: 'postula', l: 'POSTULA A', w: 168 },
+      { k: 'disp', l: 'DISP.', w: 72 },
+      { k: 'turno', l: 'TURNO', w: 62 },
+      { k: 'dia', l: 'DÍA', w: 48 },
+      { k: 'estado', l: 'ESTADO', w: 68 }
     ];
 
     function dibujarCabeceraLista() {
@@ -1831,6 +1832,21 @@ function generarPDFListaPreinscritos(lista, meta) {
       return { turno: t, dia: String(dia || '').toUpperCase() || '—' };
     }
 
+    function etiquetaDispListaPdf(ins) {
+      var d = String((ins && ins.disponibilidad) || '').toUpperCase();
+      if (d === 'VACACIONES') {
+        var bl = String((ins && ins.bloque_vacaciones) || '').trim();
+        if (bl === '1') return 'VAC B1';
+        if (bl === '2') return 'VAC B2';
+        return 'VACACIONES';
+      }
+      if (d === 'FRANCO') {
+        var dia = String((ins && ins.dia_franco) || '').toUpperCase();
+        return dia ? ('FRANCO ' + dia) : 'FRANCO';
+      }
+      return d || '—';
+    }
+
     function filaValores(ins, idx) {
       var sl = slotPostulaPdf(ins.comisaria_postula);
       if (sl.dia === '—' && ins.dia_franco) sl.dia = String(ins.dia_franco).toUpperCase();
@@ -1840,6 +1856,7 @@ function generarPDFListaPreinscritos(lista, meta) {
         cip: String(ins.cip || '—'),
         nombres: String(ins.nombres || '—').toUpperCase(),
         postula: String(ins.comisaria_postula || '—'),
+        disp: etiquetaDispListaPdf(ins),
         turno: sl.turno,
         dia: sl.dia,
         estado: etiquetaEstadoPreinscritoPdf(ins.estado)

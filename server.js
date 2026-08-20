@@ -6160,7 +6160,7 @@ function etiquetaEstadoPublico(estado, tipo) {
       anulado_solicitud: 'Preinscripción ANULADA a solicitud — puede inscribirse en otro convenio',
       verificado: 'Preinscrito — a la espera del sorteo',
       aprobado: 'Preinscrito — a la espera del sorteo',
-      ganador: 'GANADOR — debe subir expediente (plazo 2 días)',
+      ganador: 'GANADOR — debe subir expediente (plazo 4 días)',
       en_revision: 'Documentación en verificación por Convenios',
       observado: 'Expediente OBSERVADO — subsanar a la brevedad',
       expediente_ok: 'Documentación APROBADA — vacante ocupada',
@@ -7445,23 +7445,52 @@ async function cargarListaConvenioPdf(itemId, estados) {
   };
 }
 
-function filtrarListaPorTurnoDia(filas, turnoQ, diaQ) {
+function matchFiltroVacacionesLista(ins, vacQ) {
+  const vacF = canonFiltroPreinscritos(vacQ);
+  if (!vacF) return true;
+  const disp = String((ins && ins.disponibilidad) || '').toUpperCase();
+  const bloque = String((ins && ins.bloque_vacaciones) || '').trim();
+  if (vacF === 'VACACIONES') return disp === 'VACACIONES';
+  if (vacF === 'B1') return disp === 'VACACIONES' && bloque === '1';
+  if (vacF === 'B2') return disp === 'VACACIONES' && bloque === '2';
+  if (vacF === 'FRANCO') return disp === 'FRANCO';
+  return true;
+}
+
+function canonSedePostulaPdf(texto) {
+  const n = canonFiltroPreinscritos(texto);
+  if (!n) return '';
+  if (n.indexOf('MILLAS') >= 0) return 'ATU 200 MILLAS';
+  if (n.indexOf('COLONIAL') >= 0) return 'ATU COLONIAL';
+  if (n.indexOf('FISCAL') >= 0) return 'ATU FISCALIZACION';
+  return n;
+}
+
+function filtrarListaPorTurnoDia(filas, turnoQ, diaQ, vacQ, comisariaQ) {
   const turnoF = canonFiltroPreinscritos(turnoQ);
   const diaF = canonFiltroPreinscritos(diaQ);
+  const ciaF = canonSedePostulaPdf(comisariaQ);
   let out = filas || [];
-  if (turnoF || diaF) {
-    out = out.filter(function(ins) {
-      const p = conveniosFlujo.parsePostulacionSlot(ins.comisaria_postula);
-      const t = canonFiltroPreinscritos(p.turno);
-      const d = canonFiltroPreinscritos(p.dia || ins.dia_franco);
-      if (turnoF && t !== turnoF) return false;
-      if (diaF && d !== diaF) return false;
-      return true;
-    });
-  }
+  out = out.filter(function(ins) {
+    if (!matchFiltroVacacionesLista(ins, vacQ)) return false;
+    const p = conveniosFlujo.parsePostulacionSlot(ins.comisaria_postula);
+    const t = canonFiltroPreinscritos(p.turno);
+    const d = canonFiltroPreinscritos(p.dia || ins.dia_franco);
+    const c = canonSedePostulaPdf(p.lugar || ins.comisaria_postula);
+    if (ciaF && c !== ciaF) return false;
+    if (turnoF && t !== turnoF) return false;
+    if (diaF && d !== diaF) return false;
+    return true;
+  });
   const partesFiltro = [];
+  if (ciaF) partesFiltro.push(String(comisariaQ || ciaF).trim());
   if (turnoF) partesFiltro.push('Turno ' + String(turnoQ || turnoF).trim());
   if (diaF) partesFiltro.push('Dia ' + String(diaQ || diaF).trim());
+  const vacF = canonFiltroPreinscritos(vacQ);
+  if (vacF === 'VACACIONES') partesFiltro.push('Vacaciones');
+  else if (vacF === 'B1') partesFiltro.push('Vacaciones B1');
+  else if (vacF === 'B2') partesFiltro.push('Vacaciones B2');
+  else if (vacF === 'FRANCO') partesFiltro.push('Franco');
   return { filas: out, partesFiltro: partesFiltro, filtroTxt: partesFiltro.join(' / ') };
 }
 
@@ -7477,7 +7506,9 @@ async function responderPdfListaConvenio(req, res, opts) {
       return ins.estado !== 'ganador' || !ins.tiene_pdf;
     });
   }
-  const filtrado = filtrarListaPorTurnoDia(filasBase, req.query.turno, req.query.dia);
+  const filtrado = filtrarListaPorTurnoDia(
+    filasBase, req.query.turno, req.query.dia, req.query.vacaciones, req.query.comisaria
+  );
   const buf = await generarPDFAsync('generarPDFListaPreinscritos', [
     filtrado.filas,
     {
@@ -8013,7 +8044,7 @@ app.post('/portal/inscripciones/:id/expediente',
     if (!puedeGanador && !puedeObservado && !puedeRechazado) {
       if (row.estado === 'ganador' && plazoVencido) {
         await pool.query(`UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente' WHERE id=$1`, [id]);
-        return res.json({ ok: false, error: 'El plazo de 2 días ya venció. La vacante pasó a repechaje.' });
+        return res.json({ ok: false, error: 'El plazo de 4 días ya venció. La vacante pasó a repechaje.' });
       }
       if (row.estado === 'rechazado' && plazoVencido) {
         return res.json({ ok: false, error: 'El plazo de subsanación ya venció. No puede volver a subir expediente.' });

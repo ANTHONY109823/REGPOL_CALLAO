@@ -238,6 +238,10 @@
     .mpp-badge.ok{background:#d4edda;color:#1a7a3a;}
     .mpp-badge.rep{background:#f5eef8;color:#8e44ad;}
     .mpp-badge.cad{background:#eee;color:#666;}
+    .mpp-badge.vac{background:#d4edda;color:#1a7a3a;}
+    .mpp-badge.fra{background:#cce5ff;color:#004085;}
+    .mpp-stat.vac{background:#eaf7ee;border-color:#a5d6a7;}
+    .mpp-stat.vac .n{color:#1a7a3a;}
     .mpp-foot{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid #e0ebe4;background:#f7faf7;flex-shrink:0;}
     .mpp-vacio{text-align:center;padding:28px 16px;color:#888;font-size:13.5px;}
     #modal-item.modal-item-full{padding:12px;align-items:center;justify-content:center;}
@@ -1389,6 +1393,9 @@
             <option value="PAR">Día PAR</option>
             <option value="IMPAR">Día IMPAR</option>
           </select>
+          <select id="inscritos-filtro-comisaria" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:220px;">
+            <option value="">Todas las comisarías</option>
+          </select>
         </div>
         <div id="inscritos-stats" style="margin-bottom:10px;"></div>
         <div id="inscritos-tabla"><p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">Cargando...</p></div>
@@ -1413,6 +1420,7 @@
         <h3><i class="fas fa-trophy" style="color:#c8a94a;"></i> Ganadores y expedientes</h3>
         <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
           Clic en el convenio para abrir la lista. Ahí se avisa a ganadores, se reciben expedientes y se observa.
+          El ganador tiene <strong>4 días</strong> para presentar su expediente.
           <strong>Sin edición de datos</strong> del efectivo. Caducados = no presentaron expediente a tiempo.
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
@@ -1575,7 +1583,7 @@
 
         <div id="sorteo-convenio-panel" style="background:#f0f7f0;border:1.5px solid #c8e6c9;border-radius:10px;padding:16px;margin-bottom:18px;">
           <strong style="color:#004d3d;display:block;margin-bottom:10px;font-size:13px;"><i class="fas fa-handshake"></i> Sorteo de convenio</strong>
-  <p style="font-size:12px;color:#666;margin-bottom:12px;">Convenios: preinscripción (sin PDF) → sorteo directo → aviso WA/correo → expediente 2 días → revisión. Repechaje sube PDF completo (sin sorteo). Cursos mantienen verificación/aprobación.</p>
+  <p style="font-size:12px;color:#666;margin-bottom:12px;">Convenios: preinscripción (sin PDF) → sorteo directo → aviso WA/correo → expediente 4 días → revisión. Repechaje sube PDF completo (sin sorteo). Cursos mantienen verificación/aprobación.</p>
           <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
             <div style="flex:1;min-width:280px;">
               <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Convocatoria de convenio</label>
@@ -2632,11 +2640,21 @@
       <button type="button" class="btn" style="background:#e8eee9;color:#333;" onclick="cerrarModal('modal-pdf-preinscritos')">Cerrar</button>
     </div>
     <div class="mpp-filtros">
+      <select id="mpp-filtro-comisaria" onchange="filtrarModalPdfPreinscritos()">
+        <option value="">Todos los puntos / comisarías</option>
+      </select>
       <select id="mpp-filtro-turno" onchange="filtrarModalPdfPreinscritos()">
         <option value="">Todos los turnos</option>
       </select>
       <select id="mpp-filtro-dia" onchange="filtrarModalPdfPreinscritos()">
         <option value="">Todos los días</option>
+      </select>
+      <select id="mpp-filtro-vacaciones" onchange="filtrarModalPdfPreinscritos()">
+        <option value="">Disponibilidad</option>
+        <option value="VACACIONES">Vacaciones</option>
+        <option value="B1">Vacaciones B1</option>
+        <option value="B2">Vacaciones B2</option>
+        <option value="FRANCO">Franco</option>
       </select>
     </div>
     <div class="mpp-stats" id="mpp-stats"></div>
@@ -8226,11 +8244,13 @@ function abrirModalPdfListaConvenio(modo){
   var etiqueta=MPP_MODO==='ganadores'?'Ganadores':(MPP_MODO==='repechaje'?'Repechaje':'Preinscritos');
   var icono=MPP_MODO==='ganadores'?'fa-trophy':(MPP_MODO==='repechaje'?'fa-redo':'fa-users');
   if(tit) tit.innerHTML='<i class="fas '+icono+'"></i> '+etiqueta+' — '+escHtml(nombre);
-  var turnos={}, dias={};
+  var turnos={}, dias={}, comis={};
   list.forEach(function(ins){
     var sl=slotPostulacionInscrito(ins);
     if(sl.turno) turnos[sl.turno]=true;
     if(sl.dia) dias[sl.dia]=true;
+    var lug=claveSedePostula(ins);
+    if(lug) comis[lug]=(comis[lug]||0)+1;
   });
   var ordTurno=function(a,b){
     function peso(t){
@@ -8245,6 +8265,17 @@ function abrirModalPdfListaConvenio(modo){
   };
   var selT=document.getElementById('mpp-filtro-turno');
   var selD=document.getElementById('mpp-filtro-dia');
+  var selV=document.getElementById('mpp-filtro-vacaciones');
+  var selC=document.getElementById('mpp-filtro-comisaria');
+  var nVac=0, nB1=0, nB2=0, nFra=0;
+  list.forEach(function(ins){
+    var disp=String(ins.disponibilidad||'').toUpperCase();
+    if(disp==='VACACIONES'){
+      nVac++;
+      if(String(ins.bloque_vacaciones||'')==='1') nB1++;
+      else if(String(ins.bloque_vacaciones||'')==='2') nB2++;
+    } else if(disp==='FRANCO') nFra++;
+  });
   if(selT){
     selT.innerHTML='<option value="">Todos los turnos ('+list.length+')</option>'
       +Object.keys(turnos).sort(ordTurno).map(function(t){
@@ -8257,18 +8288,62 @@ function abrirModalPdfListaConvenio(modo){
         return '<option value="'+escHtml(d)+'">'+escHtml(d)+'</option>';
       }).join('');
   }
+  if(selV){
+    selV.innerHTML='<option value="">Toda la disponibilidad ('+list.length+')</option>'
+      +'<option value="VACACIONES">Vacaciones ('+nVac+')</option>'
+      +(nB1?'<option value="B1">Vacaciones B1 ('+nB1+')</option>':'')
+      +(nB2?'<option value="B2">Vacaciones B2 ('+nB2+')</option>':'')
+      +'<option value="FRANCO">Franco ('+nFra+')</option>';
+  }
+  if(selC){
+    var labSede=etiquetaFiltroSedeLista();
+    var keysC=Object.keys(comis).sort(function(a,b){ return a.localeCompare(b,'es'); });
+    selC.innerHTML='<option value="">'+escHtml(labSede.todas)+' ('+list.length+')</option>'
+      +keysC.map(function(c){
+        return '<option value="'+escHtml(c)+'">'+escHtml(c)+' ('+comis[c]+')</option>';
+      }).join('');
+  }
   modal.classList.add('open');
   filtrarModalPdfPreinscritos();
+}
+
+function etiquetaDispListaModal(ins){
+  var disp=String((ins&&ins.disponibilidad)||'').toUpperCase();
+  if(disp==='VACACIONES'){
+    var bl=String(ins.bloque_vacaciones||'');
+    if(bl==='1') return {txt:'VAC B1', cls:'vac'};
+    if(bl==='2') return {txt:'VAC B2', cls:'vac'};
+    return {txt:'VACACIONES', cls:'vac'};
+  }
+  if(disp==='FRANCO'){
+    var dia=String(ins.dia_franco||'').toUpperCase();
+    return {txt: dia ? ('FRANCO '+dia) : 'FRANCO', cls:'fra'};
+  }
+  return {txt: disp || '—', cls:''};
+}
+
+function matchFiltroVacacionesLista(ins, vacF){
+  if(!vacF) return true;
+  var disp=String((ins&&ins.disponibilidad)||'').toUpperCase();
+  if(vacF==='VACACIONES') return disp==='VACACIONES';
+  if(vacF==='B1') return disp==='VACACIONES' && String(ins.bloque_vacaciones||'')==='1';
+  if(vacF==='B2') return disp==='VACACIONES' && String(ins.bloque_vacaciones||'')==='2';
+  if(vacF==='FRANCO') return disp==='FRANCO';
+  return true;
 }
 
 function obtenerPreinscritosPdfFiltrados(){
   var turno=String((document.getElementById('mpp-filtro-turno')||{}).value||'');
   var dia=String((document.getElementById('mpp-filtro-dia')||{}).value||'');
+  var vac=String((document.getElementById('mpp-filtro-vacaciones')||{}).value||'');
+  var cia=String((document.getElementById('mpp-filtro-comisaria')||{}).value||'');
   var tKey=canonClaveFiltroPdf(turno);
   var dKey=canonClaveFiltroPdf(dia);
+  var cKey=canonClaveFiltroPdf(cia);
   return listaBaseListaConvenioPdf().filter(function(ins){
-    if(!tKey && !dKey) return true;
+    if(!matchFiltroVacacionesLista(ins, vac)) return false;
     var sl=slotPostulacionInscrito(ins);
+    if(cKey && canonClaveFiltroPdf(claveSedePostula(ins))!==cKey) return false;
     if(tKey && canonClaveFiltroPdf(sl.turno)!==tKey) return false;
     if(dKey && canonClaveFiltroPdf(sl.dia)!==dKey) return false;
     return true;
@@ -8280,28 +8355,32 @@ function filtrarModalPdfPreinscritos(){
   var stats=document.getElementById('mpp-stats');
   var cuerpo=document.getElementById('mpp-cuerpo');
   var total=listaBaseListaConvenioPdf().length;
+  var nVac=list.filter(function(i){ return String(i.disponibilidad||'').toUpperCase()==='VACACIONES'; }).length;
   if(stats){
     stats.innerHTML='<div class="mpp-stat"><div class="n">'+total+'</div><div class="l">Total</div></div>'
-      +'<div class="mpp-stat"><div class="n">'+list.length+'</div><div class="l">En este filtro</div></div>';
+      +'<div class="mpp-stat"><div class="n">'+list.length+'</div><div class="l">En este filtro</div></div>'
+      +'<div class="mpp-stat vac"><div class="n">'+nVac+'</div><div class="l">Vacaciones</div></div>';
   }
   if(!cuerpo) return;
   if(!list.length){
-    cuerpo.innerHTML='<p class="mpp-vacio">No hay '+(MPP_MODO==='ganadores'?'ganadores':(MPP_MODO==='repechaje'?'registros de repechaje':'preinscritos'))+' con ese turno o día.</p>';
+    cuerpo.innerHTML='<p class="mpp-vacio">No hay '+(MPP_MODO==='ganadores'?'ganadores':(MPP_MODO==='repechaje'?'registros de repechaje':'preinscritos'))+' con ese filtro.</p>';
     return;
   }
   cuerpo.innerHTML='<table class="mpp-tabla"><thead><tr>'
     +'<th>#</th><th>GRADO</th><th>CIP</th><th>APELLIDOS Y NOMBRES</th>'
-    +'<th>POSTULA A</th><th>TURNO</th><th>DÍA</th><th>ESTADO</th>'
+    +'<th>POSTULA A</th><th>DISP.</th><th>TURNO</th><th>DÍA</th><th>ESTADO</th>'
     +'</tr></thead><tbody>'
     +list.map(function(ins,idx){
       var sl=slotPostulacionInscrito(ins);
       var est=etiquetaEstadoListaPdf(ins.estado);
+      var disp=etiquetaDispListaModal(ins);
       return '<tr>'
         +'<td>'+(idx+1)+'</td>'
         +'<td>'+escHtml(siglaGradoPnp(ins.grado))+'</td>'
         +'<td>'+escHtml(ins.cip||'—')+'</td>'
         +'<td>'+escHtml(String(ins.nombres||'—').toUpperCase())+'</td>'
         +'<td>'+escHtml(ins.comisaria_postula||'—')+'</td>'
+        +'<td><span class="mpp-badge '+(disp.cls||'')+'">'+escHtml(disp.txt)+'</span></td>'
         +'<td>'+escHtml(labelTurnoFiltro(sl.turno))+'</td>'
         +'<td>'+escHtml(sl.dia||'—')+'</td>'
         +'<td><span class="mpp-badge '+(est.cls||'')+'">'+escHtml(est.txt)+'</span></td>'
@@ -8319,9 +8398,13 @@ function imprimirPdfPreinscritosFiltrado(){
   }
   var turno=String((document.getElementById('mpp-filtro-turno')||{}).value||'');
   var dia=String((document.getElementById('mpp-filtro-dia')||{}).value||'');
+  var vac=String((document.getElementById('mpp-filtro-vacaciones')||{}).value||'');
+  var cia=String((document.getElementById('mpp-filtro-comisaria')||{}).value||'');
   var q='?t='+Date.now();
   if(turno) q+='&turno='+encodeURIComponent(turno);
   if(dia) q+='&dia='+encodeURIComponent(dia);
+  if(vac) q+='&vacaciones='+encodeURIComponent(vac);
+  if(cia) q+='&comisaria='+encodeURIComponent(cia);
   var ruta='/preinscritos.pdf';
   if(MPP_MODO==='ganadores') ruta='/ganadores.pdf';
   else if(MPP_MODO==='repechaje') ruta='/repechaje.pdf';
@@ -8560,6 +8643,34 @@ function slotPostulacionInscrito(ins){
   return {lugar:lugar, turno:turno, dia:dia};
 }
 
+function lugarComisariaInscrito(ins){
+  var sl=slotPostulacionInscrito(ins);
+  return String((sl&&sl.lugar)||(ins&&ins.comisaria_postula)||'').trim();
+}
+
+function normalizarSedePostula(texto){
+  var n=canonClaveFiltroPdf(texto);
+  if(!n) return '';
+  if(n.indexOf('MILLAS')>=0) return 'ATU 200 MILLAS';
+  if(n.indexOf('COLONIAL')>=0) return 'ATU COLONIAL';
+  if(n.indexOf('FISCAL')>=0) return 'ATU FISCALIZACION';
+  return String(texto||'').trim();
+}
+
+function claveSedePostula(ins){
+  var lug=lugarComisariaInscrito(ins);
+  var sede=normalizarSedePostula(lug);
+  if(sede) return sede;
+  return normalizarSedePostula(ins && ins.comisaria_postula);
+}
+
+function etiquetaFiltroSedeLista(){
+  var t=String(((window.INSCRITOS_ITEM_INFO||{}).titulo)||'').toUpperCase();
+  if(t.indexOf('CELADOR')>=0) return {todas:'Todas las comisarías', vacio:'(Sin comisaría)'};
+  if(t.indexOf('ATU')>=0) return {todas:'Todos los puntos ATU', vacio:'(Sin punto)'};
+  return {todas:'Todos los lugares', vacio:'(Sin lugar)'};
+}
+
 function labelTurnoFiltro(turno){
   var t=canonTurnoInscrito(turno);
   if(t==='ATENCION AL CLIENTE') return 'Atención al cliente';
@@ -8622,7 +8733,7 @@ function verInscritos(itemId, titulo, modo){
   if(selDisp) selDisp.value='';
   var selModo=document.getElementById('inscritos-filtro-modo');
   if(selModo) selModo.value='';
-  ['inscritos-filtro-turno','inscritos-filtro-tipo','inscritos-filtro-vacaciones','inscritos-filtro-franco'].forEach(function(id){
+  ['inscritos-filtro-turno','inscritos-filtro-tipo','inscritos-filtro-vacaciones','inscritos-filtro-franco','inscritos-filtro-comisaria'].forEach(function(id){
     var el=document.getElementById(id);
     if(el) el.value='';
   });
@@ -8652,6 +8763,7 @@ function verInscritos(itemId, titulo, modo){
       poblarFiltroUnidadesInscritos();
       poblarFiltroRegionInscritos();
       poblarFiltroModalidadInscritos();
+      poblarFiltroComisariaInscritos();
       poblarFiltrosGanadoresInscritos();
       renderInscritos(obtenerInscritosFiltrados(), INSCRITOS_TIPO_ACTUAL);
     });
@@ -8721,6 +8833,25 @@ function poblarFiltroModalidadInscritos(){
   if(val) sel.value=val;
 }
 
+function poblarFiltroComisariaInscritos(){
+  var sel=document.getElementById('inscritos-filtro-comisaria');
+  if(!sel) return;
+  var lab=etiquetaFiltroSedeLista();
+  var counts={};
+  INSCRITOS_CACHE.forEach(function(i){
+    var u=claveSedePostula(i)||lab.vacio;
+    counts[u]=(counts[u]||0)+1;
+  });
+  var sorted=Object.keys(counts).sort(function(a,b){ return a.localeCompare(b,'es'); });
+  var val=sel.value;
+  sel.innerHTML='<option value="">'+escHtml(lab.todas)+' ('+INSCRITOS_CACHE.length+')</option>'
+    +sorted.map(function(u){
+      var v=u===lab.vacio?'':u;
+      return '<option value="'+escHtml(v)+'">'+escHtml(u)+' ('+counts[u]+')</option>';
+    }).join('');
+  if(val) sel.value=val;
+}
+
 function poblarFiltroUnidadesInscritos(){
   var sel=document.getElementById('inscritos-filtro-unidad');
   if(!sel) return;
@@ -8778,9 +8909,12 @@ function obtenerInscritosFiltrados(){
   var vacF=vacEl?vacEl.value:'';
   var franEl=document.getElementById('inscritos-filtro-franco');
   var franF=franEl?franEl.value:'';
+  var ciaEl=document.getElementById('inscritos-filtro-comisaria');
+  var ciaF=ciaEl?ciaEl.value:'';
+  var ciaKey=canonClaveFiltroPdf(ciaF);
   var esGan=INSCRITOS_MODO==='ganadores';
   var out=INSCRITOS_CACHE.filter(function(i){
-    var slot=esGan?slotPostulacionInscrito(i):null;
+    var slot=slotPostulacionInscrito(i);
     var blob=((i.cip||'')+' '+(i.nombres||'')+' '+(i.dni||'')+' '+(i.codifin||'')+' '+(i.unidad||'')+' '+(i.comisaria_postula||'')+' '+(i.telefono||'')+' '+(i.grado||'')).toLowerCase();
     var matchTxt=esGan||!txt||blob.indexOf(txt)>=0;
     var matchUni=esGan||!unid||(i.unidad||'')===unid;
@@ -8803,7 +8937,8 @@ function obtenerInscritosFiltrados(){
       if(franF==='FRANCO') matchFran=disp==='FRANCO';
       else matchFran=disp==='FRANCO' && diaF===franF;
     }
-    return matchTxt&&matchUni&&matchReg&&matchMod&&matchDisp&&matchModo&&matchTurno&&matchTipo&&matchVac&&matchFran;
+    var matchCia=!ciaKey||canonClaveFiltroPdf(claveSedePostula(i))===ciaKey;
+    return matchTxt&&matchUni&&matchReg&&matchMod&&matchDisp&&matchModo&&matchTurno&&matchTipo&&matchVac&&matchFran&&matchCia;
   });
   if(esGan) return ordenarInscritosPorGrado(out);
   return out;

@@ -3,13 +3,13 @@
   1. Preinscripción (sin PDF)
   2. Sorteo (todos los preinscritos) → ganador / reserva
   3. Aviso ganadores (WA + correo)
-  4. Presentación expediente (plazo 2 días)
+  4. Presentación expediente (plazo 4 días)
   5. Revisión admin → constancia u observación (+ aviso)
   6. Repechaje: registro completo con expediente (sin sorteo), según vacantes libres
 
   Cursos mantienen el flujo anterior (PDF al inscribir + verificado/aprobado).
 */
-const PLAZO_EXPEDIENTE_DIAS = 2;
+const PLAZO_EXPEDIENTE_DIAS = 4;
 
 const ESTADOS_CONVENIO = {
   PREINSCRITO: 'preinscrito',
@@ -434,7 +434,7 @@ async function migrarEstadosConvenios(pool) {
       AND COALESCE(n.pdf_requisitos,'') <> ''
   `, [String(PLAZO_EXPEDIENTE_DIAS)]);
 
-  // Ganadores sin PDF → mantienen ganador + plazo 2 días desde ahora (si no tenían)
+  // Ganadores sin PDF → mantienen ganador + plazo 4 días desde ahora (si no tenían)
   await pool.query(`
     UPDATE inscripciones n
     SET fecha_ganador = COALESCE(fecha_ganador, NOW()),
@@ -449,7 +449,7 @@ async function migrarEstadosConvenios(pool) {
 }
 
 async function caducarExpedientesVencidos(pool) {
-  // Asegurar fecha_ganador y plazo (2 días) a ganadores que aún no lo tengan
+  // Asegurar fecha_ganador y plazo (4 días) a ganadores que aún no lo tengan
   await pool.query(`
     UPDATE inscripciones n
     SET fecha_ganador = COALESCE(fecha_ganador, n.fecha, NOW()),
@@ -469,7 +469,7 @@ async function caducarExpedientesVencidos(pool) {
     UPDATE inscripciones n
     SET estado = 'caducado',
         observacion = CASE
-          WHEN COALESCE(observacion,'') = '' THEN 'Plazo de 2 días vencido sin presentar expediente'
+          WHEN COALESCE(observacion,'') = '' THEN 'Plazo de 4 días vencido sin presentar expediente'
           ELSE observacion
         END
     FROM items_portal i

@@ -697,7 +697,7 @@ function renderResultados(lista) {
       var plazoIso = ins.plazo_expediente || '';
       if (!plazoIso && ins.fecha_ganador) {
         var dg = new Date(ins.fecha_ganador);
-        if (!isNaN(dg.getTime())) { dg.setDate(dg.getDate() + 2); plazoIso = dg.toISOString(); }
+        if (!isNaN(dg.getTime())) { dg.setDate(dg.getDate() + 4); plazoIso = dg.toISOString(); }
       }
       html += '<div class="consulta-meta">'
         + '<div><span>Grado</span><strong>' + escC(ins.grado || '—') + '</strong></div>'
