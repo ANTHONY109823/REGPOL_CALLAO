@@ -312,6 +312,51 @@
     #cms-lista-convenios,#cms-panel-convenios{width:100%;max-width:none;}
     .cms-exp-modelos-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
     @media(max-width:700px){.cms-exp-modelos-grid{grid-template-columns:1fr;}}
+    .cn-layout{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.05fr);gap:16px;align-items:start;}
+    @media(max-width:980px){.cn-layout{grid-template-columns:1fr;}}
+    .cn-grupo{background:#fff;border:1.5px solid #e0ebe4;border-radius:10px;padding:12px 14px;margin-bottom:10px;}
+    .cn-grupo h4{margin:0 0 10px;color:#004d3d;font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.2px;}
+    .cn-campo{margin-bottom:9px;}
+    .cn-campo label{display:block;font-size:11px;font-weight:800;color:#004d3d;text-transform:uppercase;margin-bottom:4px;}
+    .cn-campo .hint{display:block;font-size:11px;color:#888;font-weight:600;text-transform:none;margin-top:3px;}
+    .cn-campo input[type=text],.cn-campo textarea{
+      width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit;box-sizing:border-box;
+    }
+    .cn-campo textarea{min-height:64px;resize:vertical;}
+    .cn-campo input[type=checkbox]{width:16px;height:16px;vertical-align:middle;margin-right:6px;}
+    .cn-preview-wrap{position:sticky;top:8px;background:#f7faf7;border:1.5px solid #c8e6c9;border-radius:12px;padding:12px;}
+    .cn-preview-wrap h4{margin:0 0 8px;color:#004d3d;font-size:13px;}
+    .cn-preview-modal{background:#fff;border:2px solid #c8a94a;border-radius:12px;overflow:hidden;max-height:78vh;overflow-y:auto;}
+    .cn-preview-head{background:#004d3d;color:#fff;padding:10px 12px;font-size:13px;font-weight:800;}
+    .cn-preview-body{padding:12px 14px;}
+    .modal-ganador-constancia{position:fixed;inset:0;z-index:10080;background:rgba(0,30,24,.58);display:none;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;}
+    .modal-ganador-constancia.open{display:flex;}
+    .modal-ganador-constancia .cn-preview-modal{max-width:780px;width:100%;max-height:94vh;display:flex;flex-direction:column;}
+    .modal-ganador-constancia .cn-preview-body{overflow:auto;flex:1;}
+    .cn-gc-foot{padding:12px 14px;border-top:1px solid #e8eee9;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;background:#f7faf7;}
+    .cn-gc-foot button{border:none;border-radius:8px;padding:10px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;}
+    .cn-gc-pdf{background:#004d3d;color:#fff;}
+    .cn-gc-jpg{background:#c8a94a;color:#002d24;}
+    .cn-gc-cerrar{background:#e8eee9;color:#333;}
+    .cn-preview-body .cn-msg{margin:0 0 10px;font-size:12.5px;color:#333;line-height:1.45;}
+    .constancia-sheet{background:#fff;color:#111;padding:16px 14px;border:1px solid #ccc;position:relative;}
+    .constancia-sheet .c-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px;}
+    .constancia-sheet .c-inst{font-size:10px;line-height:1.35;color:#333;text-transform:uppercase;font-weight:700;}
+    .constancia-sheet .c-qr{width:88px;height:88px;flex-shrink:0;border:1px solid #ddd;padding:3px;background:#fff;}
+    .constancia-sheet .c-qr img{width:100%;height:100%;display:block;}
+    .constancia-sheet h2{margin:0 0 10px;font-size:12.5px;text-align:center;text-decoration:underline;color:#004d3d;line-height:1.35;}
+    .constancia-sheet .c-sec{margin:0 0 10px;border:1px solid #d7e6dc;border-radius:8px;overflow:hidden;}
+    .constancia-sheet .c-sec-tit{background:#e8f5f1;color:#004d3d;font-size:10.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;padding:6px 10px;border-bottom:1px solid #d7e6dc;}
+    .constancia-sheet .c-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;padding:8px 10px;}
+    .constancia-sheet .c-grid .full{grid-column:1/-1;}
+    .constancia-sheet .c-item span{display:block;font-size:9px;font-weight:800;color:#004d3d;text-transform:uppercase;letter-spacing:.25px;margin-bottom:1px;}
+    .constancia-sheet .c-item strong{font-size:12px;color:#1a1a1a;font-weight:700;line-height:1.3;word-break:break-word;}
+    .constancia-sheet .c-aviso{background:#fff8e1;border:1.5px solid #c8a94a;border-radius:8px;padding:8px 10px;margin:0 0 10px;font-size:11.5px;color:#5c4813;line-height:1.4;}
+    .constancia-sheet .c-aviso strong{color:#004d3d;}
+    .constancia-sheet .c-aprob{background:#f0f7f4;border:1px solid #b7d4c0;border-radius:8px;padding:8px 10px;margin:0 0 8px;font-size:11.5px;color:#333;line-height:1.4;}
+    .constancia-sheet .c-fecha{text-align:right;margin-top:8px;font-size:11.5px;}
+    .constancia-sheet .c-pie{margin-top:10px;font-size:10.5px;color:#444;text-align:center;border-top:1px solid #ddd;padding-top:8px;}
+    @media (max-width:520px){.constancia-sheet .c-grid{grid-template-columns:1fr;}}
     .cms-conv-head{margin-bottom:10px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;width:100%;}
     .cms-conv-tabla-wrap{border:1px solid #e0e8e0;border-radius:8px;overflow:visible;width:100%;max-width:none;}
     table.cms-conv-tabla{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
@@ -674,6 +719,9 @@
           </div>
           <div class="sb-item" data-page="conv-plantillas" onclick="irConvPlantillas(this)">
             <i class="fas fa-file-alt"></i> 5. PLANTILLAS
+          </div>
+          <div class="sb-item" data-page="conv-constancia" onclick="irConvConstancia(this)">
+            <i class="fas fa-certificate"></i> 6. CONSTANCIA
           </div>
         </div>
       </div>
@@ -1442,6 +1490,60 @@
                 </label>
                 <button type="button" class="btn-mini" id="cms-exp-word-ver" style="display:none;" onclick="window.open((typeof API!=='undefined'?API:'')+'/portal/expediente-plantilla-word','_blank')"><i class="fas fa-download"></i> Ver / descargar</button>
                 <button type="button" class="btn-mini btn-mini-danger" id="cms-exp-word-del" style="display:none;" onclick="quitarExpModeloGlobal('word')"><i class="fas fa-trash"></i> Quitar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-conv-constancia" class="page">
+      <div class="card">
+        <h3><i class="fas fa-certificate"></i> 6. Constancia de nombramiento</h3>
+        <p style="font-size:13px;color:#666;margin:-4px 0 14px;line-height:1.5;">
+          Los <strong>datos del efectivo</strong>, el <strong>convenio</strong> y el <strong>turno</strong> (sorteo o repechaje) se llenan solos.
+          Por convenio solo se editan: <strong>dónde presentarse (punto de concentración)</strong>, <strong>indicaciones adicionales</strong> y <strong>uniforme</strong>.
+        </p>
+        <div id="cn-alerta" class="alerta" style="display:none;margin-bottom:12px;"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px;">
+          <div style="flex:1;min-width:260px;">
+            <label style="font-size:12px;font-weight:700;color:#004d3d;display:block;margin-bottom:4px;">Convenio</label>
+            <select id="cn-convenio" onchange="onSelectConstanciaConvenio()" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;">
+              <option value="">— Seleccione un convenio —</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-v" id="cn-btn-guardar" disabled onclick="guardarPresentacionConstancia()"><i class="fas fa-save"></i> Guardar</button>
+          <button type="button" class="btn" style="background:#e8eee9;color:#333;" onclick="cargarEditorConstancia()"><i class="fas fa-sync"></i> Recargar</button>
+        </div>
+        <div class="cn-layout" id="cn-editor" style="display:none;">
+          <div>
+            <div class="cn-grupo">
+              <h4>Editable por convenio</h4>
+              <div class="cn-campo">
+                <label>Dónde presentarse (punto de concentración)</label>
+                <textarea id="cn-concentracion" oninput="pintarPreviewConstancia()" placeholder="Ej. JR APURIMAC 647. Vacío = lugar de la ficha de cada ganador"></textarea>
+              </div>
+              <div class="cn-campo">
+                <label>Indicaciones adicionales</label>
+                <textarea id="cn-indicaciones" oninput="pintarPreviewConstancia()" placeholder="Horario de llegada, documentos, etc."></textarea>
+              </div>
+              <div class="cn-campo">
+                <label>Uniforme</label>
+                <textarea id="cn-uniforme" oninput="pintarPreviewConstancia()" placeholder="Uniforme autorizado para este convenio"></textarea>
+              </div>
+              <p style="margin:8px 0 0;font-size:12px;color:#666;line-height:1.4;background:#e8f5f1;border:1px solid #c8e6c9;border-radius:8px;padding:8px 10px;">
+                <strong>Turno de trabajo:</strong> no se edita. Sale automático del cupo que ganó en sorteo o repechaje (ej. MAÑANA / IMPAR).
+              </p>
+            </div>
+          </div>
+          <div class="cn-preview-wrap">
+            <h4><i class="fas fa-eye"></i> Vista previa</h4>
+            <p style="font-size:11.5px;color:#666;margin:0 0 10px;line-height:1.4;">Datos del efectivo de ejemplo. Convenio y presentación: los de este convenio.</p>
+            <div class="cn-preview-modal">
+              <div class="cn-preview-head" id="cn-preview-head">Documentación aprobada</div>
+              <div class="cn-preview-body">
+                <p class="cn-msg" id="cn-preview-msg"></p>
+                <div id="cn-preview-sheet" class="constancia-sheet"></div>
               </div>
             </div>
           </div>
@@ -2508,6 +2610,21 @@
   </div>
 </div>
 
+<div id="modal-ganador-constancia" class="modal-ganador-constancia" role="dialog" aria-modal="true" onclick="if(event.target===this)cerrarConstanciaGanador()">
+  <div class="cn-preview-modal" onclick="event.stopPropagation()">
+    <div class="cn-preview-head" id="gc-head"><i class="fas fa-check-circle"></i> Documentación aprobada</div>
+    <div class="cn-preview-body">
+      <p class="cn-msg" id="gc-msg" style="margin:0 0 10px;"></p>
+      <div id="gc-sheet" class="constancia-sheet"></div>
+    </div>
+    <div class="cn-gc-foot">
+      <button type="button" class="cn-gc-jpg" onclick="descargarConstanciaGanadorJpg()"><i class="fas fa-image"></i> Descargar imagen</button>
+      <button type="button" class="cn-gc-pdf" onclick="descargarConstanciaGanadorPdf()"><i class="fas fa-file-pdf"></i> Descargar PDF</button>
+      <button type="button" class="cn-gc-cerrar" onclick="cerrarConstanciaGanador()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-pdf-preinscritos" class="modal" role="dialog" aria-modal="true" aria-labelledby="mpp-titulo">
   <div class="modal-box" onclick="event.stopPropagation()">
     <div class="mpp-head">
@@ -2535,6 +2652,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
 <script src="api-config.js?v=2"></script>
+<script src="constancia-plantilla.js?v=3"></script>
 <script src="fecha-local.js?v=1"></script>
 <script src="comisarias.js?v=1"></script>
 <script src="portal-data.js?v=10"></script>
@@ -4113,7 +4231,7 @@ function ir(page, el){
   if(page==='sorteos'&&!puedeGestionarSorteosConvenio()){alert('Sin acceso a sorteos de convenios.');return;}
   if(page==='resultados-pdf'&&!puedePublicarResultadosPdf(RESULTADOS_PDF_TIPO)){alert('Sin acceso a publicación de resultados.');return;}
   if(page==='inscritos'&&!puedeOperarInscritosConvenio()&&!esUnitic()){alert('Sin acceso a inscritos de convenios.');return;}
-  if((page==='conv-ganadores'||page==='conv-repechaje'||page==='conv-preinscritos'||page==='conv-auditoria-cip'||page==='conv-plantillas')&&!puedeOperarInscritosConvenio()){alert('Sin acceso al flujo de convenios.');return;}
+  if((page==='conv-ganadores'||page==='conv-repechaje'||page==='conv-preinscritos'||page==='conv-auditoria-cip'||page==='conv-plantillas'||page==='conv-constancia')&&!puedeOperarInscritosConvenio()){alert('Sin acceso al flujo de convenios.');return;}
   if(page==='consulta-cip'&&!puedeConsultarCip()){alert('Sin acceso a consulta por CIP.');return;}
   if((page==='descansos'||page==='descansos-dash'||page==='descansos-import')&&!puedeGestionDescansos()){alert('Sin acceso a Descansos médicos.');return;}
   if((page==='faltos'||page==='faltos-dash'||page==='faltos-import')&&!puedeGestionFaltos()){alert('Sin acceso a Faltos.');return;}
@@ -4148,6 +4266,7 @@ function ir(page, el){
   if(page==='conv-ganadores')      { cargarConvFlujoResumen('ganadores'); }
   if(page==='conv-repechaje')      { cargarConvFlujoResumen('repechaje'); }
   if(page==='conv-plantillas')     { if(typeof cargarExpModelosGlobales==='function') cargarExpModelosGlobales(); }
+  if(page==='conv-constancia')     { if(typeof cargarEditorConstancia==='function') cargarEditorConstancia(); }
   if(page==='descansos' || page==='descansos-dash' || page==='descansos-import'){
     if(typeof dmInit === 'function') dmInit();
   }
@@ -5456,6 +5575,263 @@ function quitarExpModeloGlobal(tipo){
       cargarExpModelosGlobales();
     })
     .catch(function(){ alert('Error de conexión.'); });
+}
+
+var CN_CONVENIOS = [];
+var CN_ACTIVO = null;
+
+var CN_EJEMPLO_BASE = {
+  token_constancia: 'PREVIEW-NO-VALIDO',
+  modo_ingreso: 'sorteo',
+  modo_ingreso_label: 'Por sorteo',
+  grado: 'SO3 PNP',
+  nombres: 'PEREZ RAMOS, JUAN CARLOS',
+  cip: '000000',
+  dni: '00000000',
+  codifin: '000000',
+  telefono: '999000000',
+  unidad: 'COMISARÍA BELLAVISTA',
+  comisaria_postula: 'JR APURIMAC 647 — MAÑANA / IMPAR',
+  aprobado_por_nombre: 'SO3 PNP — Usuario de prueba UNITIC',
+  fecha_aprobacion_legible: '20/08/2026, 11:10 a. m.'
+};
+
+function cnAlerta(msg, tipo){
+  var el=document.getElementById('cn-alerta');
+  if(!el) return;
+  if(!msg){ el.style.display='none'; el.textContent=''; return; }
+  el.style.display='block';
+  el.textContent=msg;
+  el.style.background=tipo==='error'?'#f8d7da':(tipo==='ok'?'#d4edda':'#e8f4fd');
+  el.style.color=tipo==='error'?'#842029':(tipo==='ok'?'#1a5c32':'#0c5460');
+  el.style.border='1px solid '+(tipo==='error'?'#f5c2c7':(tipo==='ok'?'#a5d6a7':'#b8daff'));
+}
+
+function cnFechaHoy(){
+  try {
+    return new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+  } catch (e) {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
+function cnQrUrl(data){
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(data || 'PREVIEW');
+}
+
+function cnVal(id){
+  var el=document.getElementById(id);
+  return el ? String(el.value || '').trim() : '';
+}
+
+function leerPresentacionConstancia(){
+  return {
+    concentracion: cnVal('cn-concentracion'),
+    indicaciones: cnVal('cn-indicaciones'),
+    uniforme: cnVal('cn-uniforme')
+  };
+}
+
+function insPreviewConstancia(){
+  var c = CN_ACTIVO || {};
+  var p = leerPresentacionConstancia();
+  var ins = {};
+  Object.keys(CN_EJEMPLO_BASE).forEach(function(k){ ins[k]=CN_EJEMPLO_BASE[k]; });
+  ins.convocatoria = c.titulo || '—';
+  ins.horario = c.horario || '';
+  ins.lugar = c.lugar || '';
+  ins.contactos_responsables = c.contactos_responsables || '';
+  ins.uniforme = p.uniforme;
+  ins.constancia_presentarse = p.concentracion;
+  ins.constancia_concentracion = p.concentracion;
+  ins.constancia_indicaciones = p.indicaciones;
+  return ins;
+}
+
+function pintarPreviewConstancia(){
+  var CN = window.ConstanciaNombramiento;
+  if(!CN) return;
+  var ins = insPreviewConstancia();
+  var head=document.getElementById('cn-preview-head');
+  var msg=document.getElementById('cn-preview-msg');
+  var sheet=document.getElementById('cn-preview-sheet');
+  if(head) head.innerHTML='<i class="fas fa-check-circle"></i> Documentación aprobada';
+  if(msg) msg.textContent = CN.mensajeModal(null, ins);
+  if(sheet){
+    sheet.innerHTML = CN.htmlSheet(ins, null, {
+      esc: function(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); },
+      qrUrl: cnQrUrl,
+      fechaHoy: cnFechaHoy(),
+      verifyUrl: 'PREVIEW-NO-VALIDO'
+    });
+  }
+}
+
+function onSelectConstanciaConvenio(){
+  var sel=document.getElementById('cn-convenio');
+  var id=sel ? parseInt(sel.value,10) : 0;
+  CN_ACTIVO = CN_CONVENIOS.filter(function(c){ return c.id===id; })[0] || null;
+  var editor=document.getElementById('cn-editor');
+  var btn=document.getElementById('cn-btn-guardar');
+  if(!CN_ACTIVO){
+    if(editor) editor.style.display='none';
+    if(btn) btn.disabled=true;
+    return;
+  }
+  var p=CN_ACTIVO.presentacion || {};
+  var set=function(id,v){ var el=document.getElementById(id); if(el) el.value=v||''; };
+  set('cn-concentracion', p.concentracion || p.presentarse);
+  set('cn-indicaciones', p.indicaciones);
+  set('cn-uniforme', CN_ACTIVO.uniforme);
+  if(editor) editor.style.display='grid';
+  if(btn) btn.disabled=false;
+  cnAlerta('', '');
+  pintarPreviewConstancia();
+}
+
+function cargarEditorConstancia(){
+  cnAlerta('', '');
+  var sel=document.getElementById('cn-convenio');
+  var prev=sel ? sel.value : '';
+  fetch(API+'/admin/constancia-convenios',{headers:hdr()})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d || !d.ok){
+        cnAlerta((d && d.error) || 'No se pudieron cargar los convenios.', 'error');
+        return;
+      }
+      CN_CONVENIOS = d.convenios || [];
+      if(sel){
+        sel.innerHTML='<option value="">— Seleccione un convenio —</option>'
+          + CN_CONVENIOS.map(function(c){
+            return '<option value="'+c.id+'">'+escHtml(c.titulo||('Convenio '+c.id))+'</option>';
+          }).join('');
+        if(prev) sel.value=prev;
+      }
+      onSelectConstanciaConvenio();
+    })
+    .catch(function(){ cnAlerta('Error de conexión.', 'error'); });
+}
+
+function guardarPresentacionConstancia(){
+  if(!CN_ACTIVO || !CN_ACTIVO.id){
+    cnAlerta('Seleccione un convenio.', 'error');
+    return;
+  }
+  var datos = leerPresentacionConstancia();
+  fetch(API+'/admin/constancia-convenios/'+CN_ACTIVO.id,{
+    method:'PUT',
+    headers:hdr(),
+    body: JSON.stringify({
+      presentacion: { concentracion: datos.concentracion, indicaciones: datos.indicaciones },
+      uniforme: datos.uniforme
+    })
+  })
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d || !d.ok){
+        cnAlerta((d && d.error) || 'No se pudo guardar.', 'error');
+        return;
+      }
+      CN_ACTIVO.presentacion = d.presentacion || { concentracion: datos.concentracion, indicaciones: datos.indicaciones };
+      CN_ACTIVO.uniforme = (d.uniforme != null ? d.uniforme : datos.uniforme);
+      cnAlerta('Guardado para «'+(CN_ACTIVO.titulo||'convenio')+'». Ya se verá en la constancia de sus ganadores.', 'ok');
+      pintarPreviewConstancia();
+    })
+    .catch(function(){ cnAlerta('Error de conexión al guardar.', 'error'); });
+}
+
+var GANADOR_CONSTANCIA_ACTUAL = null;
+
+function urlVerificarConstanciaAdmin(token){
+  return (location.origin || '') + '/verificar-constancia.html?t=' + encodeURIComponent(token || '');
+}
+
+function abrirConstanciaGanador(id){
+  var CN = window.ConstanciaNombramiento;
+  if(!CN){ alert('No se pudo cargar el visor de constancia.'); return; }
+  var modal=document.getElementById('modal-ganador-constancia');
+  var sheet=document.getElementById('gc-sheet');
+  var msg=document.getElementById('gc-msg');
+  var head=document.getElementById('gc-head');
+  if(sheet) sheet.innerHTML='<p style="color:#888;font-size:13px;">Cargando constancia...</p>';
+  if(msg) msg.textContent='';
+  if(modal) modal.classList.add('open');
+  var reqVista = fetch(API+'/admin/inscripciones/'+id+'/constancia-vista',{headers:hdr()}).then(function(r){return r.json();});
+  var reqTpl = fetch(API+'/portal/constancia-nombramiento').then(function(r){return r.json();}).catch(function(){ return null; });
+  Promise.all([reqVista, reqTpl])
+    .then(function(arr){
+      var d = arr[0];
+      var tpl = (arr[1] && arr[1].ok && arr[1].plantilla) ? arr[1].plantilla : null;
+      if(!d || !d.ok || !d.inscripcion){
+        alert((d && d.error) || 'No se pudo abrir la constancia.');
+        cerrarConstanciaGanador();
+        return;
+      }
+      var ins = d.inscripcion;
+      ins.token_constancia = ins.token_constancia || ins.token || '';
+      GANADOR_CONSTANCIA_ACTUAL = ins;
+      var token = ins.token_constancia;
+      if(head){
+        var t = (CN.merge(tpl).modal_titulo) || 'Documentación aprobada';
+        head.innerHTML = '<i class="fas fa-check-circle"></i> ' + String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+      if(msg) msg.textContent = CN.mensajeModal(tpl, ins);
+      if(sheet){
+        sheet.innerHTML = CN.htmlSheet(ins, tpl, {
+          esc: function(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); },
+          qrUrl: cnQrUrl,
+          fechaHoy: cnFechaHoy(),
+          verifyUrl: token ? urlVerificarConstanciaAdmin(token) : ''
+        });
+      }
+    })
+    .catch(function(){
+      alert('Error de conexión.');
+      cerrarConstanciaGanador();
+    });
+}
+
+function cerrarConstanciaGanador(){
+  var modal=document.getElementById('modal-ganador-constancia');
+  if(modal) modal.classList.remove('open');
+  GANADOR_CONSTANCIA_ACTUAL = null;
+}
+
+function capturarHojaConstanciaGanador(){
+  var el=document.getElementById('gc-sheet');
+  if(!el || typeof html2canvas!=='function'){
+    return Promise.reject(new Error('No se puede generar'));
+  }
+  return html2canvas(el,{scale:2,useCORS:true,backgroundColor:'#ffffff'});
+}
+
+function descargarConstanciaGanadorJpg(){
+  capturarHojaConstanciaGanador().then(function(canvas){
+    var a=document.createElement('a');
+    a.href=canvas.toDataURL('image/jpeg',0.92);
+    a.download='constancia-' + ((GANADOR_CONSTANCIA_ACTUAL && GANADOR_CONSTANCIA_ACTUAL.cip) || 'vacante') + '.jpg';
+    a.click();
+  }).catch(function(){ alert('No se pudo generar la imagen.'); });
+}
+
+function descargarConstanciaGanadorPdf(){
+  capturarHojaConstanciaGanador().then(function(canvas){
+    if(!window.jspdf || !window.jspdf.jsPDF){ alert('No se pudo generar el PDF.'); return; }
+    var img=canvas.toDataURL('image/jpeg',0.92);
+    var doc=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    var pageW=doc.internal.pageSize.getWidth();
+    var pageH=doc.internal.pageSize.getHeight();
+    var margin=10;
+    var w=pageW-margin*2;
+    var h=canvas.height*w/canvas.width;
+    if(h>pageH-margin*2){
+      h=pageH-margin*2;
+      w=canvas.width*h/canvas.height;
+    }
+    doc.addImage(img,'JPEG',margin,margin,w,h);
+    doc.save('constancia-' + ((GANADOR_CONSTANCIA_ACTUAL && GANADOR_CONSTANCIA_ACTUAL.cip) || 'vacante') + '.pdf');
+  }).catch(function(){ alert('No se pudo generar el PDF.'); });
 }
 
 var INSCRITOS_CACHE = [];
@@ -8001,6 +8377,10 @@ function irConvPlantillas(el){
   ir('conv-plantillas', el);
 }
 
+function irConvConstancia(el){
+  ir('conv-constancia', el);
+}
+
 function volverDesdeInscritos(){
   if(INSCRITOS_MODO==='ganadores'){
     ir('conv-ganadores', document.querySelector('[data-page="conv-ganadores"]'));
@@ -8504,6 +8884,8 @@ function renderInscritos(list, tipo){
     btnAccion='<div style="display:flex;flex-direction:column;gap:8px;margin-left:8px;min-width:260px;">'
       +'<button type="button" class="btn btn-v" id="btn-pdf-ganadores" style="margin:0;justify-content:center;background:#004d3d;color:#fff;" onclick="abrirModalPdfListaConvenio(\'ganadores\')" '+(total<1?'disabled':'')+'>'
       +'<i class="fas fa-file-pdf"></i> DESCARGAR PDF</button>'
+      +'<button type="button" class="btn" id="btn-preview-constancia-ganador" style="margin:0;justify-content:center;background:#c8a94a;color:#002d24;" onclick="abrirPreviewConstanciaGanador()" title="Abre el modal de constancia con datos de ejemplo. No toca convenios reales.">'
+      +'<i class="fas fa-eye"></i> VISTA PREVIA CONSTANCIA</button>'
       +'</div>';
   } else if(esConvenio && INSCRITOS_MODO==='repechaje'){
     btnAccion='<div style="display:flex;flex-direction:column;gap:8px;margin-left:8px;min-width:260px;">'
@@ -8612,7 +8994,10 @@ function renderInscritos(list, tipo){
           acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'rechazado\')" title="Avisar rechazo por WhatsApp y correo"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Avisar</button> ';
         }
         if(ins.estado==='expediente_ok'){
-          acciones+='<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'expediente_ok\')" title="Avisar constancia"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Avisar</button> ';
+          acciones+='<span class="acc-preins">'
+            +'<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'expediente_ok\')" title="Avisar constancia"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Avisar</button>'
+            +'<button type="button" class="btn-mini btn-mini-solid" title="Ver constancia igual que en Consulta CIP" onclick="abrirConstanciaGanador('+ins.id+')"><i class="fas fa-file-alt"></i> Ver</button>'
+            +'</span> ';
         }
         if(INSCRITOS_MODO==='preinscripcion'){
           acciones='<span class="acc-preins">'
@@ -8920,6 +9305,10 @@ function renderHistorialCipConvenio(lista, nombres) {
   }).join('');
   html += '</tbody></table></div>';
   wrap.innerHTML = html;
+}
+
+function abrirPreviewConstanciaGanador(){
+  window.open('preview-constancia-ganador.html', 'preview-constancia-ganador', 'noopener,noreferrer');
 }
 
 function verConstanciaPanel(id) {

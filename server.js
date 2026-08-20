@@ -439,6 +439,7 @@ async function migrarColumnasPortal() {
   await pool.query(`
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS uniforme VARCHAR(300) DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS contactos_responsables TEXT DEFAULT '';
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS constancia_presentacion JSONB DEFAULT '{}'::jsonb;
   `);
 }
 
@@ -565,6 +566,7 @@ async function initDB() {
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS inscripciones_abiertas BOOLEAN DEFAULT FALSE;
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS uniforme VARCHAR(300) DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS contactos_responsables TEXT DEFAULT '';
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS constancia_presentacion JSONB DEFAULT '{}'::jsonb;
 
     CREATE TABLE IF NOT EXISTS inscripciones (
       id          SERIAL PRIMARY KEY,
@@ -1175,7 +1177,7 @@ const STATIC_WARM_FILES = [
   'index.html', 'style.css', 'portal.js', 'portal-data.js', 'site-data.json', 'api-config.js',
   'cursos.html', 'convenios.html', 'consulta.html', 'unidades.html', 'unidades-data.json',
   'evaluacion.html', 'detalle.html', 'img/regpol-callao.jpg',
-  'login.html', 'panel-admin.html', 'panel-admin.css', 'panel-usuario.html'
+  'login.html', 'panel-admin.html', 'panel-admin.css', 'panel-usuario.html', 'constancia-plantilla.js'
 ];
 
 function cacheStaticEntry(rel, data) {
@@ -4856,6 +4858,226 @@ app.delete('/admin/expediente-modelos/:tipo', requireAuth, async (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
+const CFG_CONSTANCIA_NOMBRAMIENTO = 'constancia_nombramiento';
+const CONSTANCIA_NOMBRAMIENTO_DEFAULT = {
+  modal_titulo: 'Documentación aprobada',
+  modal_mensaje: 'Su documentación fue aprobada. Ya ocupa una vacante (ingreso {modo}). Descargue su constancia y preséntese en la comisaría o en la fecha de formación según lo indicado.',
+  encabezado: 'MINISTERIO DEL INTERIOR\nPOLICÍA NACIONAL DEL PERÚ\nREGIÓN POLICIAL CALLAO\nSEC-OFIADM - OFIBAP',
+  titulo: 'CONSTANCIA DE NOMBRAMIENTO PARA EL SERVICIO POLICIAL EXTRAORDINARIO COMPLEMENTARIO A LA FUNCIÓN POLICIAL',
+  mostrar_qr: true,
+  seccion1_titulo: '1. Datos del efectivo',
+  label_grado: 'Grado',
+  label_nombres: 'Apellidos y nombres',
+  label_cip: 'CIP',
+  label_dni: 'DNI',
+  label_codifin: 'CODIFIN',
+  label_celular: 'Celular',
+  label_unidad: 'Unidad de origen',
+  seccion2_titulo: '2. Datos del convenio / vacante',
+  label_convenio: 'Convenio',
+  label_origen: 'Origen de ingreso',
+  label_comisaria: 'Comisaría asignada',
+  label_uniforme: 'Uniforme',
+  seccion3_titulo: '3. Presentación y turno de trabajo',
+  label_presentarse: 'Dónde presentarse (punto de concentración)',
+  label_concentracion: 'Punto / lugar de concentración',
+  label_turno: 'Turno de trabajo',
+  label_indicaciones: 'Indicaciones adicionales',
+  fallback_presentarse: 'Según indicación de Convenios',
+  fallback_concentracion: 'Por confirmar',
+  fallback_indicaciones: 'Consultar con el área de Convenios',
+  aviso_titulo: 'Importante — documentación original:',
+  aviso_texto: 'El día que se presente a la comisaría o formación, debe llevar en físico la documentación original completa que subió en PDF al portal (misma documentación del expediente digital). Sin ella no se concretará su incorporación.',
+  aprobacion_titulo: 'Aprobación del expediente:',
+  aprobacion_por: 'Aprobado por:',
+  aprobacion_fecha: 'Fecha y hora:',
+  aprobacion_pendiente: 'Pendiente de registro del aprobador en el sistema.',
+  fecha_prefijo: 'Callao,',
+  pie_linea1: 'Oficina de Bienestar / Convenios — REGPOL Callao',
+  pie_linea2: 'Documento verificable por QR · {modo}',
+  pie_linea3: 'La inasistencia injustificada o el incumplimiento del uniforme dará lugar a desactivación inmediata.'
+};
+const CONSTANCIA_NOMBRAMIENTO_LARGOS = {
+  encabezado: 800,
+  titulo: 500,
+  modal_mensaje: 1200,
+  aviso_texto: 1500,
+  fallback_indicaciones: 800,
+  aprobacion_pendiente: 400,
+  pie_linea3: 500
+};
+
+function fusionarPlantillaConstancia(saved) {
+  const src = saved && typeof saved === 'object' ? saved : {};
+  const out = {};
+  Object.keys(CONSTANCIA_NOMBRAMIENTO_DEFAULT).forEach(function (k) {
+    if (k === 'mostrar_qr') {
+      if (typeof src.mostrar_qr === 'boolean') out.mostrar_qr = src.mostrar_qr;
+      else if (src.mostrar_qr === '0' || src.mostrar_qr === 0 || src.mostrar_qr === 'false') out.mostrar_qr = false;
+      else out.mostrar_qr = CONSTANCIA_NOMBRAMIENTO_DEFAULT.mostrar_qr;
+      return;
+    }
+    if (src[k] != null && String(src[k]).length) out[k] = String(src[k]);
+    else out[k] = CONSTANCIA_NOMBRAMIENTO_DEFAULT[k];
+  });
+  return out;
+}
+
+function sanitizarPlantillaConstancia(body) {
+  const src = (body && body.plantilla && typeof body.plantilla === 'object') ? body.plantilla : (body || {});
+  const out = {};
+  Object.keys(CONSTANCIA_NOMBRAMIENTO_DEFAULT).forEach(function (k) {
+    if (k === 'mostrar_qr') {
+      out.mostrar_qr = !(src.mostrar_qr === false || src.mostrar_qr === 0 || src.mostrar_qr === '0' || src.mostrar_qr === 'false');
+      return;
+    }
+    const max = CONSTANCIA_NOMBRAMIENTO_LARGOS[k] || 220;
+    let v = src[k] == null ? '' : String(src[k]);
+    v = v.replace(/\r\n/g, '\n').replace(/\0/g, '').trim();
+    out[k] = v.slice(0, max);
+  });
+  return fusionarPlantillaConstancia(out);
+}
+
+async function leerPlantillaConstanciaGuardada() {
+  const raw = await getConfig(CFG_CONSTANCIA_NOMBRAMIENTO);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+app.get('/portal/constancia-nombramiento', async (req, res) => {
+  try {
+    const saved = await leerPlantillaConstanciaGuardada();
+    res.set('Cache-Control', 'no-store');
+    res.json({ ok: true, plantilla: fusionarPlantillaConstancia(saved) });
+  } catch (e) {
+    res.json({ ok: false, error: e.message, plantilla: fusionarPlantillaConstancia(null) });
+  }
+});
+
+app.get('/admin/constancia-nombramiento', requireAuth, async (req, res) => {
+  try {
+    if (!puedeGestionarItem(req.admin, 'convenio'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const saved = await leerPlantillaConstanciaGuardada();
+    res.json({
+      ok: true,
+      plantilla: fusionarPlantillaConstancia(saved),
+      defaults: CONSTANCIA_NOMBRAMIENTO_DEFAULT,
+      hay_guardada: !!saved
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.put('/admin/constancia-nombramiento', requireAuth, async (req, res) => {
+  try {
+    if (!puedeGestionarItem(req.admin, 'convenio'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const plantilla = sanitizarPlantillaConstancia(req.body);
+    await setConfig(CFG_CONSTANCIA_NOMBRAMIENTO, JSON.stringify(plantilla));
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario),
+      usuario: req.admin.usuario,
+      accion: 'editar_constancia_nombramiento',
+      modulo: 'convenios',
+      entidad: 'constancia',
+      entidadId: 'nombramiento',
+      detalle: 'Plantilla de constancia de nombramiento actualizada',
+      ip: req.ip || '',
+      ok: true
+    });
+    res.json({ ok: true, plantilla: plantilla });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.post('/admin/constancia-nombramiento/restaurar', requireAuth, async (req, res) => {
+  try {
+    if (!puedeGestionarItem(req.admin, 'convenio'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    await pool.query('DELETE FROM configuracion WHERE clave=$1', [CFG_CONSTANCIA_NOMBRAMIENTO]);
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario),
+      usuario: req.admin.usuario,
+      accion: 'restaurar_constancia_nombramiento',
+      modulo: 'convenios',
+      entidad: 'constancia',
+      entidadId: 'nombramiento',
+      detalle: 'Plantilla restaurada a valores originales',
+      ip: req.ip || '',
+      ok: true
+    });
+    res.json({ ok: true, plantilla: fusionarPlantillaConstancia(null) });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.get('/admin/constancia-convenios', requireAuth, async (req, res) => {
+  try {
+    if (!puedeGestionarItem(req.admin, 'convenio'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const r = await pool.query(
+      `SELECT id, titulo, uniforme, horario, lugar, contactos_responsables, constancia_presentacion
+       FROM items_portal
+       WHERE tipo='convenio' AND visible=TRUE
+       ORDER BY orden, id`
+    );
+    res.json({
+      ok: true,
+      convenios: r.rows.map(function(row) {
+        return {
+          id: row.id,
+          titulo: row.titulo || '',
+          uniforme: row.uniforme || '',
+          horario: row.horario || '',
+          lugar: row.lugar || '',
+          contactos_responsables: row.contactos_responsables || '',
+          presentacion: normalizarConstanciaPresentacion(row.constancia_presentacion)
+        };
+      })
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.put('/admin/constancia-convenios/:id', requireAuth, async (req, res) => {
+  try {
+    if (!puedeGestionarItem(req.admin, 'convenio'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.json({ ok: false, error: 'Convenio inválido' });
+    const cur = await pool.query(
+      `SELECT id, titulo, tipo FROM items_portal WHERE id=$1 AND tipo='convenio'`,
+      [id]
+    );
+    if (!cur.rows.length) return res.json({ ok: false, error: 'Convenio no encontrado' });
+    const body = req.body || {};
+    const presentacion = normalizarConstanciaPresentacion(body.presentacion || body);
+    const uniforme = String(body.uniforme != null ? body.uniforme : '').trim().slice(0, 300);
+    await pool.query(
+      `UPDATE items_portal SET constancia_presentacion=$1::jsonb, uniforme=$2, actualizado=NOW() WHERE id=$3`,
+      [JSON.stringify(presentacion), uniforme, id]
+    );
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario),
+      usuario: req.admin.usuario,
+      accion: 'editar_constancia_presentacion',
+      modulo: 'convenios',
+      entidad: 'item',
+      entidadId: String(id),
+      detalle: cur.rows[0].titulo || '',
+      ip: req.ip || '',
+      ok: true
+    });
+    res.json({ ok: true, presentacion: presentacion, uniforme: uniforme });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 // ── GET /admin/sorteos ─────────────────────────────────────────────────────────
 app.get('/admin/sorteos', requireAuth, async (req, res) => {
   try {
@@ -6016,6 +6238,28 @@ async function asegurarTokenConstancia(inscripcionId) {
   return (again.rows[0] && again.rows[0].token_constancia) || tok;
 }
 
+function normalizarConstanciaPresentacion(raw) {
+  let obj = raw;
+  if (typeof raw === 'string') {
+    try { obj = JSON.parse(raw); } catch (e) { obj = {}; }
+  }
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) obj = {};
+  return {
+    presentarse: String(obj.concentracion || obj.presentarse || '').trim().slice(0, 500),
+    concentracion: String(obj.concentracion || obj.presentarse || '').trim().slice(0, 500),
+    indicaciones: String(obj.indicaciones || '').trim().slice(0, 1500)
+  };
+}
+
+function camposConstanciaDesdeItem(row) {
+  const pres = normalizarConstanciaPresentacion(row && row.constancia_presentacion);
+  return {
+    constancia_presentarse: pres.presentarse,
+    constancia_concentracion: pres.concentracion,
+    constancia_indicaciones: pres.indicaciones
+  };
+}
+
 function payloadConstanciaPublica(row) {
   const modo = row.modo_ingreso || '';
   return {
@@ -6044,10 +6288,12 @@ function payloadConstanciaPublica(row) {
     contactos_responsables: row.contactos_responsables || '',
     estado: row.estado || '',
     token: row.token_constancia || '',
+    token_constancia: row.token_constancia || '',
     aprobado_por_nombre: row.aprobado_por_nombre || '',
     aprobado_por_usuario: row.aprobado_por_usuario || '',
     fecha_aprobacion: row.fecha_aprobacion || null,
-    fecha_aprobacion_legible: formatearFechaAprobacionPe(row.fecha_aprobacion)
+    fecha_aprobacion_legible: formatearFechaAprobacionPe(row.fecha_aprobacion),
+    ...camposConstanciaDesdeItem(row)
   };
 }
 
@@ -6085,7 +6331,7 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
               i.id AS item_id, i.tipo, i.titulo, i.horario, i.lugar, i.fecha_inicio, i.duracion,
               i.descripcion, i.observaciones AS item_observaciones, i.vacantes,
               i.uniforme, i.contactos_responsables, i.requisitos, i.aviso_sorteo_fb,
-              i.turnos, i.cupos_unidades
+              i.turnos, i.cupos_unidades, i.constancia_presentacion
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
        WHERE ${sqlCipKeyInscripcion('n.cip')} = $1
@@ -6213,6 +6459,7 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
         aviso_sorteo_fb: row.aviso_sorteo_fb || '',
         modo_ingreso: row.modo_ingreso || '',
         modo_ingreso_label: modoLabel,
+        ...camposConstanciaDesdeItem(row),
         tiene_pdf: !!row.tiene_pdf,
         plazo_expediente: row.plazo_expediente || null,
         fecha_ganador: row.fecha_ganador || null,
@@ -7837,7 +8084,7 @@ app.get('/portal/verificar-constancia', async (req, res) => {
     }
     const r = await pool.query(
       `SELECT n.*, i.tipo, i.titulo, i.horario, i.lugar, i.fecha_inicio, i.duracion,
-              i.uniforme, i.contactos_responsables, i.visible
+              i.uniforme, i.contactos_responsables, i.visible, i.constancia_presentacion
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
        WHERE n.token_constancia = $1 AND i.visible = TRUE
@@ -8417,6 +8664,31 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
       modalidades: conveniosFlujo.MODALIDADES_TRABAJO,
       regiones: conveniosFlujo.REGIONES_POLICIALES
     });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.get('/admin/inscripciones/:id/constancia-vista', requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.json({ ok: false, error: 'Inscripción inválida' });
+    const r = await pool.query(
+      `SELECT n.*, i.tipo, i.titulo, i.horario, i.lugar, i.fecha_inicio, i.duracion,
+              i.uniforme, i.contactos_responsables, i.constancia_presentacion
+       FROM inscripciones n
+       JOIN items_portal i ON i.id=n.item_id
+       WHERE n.id=$1`,
+      [id]
+    );
+    if (!r.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    const row = r.rows[0];
+    if (!puedeOperarInscritos(req.admin, row.tipo))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    if (row.tipo !== 'convenio' || row.estado !== 'expediente_ok') {
+      return res.json({ ok: false, error: 'La constancia solo está disponible cuando el expediente está aprobado.' });
+    }
+    const token = await asegurarTokenConstancia(id);
+    row.token_constancia = token;
+    res.json({ ok: true, inscripcion: payloadConstanciaPublica(row) });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
