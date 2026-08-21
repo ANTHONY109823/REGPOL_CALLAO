@@ -542,17 +542,35 @@ function diaCompatible(diaSlot, diaCand) {
   return a === b;
 }
 
+function canonLugarSorteo(texto) {
+  return String(texto || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/^COMISARIA(\s+DE)?\s+/, '')
+    .replace(/^COM\.?\s+/, '')
+    .replace(/^CIA\s+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function canonTurnoSorteo(turno) {
+  return String(turno || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function candidatoEnSlot(cand, slot) {
   if (!cand || !slot) return false;
-  var lugar = String(cand.slot_lugar || '').trim().toUpperCase();
-  var turno = String(cand.slot_turno || '').trim().toUpperCase();
+  var lugar = String(cand.slot_lugar || '').trim();
+  var turno = String(cand.slot_turno || '').trim();
   var dia = String(cand.slot_dia || cand.dia_franco || '').trim().toUpperCase();
   if (slot.lugar) {
-    if (lugar !== String(slot.lugar).trim().toUpperCase()) return false;
+    if (canonLugarSorteo(lugar || cand.comisaria_postula) !== canonLugarSorteo(slot.lugar)) return false;
   }
-  // Con turno en postulación: debe coincidir. Sin turno (registros antiguos): entra por día.
   if (slot.turno && slot.turno !== 'GENERAL') {
-    if (turno && turno !== slot.turno) return false;
+    if (turno && canonTurnoSorteo(turno) !== canonTurnoSorteo(slot.turno)) return false;
   }
   return diaCompatible(slot.dia, dia);
 }

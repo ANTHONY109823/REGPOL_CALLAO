@@ -5259,7 +5259,7 @@ function onSelectConvocatoriaSorteo(){
 function abrirSorteoEnVivoConvenio(){
   if(!SORTEO_CONV_ACTIVO) return;
   if(!confirm('¿Abrir SORTEO REAL?\n\nCada ganador se guarda de inmediato en la base de datos.\nPara ensayo use el botón «Prueba (ensayo)».')) return;
-  window.open('sorteo-live.html?item_id='+SORTEO_CONV_ACTIVO.id, 'regpol_sorteo_live', 'noopener,noreferrer');
+  abrirSorteoDesdeItem(SORTEO_CONV_ACTIVO.id);
 }
 
 function abrirSorteoEnsayoConvenio(){
@@ -8194,11 +8194,6 @@ function eliminarResultadoPdf(id){
     });
 }
 
-function abrirSorteoDesdeItem(itemId){
-  if(!itemId) return;
-  window.open('sorteo-live.html?item_id='+itemId, 'regpol_sorteo_live', 'noopener,noreferrer');
-}
-
 function recargarTrasPasarGanador(itemId){
   var tit = (window.INSCRITOS_ITEM_INFO && window.INSCRITOS_ITEM_INFO.titulo) || '';
   if(ITEM_ACTIVO_ID===itemId && tit){
@@ -8212,6 +8207,23 @@ function puedePasarPreinscritosVacantesNoCubiertas(preins, vacLibres){
   preins = parseInt(preins, 10) || 0;
   vacLibres = parseInt(vacLibres, 10) || 0;
   return preins > 0 && vacLibres > 0 && preins <= vacLibres;
+}
+
+function convenioRequiereSorteo(c){
+  if(c && typeof c.requiere_sorteo === 'boolean') return c.requiere_sorteo;
+  var pre = parseInt((c && c.preinscritos), 10) || 0;
+  var lib = parseInt((c && c.disponibles), 10) || 0;
+  return pre > 0 && pre > lib;
+}
+
+function abrirSorteoDesdeItem(itemId){
+  if(!itemId) return;
+  var w = window.open('sorteo-live.html?item_id='+itemId, 'regpol_sorteo_live');
+  if(!w){
+    alert('El navegador bloqueó la ventana del sorteo. Permita ventanas emergentes para este sitio.');
+    return;
+  }
+  try { w.focus(); } catch (e) {}
 }
 
 function candidatosPreinscritosAGanador(){
@@ -8683,9 +8695,9 @@ function renderConvPreinscritosCuadros(list){
         +'<button type="button" class="btn btn-v" style="width:100%;justify-content:center;" onclick="abrirConvenioPreinscritos('+c.id+',\''+escJs(c.titulo)+'\')">'
         +'<i class="fas fa-users"></i> Ver inscritos</button>'
         +'<button type="button" class="btn btn-o" style="width:100%;justify-content:center;" onclick="abrirSorteoDesdeItem('+c.id+')" '
-        +(c.preinscritos<1||puedePasarPreinscritosVacantesNoCubiertas(c.preinscritos, c.disponibles)?'disabled title="No hace falta sorteo: hay igual o menos preinscritos que vacantes"':'')+'>'
+        +(c.preinscritos<1||(!convenioRequiereSorteo(c) && puedePasarPreinscritosVacantesNoCubiertas(c.preinscritos, c.disponibles))?'disabled title="No hace falta sorteo: hay igual o menos preinscritos que vacantes en cada turno"':'title="Hay turnos con más preinscritos que vacantes"')+'>'
         +'<i class="fas fa-random"></i> Mandar a sorteo</button>'
-        +(puedePasarPreinscritosVacantesNoCubiertas(c.preinscritos, c.disponibles)
+        +((!convenioRequiereSorteo(c) && puedePasarPreinscritosVacantesNoCubiertas(c.preinscritos, c.disponibles))
           ? ('<button type="button" class="btn" style="width:100%;justify-content:center;background:#1a7a3a;color:#fff;" onclick="pasarPreinscritosAGanador('+c.id+')">'
             +'<i class="fas fa-user-check"></i> Pasar todos a ganador (sin sorteo)</button>')
           : '')
@@ -9002,6 +9014,7 @@ function verInscritos(itemId, titulo, modo){
   INSCRITOS_MODO = modo || 'preinscripcion';
   ITEM_ACTIVO_ID=itemId;
   window.INSCRITOS_ITEM_INFO={titulo:titulo||''};
+  window.INSCRITOS_REQUIERE_SORTEO=false;
   ir('inscritos',null);
   var icon = INSCRITOS_MODO==='ganadores' ? 'fa-trophy' : (INSCRITOS_MODO==='repechaje' ? 'fa-redo' : 'fa-users');
   var pref = INSCRITOS_MODO==='ganadores' ? 'Ganadores / expedientes' : (INSCRITOS_MODO==='repechaje' ? 'Repechaje' : 'Inscritos');
@@ -9034,6 +9047,7 @@ function verInscritos(itemId, titulo, modo){
       if(!d.ok){document.getElementById('inscritos-tabla').innerHTML='<p style="color:#c00;padding:16px;">'+escHtml(d.error||'Error')+'</p>';return;}
       INSCRITOS_CACHE=d.inscritos||[];
       window.INSCRITOS_VACANTES_INFO=d.vacantes_info||null;
+      window.INSCRITOS_REQUIERE_SORTEO=!!d.requiere_sorteo;
       window.INSCRITOS_ITEM_INFO=d.item||{titulo:titulo||''};
       window.CATALOGO_OBS_CONV=d.catalogo_observaciones||[];
       INSCRITOS_TIPO_ACTUAL=d.tipo||'convenio';
@@ -9326,9 +9340,11 @@ function renderInscritos(list, tipo){
   var btnAccion = '';
   if(esConvenio && INSCRITOS_MODO==='preinscripcion'){
     var vacLibresBtn = (vacInfo && vacInfo.disponibles) || 0;
-    var mostrarPasar = puedePasarPreinscritosVacantesNoCubiertas(aptos, vacLibresBtn);
+    var requiereSorteo = !!window.INSCRITOS_REQUIERE_SORTEO;
+    var mostrarPasar = !requiereSorteo && puedePasarPreinscritosVacantesNoCubiertas(aptos, vacLibresBtn);
+    var sorteoOff = aptos<1 || mostrarPasar;
     btnAccion='<div style="display:flex;flex-direction:column;gap:8px;margin-left:8px;min-width:260px;">'
-      +'<button type="button" class="btn btn-o" style="margin:0;justify-content:center;" onclick="abrirSorteoDesdeItem('+ITEM_ACTIVO_ID+')" '+(aptos<1||mostrarPasar?'disabled':'')+' title="'+(mostrarPasar?'No hace falta sorteo: hay igual o menos preinscritos que vacantes':'')+'">'
+      +'<button type="button" class="btn btn-o" style="margin:0;justify-content:center;" onclick="abrirSorteoDesdeItem('+ITEM_ACTIVO_ID+')" '+(sorteoOff?'disabled':'')+' title="'+(sorteoOff?(aptos<1?'No hay preinscritos para sortear':'No hace falta sorteo: hay igual o menos preinscritos que vacantes en cada turno'):'Hay turnos con más preinscritos que vacantes')+'">'
       +'<i class="fas fa-random"></i> MANDAR A SORTEO ('+aptos+' preinscritos)</button>'
       +(mostrarPasar
         ? ('<button type="button" class="btn" id="btn-pasar-ganador-vacantes" style="margin:0;justify-content:center;background:#1a7a3a;color:#fff;" onclick="pasarPreinscritosAGanador('+ITEM_ACTIVO_ID+')" title="Hay menos preinscritos que vacantes: todos pasan a ganador">'

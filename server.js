@@ -5720,6 +5720,34 @@ function candidatoCoincideSlotSorteo(cand, slot) {
   return candidatoEnCupoPostula(cand, slot);
 }
 
+function hayTurnosQueRequierenSorteo(item, rows) {
+  const list = Array.isArray(rows) ? rows : [];
+  const ocupan = conveniosFlujo.ESTADOS_OCUPAN_VACANTE || [];
+  const pendEst = ['preinscrito', 'pendiente', 'aprobado', 'verificado'];
+  const slots = construirSlotsSorteoItem(item);
+  if (!slots.length) {
+    const pend = list.filter(function(c) { return pendEst.indexOf(c.estado) >= 0; }).length;
+    const occ = list.filter(function(c) { return ocupan.indexOf(c.estado) >= 0; }).length;
+    const vac = parseInt(item && item.vacantes, 10) || 0;
+    return pend > Math.max(0, vac - occ);
+  }
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    const vac = parseInt(slot.vacantes, 10) || 0;
+    if (vac < 1) continue;
+    let ocupadas = 0;
+    let pend = 0;
+    for (let j = 0; j < list.length; j++) {
+      if (!candidatoEnCupoPostula(list[j], slot)) continue;
+      if (ocupan.indexOf(list[j].estado) >= 0) ocupadas++;
+      else if (pendEst.indexOf(list[j].estado) >= 0) pend++;
+    }
+    const libres = Math.max(0, vac - ocupadas);
+    if (pend > 0 && pend > libres) return true;
+  }
+  return false;
+}
+
 /** Datos operativos de la hoja de vacantes (turnos / día / cupos). */
 const CONVENIOS_DATOS_HOJA = {
   'MUNICIPALIDAD PROV. CALLAO': {
@@ -8335,7 +8363,8 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     await conveniosFlujo.caducarExpedientesVencidos(pool);
     const items = await pool.query(
-      `SELECT id, titulo, vacantes, estado, horario, fecha_inicio, duracion, lugar, orden
+      `SELECT id, titulo, vacantes, estado, horario, fecha_inicio, duracion, lugar, orden,
+              cupos_unidades, turnos
        FROM items_portal
        WHERE tipo='convenio' AND visible=TRUE
        ORDER BY orden, id`
@@ -8372,6 +8401,21 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
       const pre =
         (mapa.preinscrito || 0) + (mapa.pendiente || 0) +
         (mapa.aprobado || 0) + (mapa.verificado || 0);
+      let requiereSorteo = pre > (vac.disponibles != null ? vac.disponibles : 0);
+      if (pre > 0) {
+        const slotRows = await pool.query(
+          `SELECT estado, comisaria_postula FROM inscripciones WHERE item_id=$1`,
+          [it.id]
+        );
+        const itemSlots = Object.assign({}, it, {
+          tipo: 'convenio',
+          cupos_unidades: normalizarCuposUnidades(it.cupos_unidades),
+          turnos: normalizarTurnos(it.turnos)
+        });
+        requiereSorteo = hayTurnosQueRequierenSorteo(itemSlots, slotRows.rows);
+      } else {
+        requiereSorteo = false;
+      }
       out.push({
         id: it.id,
         titulo: it.titulo,
@@ -8393,7 +8437,8 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
         caducados: mapa.caducado || 0,
         repechaje: mapa.repechaje || 0,
         reservas: mapa.reserva || 0,
-        pendientes_expediente: pendPdf.rows[0].n || 0
+        pendientes_expediente: pendPdf.rows[0].n || 0,
+        requiere_sorteo: !!requiereSorteo
       });
     }
     res.json({ ok: true, convenios: out });
@@ -8828,7 +8873,8 @@ app.delete('/admin/items/:id', requireAuth, async (req, res) => {
 app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
   try {
     const cur = await pool.query(
-      `SELECT tipo, titulo, vacantes, horario, duracion, lugar, fecha_inicio, aviso_sorteo_fb
+      `SELECT tipo, titulo, vacantes, horario, duracion, lugar, fecha_inicio, aviso_sorteo_fb,
+              cupos_unidades, turnos
        FROM items_portal WHERE id=$1`,
       [req.params.id]);
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
@@ -8853,6 +8899,14 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
     const vac = cur.rows[0].tipo === 'convenio'
       ? await conveniosFlujo.vacantesDisponibles(pool, req.params.id)
       : null;
+    let requiereSorteo = false;
+    if (cur.rows[0].tipo === 'convenio') {
+      const itemSlots = Object.assign({}, cur.rows[0], {
+        cupos_unidades: normalizarCuposUnidades(cur.rows[0].cupos_unidades),
+        turnos: normalizarTurnos(cur.rows[0].turnos)
+      });
+      requiereSorteo = hayTurnosQueRequierenSorteo(itemSlots, r.rows);
+    }
     const itemInfo = {
       id: parseInt(req.params.id, 10),
       tipo: cur.rows[0].tipo,
@@ -8870,6 +8924,7 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
       tipo: cur.rows[0].tipo,
       item: itemInfo,
       vacantes_info: vac,
+      requiere_sorteo: !!requiereSorteo,
       catalogo_observaciones: conveniosFlujo.CATALOGO_OBSERVACIONES,
       modalidades: conveniosFlujo.MODALIDADES_TRABAJO,
       regiones: conveniosFlujo.REGIONES_POLICIALES
