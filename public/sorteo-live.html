@@ -301,13 +301,11 @@
       <div class="cfg-grid">
         <div class="cfg-col cfg-col-izq">
           <div class="conv-meta" id="cfg-meta"></div>
-          <div class="lista-total-titulo"><i class="fas fa-layer-group"></i> Cupos por turno / día</div>
+          <div class="lista-total-titulo"><i class="fas fa-layer-group"></i> Turnos pendientes de sorteo</div>
           <div id="cfg-slots" class="cfg-slots"></div>
           <p class="hint">
             <i class="fas fa-info-circle" style="color:#c8a94a;"></i>
-            Sorteo <strong>por turno y día</strong>.
-            <span class="tag-vac">VACACIONES</span> cubren vacante.
-            <span class="tag-rueda">FRANCO</span> entra a la rueda.
+            Solo aparecen los turnos con <strong>más preinscritos que vacantes</strong>. El resto ya se sorteó o pasó directo a ganador.
           </p>
           <button class="btn-iniciar" id="btn-iniciar" onclick="iniciarSorteo()" disabled>
             <i class="fas fa-play"></i> INICIAR SORTEO EN VIVO
@@ -459,6 +457,7 @@ var IDS_PERSISTIDOS = {};
 var RESERVAS_PERSISTIDAS = false;
 var SLOTS_SORTEO = [];
 var SLOT_IDX = 0;
+var SOLO_TURNOS_PENDIENTES = false;
 var BLOQUES_VAC_HECHO = false;
 var AUTO_SORTEO = false;
 var AUTO_PAUSA_MS = 10000;
@@ -665,11 +664,24 @@ function labelSlotCand(c) {
   return '—';
 }
 
+function libresDeSlot(s) {
+  var libres = parseInt(s && s.disponibles, 10);
+  if (isNaN(libres)) libres = Math.max(0, ((s && s.vacantes) || 0) - ((s && s.ocupadas) || 0));
+  return libres;
+}
+
+function slotRequiereSorteo(s, lista) {
+  var libres = libresDeSlot(s);
+  if (libres < 1) return false;
+  var nPend = (lista || []).filter(function(c) { return candidatoEnSlot(c, s); }).length;
+  return nPend > libres;
+}
+
 function renderSlotsPreview() {
   var el = document.getElementById('cfg-slots');
   if (!el) return;
   if (!SLOTS_SORTEO.length) {
-    el.innerHTML = '<p style="padding:10px;font-size:12px;color:#888;margin:0;">Sin desglose de turnos: se usará el cupo general.</p>';
+    el.innerHTML = '<p style="padding:10px;font-size:13px;color:#1a7a3a;margin:0;">No hay turnos pendientes de sorteo. Los que tenían menos inscritos que vacantes ya pasaron a ganador.</p>';
     return;
   }
   el.innerHTML = '<table class="lista-total-tabla"><thead><tr>'
@@ -701,18 +713,12 @@ function renderSlotsPreview() {
 function renderMetaConvenio(containerId) {
   var el = document.getElementById(containerId);
   if (!el || !ITEM_DATA) return;
-  var cupo = CUPO_TOTAL;
-  var ocup = VACANTES_INFO && VACANTES_INFO.ocupadas != null ? VACANTES_INFO.ocupadas : 0;
-  var disp = VACANTES_INFO && VACANTES_INFO.disponibles != null ? VACANTES_INFO.disponibles : Math.max(0, cupo - ocup);
+  var cupoSesion = FALTAN_INICIAL || 0;
   el.innerHTML =
-    '<div class="conv-meta-item"><span>Cupo total</span><strong>' + cupo + ' efectivos</strong></div>'
-    + '<div class="conv-meta-item"><span>Ya ocupadas</span><strong>' + ocup + '</strong></div>'
-    + '<div class="conv-meta-item"><span>Disponibles</span><strong>' + disp + '</strong></div>'
-    + '<div class="conv-meta-item"><span>Turnos</span><strong>' + (SLOTS_SORTEO.length || 1) + '</strong></div>'
-    + '<div class="conv-meta-item"><span>Turnos / Horarios</span><strong>' + escH(ITEM_DATA.horario || 'No especificado') + '</strong></div>'
-    + '<div class="conv-meta-item"><span>Fecha inicio</span><strong>' + escH(ITEM_DATA.fecha_inicio || '—') + '</strong></div>'
-    + '<div class="conv-meta-item"><span>Duración</span><strong>' + escH(ITEM_DATA.duracion || '—') + '</strong></div>'
-    + '<div class="conv-meta-item"><span>Lugar</span><strong>' + escH(ITEM_DATA.lugar || '—') + '</strong></div>';
+    '<div class="conv-meta-item"><span>Turnos por sortear</span><strong>' + (SLOTS_SORTEO.length || 0) + '</strong></div>'
+    + '<div class="conv-meta-item"><span>Preinscritos en esos turnos</span><strong>' + (LISTA_APROBADOS.length || 0) + '</strong></div>'
+    + '<div class="conv-meta-item"><span>Vacantes a cubrir ahora</span><strong>' + cupoSesion + '</strong></div>'
+    + '<div class="conv-meta-item"><span>Convenio</span><strong>' + escH(ITEM_DATA.titulo || '') + '</strong></div>';
 }
 
 function cargarCandidatos() {
@@ -729,6 +735,15 @@ function cargarCandidatos() {
       LISTA_APROBADOS = TODOS_CAND.filter(function(c) {
         return c.estado === 'aprobado' || c.estado === 'preinscrito' || c.estado === 'pendiente' || c.estado === 'verificado';
       });
+      if (SLOTS_SORTEO.length) {
+        SLOTS_SORTEO = SLOTS_SORTEO.filter(function(s) {
+          return slotRequiereSorteo(s, LISTA_APROBADOS);
+        });
+        LISTA_APROBADOS = LISTA_APROBADOS.filter(function(c) {
+          return SLOTS_SORTEO.some(function(s) { return candidatoEnSlot(c, s); });
+        });
+        SOLO_TURNOS_PENDIENTES = true;
+      }
       CUPO_TOTAL = parseInt(ITEM_DATA.vacantes, 10) || 1;
       if (VACANTES_INFO && VACANTES_INFO.vacantes != null) {
         CUPO_TOTAL = parseInt(VACANTES_INFO.vacantes, 10) || CUPO_TOTAL;
@@ -737,6 +752,17 @@ function cargarCandidatos() {
         ? parseInt(VACANTES_INFO.disponibles, 10)
         : CUPO_TOTAL;
       FALTAN_INICIAL = Math.max(0, disponibles);
+      if (SOLO_TURNOS_PENDIENTES) {
+        var aSortear = 0;
+        SLOTS_SORTEO.forEach(function(s) {
+          var nF = LISTA_APROBADOS.filter(function(c) {
+            return c.disponibilidad !== 'VACACIONES' && candidatoEnSlot(c, s);
+          }).length;
+          aSortear += Math.min(libresDeSlot(s), nF);
+        });
+        FALTAN_INICIAL = aSortear;
+        CUPO_TOTAL = aSortear;
+      }
       OBJETIVO = CUPO_TOTAL;
 
       document.getElementById('cfg-nombre').textContent = ITEM_DATA.titulo || '';
@@ -750,7 +776,9 @@ function cargarCandidatos() {
       var lock = document.getElementById('lock-msg');
       if (FALTAN_INICIAL <= 0) {
         lock.style.display = 'block';
-        lock.textContent = 'No hay vacantes disponibles. El cupo ya está completo según el panel admin.';
+        lock.textContent = SLOTS_SORTEO.length
+          ? 'No hay vacantes disponibles en los turnos pendientes.'
+          : 'No hay turnos pendientes de sorteo. Los que tenían menos inscritos que vacantes ya pasaron a ganador.';
       } else if (!LISTA_APROBADOS.length) {
         lock.style.display = 'block';
         lock.textContent = 'No hay preinscritos disponibles para sortear.';
@@ -944,22 +972,24 @@ function iniciarSorteo() {
   SORTEO_CULMINADO = false;
   SLOT_IDX = 0;
 
-  var yaGanadores = TODOS_CAND.filter(function(c) { return c.estado === 'ganador'; });
-  yaGanadores.forEach(function(c) {
-    var g = {
-      id: c.id, grado: c.grado, nombres: c.nombres, unidad: c.unidad,
-      area: c.area, cip: c.cip, tipo: 'previo', nro: GANADORES.length + 1,
-      bloque_vacaciones: c.bloque_vacaciones || '',
-      slot_key: '',
-      slot_label: labelSlotCand(c)
-    };
-    GANADORES.push(g);
-    IDS_GANADOS[c.id] = g;
-    IDS_PERSISTIDOS[c.id] = true;
-  });
+  if (!SOLO_TURNOS_PENDIENTES) {
+    var yaGanadores = TODOS_CAND.filter(function(c) { return c.estado === 'ganador'; });
+    yaGanadores.forEach(function(c) {
+      var g = {
+        id: c.id, grado: c.grado, nombres: c.nombres, unidad: c.unidad,
+        area: c.area, cip: c.cip, tipo: 'previo', nro: GANADORES.length + 1,
+        bloque_vacaciones: c.bloque_vacaciones || '',
+        slot_key: '',
+        slot_label: labelSlotCand(c)
+      };
+      GANADORES.push(g);
+      IDS_GANADOS[c.id] = g;
+      IDS_PERSISTIDOS[c.id] = true;
+    });
+  }
 
   OBJETIVO = GANADORES.length + FALTAN_INICIAL;
-  if (OBJETIVO > CUPO_TOTAL) OBJETIVO = CUPO_TOTAL;
+  if (OBJETIVO > CUPO_TOTAL && !SOLO_TURNOS_PENDIENTES) OBJETIVO = CUPO_TOTAL;
 
   // Vacaciones: ocupan vacante automática por slot (si hay cupo)
   VACACIONES_CAND.forEach(function(c) {
