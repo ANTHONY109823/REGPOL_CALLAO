@@ -5691,23 +5691,33 @@ function diaCompatibleSorteo(diaSlot, diaCand) {
   return a === b;
 }
 
-function candidatoCoincideSlotSorteo(cand, slot) {
+function canonLugarSlot(texto) {
+  return String(texto || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/^COMISARIA(\s+DE)?\s+/, '')
+    .replace(/^COM\.?\s+/, '')
+    .replace(/^CIA\s+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function candidatoEnCupoPostula(cand, slot) {
   if (!cand || !slot) return false;
   var p = conveniosFlujo.parsePostulacionSlot(cand.comisaria_postula);
   if (slot.lugar) {
-    if (String(p.lugar || '').trim().toUpperCase() !== String(slot.lugar).trim().toUpperCase()) {
+    if (canonLugarSlot(p.lugar || cand.comisaria_postula) !== canonLugarSlot(slot.lugar)) {
       return false;
     }
   }
-  // Si trae turno en la postulación, debe coincidir. Si no trae (legado), entra por día.
   if (slot.turno && slot.turno !== 'GENERAL') {
     if (p.turno && p.turno !== slot.turno) return false;
   }
-  var diaCand = p.dia;
-  if (String(cand.disponibilidad || '').toUpperCase() === 'FRANCO' && cand.dia_franco) {
-    diaCand = String(cand.dia_franco).toUpperCase();
-  }
-  return diaCompatibleSorteo(slot.dia, diaCand);
+  return diaCompatibleSorteo(slot.dia, p.dia);
+}
+
+function candidatoCoincideSlotSorteo(cand, slot) {
+  return candidatoEnCupoPostula(cand, slot);
 }
 
 /** Datos operativos de la hoja de vacantes (turnos / día / cupos). */
@@ -6615,7 +6625,7 @@ app.post('/admin/items/:id/aplicar-sorteo', requireAuth, async (req, res) => {
                ELSE COALESCE(bloque_vacaciones, '')
              END
            WHERE id=$3 AND item_id=$4
-             AND estado IN ('preinscrito','pendiente','aprobado','verificado','ganador')`,
+             AND estado IN ('preinscrito','pendiente','aprobado','verificado','ganador','reserva','corregir_preinscripcion')`,
           [obs, plazo.toISOString(), insId, itemId, bloque]);
       } else {
         r = await pool.query(
@@ -6657,6 +6667,63 @@ app.post('/admin/items/:id/aplicar-sorteo', requireAuth, async (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
+async function promoverVacantesNoCubiertasPorSlot(pool, itemId) {
+  const cur = await pool.query(
+    'SELECT id, tipo, titulo, vacantes, cupos_unidades, turnos FROM items_portal WHERE id=$1',
+    [itemId]
+  );
+  if (!cur.rows.length || cur.rows[0].tipo !== 'convenio') {
+    return { ok: false, ganadores: 0 };
+  }
+  const item = cur.rows[0];
+  item.cupos_unidades = normalizarCuposUnidades(item.cupos_unidades);
+  item.turnos = normalizarTurnos(item.turnos);
+  const slots = construirSlotsSorteoItem(item);
+  if (!slots.length) return { ok: true, ganadores: 0 };
+  const ins = await pool.query(
+    `SELECT id, estado, comisaria_postula, disponibilidad, dia_franco
+     FROM inscripciones WHERE item_id=$1`,
+    [itemId]
+  );
+  const ocupan = conveniosFlujo.ESTADOS_OCUPAN_VACANTE || [];
+  const pendientesEst = ['reserva', 'preinscrito', 'pendiente', 'aprobado', 'verificado'];
+  const plazo = conveniosFlujo.plazoDesdeAhora();
+  const obs = 'Asignado por vacante no cubierta (turno sin sorteo)';
+  const ya = {};
+  let nGan = 0;
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    const vac = parseInt(slot.vacantes, 10) || 0;
+    if (vac < 1) continue;
+    const ocupadas = ins.rows.filter(function(c) {
+      return ocupan.indexOf(c.estado) >= 0 && candidatoEnCupoPostula(c, slot);
+    }).length;
+    const libres = Math.max(0, vac - ocupadas);
+    if (libres < 1) continue;
+    const pend = ins.rows.filter(function(c) {
+      return pendientesEst.indexOf(c.estado) >= 0
+        && !ya[c.id]
+        && candidatoEnCupoPostula(c, slot);
+    });
+    if (!pend.length || pend.length > libres) continue;
+    for (let j = 0; j < pend.length; j++) {
+      const row = pend[j];
+      const r = await pool.query(
+        `UPDATE inscripciones SET
+           estado='ganador', observacion=$1, modo_ingreso=COALESCE(NULLIF(modo_ingreso,''),'sorteo'),
+           fecha_ganador=COALESCE(fecha_ganador, NOW()), plazo_expediente=COALESCE(plazo_expediente, $2)
+         WHERE id=$3 AND item_id=$4 AND estado = ANY($5::varchar[])`,
+        [obs, plazo.toISOString(), row.id, itemId, pendientesEst]
+      );
+      if (!r.rowCount) continue;
+      nGan++;
+      ya[row.id] = true;
+      row.estado = 'ganador';
+    }
+  }
+  return { ok: true, ganadores: nGan };
+}
+
 app.post('/admin/items/:id/pasar-preinscritos-ganador', requireAuth, async (req, res) => {
   try {
     const itemId = parseInt(req.params.id, 10);
@@ -6667,58 +6734,19 @@ app.post('/admin/items/:id/pasar-preinscritos-ganador', requireAuth, async (req,
       return res.json({ ok: false, error: 'Solo aplica a convenios' });
     if (!puedeOperarInscritos(req.admin, 'convenio'))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
-    const vac = await conveniosFlujo.vacantesDisponibles(pool, itemId);
-    const libres = (vac && vac.ok) ? (vac.disponibles || 0) : 0;
-    if (libres < 1) {
-      return res.json({ ok: false, error: 'No hay vacantes libres para pasar a ganador.' });
-    }
-    const nPreR = await pool.query(
-      `SELECT COUNT(*)::int AS n FROM inscripciones
-       WHERE item_id=$1 AND estado IN ('preinscrito','pendiente','aprobado','verificado')`,
-      [itemId]
-    );
-    const nPre = (nPreR.rows[0] && nPreR.rows[0].n) || 0;
-    if (nPre < 1) {
-      return res.json({ ok: false, error: 'No hay preinscritos pendientes para pasar a ganador.' });
-    }
-    if (nPre > libres) {
+    const promo = await promoverVacantesNoCubiertasPorSlot(pool, itemId);
+    const vac2 = await conveniosFlujo.vacantesDisponibles(pool, itemId);
+    if (!promo.ganadores) {
       return res.json({
         ok: false,
-        error: 'Hay más preinscritos (' + nPre + ') que vacantes libres (' + libres + '). Debe realizarse el sorteo.'
+        error: 'No hay turnos con menos preinscritos que vacantes para pasar a ganador sin sorteo.'
       });
     }
-    const cand = await pool.query(
-      `SELECT id, cip, nombres, estado FROM inscripciones
-       WHERE item_id=$1 AND estado IN ('preinscrito','pendiente','aprobado','verificado')
-       ORDER BY fecha ASC, id ASC`,
-      [itemId]
-    );
-    const plazo = conveniosFlujo.plazoDesdeAhora();
-    const obs = 'Asignado por vacante no cubierta';
-    const notifs = [];
-    let nGan = 0;
-    for (const row of cand.rows) {
-      const r = await pool.query(
-        `UPDATE inscripciones SET
-           estado='ganador', observacion=$1, modo_ingreso='sorteo',
-           fecha_ganador=NOW(), plazo_expediente=$2
-         WHERE id=$3 AND item_id=$4
-           AND estado IN ('preinscrito','pendiente','aprobado','verificado')`,
-        [obs, plazo.toISOString(), row.id, itemId]
-      );
-      if (!r.rowCount) continue;
-      nGan++;
-      try {
-        const n = await conveniosFlujo.notificarInscripcion(pool, row.id, 'ganador');
-        notifs.push({ id: row.id, ok: n.ok });
-      } catch (e) { /* ignore */ }
-    }
-    const vac2 = await conveniosFlujo.vacantesDisponibles(pool, itemId);
     res.json({
       ok: true,
-      ganadores: nGan,
+      ganadores: promo.ganadores,
       vacantes_libres: (vac2 && vac2.ok) ? vac2.disponibles : 0,
-      notificaciones: notifs
+      notificaciones: []
     });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
@@ -8760,6 +8788,10 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    if (cur.rows[0].tipo === 'convenio') {
+      await conveniosFlujo.caducarExpedientesVencidos(pool);
+      await promoverVacantesNoCubiertasPorSlot(pool, parseInt(req.params.id, 10));
+    }
     const r = await pool.query(
       `SELECT id,item_id,cip,dni,grado,nombres,unidad,area,cargo,telefono,email,
               arma,disponibilidad,dia_franco,fecha_egreso,tiempo_servicio,
@@ -8771,7 +8803,6 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
               CASE WHEN pdf_requisitos IS NOT NULL AND pdf_requisitos<>'' THEN true ELSE false END AS tiene_pdf,
               pdf_nombre
        FROM inscripciones WHERE item_id=$1 ORDER BY fecha ASC`, [req.params.id]);
-    if (cur.rows[0].tipo === 'convenio') await conveniosFlujo.caducarExpedientesVencidos(pool);
     const vac = cur.rows[0].tipo === 'convenio'
       ? await conveniosFlujo.vacantesDisponibles(pool, req.params.id)
       : null;

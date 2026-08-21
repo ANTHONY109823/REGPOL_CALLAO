@@ -1352,7 +1352,7 @@
           <button class="btn" style="background:#888;color:#fff;" id="inscritos-btn-volver" onclick="volverDesdeInscritos()"><i class="fas fa-chevron-left"></i> Volver</button>
           <h3 id="inscritos-titulo" style="margin:0;border:none;padding:0;"><i class="fas fa-users"></i> Inscritos</h3>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;" id="inscritos-filtros-bar">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;" id="inscritos-filtros-bar" autocomplete="off">
           <input type="text" id="inscritos-buscar" class="filtro-solo-preins" placeholder="CIP, DNI, CODIFIN, nombre o postulación..." oninput="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:260px;"/>
           <select id="inscritos-filtro-region" class="inscritos-filtro-extra filtro-solo-preins filtro-preins-no-celador" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
             <option value="">Todas las regiones</option>
@@ -1368,15 +1368,15 @@
             <option value="VACACIONES">Vacaciones</option>
             <option value="FRANCO">Franco</option>
           </select>
-          <select id="inscritos-filtro-comisaria" class="inscritos-filtro-extra" onchange="onFiltroComisariaInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:240px;">
+          <select id="inscritos-filtro-comisaria" class="inscritos-filtro-extra" autocomplete="off" onchange="onFiltroComisariaInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:240px;">
             <option value="">Todas las comisarías</option>
           </select>
-          <select id="inscritos-filtro-tipo" class="inscritos-filtro-extra filtro-solo-ganadores" onchange="onFiltroDiaInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:170px;">
+          <select id="inscritos-filtro-tipo" class="inscritos-filtro-extra filtro-solo-ganadores" autocomplete="off" onchange="onFiltroDiaInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:170px;">
             <option value="">PAR / IMPAR</option>
             <option value="PAR">PAR</option>
             <option value="IMPAR">IMPAR</option>
           </select>
-          <select id="inscritos-filtro-turno" class="inscritos-filtro-extra filtro-solo-ganadores" onchange="filtrarInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:160px;">
+          <select id="inscritos-filtro-turno" class="inscritos-filtro-extra filtro-solo-ganadores" autocomplete="off" onchange="filtrarInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:160px;">
             <option value="">Turno</option>
           </select>
           <select id="inscritos-filtro-vacaciones" class="inscritos-filtro-extra filtro-solo-ganadores filtro-gan-extra" onchange="onFiltroVacacionesInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:190px;">
@@ -1391,11 +1391,14 @@
             <option value="PAR">Franco día par</option>
             <option value="IMPAR">Franco día impar</option>
           </select>
-          <select id="inscritos-filtro-modo" class="inscritos-filtro-extra filtro-solo-ganadores filtro-gan-extra" onchange="filtrarInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:150px;">
+          <select id="inscritos-filtro-modo" class="inscritos-filtro-extra filtro-solo-ganadores filtro-gan-extra" autocomplete="off" onchange="filtrarInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:150px;">
             <option value="">Origen</option>
             <option value="sorteo">Por sorteo</option>
             <option value="repechaje">Por repechaje</option>
           </select>
+          <button type="button" class="btn" id="inscritos-btn-ver-todos" onclick="limpiarFiltrosInscritos()" style="background:#e8eee9;color:#004d3d;padding:7px 12px;">
+            <i class="fas fa-list"></i> Ver todos
+          </button>
         </div>
         <div id="inscritos-stats" style="margin-bottom:10px;"></div>
         <div id="inscritos-tabla"><p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">Cargando...</p></div>
@@ -8761,6 +8764,38 @@ function esCeladorActivo(){
   return t.indexOf('CELADOR')>=0;
 }
 
+function idsFiltrosInscritos(){
+  return [
+    'inscritos-filtro-region','inscritos-filtro-unidad','inscritos-filtro-modalidad','inscritos-filtro-disp',
+    'inscritos-filtro-comisaria','inscritos-filtro-tipo','inscritos-filtro-turno',
+    'inscritos-filtro-vacaciones','inscritos-filtro-franco','inscritos-filtro-modo'
+  ];
+}
+
+function resetFiltrosInscritosValores(){
+  idsFiltrosInscritos().forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.value='';
+  });
+  var bus=document.getElementById('inscritos-buscar');
+  if(bus) bus.value='';
+}
+
+function valorFiltroVisible(id){
+  var el=document.getElementById(id);
+  if(!el) return '';
+  if(el.style.display==='none') return '';
+  return String(el.value||'');
+}
+
+function limpiarFiltrosInscritos(){
+  resetFiltrosInscritosValores();
+  poblarFiltroComisariaInscritos();
+  poblarFiltrosGanadoresInscritos();
+  resetFiltrosInscritosValores();
+  renderInscritos(INSCRITOS_CACHE||[], INSCRITOS_TIPO_ACTUAL);
+}
+
 function setFiltroInscritosVisible(id, show){
   var el=document.getElementById(id);
   if(el) el.style.display = show ? '' : 'none';
@@ -8790,10 +8825,15 @@ function aplicarVisibilidadFiltrosInscritos(){
     setFiltroInscritosVisible('inscritos-filtro-tipo', true);
     setFiltroInscritosVisible('inscritos-filtro-turno', true);
     setFiltroInscritosVisible('inscritos-filtro-comisaria', true);
+    var btnTodos=document.getElementById('inscritos-btn-ver-todos');
+    if(btnTodos) btnTodos.style.display='';
     ['inscritos-filtro-vacaciones','inscritos-filtro-franco','inscritos-filtro-modo'].forEach(function(id){
       var el=document.getElementById(id);
       if(el) el.value='';
     });
+  } else {
+    var btnTodos2=document.getElementById('inscritos-btn-ver-todos');
+    if(btnTodos2) btnTodos2.style.display = esGan ? '' : 'none';
   }
   if(esPre && !esCel){
     setFiltroInscritosVisible('inscritos-filtro-tipo', false);
@@ -9005,7 +9045,8 @@ function verInscritos(itemId, titulo, modo){
       poblarFiltroModalidadInscritos();
       poblarFiltroComisariaInscritos();
       poblarFiltrosGanadoresInscritos();
-      renderInscritos(obtenerInscritosFiltrados(), INSCRITOS_TIPO_ACTUAL);
+      resetFiltrosInscritosValores();
+      renderInscritos(INSCRITOS_CACHE, INSCRITOS_TIPO_ACTUAL);
     });
 }
 
@@ -9131,26 +9172,16 @@ function poblarFiltroAreasInscritos(){
 function obtenerInscritosFiltrados(){
   var txt=(document.getElementById('inscritos-buscar')||{}).value||'';
   txt=txt.toLowerCase();
-  var unidEl=document.getElementById('inscritos-filtro-unidad');
-  var unid=unidEl?unidEl.value:'';
-  var regEl=document.getElementById('inscritos-filtro-region');
-  var regF=regEl?regEl.value:'';
-  var modEl=document.getElementById('inscritos-filtro-modalidad');
-  var modF=modEl?modEl.value:'';
-  var dispEl=document.getElementById('inscritos-filtro-disp');
-  var dispF=dispEl?dispEl.value:'';
-  var modoEl=document.getElementById('inscritos-filtro-modo');
-  var modoF=modoEl?modoEl.value:'';
-  var turnoEl=document.getElementById('inscritos-filtro-turno');
-  var turnoF=turnoEl?turnoEl.value:'';
-  var tipoEl=document.getElementById('inscritos-filtro-tipo');
-  var tipoF=tipoEl?tipoEl.value:'';
-  var vacEl=document.getElementById('inscritos-filtro-vacaciones');
-  var vacF=vacEl?vacEl.value:'';
-  var franEl=document.getElementById('inscritos-filtro-franco');
-  var franF=franEl?franEl.value:'';
-  var ciaEl=document.getElementById('inscritos-filtro-comisaria');
-  var ciaF=ciaEl?ciaEl.value:'';
+  var unid=valorFiltroVisible('inscritos-filtro-unidad');
+  var regF=valorFiltroVisible('inscritos-filtro-region');
+  var modF=valorFiltroVisible('inscritos-filtro-modalidad');
+  var dispF=valorFiltroVisible('inscritos-filtro-disp');
+  var modoF=valorFiltroVisible('inscritos-filtro-modo');
+  var turnoF=valorFiltroVisible('inscritos-filtro-turno');
+  var tipoF=valorFiltroVisible('inscritos-filtro-tipo');
+  var vacF=valorFiltroVisible('inscritos-filtro-vacaciones');
+  var franF=valorFiltroVisible('inscritos-filtro-franco');
+  var ciaF=valorFiltroVisible('inscritos-filtro-comisaria');
   var ciaKey=canonClaveFiltroPdf(ciaF);
   var esGan=INSCRITOS_MODO==='ganadores';
   var esCel=esCeladorActivo();
@@ -9340,7 +9371,7 @@ function renderInscritos(list, tipo){
   if(!list.length){
     var msg = total
       ? (INSCRITOS_MODO==='ganadores'
-        ? 'Ningún ganador coincide con ese filtro. Elija otra comisaría, PAR/IMPAR o turno.'
+        ? 'Ningún ganador coincide con ese filtro. Pulse «Ver todos» para quitar comisaría, PAR/IMPAR y turno.'
         : 'Ningún registro coincide con ese filtro.')
       : 'Sin inscripciones registradas.';
     document.getElementById('inscritos-tabla').innerHTML='<p style="color:#888;font-size:13px;text-align:center;padding:24px;">'+msg+'</p>';

@@ -452,10 +452,10 @@ async function caducarExpedientesVencidos(pool) {
   // Asegurar fecha_ganador y plazo (4 días) a ganadores que aún no lo tengan
   await pool.query(`
     UPDATE inscripciones n
-    SET fecha_ganador = COALESCE(fecha_ganador, n.fecha, NOW()),
+    SET fecha_ganador = COALESCE(fecha_ganador, NOW()),
         plazo_expediente = COALESCE(
           plazo_expediente,
-          COALESCE(fecha_ganador, n.fecha, NOW()) + ($1 || ' days')::interval
+          NOW() + ($1 || ' days')::interval
         )
     FROM items_portal i
     WHERE n.item_id = i.id

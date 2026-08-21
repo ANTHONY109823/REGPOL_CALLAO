@@ -843,7 +843,38 @@ function persistirReservasPendientes() {
   });
 }
 
+function asignarGanadoresSinSorteoPendientes() {
+  if (!SLOTS_SORTEO.length) return 0;
+  var n = 0;
+  SLOTS_SORTEO.forEach(function(slot) {
+    var libres = cupoRestanteSlot(slot);
+    if (libres < 1) return;
+    var pend = TODOS_CAND.filter(function(c) {
+      var est = String(c.estado || '');
+      return !IDS_GANADOS[c.id]
+        && (est === 'preinscrito' || est === 'pendiente' || est === 'verificado' || est === 'aprobado')
+        && candidatoEnSlot(c, slot);
+    });
+    if (!pend.length || pend.length > libres) return;
+    pend.forEach(function(c) {
+      var g = {
+        id: c.id, grado: c.grado, nombres: c.nombres, unidad: c.unidad,
+        area: c.area, cip: c.cip, tipo: 'directo', nro: GANADORES.length + 1,
+        bloque_vacaciones: c.bloque_vacaciones || '',
+        slot_key: slot.key || '',
+        slot_label: slot.label || 'Vacante no cubierta'
+      };
+      GANADORES.push(g);
+      IDS_GANADOS[c.id] = g;
+      marcarEstadoLocal(c.id, 'ganador');
+      n++;
+    });
+  });
+  return n;
+}
+
 function sincronizarPendientes() {
+  asignarGanadoresSinSorteoPendientes();
   var cadena = Promise.resolve();
   GANADORES.forEach(function(g) {
     if (!IDS_PERSISTIDOS[g.id] || g.forceBloque) {
@@ -1309,7 +1340,7 @@ function culminarSorteo() {
   if (!GANADORES.length) {
     if (!confirm('No hay ganadores registrados. ¿Culminar de todas formas?')) return;
   } else if ((OBJETIVO - GANADORES.length) > 0 && RUEDA_CAND.some(function(c) { return !IDS_GANADOS[c.id]; })) {
-    if (!confirm('Aún faltan vacantes y hay candidatos en rueda. ¿Culminar el sorteo ahora?')) return;
+    if (!confirm('Aún hay candidatos. Los turnos con menos preinscritos que vacantes pasarán a ganador sin sorteo. El resto quedará como reserva. ¿Culminar ahora?')) return;
   }
 
   var btn = document.getElementById('btn-culminar');
