@@ -6667,6 +6667,52 @@ app.post('/admin/items/:id/aplicar-sorteo', requireAuth, async (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
+async function revertirReservasTurnosSinSorteo(pool, itemId) {
+  const cur = await pool.query(
+    'SELECT id, tipo, titulo, vacantes, cupos_unidades, turnos FROM items_portal WHERE id=$1',
+    [itemId]
+  );
+  if (!cur.rows.length || cur.rows[0].tipo !== 'convenio') {
+    return { ok: false, revertidos: 0 };
+  }
+  const item = cur.rows[0];
+  item.cupos_unidades = normalizarCuposUnidades(item.cupos_unidades);
+  item.turnos = normalizarTurnos(item.turnos);
+  const slots = construirSlotsSorteoItem(item);
+  if (!slots.length) return { ok: true, revertidos: 0 };
+  const ins = await pool.query(
+    `SELECT id, estado, observacion, comisaria_postula FROM inscripciones WHERE item_id=$1`,
+    [itemId]
+  );
+  const ocupan = conveniosFlujo.ESTADOS_OCUPAN_VACANTE || [];
+  const ids = [];
+  const ya = {};
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    const vac = parseInt(slot.vacantes, 10) || 0;
+    if (vac < 1) continue;
+    const mismo = ins.rows.filter(function(c) { return candidatoEnCupoPostula(c, slot); });
+    const gan = mismo.filter(function(c) { return ocupan.indexOf(c.estado) >= 0; });
+    const tuvoSorteo = gan.some(function(c) {
+      return String(c.observacion || '').indexOf('Seleccionado en sorteo público') >= 0;
+    });
+    if (tuvoSorteo) continue;
+    if (gan.length >= vac) continue;
+    mismo.filter(function(c) { return c.estado === 'reserva' && !ya[c.id]; }).forEach(function(c) {
+      ya[c.id] = true;
+      ids.push(c.id);
+    });
+  }
+  if (!ids.length) return { ok: true, revertidos: 0 };
+  const r = await pool.query(
+    `UPDATE inscripciones
+     SET estado='preinscrito', observacion=''
+     WHERE item_id=$1 AND estado='reserva' AND id = ANY($2::int[])`,
+    [itemId, ids]
+  );
+  return { ok: true, revertidos: r.rowCount || 0 };
+}
+
 async function promoverVacantesNoCubiertasPorSlot(pool, itemId) {
   const cur = await pool.query(
     'SELECT id, tipo, titulo, vacantes, cupos_unidades, turnos FROM items_portal WHERE id=$1',
@@ -8790,6 +8836,7 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     if (cur.rows[0].tipo === 'convenio') {
       await conveniosFlujo.caducarExpedientesVencidos(pool);
+      await revertirReservasTurnosSinSorteo(pool, parseInt(req.params.id, 10));
       await promoverVacantesNoCubiertasPorSlot(pool, parseInt(req.params.id, 10));
     }
     const r = await pool.query(

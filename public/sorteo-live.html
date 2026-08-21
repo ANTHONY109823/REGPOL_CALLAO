@@ -820,6 +820,21 @@ function persistirGanadorUno(g) {
   });
 }
 
+function slotDeCandidato(c) {
+  if (!c || !SLOTS_SORTEO.length) return null;
+  for (var i = 0; i < SLOTS_SORTEO.length; i++) {
+    if (candidatoEnSlot(c, SLOTS_SORTEO[i])) return SLOTS_SORTEO[i];
+  }
+  return null;
+}
+
+function slotTuvoSorteoPublico(slot) {
+  if (!slot) return false;
+  return GANADORES.some(function(g) {
+    return g.tipo === 'sorteo' && g.slot_key === slot.key;
+  });
+}
+
 function persistirReservasPendientes() {
   if (RESERVAS_PERSISTIDAS || !ITEM_ID) return Promise.resolve();
   if (ENSAYO) {
@@ -828,8 +843,13 @@ function persistirReservasPendientes() {
   }
   var idsGan = GANADORES.map(function(g) { return g.id; });
   var reservas = TODOS_CAND.filter(function(c) {
-    return (c.estado === 'aprobado' || c.estado === 'preinscrito' || c.estado === 'pendiente' || c.estado === 'verificado')
-      && idsGan.indexOf(c.id) < 0;
+    if (idsGan.indexOf(c.id) >= 0) return false;
+    if (!(c.estado === 'aprobado' || c.estado === 'preinscrito' || c.estado === 'pendiente' || c.estado === 'verificado')) return false;
+    var slot = slotDeCandidato(c);
+    if (!slot) return !SLOTS_SORTEO.length;
+    if (cupoRestanteSlot(slot) < 1) return true;
+    if (slotTuvoSorteoPublico(slot)) return true;
+    return false;
   }).map(function(c) { return c.id; });
   if (!reservas.length) { RESERVAS_PERSISTIDAS = true; return Promise.resolve(); }
   return fetch(API + '/admin/items/' + ITEM_ID + '/aplicar-sorteo', {
@@ -1340,7 +1360,7 @@ function culminarSorteo() {
   if (!GANADORES.length) {
     if (!confirm('No hay ganadores registrados. ¿Culminar de todas formas?')) return;
   } else if ((OBJETIVO - GANADORES.length) > 0 && RUEDA_CAND.some(function(c) { return !IDS_GANADOS[c.id]; })) {
-    if (!confirm('Aún hay candidatos. Los turnos con menos preinscritos que vacantes pasarán a ganador sin sorteo. El resto quedará como reserva. ¿Culminar ahora?')) return;
+    if (!confirm('Aún hay candidatos. Los turnos con menos preinscritos que vacantes pasarán a ganador sin sorteo. Los turnos ya sorteados dejarán al resto como reserva. Los turnos que no se sortearon seguirán como preinscritos. ¿Culminar ahora?')) return;
   }
 
   var btn = document.getElementById('btn-culminar');
