@@ -6672,21 +6672,27 @@ app.post('/admin/items/:id/pasar-preinscritos-ganador', requireAuth, async (req,
     if (libres < 1) {
       return res.json({ ok: false, error: 'No hay vacantes libres para pasar a ganador.' });
     }
-    const idsBody = Array.isArray(req.body && req.body.ids) ? req.body.ids : [];
-    const idsFiltro = idsBody.map(function(x) { return parseInt(x, 10); }).filter(Boolean);
-    let q = `SELECT id, cip, nombres, estado FROM inscripciones
-             WHERE item_id=$1 AND estado IN ('preinscrito','pendiente','aprobado','verificado')`;
-    const args = [itemId];
-    if (idsFiltro.length) {
-      q += ' AND id = ANY($2::int[])';
-      args.push(idsFiltro);
-    }
-    q += ' ORDER BY fecha ASC, id ASC LIMIT $' + (args.length + 1);
-    args.push(libres);
-    const cand = await pool.query(q, args);
-    if (!cand.rows.length) {
+    const nPreR = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM inscripciones
+       WHERE item_id=$1 AND estado IN ('preinscrito','pendiente','aprobado','verificado')`,
+      [itemId]
+    );
+    const nPre = (nPreR.rows[0] && nPreR.rows[0].n) || 0;
+    if (nPre < 1) {
       return res.json({ ok: false, error: 'No hay preinscritos pendientes para pasar a ganador.' });
     }
+    if (nPre > libres) {
+      return res.json({
+        ok: false,
+        error: 'Hay más preinscritos (' + nPre + ') que vacantes libres (' + libres + '). Debe realizarse el sorteo.'
+      });
+    }
+    const cand = await pool.query(
+      `SELECT id, cip, nombres, estado FROM inscripciones
+       WHERE item_id=$1 AND estado IN ('preinscrito','pendiente','aprobado','verificado')
+       ORDER BY fecha ASC, id ASC`,
+      [itemId]
+    );
     const plazo = conveniosFlujo.plazoDesdeAhora();
     const obs = 'Asignado por vacante no cubierta';
     const notifs = [];
