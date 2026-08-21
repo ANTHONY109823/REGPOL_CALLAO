@@ -1368,33 +1368,33 @@
             <option value="VACACIONES">Vacaciones</option>
             <option value="FRANCO">Franco</option>
           </select>
+          <select id="inscritos-filtro-comisaria" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:240px;">
+            <option value="">Todas las comisarías</option>
+          </select>
+          <select id="inscritos-filtro-tipo" class="inscritos-filtro-extra filtro-solo-ganadores" onchange="filtrarInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:170px;">
+            <option value="">Día (PAR / IMPAR)</option>
+            <option value="PAR">Días pares</option>
+            <option value="IMPAR">Días impares</option>
+          </select>
           <select id="inscritos-filtro-turno" class="inscritos-filtro-extra filtro-solo-ganadores" onchange="filtrarInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:150px;">
             <option value="">Turno</option>
           </select>
-          <select id="inscritos-filtro-modo" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
+          <select id="inscritos-filtro-vacaciones" class="inscritos-filtro-extra filtro-solo-ganadores" onchange="onFiltroVacacionesInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:190px;">
+            <option value="">Vacaciones (sin filtro)</option>
+            <option value="VACACIONES">Solo vacaciones</option>
+            <option value="B1">Vacaciones bloque 1</option>
+            <option value="B2">Vacaciones bloque 2</option>
+          </select>
+          <select id="inscritos-filtro-franco" class="inscritos-filtro-extra filtro-solo-ganadores" onchange="onFiltroFrancoInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:180px;">
+            <option value="">Franco (sin filtro)</option>
+            <option value="FRANCO">Solo francos</option>
+            <option value="PAR">Franco día par</option>
+            <option value="IMPAR">Franco día impar</option>
+          </select>
+          <select id="inscritos-filtro-modo" class="inscritos-filtro-extra filtro-solo-ganadores" onchange="filtrarInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:150px;">
             <option value="">Origen</option>
             <option value="sorteo">Por sorteo</option>
             <option value="repechaje">Por repechaje</option>
-          </select>
-          <select id="inscritos-filtro-tipo" class="inscritos-filtro-extra filtro-solo-ganadores" onchange="filtrarInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:130px;">
-            <option value="">Tipo</option>
-            <option value="PAR">PAR</option>
-            <option value="IMPAR">IMPAR</option>
-          </select>
-          <select id="inscritos-filtro-vacaciones" class="inscritos-filtro-extra filtro-solo-ganadores" onchange="filtrarInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:150px;">
-            <option value="">Vacaciones</option>
-            <option value="VACACIONES">Todas</option>
-            <option value="B1">Bloque 1</option>
-            <option value="B2">Bloque 2</option>
-          </select>
-          <select id="inscritos-filtro-franco" class="inscritos-filtro-extra filtro-solo-ganadores" onchange="filtrarInscritos()" style="display:none;padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:140px;">
-            <option value="">Franco</option>
-            <option value="FRANCO">Todos</option>
-            <option value="PAR">Día PAR</option>
-            <option value="IMPAR">Día IMPAR</option>
-          </select>
-          <select id="inscritos-filtro-comisaria" class="inscritos-filtro-extra" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:220px;">
-            <option value="">Todas las comisarías</option>
           </select>
         </div>
         <div id="inscritos-stats" style="margin-bottom:10px;"></div>
@@ -8317,6 +8317,56 @@ function canonClaveFiltroPdf(v){
   return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
 }
 
+function canonDiaSlot(dia){
+  var d=canonClaveFiltroPdf(dia).replace(/\s+/g,'').replace(/-/g,'/');
+  if(!d) return '';
+  if(d==='PAR/IMPAR' || d==='PARIMPAR' || d==='AMBOS') return 'PAR/IMPAR';
+  if(d==='IMPAR') return 'IMPAR';
+  if(d==='PAR') return 'PAR';
+  if(/\bIMPAR\b/.test(canonClaveFiltroPdf(dia))) return 'IMPAR';
+  if(/(^|[^A-Z])PAR([^A-Z]|$)/.test(canonClaveFiltroPdf(dia))) return 'PAR';
+  return d;
+}
+
+function diaSlotCoincide(dia, filtro){
+  var f=canonDiaSlot(filtro);
+  if(!f) return true;
+  var d=canonDiaSlot(dia);
+  if(!d) return false;
+  if(d===f) return true;
+  if(d==='PAR/IMPAR' && (f==='PAR' || f==='IMPAR')) return true;
+  return false;
+}
+
+function canonNombreComisaria(texto){
+  var n=canonClaveFiltroPdf(texto);
+  if(!n) return '';
+  n=n.replace(/^COMISARIA(\s+DE)?\s+/,'').replace(/^COM\.?\s+/,'').replace(/^CIA\s+/,'');
+  var list=(typeof COMISARIAS_CALLAO!=='undefined')?COMISARIAS_CALLAO:[];
+  for(var i=0;i<list.length;i++){
+    var c=list[i];
+    var cn=canonClaveFiltroPdf(c).replace(/^CIA\s+/,'');
+    if(n===cn || n===canonClaveFiltroPdf(c)) return c;
+    if(n.indexOf(cn+'|')===0 || n.indexOf(cn+' —')===0 || n.indexOf(cn+' -')===0) return c;
+  }
+  return '';
+}
+
+function ordenClavesSedeFiltro(keys){
+  return (keys||[]).slice().sort(function(a,b){
+    var ia=1000, ib=1000;
+    var list=(typeof COMISARIAS_CALLAO!=='undefined')?COMISARIAS_CALLAO:[];
+    var ca=canonNombreComisaria(a)||a;
+    var cb=canonNombreComisaria(b)||b;
+    for(var i=0;i<list.length;i++){
+      if(list[i]===ca) ia=i;
+      if(list[i]===cb) ib=i;
+    }
+    if(ia!==ib) return ia-ib;
+    return String(a).localeCompare(String(b),'es');
+  });
+}
+
 function abrirModalPdfPreinscritos(){
   abrirModalPdfListaConvenio('preinscritos');
 }
@@ -8371,9 +8421,20 @@ function abrirModalPdfListaConvenio(modo){
       }).join('');
   }
   if(selD){
+    var keysD=Object.keys(dias).sort(function(a,b){
+      function peso(x){
+        var d=canonDiaSlot(x);
+        if(d==='PAR') return 1;
+        if(d==='IMPAR') return 2;
+        if(d==='PAR/IMPAR') return 3;
+        return 9;
+      }
+      return peso(a)-peso(b)||a.localeCompare(b,'es');
+    });
     selD.innerHTML='<option value="">Todos los días ('+list.length+')</option>'
-      +Object.keys(dias).sort().map(function(d){
-        return '<option value="'+escHtml(d)+'">'+escHtml(d)+'</option>';
+      +keysD.map(function(d){
+        var lab=canonDiaSlot(d)==='PAR'?'Días pares':(canonDiaSlot(d)==='IMPAR'?'Días impares':d);
+        return '<option value="'+escHtml(d)+'">'+escHtml(lab)+'</option>';
       }).join('');
   }
   if(selV){
@@ -8385,7 +8446,7 @@ function abrirModalPdfListaConvenio(modo){
   }
   if(selC){
     var labSede=etiquetaFiltroSedeLista();
-    var keysC=Object.keys(comis).sort(function(a,b){ return a.localeCompare(b,'es'); });
+    var keysC=ordenClavesSedeFiltro(Object.keys(comis));
     selC.innerHTML='<option value="">'+escHtml(labSede.todas)+' ('+list.length+')</option>'
       +keysC.map(function(c){
         return '<option value="'+escHtml(c)+'">'+escHtml(c)+' ('+comis[c]+')</option>';
@@ -8433,7 +8494,7 @@ function obtenerPreinscritosPdfFiltrados(){
     var sl=slotPostulacionInscrito(ins);
     if(cKey && canonClaveFiltroPdf(claveSedePostula(ins))!==cKey) return false;
     if(tKey && canonClaveFiltroPdf(sl.turno)!==tKey) return false;
-    if(dKey && canonClaveFiltroPdf(sl.dia)!==dKey) return false;
+    if(dKey && !diaSlotCoincide(sl.dia, dia)) return false;
     return true;
   });
 }
@@ -8731,7 +8792,11 @@ function slotPostulacionInscrito(ins){
       lugar=s;
     }
   }
-  if(!dia) dia=String((ins&&ins.dia_franco)||'').toUpperCase();
+  if(!dia){
+    var raw=canonClaveFiltroPdf(s);
+    if(/\bIMPAR\b/.test(raw)) dia='IMPAR';
+    else if(/(^|[^A-Z])PAR([^A-Z]|$)/.test(raw)) dia='PAR';
+  }
   return {lugar:lugar, turno:turno, dia:dia};
 }
 
@@ -8746,6 +8811,8 @@ function normalizarSedePostula(texto){
   if(n.indexOf('MILLAS')>=0) return 'ATU 200 MILLAS';
   if(n.indexOf('COLONIAL')>=0) return 'ATU COLONIAL';
   if(n.indexOf('FISCAL')>=0) return 'ATU FISCALIZACION';
+  var cia=canonNombreComisaria(texto);
+  if(cia) return cia;
   return String(texto||'').trim();
 }
 
@@ -8797,6 +8864,21 @@ function poblarFiltrosGanadoresInscritos(){
         return '<option value="'+escHtml(v)+'">'+escHtml(labelTurnoFiltro(k==='(Sin turno)'?'':k))+' ('+counts[k]+')</option>';
       }).join('');
     if(val) selTurno.value=val;
+  }
+  var selTipo=document.getElementById('inscritos-filtro-tipo');
+  if(selTipo){
+    var nPar=0, nImpar=0, nAmbos=0;
+    INSCRITOS_CACHE.forEach(function(i){
+      var d=canonDiaSlot(slotPostulacionInscrito(i).dia);
+      if(d==='PAR') nPar++;
+      else if(d==='IMPAR') nImpar++;
+      else if(d==='PAR/IMPAR') nAmbos++;
+    });
+    var valT=selTipo.value;
+    selTipo.innerHTML='<option value="">Día (PAR / IMPAR)</option>'
+      +'<option value="PAR">Días pares ('+(nPar+nAmbos)+')</option>'
+      +'<option value="IMPAR">Días impares ('+(nImpar+nAmbos)+')</option>';
+    if(valT) selTipo.value=valT;
   }
 }
 
@@ -8934,7 +9016,7 @@ function poblarFiltroComisariaInscritos(){
     var u=claveSedePostula(i)||lab.vacio;
     counts[u]=(counts[u]||0)+1;
   });
-  var sorted=Object.keys(counts).sort(function(a,b){ return a.localeCompare(b,'es'); });
+  var sorted=ordenClavesSedeFiltro(Object.keys(counts));
   var val=sel.value;
   sel.innerHTML='<option value="">'+escHtml(lab.todas)+' ('+INSCRITOS_CACHE.length+')</option>'
     +sorted.map(function(u){
@@ -9015,7 +9097,7 @@ function obtenerInscritosFiltrados(){
     var matchDisp=esGan||!dispF||(i.disponibilidad||'')===dispF;
     var matchModo=!modoF||String(i.modo_ingreso||'').toLowerCase()===modoF;
     var matchTurno=!esGan||!turnoF||canonTurnoInscrito(slot.turno)===canonTurnoInscrito(turnoF);
-    var matchTipo=!esGan||!tipoF||String(slot.dia||'').toUpperCase()===tipoF || String(slot.dia||'').toUpperCase()==='PAR/IMPAR';
+    var matchTipo=!esGan||!tipoF||diaSlotCoincide(slot.dia, tipoF);
     var disp=String(i.disponibilidad||'').toUpperCase();
     var matchVac=true;
     if(esGan && vacF){
@@ -9025,9 +9107,9 @@ function obtenerInscritosFiltrados(){
     }
     var matchFran=true;
     if(esGan && franF){
-      var diaF=String(i.dia_franco||slot.dia||'').toUpperCase();
+      var diaFran=canonDiaSlot(i.dia_franco);
       if(franF==='FRANCO') matchFran=disp==='FRANCO';
-      else matchFran=disp==='FRANCO' && diaF===franF;
+      else matchFran=disp==='FRANCO' && diaSlotCoincide(diaFran, franF);
     }
     var matchCia=!ciaKey||canonClaveFiltroPdf(claveSedePostula(i))===ciaKey;
     return matchTxt&&matchUni&&matchReg&&matchMod&&matchDisp&&matchModo&&matchTurno&&matchTipo&&matchVac&&matchFran&&matchCia;
@@ -9038,6 +9120,18 @@ function obtenerInscritosFiltrados(){
 
 function filtrarInscritos(){
   renderInscritos(obtenerInscritosFiltrados(), INSCRITOS_TIPO_ACTUAL);
+}
+
+function onFiltroVacacionesInscritos(){
+  var fran=document.getElementById('inscritos-filtro-franco');
+  if(fran && fran.value) fran.value='';
+  filtrarInscritos();
+}
+
+function onFiltroFrancoInscritos(){
+  var vac=document.getElementById('inscritos-filtro-vacaciones');
+  if(vac && vac.value) vac.value='';
+  filtrarInscritos();
 }
 
 var INSCRITOS_TIPO_ACTUAL = 'convenio';
@@ -9134,6 +9228,9 @@ function renderInscritos(list, tipo){
     '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
     +'<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;flex:1;">'
     +'<div class="stat"><div class="n">'+total+'</div><div class="l">Total</div></div>'
+    +(list.length!==total
+      ? '<div class="stat" style="border-color:#004d3d;"><div class="n" style="color:#004d3d;">'+list.length+'</div><div class="l">En este filtro</div></div>'
+      : '')
     +(esConvenio && INSCRITOS_MODO==='ganadores'
       ? ('<div class="stat" style="border-color:#c8a94a;"><div class="n" style="color:#856404;">'+gan+'</div><div class="l">Ganadores/OK</div></div>'
         +'<div class="stat" style="border-color:#2980b9;"><div class="n" style="color:#2980b9;">'+enRev+'</div><div class="l">En revisión</div></div>'
@@ -9156,7 +9253,12 @@ function renderInscritos(list, tipo){
     +'</div>';
 
   if(!list.length){
-    document.getElementById('inscritos-tabla').innerHTML='<p style="color:#bbb;font-size:13px;text-align:center;padding:24px;">Sin inscripciones registradas.</p>';
+    var msg = total
+      ? (INSCRITOS_MODO==='ganadores'
+        ? 'Ningún ganador coincide con ese filtro. Deje Vacaciones y Franco en «sin filtro» y elija Comisaría + Días pares.'
+        : 'Ningún registro coincide con ese filtro.')
+      : 'Sin inscripciones registradas.';
+    document.getElementById('inscritos-tabla').innerHTML='<p style="color:#888;font-size:13px;text-align:center;padding:24px;">'+msg+'</p>';
     return;
   }
 

@@ -7531,23 +7531,56 @@ function canonSedePostulaPdf(texto) {
   if (n.indexOf('MILLAS') >= 0) return 'ATU 200 MILLAS';
   if (n.indexOf('COLONIAL') >= 0) return 'ATU COLONIAL';
   if (n.indexOf('FISCAL') >= 0) return 'ATU FISCALIZACION';
+  const short = n.replace(/^COMISARIA(\s+DE)?\s+/, '').replace(/^COM\.?\s+/, '').replace(/^CIA\s+/, '');
+  for (var i = 0; i < COMISARIAS_CELADOR.length; i++) {
+    const c = COMISARIAS_CELADOR[i];
+    const cn = canonFiltroPreinscritos(c).replace(/^CIA\s+/, '');
+    if (n === canonFiltroPreinscritos(c) || short === cn) return canonFiltroPreinscritos(c);
+  }
   return n;
+}
+
+function canonDiaSlotPdf(dia) {
+  const raw = canonFiltroPreinscritos(dia);
+  const d = raw.replace(/\s+/g, '').replace(/-/g, '/');
+  if (!d) return '';
+  if (d === 'PAR/IMPAR' || d === 'PARIMPAR' || d === 'AMBOS') return 'PAR/IMPAR';
+  if (d === 'IMPAR') return 'IMPAR';
+  if (d === 'PAR') return 'PAR';
+  if (/\bIMPAR\b/.test(raw)) return 'IMPAR';
+  if (/(^|[^A-Z])PAR([^A-Z]|$)/.test(raw)) return 'PAR';
+  return d;
+}
+
+function diaSlotCoincidePdf(dia, filtro) {
+  const f = canonDiaSlotPdf(filtro);
+  if (!f) return true;
+  const d = canonDiaSlotPdf(dia);
+  if (!d) return false;
+  if (d === f) return true;
+  if (d === 'PAR/IMPAR' && (f === 'PAR' || f === 'IMPAR')) return true;
+  return false;
 }
 
 function filtrarListaPorTurnoDia(filas, turnoQ, diaQ, vacQ, comisariaQ) {
   const turnoF = canonFiltroPreinscritos(turnoQ);
-  const diaF = canonFiltroPreinscritos(diaQ);
+  const diaF = canonDiaSlotPdf(diaQ);
   const ciaF = canonSedePostulaPdf(comisariaQ);
   let out = filas || [];
   out = out.filter(function(ins) {
     if (!matchFiltroVacacionesLista(ins, vacQ)) return false;
     const p = conveniosFlujo.parsePostulacionSlot(ins.comisaria_postula);
     const t = canonFiltroPreinscritos(p.turno);
-    const d = canonFiltroPreinscritos(p.dia || ins.dia_franco);
+    let dRaw = p.dia || '';
+    if (!dRaw) {
+      const raw = canonFiltroPreinscritos(ins.comisaria_postula);
+      if (/\bIMPAR\b/.test(raw)) dRaw = 'IMPAR';
+      else if (/(^|[^A-Z])PAR([^A-Z]|$)/.test(raw)) dRaw = 'PAR';
+    }
     const c = canonSedePostulaPdf(p.lugar || ins.comisaria_postula);
     if (ciaF && c !== ciaF) return false;
     if (turnoF && t !== turnoF) return false;
-    if (diaF && d !== diaF) return false;
+    if (diaF && !diaSlotCoincidePdf(dRaw, diaQ)) return false;
     return true;
   });
   const partesFiltro = [];
