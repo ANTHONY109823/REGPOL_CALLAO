@@ -8190,6 +8190,96 @@ function abrirSorteoDesdeItem(itemId){
   window.open('sorteo-live.html?item_id='+itemId, 'regpol_sorteo_live', 'noopener,noreferrer');
 }
 
+function recargarTrasPasarGanador(itemId){
+  var tit = (window.INSCRITOS_ITEM_INFO && window.INSCRITOS_ITEM_INFO.titulo) || '';
+  if(ITEM_ACTIVO_ID===itemId && tit){
+    verInscritos(itemId, tit, INSCRITOS_MODO || 'preinscripcion');
+    return;
+  }
+  if(typeof cargarConvFlujoResumen==='function') cargarConvFlujoResumen('preinscritos');
+}
+
+function candidatosPreinscritosAGanador(){
+  var list = (typeof obtenerInscritosFiltrados==='function') ? obtenerInscritosFiltrados() : (INSCRITOS_CACHE||[]);
+  return (list||[]).filter(function(i){
+    return ['preinscrito','pendiente','aprobado','verificado'].indexOf(i.estado)>=0;
+  });
+}
+
+function pasarPreinscritosAGanador(itemId){
+  var id = parseInt(itemId || ITEM_ACTIVO_ID, 10);
+  if(!id){ alert('Seleccione un convenio.'); return; }
+  function confirmarYEnviar(cand, vacLibres){
+    if(vacLibres < 1){
+      alert('No hay vacantes libres. No se puede pasar a ganador.');
+      return;
+    }
+    if(!cand.length){
+      alert('No hay preinscritos pendientes para pasar a ganador.');
+      return;
+    }
+    var n = Math.min(vacLibres, cand.length);
+    var extra = cand.length > n
+      ? ('\nHay '+cand.length+' preinscritos; solo se pasarán '+n+' (cupo libre).')
+      : '';
+    if(!confirm('¿Pasar a GANADOR a '+n+' preinscrito(s) por vacantes no cubiertas?\n\nVacantes libres: '+vacLibres+'\nPreinscritos a enviar: '+n+'\nPlazo de expediente: 4 días.'+extra+'\n\nNo toca a quienes ya son ganadores.\nSi el sorteo en vivo sigue girando, espere a que no haya más candidatos en rueda.')) return;
+    var ids = cand.slice(0, n).map(function(i){ return i.id; });
+    var btn = document.getElementById('btn-pasar-ganador-vacantes');
+    if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pasando...'; }
+    fetch(API+'/admin/items/'+id+'/pasar-preinscritos-ganador',{
+      method:'POST',
+      headers:hdr(),
+      body: JSON.stringify({ confirmar:true, ids:ids })
+    })
+      .then(function(r){
+        return r.json().then(function(d){ return { okHttp:r.ok, d:d }; }).catch(function(){ return { okHttp:false, d:null }; });
+      })
+      .then(function(res){
+        if(res.d && res.d.ok){
+          alert('Listo. Se pasaron '+res.d.ganadores+' preinscrito(s) a ganador.');
+          recargarTrasPasarGanador(id);
+          return;
+        }
+        var ganadores = ids.map(function(gid){
+          return { id:gid, tipo:'directo', slot_label:'Vacante no cubierta' };
+        });
+        return fetch(API+'/admin/items/'+id+'/aplicar-sorteo',{
+          method:'POST',
+          headers:hdr(),
+          body: JSON.stringify({ ganadores:ganadores, reservas:[] })
+        }).then(function(r){ return r.json(); }).then(function(d){
+          if(!d || !d.ok) throw new Error((d && d.error) || (res.d && res.d.error) || 'No se pudo pasar a ganador.');
+          alert('Listo. Se pasaron '+(d.ganadores||n)+' preinscrito(s) a ganador.');
+          recargarTrasPasarGanador(id);
+        });
+      })
+      .catch(function(e){ alert(e.message || 'Error de conexión.'); })
+      .then(function(){
+        if(btn){
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-user-check"></i> PASAR A GANADOR (vacantes libres)';
+        }
+      });
+  }
+
+  if(ITEM_ACTIVO_ID===id && INSCRITOS_CACHE && INSCRITOS_CACHE.length){
+    var vacLibres = (window.INSCRITOS_VACANTES_INFO && window.INSCRITOS_VACANTES_INFO.disponibles) || 0;
+    confirmarYEnviar(candidatosPreinscritosAGanador(), vacLibres);
+    return;
+  }
+  fetch(API+'/admin/items/'+id+'/inscritos',{headers:hdr()})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d || !d.ok){ alert((d && d.error) || 'No se pudo cargar el convenio.'); return; }
+      var vacLibres = (d.vacantes_info && d.vacantes_info.disponibles) || 0;
+      var cand = (d.inscritos||[]).filter(function(i){
+        return ['preinscrito','pendiente','aprobado','verificado'].indexOf(i.estado)>=0;
+      });
+      confirmarYEnviar(cand, vacLibres);
+    })
+    .catch(function(){ alert('Error de conexión.'); });
+}
+
 function descargarPdfPreinscritosAdmin(){
   abrirModalPdfListaConvenio('preinscritos');
 }
@@ -8518,6 +8608,9 @@ function renderConvPreinscritosCuadros(list){
         +'<button type="button" class="btn btn-o" style="width:100%;justify-content:center;" onclick="abrirSorteoDesdeItem('+c.id+')" '
         +(c.preinscritos<1?'disabled':'')+'>'
         +'<i class="fas fa-random"></i> Mandar a sorteo</button>'
+        +'<button type="button" class="btn" style="width:100%;justify-content:center;background:#1a7a3a;color:#fff;" onclick="pasarPreinscritosAGanador('+c.id+')" '
+        +(c.preinscritos<1||(c.disponibles||0)<1?'disabled':'')+'>'
+        +'<i class="fas fa-user-check"></i> Pasar a ganador (vacantes libres)</button>'
         +'</div></div>';
     }).join('')
     +'</div>';
@@ -9009,9 +9102,12 @@ function renderInscritos(list, tipo){
 
   var btnAccion = '';
   if(esConvenio && INSCRITOS_MODO==='preinscripcion'){
+    var vacLibresBtn = (vacInfo && vacInfo.disponibles) || 0;
     btnAccion='<div style="display:flex;flex-direction:column;gap:8px;margin-left:8px;min-width:260px;">'
       +'<button type="button" class="btn btn-o" style="margin:0;justify-content:center;" onclick="abrirSorteoDesdeItem('+ITEM_ACTIVO_ID+')" '+(aptos<1?'disabled':'')+'>'
       +'<i class="fas fa-random"></i> MANDAR A SORTEO ('+aptos+' preinscritos)</button>'
+      +'<button type="button" class="btn" id="btn-pasar-ganador-vacantes" style="margin:0;justify-content:center;background:#1a7a3a;color:#fff;" onclick="pasarPreinscritosAGanador('+ITEM_ACTIVO_ID+')" '+(aptos<1||vacLibresBtn<1?'disabled':'')+' title="Pasa preinscritos a ganador solo por las vacantes que no se cubrieron">'
+      +'<i class="fas fa-user-check"></i> PASAR A GANADOR (vacantes libres)</button>'
       +'<button type="button" class="btn btn-v" id="btn-pdf-preinscritos" style="margin:0;justify-content:center;background:#004d3d;color:#fff;" onclick="abrirModalPdfListaConvenio(\'preinscritos\')" '+(total<1?'disabled':'')+'>'
       +'<i class="fas fa-file-pdf"></i> DESCARGAR PDF</button>'
       +'</div>';

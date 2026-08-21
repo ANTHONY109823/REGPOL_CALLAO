@@ -6596,7 +6596,9 @@ app.post('/admin/items/:id/aplicar-sorteo', requireAuth, async (req, res) => {
       const bloque = String(g.bloque_vacaciones || g.bloque || '').trim();
       const obsBase = g.tipo === 'vacaciones'
         ? 'Vacante automática por vacaciones'
-        : 'Seleccionado en sorteo público';
+        : (g.tipo === 'directo'
+          ? 'Asignado por vacante no cubierta'
+          : 'Seleccionado en sorteo público');
       const obsBloque = bloque
         ? (' · ' + (conveniosFlujo.etiquetaBloqueVacaciones(bloque) || ('Bloque ' + bloque)))
         : '';
@@ -6652,6 +6654,66 @@ app.post('/admin/items/:id/aplicar-sorteo', requireAuth, async (req, res) => {
       if (r.rowCount) nRes++;
     }
     res.json({ ok: true, ganadores: nGan, reservas: nRes, notificaciones: notifs });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.post('/admin/items/:id/pasar-preinscritos-ganador', requireAuth, async (req, res) => {
+  try {
+    const itemId = parseInt(req.params.id, 10);
+    if (!itemId) return res.json({ ok: false, error: 'Convocatoria inválida' });
+    const cur = await pool.query('SELECT tipo, titulo FROM items_portal WHERE id=$1', [itemId]);
+    if (!cur.rows.length) return res.json({ ok: false, error: 'Convocatoria no encontrada' });
+    if (cur.rows[0].tipo !== 'convenio')
+      return res.json({ ok: false, error: 'Solo aplica a convenios' });
+    if (!puedeOperarInscritos(req.admin, 'convenio'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const vac = await conveniosFlujo.vacantesDisponibles(pool, itemId);
+    const libres = (vac && vac.ok) ? (vac.disponibles || 0) : 0;
+    if (libres < 1) {
+      return res.json({ ok: false, error: 'No hay vacantes libres para pasar a ganador.' });
+    }
+    const idsBody = Array.isArray(req.body && req.body.ids) ? req.body.ids : [];
+    const idsFiltro = idsBody.map(function(x) { return parseInt(x, 10); }).filter(Boolean);
+    let q = `SELECT id, cip, nombres, estado FROM inscripciones
+             WHERE item_id=$1 AND estado IN ('preinscrito','pendiente','aprobado','verificado')`;
+    const args = [itemId];
+    if (idsFiltro.length) {
+      q += ' AND id = ANY($2::int[])';
+      args.push(idsFiltro);
+    }
+    q += ' ORDER BY fecha ASC, id ASC LIMIT $' + (args.length + 1);
+    args.push(libres);
+    const cand = await pool.query(q, args);
+    if (!cand.rows.length) {
+      return res.json({ ok: false, error: 'No hay preinscritos pendientes para pasar a ganador.' });
+    }
+    const plazo = conveniosFlujo.plazoDesdeAhora();
+    const obs = 'Asignado por vacante no cubierta';
+    const notifs = [];
+    let nGan = 0;
+    for (const row of cand.rows) {
+      const r = await pool.query(
+        `UPDATE inscripciones SET
+           estado='ganador', observacion=$1, modo_ingreso='sorteo',
+           fecha_ganador=NOW(), plazo_expediente=$2
+         WHERE id=$3 AND item_id=$4
+           AND estado IN ('preinscrito','pendiente','aprobado','verificado')`,
+        [obs, plazo.toISOString(), row.id, itemId]
+      );
+      if (!r.rowCount) continue;
+      nGan++;
+      try {
+        const n = await conveniosFlujo.notificarInscripcion(pool, row.id, 'ganador');
+        notifs.push({ id: row.id, ok: n.ok });
+      } catch (e) { /* ignore */ }
+    }
+    const vac2 = await conveniosFlujo.vacantesDisponibles(pool, itemId);
+    res.json({
+      ok: true,
+      ganadores: nGan,
+      vacantes_libres: (vac2 && vac2.ok) ? vac2.disponibles : 0,
+      notificaciones: notifs
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
