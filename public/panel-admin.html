@@ -1354,6 +1354,12 @@
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;" id="inscritos-filtros-bar" autocomplete="off">
           <input type="text" id="inscritos-buscar" class="filtro-solo-preins" placeholder="CIP, DNI, CODIFIN, nombre o postulación..." oninput="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:260px;"/>
+          <select id="inscritos-filtro-resultado" class="filtro-solo-preins" autocomplete="off" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:180px;">
+            <option value="">Todos los inscritos</option>
+            <option value="preinscrito">Solo preinscritos</option>
+            <option value="ganador">Solo ganadores</option>
+            <option value="perdio">Solo no salieron</option>
+          </select>
           <select id="inscritos-filtro-region" class="inscritos-filtro-extra filtro-solo-preins filtro-preins-no-celador" onchange="filtrarInscritos()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:200px;">
             <option value="">Todas las regiones</option>
           </select>
@@ -1409,7 +1415,7 @@
       <div class="card">
         <h3><i class="fas fa-users"></i> Preinscritos</h3>
         <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
-          Seleccione el convenio para ver preinscritos y mandar al sorteo.
+          Seleccione el convenio para ver a todos los que se inscribieron. Los ganadores y quienes no salieron se marcan en la lista; no se elimina ni se modifica ningún registro.
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
           <button class="btn btn-v" type="button" onclick="cargarConvFlujoResumen('preinscritos')"><i class="fas fa-sync"></i> Actualizar</button>
@@ -8311,6 +8317,7 @@ function etiquetaEstadoListaPdf(estado){
   if(e==='en_revision') return {txt:'En revisión', cls:'rev'};
   if(e==='observado') return {txt:'Observado', cls:'obs'};
   if(e==='expediente_ok') return {txt:'Expediente OK', cls:'ok'};
+  if(e==='reserva') return {txt:'No salió', cls:'cad'};
   if(e==='repechaje') return {txt:'Repechaje', cls:'rep'};
   if(e==='caducado') return {txt:'Caducado', cls:'cad'};
   return {txt:estado||'—', cls:''};
@@ -8661,16 +8668,20 @@ function renderConvPreinscritosCuadros(list){
   }
   el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">'
     +list.map(function(c){
+      var ganT = (c.ganadores||0)+(c.en_revision||0)+(c.observados||0)+(c.expediente_ok||0);
+      var noSal = c.reservas||0;
+      var inscT = (c.preinscritos||0)+ganT+noSal+(c.caducados||0)+(c.repechaje||0);
       return '<div style="background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(0,77,61,.06);">'
         +'<div style="font-weight:800;color:#004d3d;font-size:14px;margin-bottom:10px;line-height:1.3;">'+escHtml(c.titulo)+'</div>'
-        +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">'
-        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#004d3d;">'+c.vacantes+'</div><div class="l">Vacantes</div></div>'
-        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#856404;">'+c.preinscritos+'</div><div class="l">Preinscritos</div></div>'
-        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#1a7a3a;">'+c.disponibles+'</div><div class="l">Vac. libres</div></div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;">'
+        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#004d3d;">'+inscT+'</div><div class="l">Inscritos</div></div>'
+        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#856404;">'+ganT+'</div><div class="l">Ganadores</div></div>'
+        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#6c757d;">'+noSal+'</div><div class="l">No salieron</div></div>'
+        +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#856404;">'+(c.preinscritos||0)+'</div><div class="l">Preinscritos</div></div>'
         +'</div>'
         +'<div style="display:flex;flex-direction:column;gap:8px;">'
         +'<button type="button" class="btn btn-v" style="width:100%;justify-content:center;" onclick="abrirConvenioPreinscritos('+c.id+',\''+escJs(c.titulo)+'\')">'
-        +'<i class="fas fa-users"></i> Ver preinscritos</button>'
+        +'<i class="fas fa-users"></i> Ver inscritos</button>'
         +'<button type="button" class="btn btn-o" style="width:100%;justify-content:center;" onclick="abrirSorteoDesdeItem('+c.id+')" '
         +(c.preinscritos<1||puedePasarPreinscritosVacantesNoCubiertas(c.preinscritos, c.disponibles)?'disabled title="No hace falta sorteo: hay igual o menos preinscritos que vacantes"':'')+'>'
         +'<i class="fas fa-random"></i> Mandar a sorteo</button>'
@@ -8768,7 +8779,8 @@ function idsFiltrosInscritos(){
   return [
     'inscritos-filtro-region','inscritos-filtro-unidad','inscritos-filtro-modalidad','inscritos-filtro-disp',
     'inscritos-filtro-comisaria','inscritos-filtro-tipo','inscritos-filtro-turno',
-    'inscritos-filtro-vacaciones','inscritos-filtro-franco','inscritos-filtro-modo'
+    'inscritos-filtro-vacaciones','inscritos-filtro-franco','inscritos-filtro-modo',
+    'inscritos-filtro-resultado'
   ];
 }
 
@@ -8992,7 +9004,7 @@ function verInscritos(itemId, titulo, modo){
   window.INSCRITOS_ITEM_INFO={titulo:titulo||''};
   ir('inscritos',null);
   var icon = INSCRITOS_MODO==='ganadores' ? 'fa-trophy' : (INSCRITOS_MODO==='repechaje' ? 'fa-redo' : 'fa-users');
-  var pref = INSCRITOS_MODO==='ganadores' ? 'Ganadores / expedientes' : (INSCRITOS_MODO==='repechaje' ? 'Repechaje' : 'Preinscritos');
+  var pref = INSCRITOS_MODO==='ganadores' ? 'Ganadores / expedientes' : (INSCRITOS_MODO==='repechaje' ? 'Repechaje' : 'Inscritos');
   document.getElementById('inscritos-titulo').innerHTML='<i class="fas '+icon+'"></i> '+pref+' — '+escHtml(titulo);
   aplicarVisibilidadFiltrosInscritos();
   var busEl=document.getElementById('inscritos-buscar');
@@ -9034,10 +9046,6 @@ function verInscritos(itemId, titulo, modo){
         INSCRITOS_CACHE = INSCRITOS_CACHE.filter(function(i){
           return ['caducado','repechaje','ganador'].indexOf(i.estado)>=0
             && (i.estado!=='ganador' || !i.tiene_pdf);
-        });
-      } else if(INSCRITOS_MODO==='preinscripcion'){
-        INSCRITOS_CACHE = INSCRITOS_CACHE.filter(function(i){
-          return ['preinscrito','pendiente','aprobado','verificado','corregir_preinscripcion','anulado_solicitud'].indexOf(i.estado)>=0;
         });
       }
       poblarFiltroUnidadesInscritos();
@@ -9182,6 +9190,7 @@ function obtenerInscritosFiltrados(){
   var vacF=valorFiltroVisible('inscritos-filtro-vacaciones');
   var franF=valorFiltroVisible('inscritos-filtro-franco');
   var ciaF=valorFiltroVisible('inscritos-filtro-comisaria');
+  var resF=valorFiltroVisible('inscritos-filtro-resultado');
   var ciaKey=canonClaveFiltroPdf(ciaF);
   var esGan=INSCRITOS_MODO==='ganadores';
   var esCel=esCeladorActivo();
@@ -9212,7 +9221,8 @@ function obtenerInscritosFiltrados(){
       else matchFran=disp==='FRANCO' && diaSlotCoincide(diaFran, franF);
     }
     var matchCia=!ciaKey||canonClaveFiltroPdf(claveSedePostula(i))===ciaKey;
-    return matchTxt&&matchUni&&matchReg&&matchMod&&matchDisp&&matchModo&&matchTurno&&matchTipo&&matchVac&&matchFran&&matchCia;
+    var matchRes=!resF||grupoResultadoPreins(i.estado)===resF;
+    return matchTxt&&matchUni&&matchReg&&matchMod&&matchDisp&&matchModo&&matchTurno&&matchTipo&&matchVac&&matchFran&&matchCia&&matchRes;
   });
   if(esGan) return ordenarInscritosPorGrado(out);
   return out;
@@ -9306,6 +9316,10 @@ function renderInscritos(list, tipo){
   var verif=INSCRITOS_CACHE.filter(function(i){return i.estado==='verificado';}).length;
   var aptos = esConvenio ? preins : INSCRITOS_CACHE.filter(function(i){return i.estado==='aprobado';}).length;
   var gan  = INSCRITOS_CACHE.filter(function(i){return i.estado==='ganador'||i.estado==='expediente_ok';}).length;
+  var ganMarca = INSCRITOS_CACHE.filter(function(i){
+    return ['ganador','en_revision','observado','expediente_ok'].indexOf(i.estado)>=0;
+  }).length;
+  var noSalio = INSCRITOS_CACHE.filter(function(i){return i.estado==='reserva';}).length;
   var rech =INSCRITOS_CACHE.filter(function(i){return i.estado==='rechazado'||i.estado==='caducado';}).length;
   var vacInfo = window.INSCRITOS_VACANTES_INFO || null;
 
@@ -9320,7 +9334,7 @@ function renderInscritos(list, tipo){
         ? ('<button type="button" class="btn" id="btn-pasar-ganador-vacantes" style="margin:0;justify-content:center;background:#1a7a3a;color:#fff;" onclick="pasarPreinscritosAGanador('+ITEM_ACTIVO_ID+')" title="Hay menos preinscritos que vacantes: todos pasan a ganador">'
           +'<i class="fas fa-user-check"></i> PASAR TODOS A GANADOR (sin sorteo)</button>')
         : '')
-      +'<button type="button" class="btn btn-v" id="btn-pdf-preinscritos" style="margin:0;justify-content:center;background:#004d3d;color:#fff;" onclick="abrirModalPdfListaConvenio(\'preinscritos\')" '+(total<1?'disabled':'')+'>'
+      +'<button type="button" class="btn btn-v" id="btn-pdf-preinscritos" style="margin:0;justify-content:center;background:#004d3d;color:#fff;" onclick="abrirModalPdfListaConvenio(\'preinscritos\')" '+(preins<1?'disabled':'')+'>'
       +'<i class="fas fa-file-pdf"></i> DESCARGAR PDF</button>'
       +'</div>';
   } else if(esConvenio && INSCRITOS_MODO==='ganadores'){
@@ -9358,6 +9372,8 @@ function renderInscritos(list, tipo){
           +(vacInfo ? '<div class="stat" style="border-color:#004d3d;"><div class="n" style="color:#004d3d;">'+vacInfo.disponibles+'</div><div class="l">Vac. libres</div></div>' : ''))
         : (esConvenio
           ? ('<div class="stat" style="border-color:#ffe082;"><div class="n" style="color:#856404;">'+preins+'</div><div class="l">Preinscritos</div></div>'
+            +'<div class="stat" style="border-color:#c8a94a;"><div class="n" style="color:#856404;">'+ganMarca+'</div><div class="l">Ganadores</div></div>'
+            +'<div class="stat" style="border-color:#6c757d;"><div class="n" style="color:#6c757d;">'+noSalio+'</div><div class="l">No salieron</div></div>'
             +(aCorregir ? '<div class="stat" style="border-color:#e67e22;"><div class="n" style="color:#e67e22;">'+aCorregir+'</div><div class="l">A corregir</div></div>' : '')
             +(vacInfo ? '<div class="stat" style="border-color:#004d3d;"><div class="n" style="color:#004d3d;">'+vacInfo.disponibles+'</div><div class="l">Vac. libres</div></div>' : ''))
           : ('<div class="stat" style="border-color:#ffe082;"><div class="n" style="color:#856404;">'+pend+'</div><div class="l">Pendientes</div></div>'
@@ -9451,9 +9467,12 @@ function renderInscritos(list, tipo){
             +'</span> ';
         }
         if(INSCRITOS_MODO==='preinscripcion'){
+          var siguePreins=['preinscrito','pendiente','aprobado','verificado','corregir_preinscripcion'].indexOf(ins.estado)>=0;
           acciones='<span class="acc-preins">'
             +'<button type="button" class="btn-mini btn-mini-solid" title="Ver constancia completa" onclick="abrirConstanciaAdmin('+ins.id+')"><i class="fas fa-file-alt"></i> Ver</button>'
-            +'<button type="button" class="btn-mini" style="border-color:#c0392b;color:#c0392b;" title="Devolver a corregir o eliminar de la lista y la base" onclick="abrirGestionPreinscripcion('+ins.id+')"><i class="fas fa-exchange-alt"></i> Devolver</button>'
+            +(siguePreins
+              ? '<button type="button" class="btn-mini" style="border-color:#c0392b;color:#c0392b;" title="Devolver a corregir o eliminar de la lista y la base" onclick="abrirGestionPreinscripcion('+ins.id+')"><i class="fas fa-exchange-alt"></i> Devolver</button>'
+              : '')
             +'</span>';
           if(ins.estado==='corregir_preinscripcion'){
             acciones+='<span class="acc-preins-nota" title="'+escHtml(ins.preins_correccion_motivo||'')+'">A corregir</span>';
@@ -9488,7 +9507,7 @@ function renderInscritos(list, tipo){
           ?'<button type="button" class="btn-mini btn-mini-pdf" title="Ver PDF del expediente" onclick="verPdfInscripcion('+ins.id+')"><i class="fas fa-file-pdf"></i> PDF</button>'
           :'<span style="color:#888;font-size:12px;">—</span>')+'</td>'))
         +(esPreins?'':('<td style="text-align:center;">'+origenLbl+'</td>'))
-        +'<td><span class="badge badge-estado" style="background:'+bg+';color:'+c+';">'+escHtml(etiquetaEstadoFlujoInscripcion(ins.estado, esConvenio))+'</span>'
+        +'<td><span class="badge badge-estado" style="background:'+bg+';color:'+c+';">'+escHtml(esPreins?etiquetaEstadoListaPreins(ins.estado):etiquetaEstadoFlujoInscripcion(ins.estado, esConvenio))+'</span>'
         +htmlPlazoCountdownInscripcion(ins, esConvenio)
         +'</td>'
         +(esPreins
@@ -9583,6 +9602,26 @@ function etiquetaEstadoFlujoInscripcion(estado, esConvenio){
     rechazado:'Rechazado'
   };
   return mapa[estado] || estado;
+}
+
+function grupoResultadoPreins(estado){
+  var e=String(estado||'');
+  if(['ganador','en_revision','observado','expediente_ok'].indexOf(e)>=0) return 'ganador';
+  if(e==='reserva') return 'perdio';
+  if(['preinscrito','pendiente','aprobado','verificado','corregir_preinscripcion'].indexOf(e)>=0) return 'preinscrito';
+  return e;
+}
+
+function etiquetaEstadoListaPreins(estado){
+  var g=grupoResultadoPreins(estado);
+  if(g==='ganador'){
+    if(estado==='en_revision') return 'Ganador — en revisión';
+    if(estado==='observado') return 'Ganador — observado';
+    if(estado==='expediente_ok') return 'Ganador — expediente OK';
+    return 'Ganador';
+  }
+  if(g==='perdio') return 'No salió';
+  return etiquetaEstadoFlujoInscripcion(estado, true);
 }
 
 var PANEL_CIP_CONSULTA = '';
