@@ -305,7 +305,7 @@
           <div id="cfg-slots" class="cfg-slots"></div>
           <p class="hint">
             <i class="fas fa-info-circle" style="color:#c8a94a;"></i>
-            Solo aparecen los turnos con <strong>más preinscritos que vacantes</strong>. El resto ya se sorteó o pasó directo a ganador.
+            Ocupadas = ya ganadores de ese turno (casi siempre vacaciones). Franco = los que entran a la rueda.
           </p>
           <button class="btn-iniciar" id="btn-iniciar" onclick="iniciarSorteo()" disabled>
             <i class="fas fa-play"></i> INICIAR SORTEO EN VIVO
@@ -691,8 +691,12 @@ function renderSlotsPreview() {
       var nF = LISTA_APROBADOS.filter(function(c) {
         return c.disponibilidad !== 'VACACIONES' && candidatoEnSlot(c, s);
       }).length;
-      var nV = LISTA_APROBADOS.filter(function(c) {
-        return c.disponibilidad === 'VACACIONES' && candidatoEnSlot(c, s);
+      var nV = TODOS_CAND.filter(function(c) {
+        if (c.disponibilidad !== 'VACACIONES' || !candidatoEnSlot(c, s)) return false;
+        var est = String(c.estado || '');
+        return est === 'ganador' || est === 'en_revision' || est === 'observado'
+          || est === 'expediente_ok' || est === 'preinscrito' || est === 'pendiente'
+          || est === 'aprobado' || est === 'verificado';
       }).length;
       var libres = parseInt(s.disponibles, 10);
       if (isNaN(libres)) libres = Math.max(0, (s.vacantes || 0) - (s.ocupadas || 0));
