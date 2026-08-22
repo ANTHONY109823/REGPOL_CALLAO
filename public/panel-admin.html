@@ -2046,32 +2046,6 @@
   </div>
 </div>
 
-<div id="modal-fechas-inscripcion" class="modal">
-  <div class="modal-box" style="width:420px;max-width:94vw;">
-    <h3 style="font-size:15px;margin:0 0 6px;"><i class="fas fa-calendar-check"></i> Fechas de inscripción</h3>
-    <p id="mf-titulo" style="font-size:13px;font-weight:700;color:#004d3d;margin:0 0 14px;"></p>
-    <input type="hidden" id="mf-id"/>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      <div>
-        <label style="font-size:11px;">Desde</label>
-        <input type="date" id="mf-inicio" style="width:100%;padding:9px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;" onchange="actualizarPreviewFechasInscripcion()"/>
-      </div>
-      <div>
-        <label style="font-size:11px;">Hasta (cierra 23:59)</label>
-        <input type="date" id="mf-cierre" style="width:100%;padding:9px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;" onchange="actualizarPreviewFechasInscripcion()"/>
-      </div>
-    </div>
-    <p id="mf-estado" style="margin:12px 0 0;font-size:13px;font-weight:700;color:#888;">Sin fechas — cerrado</p>
-    <p id="mf-aviso" style="margin:8px 0 0;font-size:12px;color:#555;line-height:1.4;background:#f5f8f6;border-radius:6px;padding:8px 10px;min-height:38px;">El aviso público se genera solo al guardar.</p>
-    <p style="margin:10px 0 0;font-size:11px;color:#777;line-height:1.35;">Ejemplo: del 20/08/2026 al 25/08/2026. Ese día cierra solo a las 23:59 hrs (hora Lima).</p>
-    <div class="modal-footer" style="margin-top:16px;gap:6px;flex-wrap:wrap;">
-      <button type="button" class="btn-mini" style="background:#999;color:#fff;border-color:#999;" onclick="cerrarModal('modal-fechas-inscripcion')">Cancelar</button>
-      <button type="button" class="btn-mini" style="border-color:#c0392b;color:#c0392b;" onclick="limpiarFechasInscripcionModal()" title="Quitar fechas y cerrar inscripciones">Quitar fechas</button>
-      <button type="button" class="btn-mini btn-mini-ok" id="mf-btn-guardar" onclick="guardarFechasInscripcionModal()"><i class="fas fa-save"></i> Guardar fechas</button>
-    </div>
-  </div>
-</div>
-
 <div id="modal-aviso-convenios-front" class="modal">
   <div class="modal-box" style="width:560px;max-height:92vh;overflow-y:auto;">
     <h3><i class="fab fa-facebook" style="color:#1877f2;"></i> Aviso frontend — Convenios</h3>
@@ -2874,15 +2848,6 @@ function esEvalCompleta(r) {
   return total >= 566 && !r.solo_progreso && !!r.id && !!r.completada;
 }
 
-function urlPdfEfectivo(r) {
-  if (!r) return null;
-  var total = parseInt(r.total_resp, 10) || 0;
-  if (total < 1) return null;
-  if (r.id) return API + '/pdf/efectivo?id=' + r.id + '&token=' + encodeURIComponent(TOKEN);
-  if (r.cip) return API + '/pdf/efectivo?cip=' + encodeURIComponent(r.cip) + '&token=' + encodeURIComponent(TOKEN);
-  return null;
-}
-
 function configurarBtnPdfEfectivo(btnPdf, opts) {
   if (!btnPdf) return;
   opts = opts || {};
@@ -3058,23 +3023,6 @@ function btnEliminarEval(r) {
 
 function actualizarBotonesEliminarEval() {
   actualizarBotonesRespuestas();
-}
-
-function hayFiltroRespuestasActivos() {
-  // Siempre se puede listar; "Todas" = sin filtro de división/unidad
-  return true;
-}
-
-function vaciarTablaRespuestas(msg) {
-  var body = document.getElementById('tabla-body');
-  var texto = msg || 'Pulse Buscar para cargar el listado, o deje Todas las divisiones / unidades para ver el total general.';
-  if (body) {
-    body.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#888;padding:24px;font-size:13px;">'
-      + escHtml(texto) + '</td></tr>';
-  }
-  set('tabla-info', '');
-  var pags = document.getElementById('paginacion');
-  if (pags) pags.innerHTML = '';
 }
 
 function esDivisionAdmRpc(nombre) {
@@ -3717,10 +3665,6 @@ function aplicarFiltrosListadoGrupo() {
   }
 }
 
-function aplicarFiltroListadoRiesgoGrupo() {
-  aplicarFiltrosListadoGrupo();
-}
-
 function nombrePdfSeguroGrupo(base) {
   return String(base || 'informe')
     .normalize('NFD')
@@ -3937,41 +3881,6 @@ function guardarEditarDatos() {
     });
 }
 
-function eliminarEvaluacionesUnidad() {
-  var uni = val('f-uni');
-  var div = val('f-div');
-  if (!uni && !div) { alert('Seleccione una división o unidad en el filtro.'); return; }
-  var etiqueta = uni || div;
-  if (!confirm('¿Eliminar TODAS las evaluaciones y avances de: ' + etiqueta + '?\nSe borrarán de la base de datos.')) return;
-  if (!confirm('Confirme de nuevo: se eliminarán todos los registros de "' + etiqueta + '".')) return;
-  var q = 'unidad=' + encodeURIComponent(uni) + '&division=' + encodeURIComponent(div);
-  fetch(API + '/admin/evaluaciones-lote?' + q, { method: 'DELETE', headers: hdr() })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.ok) {
-        alert('Eliminados: ' + (d.eliminados_eval || 0) + ' evaluaciones y ' + (d.eliminados_prog || 0) + ' avances.');
-        cargarTabla(1);
-      } else alert(d.error || 'No se pudo eliminar.');
-    })
-    .catch(function() { alert('Error de conexión.'); });
-}
-
-function limpiarTodosRegistrosEval() {
-  if (!esUnitic()) return;
-  if (!confirm('¿Eliminar TODOS los registros de evaluaciones y avances del sistema?\nEsta acción no se puede deshacer.')) return;
-  var txt = prompt('Escriba ELIMINAR para confirmar la limpieza total:');
-  if (txt !== 'ELIMINAR') return;
-  fetch(API + '/admin/evaluaciones-lote?todos=true&confirmar=ELIMINAR', { method: 'DELETE', headers: hdr() })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.ok) {
-        alert('Limpieza completada: ' + (d.eliminados_eval || 0) + ' evaluaciones y ' + (d.eliminados_prog || 0) + ' avances eliminados.');
-        cargarTabla(1);
-      } else alert(d.error || 'No se pudo limpiar.');
-    })
-    .catch(function() { alert('Error de conexión.'); });
-}
-
 function colorInterpT(t) {
   if (!t || t === 0) return '#888888';
   if (t >= 80) return '#c0392b';
@@ -4148,14 +4057,6 @@ function irGestionItems(tipo, el){
   panelNavPush();
 }
 
-function irGestionSorteos(el){
-  if (!puedeGestionarSorteosConvenio()) { alert('Sin acceso a sorteos de convenios.'); return; }
-  SORTEOS_MODO = 'completo';
-  SORTEOS_TIPO_FILTRO = 'convenio';
-  ir('sorteos', el);
-  aplicarModoSorteosUI();
-}
-
 var RESULTADOS_PDF_TIPO = 'convenio';
 var RESULTADOS_PDF_CACHE = [];
 var ITEMS_PDF_SELECT_CACHE = [];
@@ -4165,10 +4066,6 @@ function irResultadosPdf(tipo, el){
   RESULTADOS_PDF_TIPO = tipo || 'convenio';
   ir('resultados-pdf', el);
   cargarResultadosPdfAdmin();
-}
-
-function irPublicarResultados(tipo, el){
-  irResultadosPdf(tipo, el);
 }
 
 function iniciarPanel(s){
@@ -5410,10 +5307,6 @@ function previewImgSorteo(input){
   reader.readAsDataURL(file);
 }
 
-function cargarSelectItems(){
-  llenarSelectItemsSorteo('ms-import-item', '— Importar desde convocatoria —');
-}
-
 function importarInscritos(){
   var itemId=document.getElementById('ms-import-item').value;
   if(!itemId){alert('Seleccione una convocatoria para importar los seleccionados.');return;}
@@ -6226,48 +6119,6 @@ function actualizarAvisoInscripcionModal(){
   }
 }
 
-function actualizarPreviewFechasInscripcion(){
-  var ini=(document.getElementById('mf-inicio')||{}).value||'';
-  var cie=(document.getElementById('mf-cierre')||{}).value||'';
-  var st=etiquetaEstadoInscripcion(ini, cie);
-  var est=document.getElementById('mf-estado');
-  if(est){
-    est.textContent=st.texto+' — '+st.detalle;
-    est.style.color=st.color;
-  }
-  var av=document.getElementById('mf-aviso');
-  if(av){
-    var txt=formatearAvisoInscripcionUI(ini, cie);
-    av.textContent=txt || 'Configure ambas fechas para generar el aviso público.';
-  }
-}
-
-function abrirModalFechasInscripcion(id){
-  // Las fechas van en Editar (bloque básico al inicio del modal).
-  abrirModalItem(id);
-}
-
-function limpiarFechasInscripcionModal(){
-  var ini=document.getElementById('mf-inicio');
-  var cie=document.getElementById('mf-cierre');
-  if(ini) ini.value='';
-  if(cie) cie.value='';
-  if(typeof actualizarPreviewFechasInscripcion==='function') actualizarPreviewFechasInscripcion();
-}
-
-function guardarFechasInscripcionModal(){
-  abrirModalItem(parseInt((document.getElementById('mf-id')||{}).value,10)||null);
-  cerrarModal('modal-fechas-inscripcion');
-}
-
-function actualizarBadgeLineaConvenio(id){
-  var cell=document.getElementById('cv-insc-cell-'+id);
-  if(!cell) return;
-  var item=(ITEMS_CACHE||[]).find(function(i){ return parseInt(i.id,10)===parseInt(id,10); });
-  var st=item ? etiquetaEstadoInscripcion(item) : etiquetaEstadoInscripcion(null,null);
-  cell.outerHTML=htmlCeldaEstadoInscripcion(st, id);
-}
-
 function abrirModalItem(id){
   var idNum = id ? parseInt(id, 10) : 0;
   var cachedHint = idNum
@@ -6299,8 +6150,6 @@ function abrirModalItem(id){
   document.getElementById('mi-uniforme').value='';
   document.getElementById('mi-contactos').value='';
   document.getElementById('mi-observaciones').value='';
-  var plazoEl=document.getElementById('mi-plazo-fecha');
-  if(plazoEl) plazoEl.value='';
   document.getElementById('mi-requisitos').value='';
   document.getElementById('mi-cupos-unidades').value='';
   var turnosTa=document.getElementById('mi-turnos');
@@ -6370,12 +6219,6 @@ function poblarModalItem(item){
   document.getElementById('mi-uniforme').value=item.uniforme||'';
   document.getElementById('mi-contactos').value=item.contactos_responsables||'';
   document.getElementById('mi-observaciones').value=item.observaciones||'';
-  var plazoEl=document.getElementById('mi-plazo-fecha');
-  if(plazoEl){
-    plazoEl.value = parsePlazoAFechaISO(item.ventana_inscripcion||'')
-      || parsePlazoAFechaISO(item.observaciones||'')
-      || '';
-  }
   var reqs=Array.isArray(item.requisitos)?item.requisitos:[];
   document.getElementById('mi-requisitos').value=reqs.join('\n');
   document.getElementById('mi-cupos-unidades').value=serializarCuposUnidades(item.cupos_unidades);
@@ -6500,14 +6343,6 @@ function opcionesTurnoConvenio(titulo, valorActual){
     ops.push({ value: TURNO_SEDAPAL_ATENCION, label: 'ATENCIÓN AL CLIENTE (09:00–17:00)' });
   }
   return ops;
-}
-
-function htmlOptionsTurno(valor){
-  var v = esTurnoSedapalAtencion(valor) ? TURNO_SEDAPAL_ATENCION : String(valor || 'TARDE').toUpperCase();
-  var titulo = (document.getElementById('mi-titulo-val') || {}).value;
-  return opcionesTurnoConvenio(titulo, v).map(function(op){
-    return '<option value="'+op.value+'"'+(op.value===v?' selected':'')+'>'+op.label+'</option>';
-  }).join('');
 }
 
 function rellenarSelectTurnoConvenio(sel, valorPreferido){
@@ -6640,37 +6475,6 @@ var CONVENIO_TURNOS_SLOTS = [
   { turno: 'TARDE', dia: 'IMPAR', label: 'Tarde', grupo: 'IMPAR' },
   { turno: 'NOCHE', dia: 'IMPAR', label: 'Noche', grupo: 'IMPAR' }
 ];
-
-function claveTurnoDia(turno, dia){
-  var tNom = (typeof esTurnoSedapalAtencion === 'function' && esTurnoSedapalAtencion(turno))
-    ? TURNO_SEDAPAL_ATENCION
-    : String(turno || '').trim().toUpperCase();
-  var tDia = String(dia || 'PAR/IMPAR').trim().toUpperCase() || 'PAR/IMPAR';
-  if (typeof esTurnoSedapalAtencion === 'function' && esTurnoSedapalAtencion(tNom)
-      && tDia !== 'PAR' && tDia !== 'IMPAR') tDia = 'PAR/IMPAR';
-  return tNom + '|' + tDia;
-}
-
-/** Columnas horizontales (como Celador): un slot por turno × día usado. */
-function slotsTurnosDesdeCupos(cupos){
-  var seen = {};
-  var out = [];
-  (cupos || []).forEach(function(c){
-    (Array.isArray(c.turnos) ? c.turnos : []).forEach(function(t){
-      if (esLugarSedapalAtencion(c.nombre) || esTurnoSedapalAtencion(t.turno)) return;
-      var k = claveTurnoDia(t.turno, t.dia);
-      if (!k || k.charAt(0) === '|' || seen[k]) return;
-      seen[k] = true;
-      var parts = k.split('|');
-      out.push({
-        turno: parts[0],
-        dia: parts[1] || 'PAR/IMPAR',
-        label: etiquetaTurnoHorario(parts[0]) + ' ' + (parts[1] || '')
-      });
-    });
-  });
-  return out;
-}
 
 function vacTurnoCelador(cupo, turno, dia){
   var list = (cupo && Array.isArray(cupo.turnos)) ? cupo.turnos : [];
@@ -7131,17 +6935,7 @@ function bodyDesdeItemCache(item, overrides){
   };
 }
 
-function marcarLineaConvenioDirty(id){
-  var btn = document.getElementById('cv-btn-save-' + id);
-  if(btn){
-    btn.style.background = '#004d3d';
-    btn.style.color = '#fff';
-    btn.style.borderColor = '#004d3d';
-    btn.disabled = false;
-  }
-}
-
-/** Guarda solo Activo en web (checkbox). Las fechas van por el modal Fechas. */
+/** Guarda solo Activo en web (checkbox). */
 function guardarActivoConvenio(id){
   if(!id) return;
   var item = (ITEMS_CACHE || []).find(function(i){ return parseInt(i.id,10) === parseInt(id,10); });
@@ -7174,24 +6968,6 @@ function guardarActivoConvenio(id){
     });
 }
 
-function guardarLineaConvenio(id){
-  guardarActivoConvenio(id);
-}
-
-function toggleEstadoItem(id){
-  var chk = document.getElementById('cv-activo-' + id);
-  if(chk){ chk.checked = !chk.checked; guardarActivoConvenio(id); return; }
-  var item = (ITEMS_CACHE || []).find(function(i){ return parseInt(i.id,10) === parseInt(id,10); });
-  if(!item) return;
-  var activo = String(item.estado || '').toUpperCase() !== 'CERRADO';
-  item.estado = activo ? 'CERRADO' : 'DISPONIBLE';
-  guardarActivoConvenio(id);
-}
-
-function toggleInscripcionesItem(id){
-  abrirModalItem(id);
-}
-
 function serializarCuposUnidades(cupos){
   if(!Array.isArray(cupos)||!cupos.length) return '';
   var conTurnos = cupos.some(function(c){ return Array.isArray(c && c.turnos) && c.turnos.length; });
@@ -7211,67 +6987,6 @@ function serializarTurnos(turnos){
   return turnos.map(function(t){
     return String((t&&t.turno)||'').trim()+' | '+String((t&&t.dia)||'PAR/IMPAR').trim()+' | '+(t&&t.vacantes!=null?t.vacantes:0);
   }).join('\n');
-}
-
-function parsePlazoAFechaISO(texto){
-  var s = String(texto || '').trim();
-  if(!s) return '';
-  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  var mIso = s.match(/(\d{4})-(\d{2})-(\d{2})/);
-  if(mIso) return mIso[1]+'-'+mIso[2]+'-'+mIso[3];
-  var mDmY = s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-  if(mDmY){
-    var d = ('0'+mDmY[1]).slice(-2);
-    var mo = ('0'+mDmY[2]).slice(-2);
-    return mDmY[3]+'-'+mo+'-'+d;
-  }
-  var meses = {
-    enero:1, febrero:2, marzo:3, abril:4, mayo:5, junio:6,
-    julio:7, agosto:8, setiembre:9, septiembre:9, octubre:10, noviembre:11, diciembre:12
-  };
-  var mTxt = s.toLowerCase().match(/(\d{1,2})\s+de\s+([a-záéíóú]+)\s+(?:de\s+)?(\d{4})/i);
-  if(mTxt){
-    var mes = meses[mTxt[2].normalize('NFD').replace(/[\u0300-\u036f]/g,'')];
-    if(!mes && mTxt[2].indexOf('julio')===0) mes = 7;
-    if(mes){
-      return mTxt[3]+'-'+('0'+mes).slice(-2)+'-'+('0'+mTxt[1]).slice(-2);
-    }
-  }
-  return '';
-}
-
-function textoPlazoDesdeFechaISO(iso){
-  if(!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
-  var parts = iso.split('-');
-  var y = parseInt(parts[0],10), m = parseInt(parts[1],10)-1, d = parseInt(parts[2],10);
-  var dt = new Date(y, m, d);
-  if(isNaN(dt.getTime())) return '';
-  var dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-  var mesesNom = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  return 'Entrega de documentos hasta el día '+dias[dt.getDay()]+' '+d+' de '+mesesNom[m]+' '+y+'.';
-}
-
-function aplicarFechaEntregaAVentana(){
-  var iso = (document.getElementById('mi-plazo-fecha') || {}).value || '';
-  if(!iso){ alert('Elija una fecha en el calendario.'); return; }
-  var plazo = textoPlazoDesdeFechaISO(iso);
-  if(!plazo){ alert('Fecha inválida.'); return; }
-  var el = document.getElementById('mi-ventana-inscripcion');
-  if(!el) return;
-  var base = String(el.value || '').replace(/\s*Entrega de documentos hasta[^.]*\.?\s*/gi, ' ').trim();
-  base = base.replace(/\s{2,}/g, ' ').replace(/\.\s*\./g, '.').trim();
-  if(base && !/[.!?]$/.test(base)) base += '.';
-  el.value = (base ? (base + ' ') : '') + plazo;
-}
-
-function setVentanaInscripcionesAbiertas(){
-  var el = document.getElementById('mi-ventana-inscripcion');
-  if(!el) return;
-  var iso = (document.getElementById('mi-plazo-fecha') || {}).value || '';
-  var plazo = textoPlazoDesdeFechaISO(iso);
-  el.value = plazo
-    ? ('Inscripciones abiertas. ' + plazo)
-    : 'Inscripciones abiertas.';
 }
 
 function parseTurnosTexto(txt){
@@ -7427,24 +7142,6 @@ function asegurarTurnosEnCuposConvenio(){
   if (ta) ta.value = serializarCuposUnidades(cupos.map(function(c){
     return esLugarSedapalAtencion(c.nombre) ? asegurarTurnosSedapalAtencionEnCupo(c) : asegurarTurnosConvenioEnCupo(c);
   }));
-}
-
-function htmlSelectTurno(id, valor){
-  var v = esTurnoSedapalAtencion(valor) ? TURNO_SEDAPAL_ATENCION : String(valor || 'TARDE').toUpperCase();
-  var ancho = esTituloSedapal((document.getElementById('mi-titulo-val') || {}).value) || esTurnoSedapalAtencion(v)
-    ? 'min-width:210px;width:auto;' : 'width:118px;';
-  return '<select id="'+id+'" onchange="onCambioTurnoSedapal(this)" style="'+ancho+'padding:5px 6px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;">'
-    + htmlOptionsTurno(v)
-    + '</select>';
-}
-
-function htmlSelectDia(id, valor){
-  var v = String(valor || 'PAR/IMPAR').toUpperCase();
-  return '<select id="'+id+'" style="width:118px;padding:5px 6px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;">'
-    + ['PAR/IMPAR','PAR','IMPAR'].map(function(op){
-      return '<option value="'+op+'"'+(op===v?' selected':'')+'>'+op+'</option>';
-    }).join('')
-    + '</select>';
 }
 
 function renderListaCuposUnidadesUI(){
@@ -7621,20 +7318,6 @@ function agregarCupoUnidadUI(){
   if (txt) txt.value = '';
 }
 
-function agregarTurnoALugarUI(idx){
-  var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
-  if (!cupos[idx]) return;
-  var nomEl = document.getElementById('mi-lt-turno-'+idx);
-  var diaEl = document.getElementById('mi-lt-dia-'+idx);
-  var vacEl = document.getElementById('mi-lt-vac-'+idx);
-  var turno = nomEl ? String(nomEl.value || '').trim().toUpperCase() : '';
-  var dia = diaEl ? String(diaEl.value || 'PAR/IMPAR').trim().toUpperCase() : 'PAR/IMPAR';
-  var vac = vacEl ? (parseInt(vacEl.value, 10) || 0) : 0;
-  if (!turno) { alert('Seleccione un turno.'); return; }
-  cupos[idx] = agregarTurnoEnCupo(cupos[idx], turno, dia, vac);
-  setCuposUnidadesDesdeArray(cupos);
-}
-
 function actualizarVacAtencionDiaUI(idx, dia, valor){
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
   if (!cupos[idx]) return;
@@ -7648,10 +7331,6 @@ function actualizarVacAtencionDiaUI(idx, dia, valor){
   setCuposUnidadesDesdeArray(cupos);
 }
 
-function actualizarVacAtencionLugarUI(idx, valor){
-  actualizarVacAtencionDiaUI(idx, 'PAR', valor);
-}
-
 function actualizarTurnoSlotLugarUI(idx, slotIdx, valor){
   var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
   var slots = CONVENIO_TURNOS_SLOTS;
@@ -7661,24 +7340,6 @@ function actualizarTurnoSlotLugarUI(idx, slotIdx, valor){
   cupos[idx] = asegurarTurnosConvenioEnCupo(cupos[idx]);
   cupos[idx] = agregarTurnoEnCupo(cupos[idx], slots[slotIdx].turno, slots[slotIdx].dia, n);
   cupos[idx] = asegurarTurnosConvenioEnCupo(cupos[idx]);
-  setCuposUnidadesDesdeArray(cupos);
-}
-
-function actualizarTurnoDeLugarUI(idx, tIdx, valor){
-  var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
-  if (!cupos[idx] || !Array.isArray(cupos[idx].turnos) || !cupos[idx].turnos[tIdx]) return;
-  var n = parseInt(valor, 10);
-  if (isNaN(n) || n < 0) n = 0;
-  cupos[idx].turnos[tIdx].vacantes = n;
-  cupos[idx] = recalcCupoTurnos(cupos[idx]);
-  setCuposUnidadesDesdeArray(cupos);
-}
-
-function quitarTurnoDeLugarUI(idx, tIdx){
-  var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
-  if (!cupos[idx] || !Array.isArray(cupos[idx].turnos)) return;
-  cupos[idx].turnos.splice(tIdx, 1);
-  cupos[idx] = recalcCupoTurnos(cupos[idx]);
   setCuposUnidadesDesdeArray(cupos);
 }
 
@@ -8303,10 +7964,6 @@ function pasarPreinscritosAGanador(itemId){
     .catch(function(){ alert('Error de conexión.'); });
 }
 
-function descargarPdfPreinscritosAdmin(){
-  abrirModalPdfListaConvenio('preinscritos');
-}
-
 var MPP_MODO = 'preinscritos';
 
 function listaBaseListaConvenioPdf(){
@@ -8391,10 +8048,6 @@ function ordenClavesSedeFiltro(keys){
     if(ia!==ib) return ia-ib;
     return String(a).localeCompare(String(b),'es');
   });
-}
-
-function abrirModalPdfPreinscritos(){
-  abrirModalPdfListaConvenio('preinscritos');
 }
 
 function abrirModalPdfListaConvenio(modo){
@@ -9101,32 +8754,6 @@ function verInscritos(itemId, titulo, modo){
     });
 }
 
-function poblarFiltroEstadoInscritos(tipo){
-  var sel=document.getElementById('inscritos-filtro-estado');
-  if(!sel) return;
-  var opts = tipo==='convenio'
-    ? [
-        ['','Todos'],
-        ['preinscrito','Preinscrito'],
-        ['ganador','Ganador (espera PDF)'],
-        ['en_revision','En revisión'],
-        ['observado','Observado'],
-        ['expediente_ok','Expediente OK'],
-        ['reserva','Reserva'],
-        ['repechaje','Repechaje'],
-        ['caducado','Caducado'],
-        ['rechazado','Rechazado']
-      ]
-    : [
-        ['','Todos'],
-        ['pendiente','Pendiente'],
-        ['verificado','Verificado'],
-        ['aprobado','Aprobado'],
-        ['rechazado','Rechazado']
-      ];
-  sel.innerHTML=opts.map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>';}).join('');
-}
-
 function poblarFiltroRegionInscritos(){
   var sel=document.getElementById('inscritos-filtro-region');
   if(!sel) return;
@@ -9198,24 +8825,6 @@ function poblarFiltroUnidadesInscritos(){
     +sorted.map(function(u){
       var v=u==='(Sin unidad)'?'':u;
       return '<option value="'+escHtml(v)+'">'+escHtml(u)+' ('+counts[u]+')</option>';
-    }).join('');
-  if(val) sel.value=val;
-}
-
-function poblarFiltroAreasInscritos(){
-  var sel=document.getElementById('inscritos-filtro-area');
-  if(!sel) return;
-  var counts={};
-  INSCRITOS_CACHE.forEach(function(i){
-    var a=(i.area||'').trim()||'(Sin área)';
-    counts[a]=(counts[a]||0)+1;
-  });
-  var sorted=Object.keys(counts).sort();
-  var val=sel.value;
-  sel.innerHTML='<option value="">Todas las áreas ('+INSCRITOS_CACHE.length+')</option>'
-    +sorted.map(function(a){
-      var v=a==='(Sin área)'?'':a;
-      return '<option value="'+escHtml(v)+'">'+escHtml(a)+' ('+counts[a]+')</option>';
     }).join('');
   if(val) sel.value=val;
 }
@@ -9386,8 +8995,6 @@ function renderInscritos(list, tipo){
     btnAccion='<div style="display:flex;flex-direction:column;gap:8px;margin-left:8px;min-width:260px;">'
       +'<button type="button" class="btn btn-v" id="btn-pdf-ganadores" style="margin:0;justify-content:center;background:#004d3d;color:#fff;" onclick="abrirModalPdfListaConvenio(\'ganadores\')" '+(total<1?'disabled':'')+'>'
       +'<i class="fas fa-file-pdf"></i> DESCARGAR PDF</button>'
-      +'<button type="button" class="btn" id="btn-preview-constancia-ganador" style="margin:0;justify-content:center;background:#c8a94a;color:#002d24;" onclick="abrirPreviewConstanciaGanador()" title="Abre el modal de constancia con datos de ejemplo. No toca convenios reales.">'
-      +'<i class="fas fa-eye"></i> VISTA PREVIA CONSTANCIA</button>'
       +'</div>';
   } else if(esConvenio && INSCRITOS_MODO==='repechaje'){
     btnAccion='<div style="display:flex;flex-direction:column;gap:8px;margin-left:8px;min-width:260px;">'
@@ -9842,10 +9449,6 @@ function renderHistorialCipConvenio(lista, nombres) {
   wrap.innerHTML = html;
 }
 
-function abrirPreviewConstanciaGanador(){
-  window.open('preview-constancia-ganador.html', 'preview-constancia-ganador', 'noopener,noreferrer');
-}
-
 function verConstanciaPanel(id) {
   if (!PANEL_CIP_CONSULTA) return;
   fetch(API + '/portal/inscripciones/' + id + '/constancia-vacante?cip=' + encodeURIComponent(PANEL_CIP_CONSULTA))
@@ -9913,10 +9516,6 @@ function notificarInscripcionConv(id, tipo){
   }).then(function(r){return r.json();}).then(function(d){
     mostrarLinksNotificacion(d);
   }).catch(function(){ alert('Error de conexión'); });
-}
-
-function revisarExpedienteConv(id, accion){
-  if(accion==='aprobar'){ abrirModalAprobarExpediente(id); return; }
 }
 
 function abrirModalAprobarExpediente(id){
@@ -10027,8 +9626,6 @@ function abrirGestionPreinscripcion(id){
   document.getElementById('modal-devolver-preins').classList.add('open');
 }
 
-function abrirDevolverPreinscripcion(id){ abrirGestionPreinscripcion(id); }
-function abrirAnularPreinscripcion(id){ abrirGestionPreinscripcion(id); }
 
 function textoBotonAccionPreins(accion){
   return accion==='anular'
@@ -10515,29 +10112,8 @@ function eliminarInscripcion(){
     });
 }
 
-function exportarInscritos(){
-  var list=obtenerInscritosFiltrados();
-  if(!list.length){alert('No hay inscritos para exportar con el filtro actual.');return;}
-  var rows=[['CIP','DNI','CODIFIN','Nombres','Region','Unidad','PostulaA','Area','Cargo','Modalidad','ModalidadOtro','Disponibilidad','Telefono','Email','Estado','Observacion','Fecha']];
-  list.forEach(function(i){
-    rows.push([i.cip,i.dni,i.codifin,i.nombres,i.region_policial,i.unidad,i.comisaria_postula,i.area,i.cargo,i.modalidad,i.modalidad_otro,i.disponibilidad,i.telefono,i.email,i.estado,i.observacion,
-      i.fecha?new Date(i.fecha).toLocaleDateString('es-PE'):'']);
-  });
-  var csv=rows.map(function(r){return r.map(function(c){return '"'+(c||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
-  var blob=new Blob(['ï»¿'+csv],{type:'text/csv;charset=utf-8;'});
-  var a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='inscritos_'+ITEM_ACTIVO_ID+'_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();
-}
-
 function val(id){var el=document.getElementById(id);return el?el.value:'';}
 function set(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
-function llenarSel(id,items,ph){
-  var sel=document.getElementById(id);if(!sel)return;
-  sel.innerHTML='<option value="">'+ph+'</option>';
-  items.forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});
-}
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escDatos(s){return escHtml(String(s == null || s === '' ? '—' : s).toUpperCase());}
 function escJs(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
