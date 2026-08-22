@@ -8725,14 +8725,18 @@ function renderConvGanadoresCuadros(list){
     if(!isNaN(n) && n>0) return n;
     return parseInt(c.vacantes,10)||0;
   }
+  function ganOcupan(c){
+    return (c.ganadores||0)+(c.en_revision||0)+(c.observados||0)+(c.expediente_ok||0);
+  }
   var totVac=list.reduce(function(s,c){ return s+vacInicial(c); },0);
+  var totGan=list.reduce(function(s,c){ return s+ganOcupan(c); },0);
   el.innerHTML='<div class="tabla-rep-excel-wrap"><table class="tabla-rep-excel">'
     +'<thead><tr>'
     +'<th class="col-conv">Convenio</th>'
     +'<th title="Cupos configurados al inicio">Vacantes</th>'
-    +'<th>Ganadores</th>'
-    +'<th>Por vacaciones</th>'
-    +'<th>Por sorteo</th>'
+    +'<th title="Ocupan cupo: ganador + en revisión + observados + expediente ok. Vacaciones + sorteo debe coincidir con este número.">Ganadores</th>'
+    +'<th title="Ganaron por vacaciones (no se cuentan otra vez en sorteo)">Por vacaciones</th>'
+    +'<th title="Ganaron por sorteo o asignación directa, sin vacaciones">Por sorteo</th>'
     +'<th>En revisión</th>'
     +'<th>Observados</th>'
     +'<th>Sin PDF</th>'
@@ -8742,7 +8746,7 @@ function renderConvGanadoresCuadros(list){
       return '<tr onclick="abrirConvenioGanadores('+c.id+',\''+escJs(c.titulo)+'\')" title="Abrir ganadores y expedientes">'
         +'<td class="td-conv">'+escHtml(c.titulo)+'</td>'
         +'<td class="num" style="color:#004d3d;">'+vacInicial(c)+'</td>'
-        +'<td class="num" style="color:#b8860b;">'+(c.ganadores||0)+'</td>'
+        +'<td class="num" style="color:#b8860b;">'+ganOcupan(c)+'</td>'
         +'<td class="num" style="color:#1a7a3a;">'+(c.ganadores_vacaciones||0)+'</td>'
         +'<td class="num" style="color:#2980b9;">'+(c.ganadores_sorteo||0)+'</td>'
         +'<td class="num" style="color:#2980b9;">'+(c.en_revision||0)+'</td>'
@@ -8754,7 +8758,7 @@ function renderConvGanadoresCuadros(list){
     +'</tbody><tfoot><tr>'
     +'<td class="td-conv">Total</td>'
     +'<td class="num" style="color:#004d3d;">'+totVac+'</td>'
-    +'<td class="num" style="color:#b8860b;">'+tot('ganadores')+'</td>'
+    +'<td class="num" style="color:#b8860b;">'+totGan+'</td>'
     +'<td class="num" style="color:#1a7a3a;">'+tot('ganadores_vacaciones')+'</td>'
     +'<td class="num" style="color:#2980b9;">'+tot('ganadores_sorteo')+'</td>'
     +'<td class="num" style="color:#2980b9;">'+tot('en_revision')+'</td>'

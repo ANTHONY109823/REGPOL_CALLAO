@@ -8393,7 +8393,8 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
            )::int AS vacaciones,
            COUNT(*) FILTER (
              WHERE estado = ANY($2::varchar[])
-               AND LOWER(COALESCE(NULLIF(modo_ingreso,''),'sorteo')) = 'sorteo'
+               AND UPPER(COALESCE(disponibilidad,'')) <> 'VACACIONES'
+               AND LOWER(COALESCE(modo_ingreso,'')) <> 'repechaje'
            )::int AS sorteo
          FROM inscripciones WHERE item_id=$1`,
         [it.id, ['ganador', 'en_revision', 'observado', 'expediente_ok']]
