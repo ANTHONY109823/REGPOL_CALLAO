@@ -8401,17 +8401,21 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
       const pre =
         (mapa.preinscrito || 0) + (mapa.pendiente || 0) +
         (mapa.aprobado || 0) + (mapa.verificado || 0);
+      const itemSlots = Object.assign({}, it, {
+        tipo: 'convenio',
+        cupos_unidades: normalizarCuposUnidades(it.cupos_unidades),
+        turnos: normalizarTurnos(it.turnos)
+      });
+      const slotsVac = construirSlotsSorteoItem(itemSlots);
+      const vacIniciales = slotsVac.reduce(function(s, sl) {
+        return s + (parseInt(sl.vacantes, 10) || 0);
+      }, 0) || (parseInt(it.vacantes, 10) || 0);
       let requiereSorteo = pre > (vac.disponibles != null ? vac.disponibles : 0);
       if (pre > 0) {
         const slotRows = await pool.query(
           `SELECT estado, comisaria_postula FROM inscripciones WHERE item_id=$1`,
           [it.id]
         );
-        const itemSlots = Object.assign({}, it, {
-          tipo: 'convenio',
-          cupos_unidades: normalizarCuposUnidades(it.cupos_unidades),
-          turnos: normalizarTurnos(it.turnos)
-        });
         requiereSorteo = hayTurnosQueRequierenSorteo(itemSlots, slotRows.rows);
       } else {
         requiereSorteo = false;
@@ -8424,6 +8428,7 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
         fecha_inicio: it.fecha_inicio || '',
         duracion: it.duracion || '',
         lugar: it.lugar || '',
+        vacantes_iniciales: vacIniciales,
         vacantes: vac.vacantes != null ? vac.vacantes : (it.vacantes || 0),
         ocupadas: vac.ocupadas != null ? vac.ocupadas : 0,
         disponibles: vac.disponibles != null ? vac.disponibles : 0,
