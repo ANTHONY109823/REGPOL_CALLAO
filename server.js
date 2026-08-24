@@ -4886,8 +4886,8 @@ const CONSTANCIA_NOMBRAMIENTO_DEFAULT = {
   fallback_presentarse: 'Según indicación de Convenios',
   fallback_concentracion: 'Por confirmar',
   fallback_indicaciones: 'Consultar con el área de Convenios',
-  aviso_titulo: 'Importante — documentación original:',
-  aviso_texto: 'El día que se presente a la comisaría o formación, debe llevar en físico la documentación original completa que subió en PDF al portal (misma documentación del expediente digital). Sin ella no se concretará su incorporación.',
+  aviso_titulo: 'Importante:',
+  aviso_texto: 'EL PRIMER DÍA QUE USTED SE PRESENTE A REALIZAR EL SERVICIO, DEBERÁ PORTAR SU CONSTANCIA EN FORMA FÍSICA, LA CUAL SERÁ SOLICITADA POR EL ENCARGADO, A FIN DE SER CONSIDERADO EN EL SERVICIO AL CUAL FUE ASIGNADO MEDIANTE SORTEO.',
   aprobacion_titulo: 'Aprobación del expediente:',
   aprobacion_por: 'Aprobado por:',
   aprobacion_fecha: 'Fecha y hora:',
@@ -4920,6 +4920,12 @@ function fusionarPlantillaConstancia(saved) {
     if (src[k] != null && String(src[k]).length) out[k] = String(src[k]);
     else out[k] = CONSTANCIA_NOMBRAMIENTO_DEFAULT[k];
   });
+  if (String(out.aviso_titulo || '').indexOf('documentación original') >= 0) {
+    out.aviso_titulo = CONSTANCIA_NOMBRAMIENTO_DEFAULT.aviso_titulo;
+  }
+  if (String(out.aviso_texto || '').indexOf('documentación original completa') >= 0) {
+    out.aviso_texto = CONSTANCIA_NOMBRAMIENTO_DEFAULT.aviso_texto;
+  }
   return out;
 }
 
