@@ -28,6 +28,9 @@
     fallback_indicaciones: 'Consultar con el área de Convenios',
     aviso_titulo: 'Importante:',
     aviso_texto: 'EL PRIMER DÍA QUE USTED SE PRESENTE A REALIZAR EL SERVICIO, DEBERÁ PORTAR SU CONSTANCIA EN FORMA FÍSICA, LA CUAL SERÁ SOLICITADA POR EL ENCARGADO, A FIN DE SER CONSIDERADO EN EL SERVICIO AL CUAL FUE ASIGNADO MEDIANTE SORTEO.',
+    label_situacion: 'Situación:',
+    situacion_vacaciones: 'Vacaciones',
+    situacion_franco: 'Franco',
     aprobacion_titulo: 'Aprobación del expediente:',
     aprobacion_por: 'Aprobado por:',
     aprobacion_fecha: 'Fecha y hora:',
@@ -88,6 +91,7 @@
         { key: 'seccion3_titulo', label: 'Título de la sección', tipo: 'text' },
         { key: 'label_presentarse', label: 'Etiqueta Dónde presentarse', tipo: 'text' },
         { key: 'label_concentracion', label: 'Etiqueta Punto / lugar de concentración', tipo: 'text' },
+        { key: 'label_turno', label: 'Etiqueta Turno de trabajo', tipo: 'text' },
         { key: 'label_indicaciones', label: 'Etiqueta Indicaciones adicionales', tipo: 'text' },
         { key: 'fallback_presentarse', label: 'Texto si no hay lugar de presentación', tipo: 'text' },
         { key: 'fallback_concentracion', label: 'Texto si no hay punto de concentración', tipo: 'text' },
@@ -100,6 +104,15 @@
       campos: [
         { key: 'aviso_titulo', label: 'Título del aviso', tipo: 'text' },
         { key: 'aviso_texto', label: 'Texto del aviso', tipo: 'textarea' }
+      ]
+    },
+    {
+      id: 'situacion',
+      titulo: 'Situación (recuadro verde al pie)',
+      campos: [
+        { key: 'label_situacion', label: 'Etiqueta Situación', tipo: 'text' },
+        { key: 'situacion_vacaciones', label: 'Texto si es vacaciones', tipo: 'text' },
+        { key: 'situacion_franco', label: 'Texto si es franco', tipo: 'text' }
       ]
     },
     {
@@ -167,6 +180,30 @@
     return esc(s).replace(/\n/g, '<br>');
   }
 
+  function etiquetaBloqueVacaciones(bloque) {
+    var b = String(bloque || '').trim();
+    if (b === '1') return 'Bloque 1 (días 1–15)';
+    if (b === '2') return 'Bloque 2 (días 16–fin de mes)';
+    return '';
+  }
+
+  function textoSituacion(ins, tpl) {
+    ins = ins || {};
+    tpl = tpl || {};
+    var disp = String(ins.disponibilidad || '').toUpperCase().trim();
+    if (disp === 'VACACIONES') {
+      var vac = tpl.situacion_vacaciones || 'Vacaciones';
+      var bl = etiquetaBloqueVacaciones(ins.bloque_vacaciones);
+      return bl ? (vac + ' — ' + bl) : vac;
+    }
+    if (disp === 'FRANCO') {
+      var fra = tpl.situacion_franco || 'Franco';
+      var dia = String(ins.dia_franco || '').trim();
+      return dia ? (fra + ' — ' + dia) : fra;
+    }
+    return '';
+  }
+
   function htmlSheet(ins, tpl, opts) {
     ins = ins || {};
     tpl = merge(tpl);
@@ -189,6 +226,7 @@
     var autoIndicaciones = String(ins.contactos_responsables || '').trim() || tpl.fallback_indicaciones;
     var indicaciones = String(ins.constancia_indicaciones || '').trim() || autoIndicaciones;
     var turnoTrabajo = autoTurno;
+    var situacionTxt = textoSituacion(ins, tpl);
     var aprobNombre = String(ins.aprobado_por_nombre || '').trim();
     var aprobFecha = String(ins.fecha_aprobacion_legible || '').trim();
     if (!aprobFecha && ins.fecha_aprobacion) {
@@ -230,6 +268,9 @@
       + fila(tpl.label_indicaciones, indicaciones, true)
       + '</div></div>'
       + '<div class="c-aviso"><strong>' + esc(tpl.aviso_titulo) + '</strong> ' + esc(tpl.aviso_texto) + '</div>'
+      + (situacionTxt
+        ? ('<div class="c-situacion"><strong>' + esc(tpl.label_situacion) + '</strong> ' + esc(situacionTxt) + '</div>')
+        : '')
       + '<div class="c-aprob"><strong>' + esc(tpl.aprobacion_titulo) + '</strong><br>'
       + (aprobNombre
         ? (esc(tpl.aprobacion_por) + ' <strong>' + esc(aprobNombre) + '</strong>'
