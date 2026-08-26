@@ -10,6 +10,8 @@
   Cursos mantienen el flujo anterior (PDF al inscribir + verificado/aprobado).
 */
 const PLAZO_EXPEDIENTE_DIAS = 4;
+/** Horas para subsanar desde el momento en que el admin observa el expediente. */
+const PLAZO_SUBSANACION_HORAS = 24;
 
 const ESTADOS_CONVENIO = {
   PREINSCRITO: 'preinscrito',
@@ -114,7 +116,9 @@ function mensajeNotificacion(tipo, ins, itemTitulo, item) {
       + datos
       + '\nMotivo: ' + motivo + '\n'
       + (obs ? ('Detalle: ' + obs + '\n') : '')
-      + 'Subsanar a la brevedad y volver a subir el PDF corregido desde Consulta por CIP.';
+      + '\nTiene ' + PLAZO_SUBSANACION_HORAS
+      + ' horas (desde esta observación) para corregir y volver a subir el PDF '
+      + 'desde Consulta por CIP. El plazo no depende del cierre del convenio.';
   }
   if (tipo === 'rechazado') {
     const motivo = etiquetaObservacion(ins.motivo_observacion) || '';
@@ -360,6 +364,7 @@ async function initColumnasFlujoConvenios(pool) {
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS fecha_ganador TIMESTAMPTZ;
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS plazo_expediente TIMESTAMPTZ;
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS motivo_observacion VARCHAR(80) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS fecha_observacion TIMESTAMPTZ;
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS notif_log JSONB DEFAULT '[]'::jsonb;
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS ultima_notif TIMESTAMPTZ;
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS nro_registro VARCHAR(30) DEFAULT '';
@@ -446,6 +451,18 @@ async function migrarEstadosConvenios(pool) {
       AND n.estado = 'ganador'
       AND COALESCE(n.pdf_requisitos,'') = ''
   `, [String(PLAZO_EXPEDIENTE_DIAS)]);
+
+  // Observados actuales: 24 h desde ahora (una sola vez, si aún no hay fecha_observacion)
+  await pool.query(`
+    UPDATE inscripciones n
+    SET fecha_observacion = NOW(),
+        plazo_expediente = NOW() + ($1 || ' hours')::interval
+    FROM items_portal i
+    WHERE n.item_id = i.id
+      AND i.tipo = 'convenio'
+      AND n.estado = 'observado'
+      AND n.fecha_observacion IS NULL
+  `, [String(PLAZO_SUBSANACION_HORAS)]);
 }
 
 async function caducarExpedientesVencidos(pool) {
@@ -512,6 +529,10 @@ function plazoDesdeAhora() {
   return d;
 }
 
+function plazoSubsanacionDesdeAhora() {
+  return new Date(Date.now() + PLAZO_SUBSANACION_HORAS * 60 * 60 * 1000);
+}
+
 function canonTurnoPostulacion(turno) {
   var s = String(turno || '').trim().toUpperCase();
   var n = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
@@ -551,6 +572,7 @@ function etiquetaBloqueVacaciones(bloque) {
 
 module.exports = {
   PLAZO_EXPEDIENTE_DIAS,
+  PLAZO_SUBSANACION_HORAS,
   ESTADOS_CONVENIO,
   ESTADOS_OCUPAN_VACANTE,
   CATALOGO_OBSERVACIONES,
@@ -563,6 +585,7 @@ module.exports = {
   caducarExpedientesVencidos,
   vacantesDisponibles,
   plazoDesdeAhora,
+  plazoSubsanacionDesdeAhora,
   asegurarNroRegistro,
   limpio,
   soloDigitos,

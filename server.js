@@ -6406,10 +6406,10 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
         }
       }
       const plazoVencido = !!(row.plazo_expediente && new Date(row.plazo_expediente) < new Date());
-      const puedeSubir = row.tipo === 'convenio' && (
+      const puedeSubir = row.tipo === 'convenio' && !plazoVencido && (
         estado === 'ganador'
         || estado === 'observado'
-        || (estado === 'rechazado' && !!row.plazo_expediente && !plazoVencido)
+        || (estado === 'rechazado' && !!row.plazo_expediente)
       );
       const puedeConstancia = puedeDescargarConstanciaEstado(estado, row.tipo);
       const enVerificacion = row.tipo === 'convenio' && (estado === 'en_revision' || estado === 'repechaje');
@@ -8252,12 +8252,15 @@ app.post('/portal/inscripciones/:id/expediente',
     if (row.tipo !== 'convenio') return res.json({ ok: false, error: 'Solo aplica a convenios' });
     const plazoVencido = !!(row.plazo_expediente && new Date(row.plazo_expediente) < new Date());
     const puedeGanador = row.estado === 'ganador' && !plazoVencido;
-    const puedeObservado = row.estado === 'observado';
+    const puedeObservado = row.estado === 'observado' && !plazoVencido;
     const puedeRechazado = row.estado === 'rechazado' && !!row.plazo_expediente && !plazoVencido;
     if (!puedeGanador && !puedeObservado && !puedeRechazado) {
       if (row.estado === 'ganador' && plazoVencido) {
         await pool.query(`UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente' WHERE id=$1`, [id]);
         return res.json({ ok: false, error: 'El plazo de 4 días ya venció. La vacante pasó a repechaje.' });
+      }
+      if (row.estado === 'observado' && plazoVencido) {
+        return res.json({ ok: false, error: 'El plazo de 24 horas para subsanar ya venció. No puede volver a subir expediente.' });
       }
       if (row.estado === 'rechazado' && plazoVencido) {
         return res.json({ ok: false, error: 'El plazo de subsanación ya venció. No puede volver a subir expediente.' });
@@ -8556,12 +8559,14 @@ app.post('/admin/inscripciones/:id/revisar-expediente', requireAuth, async (req,
       if (!motivo) return res.json({ ok: false, error: 'Seleccione un motivo de observación' });
       const label = conveniosFlujo.etiquetaObservacion(motivo);
       const obsTxt = observacion
-        ? (label + '. ' + observacion + ' — Subsanar a la brevedad.')
-        : (label + ' — Subsanar a la brevedad.');
+        ? (label + '. ' + observacion + ' — Subsanar dentro de 24 horas.')
+        : (label + ' — Subsanar dentro de 24 horas.');
+      const plazoObs = conveniosFlujo.plazoSubsanacionDesdeAhora();
       await pool.query(
-        `UPDATE inscripciones SET estado='observado', motivo_observacion=$1, observacion=$2
-         WHERE id=$3 AND estado IN ('en_revision','repechaje','observado')`,
-        [motivo, obsTxt, id]);
+        `UPDATE inscripciones SET estado='observado', motivo_observacion=$1, observacion=$2,
+           fecha_observacion=NOW(), plazo_expediente=$3::timestamptz
+         WHERE id=$4 AND estado IN ('en_revision','repechaje','observado')`,
+        [motivo, obsTxt, plazoObs.toISOString(), id]);
       const n = await conveniosFlujo.notificarInscripcion(pool, id, 'observado');
       await adminAuth.registrarAuditoria(pool, {
         adminId: req.admin.id,
@@ -8571,11 +8576,16 @@ app.post('/admin/inscripciones/:id/revisar-expediente', requireAuth, async (req,
         modulo: 'convenios',
         entidad: 'inscripcion',
         entidadId: String(id),
-        detalle: motivo,
+        detalle: motivo + ' — plazo subsanación 24h',
         ip: req.ip || '',
         ok: true
       });
-      return res.json({ ok: true, estado: 'observado', notificacion: n });
+      return res.json({
+        ok: true,
+        estado: 'observado',
+        plazo_expediente: plazoObs.toISOString(),
+        notificacion: n
+      });
     }
 
     if (accion === 'rechazar') {

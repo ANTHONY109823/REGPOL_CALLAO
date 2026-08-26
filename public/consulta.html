@@ -677,9 +677,9 @@ function renderResultados(lista) {
         + '<div class="expediente-box-top">'
         + '<p><i class="fas fa-file-upload" style="color:#004d3d;"></i> '
         + (puedeSub
-          ? 'Subsane y suba el PDF corregido.'
+          ? 'Tiene 24 horas desde la observación para subir el PDF corregido.'
           : (ins.plazo_vencido
-            ? 'Plazo vencido — no puede subir expediente.'
+            ? 'Plazo de 24 horas vencido — no puede subir expediente.'
             : 'Sin plazo de subsanación activo.'))
         + '</p>'
         + htmlBotonesModeloExp()

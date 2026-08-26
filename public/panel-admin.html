@@ -2250,6 +2250,7 @@
     <input type="hidden" id="mobs-id"/>
     <p style="font-size:12.5px;color:#666;margin:-4px 0 12px;line-height:1.45;">
       Se avisará al efectivo (WhatsApp / correo) para que <strong>subsane</strong> y vuelva a subir el PDF.
+      El plazo de subsanación es de <strong>24 horas desde este momento</strong>, aunque el convenio ya haya cerrado.
     </p>
     <div id="mobs-motivo-wrap">
       <label>Motivo *</label>
@@ -9190,7 +9191,15 @@ function resolverPlazoExpedienteIso(ins){
 }
 
 function htmlPlazoCountdownInscripcion(ins, esConvenio){
-  if(!esConvenio || ins.estado!=='ganador' || ins.tiene_pdf) return '';
+  if(!esConvenio) return '';
+  if(ins.estado==='observado'){
+    var isoObs=ins.plazo_expediente||'';
+    if(!isoObs){
+      return '<span class="plazo-countdown vencido" title="Sin plazo de subsanación">Sin plazo 24h</span>';
+    }
+    return '<span class="plazo-countdown" data-plazo-exp="'+escHtml(isoObs)+'" title="Plazo de 24 h para subsanar">—</span>';
+  }
+  if(ins.estado!=='ganador' || ins.tiene_pdf) return '';
   var iso=resolverPlazoExpedienteIso(ins);
   if(!iso){
     return '<span class="plazo-countdown vencido" title="Sin fecha de plazo">Sin plazo</span>';
