@@ -12,6 +12,9 @@
 const PLAZO_EXPEDIENTE_DIAS = 4;
 /** Horas para subsanar desde el momento en que el admin observa el expediente. */
 const PLAZO_SUBSANACION_HORAS = 24;
+/** Cierre de la primera entrega de expediente (Lima). Tras esta hora, ganador sin PDF queda caducado. */
+const CIERRE_PRESENTACION_LIMA = '2026-08-25 17:00:00';
+const CIERRE_PRESENTACION_MES = '2026-08';
 
 const ESTADOS_CONVENIO = {
   PREINSCRITO: 'preinscrito',
@@ -425,32 +428,18 @@ async function migrarEstadosConvenios(pool) {
       AND n.estado IN ('pendiente', 'verificado', 'aprobado')
   `);
 
-  // Ganadores con PDF ya cargado → en revisión
+  // Ganadores con PDF ya cargado → en revisión (no reabrir plazo)
   await pool.query(`
     UPDATE inscripciones n
     SET estado = 'en_revision',
         fecha_ganador = COALESCE(fecha_ganador, n.fecha, NOW()),
-        plazo_expediente = COALESCE(plazo_expediente, NOW() + ($1 || ' days')::interval),
         modo_ingreso = CASE WHEN COALESCE(modo_ingreso,'')='' THEN 'sorteo' ELSE modo_ingreso END
     FROM items_portal i
     WHERE n.item_id = i.id
       AND i.tipo = 'convenio'
       AND n.estado = 'ganador'
       AND COALESCE(n.pdf_requisitos,'') <> ''
-  `, [String(PLAZO_EXPEDIENTE_DIAS)]);
-
-  // Ganadores sin PDF → mantienen ganador + plazo 4 días desde ahora (si no tenían)
-  await pool.query(`
-    UPDATE inscripciones n
-    SET fecha_ganador = COALESCE(fecha_ganador, NOW()),
-        plazo_expediente = COALESCE(plazo_expediente, NOW() + ($1 || ' days')::interval),
-        modo_ingreso = CASE WHEN COALESCE(modo_ingreso,'')='' THEN 'sorteo' ELSE modo_ingreso END
-    FROM items_portal i
-    WHERE n.item_id = i.id
-      AND i.tipo = 'convenio'
-      AND n.estado = 'ganador'
-      AND COALESCE(n.pdf_requisitos,'') = ''
-  `, [String(PLAZO_EXPEDIENTE_DIAS)]);
+  `);
 
   // Observados actuales: 24 h desde ahora (una sola vez, si aún no hay fecha_observacion)
   await pool.query(`
@@ -463,30 +452,32 @@ async function migrarEstadosConvenios(pool) {
       AND n.estado = 'observado'
       AND n.fecha_observacion IS NULL
   `, [String(PLAZO_SUBSANACION_HORAS)]);
+
+  await caducarExpedientesVencidos(pool);
 }
 
 async function caducarExpedientesVencidos(pool) {
-  // Asegurar fecha_ganador y plazo (4 días) a ganadores que aún no lo tengan
-  await pool.query(`
-    UPDATE inscripciones n
-    SET fecha_ganador = COALESCE(fecha_ganador, NOW()),
-        plazo_expediente = COALESCE(
-          plazo_expediente,
-          NOW() + ($1 || ' days')::interval
-        )
-    FROM items_portal i
-    WHERE n.item_id = i.id
-      AND i.tipo = 'convenio'
-      AND n.estado = 'ganador'
-      AND COALESCE(n.pdf_requisitos,'') = ''
-      AND (n.plazo_expediente IS NULL OR n.fecha_ganador IS NULL)
-  `, [String(PLAZO_EXPEDIENTE_DIAS)]);
+  // Agosto 2026: entrega cerró el 25/08 a las 17:00. No reabrir plazo a quien no subió PDF.
+  await pool.query(
+    `UPDATE inscripciones n
+     SET estado = 'caducado',
+         plazo_expediente = $2::timestamp AT TIME ZONE 'America/Lima',
+         observacion = 'Presentación de expediente cerrada el 25/08/2026 a las 17:00. No presentó PDF.'
+     FROM items_portal i
+     WHERE n.item_id = i.id
+       AND i.tipo = 'convenio'
+       AND n.estado = 'ganador'
+       AND COALESCE(n.pdf_requisitos,'') = ''
+       AND to_char(timezone('America/Lima', COALESCE(n.fecha, NOW())), 'YYYY-MM') = $1
+       AND (CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima') >= $2::timestamp`,
+    [CIERRE_PRESENTACION_MES, CIERRE_PRESENTACION_LIMA]
+  );
 
   const r = await pool.query(`
     UPDATE inscripciones n
     SET estado = 'caducado',
         observacion = CASE
-          WHEN COALESCE(observacion,'') = '' THEN 'Plazo de 4 días vencido sin presentar expediente'
+          WHEN COALESCE(observacion,'') = '' THEN 'Plazo vencido sin presentar expediente'
           ELSE observacion
         END
     FROM items_portal i
