@@ -458,7 +458,7 @@ body.panel-admin-page.autenticado #admin-contenido { display: flex !important; }
 
 .cms-pilar-info { flex: 1; min-width: 0; }
 .cms-pilar-info strong { display: block; color: var(--verde-pnp); font-size: 14px; margin-bottom: 4px; }
-.cms-pilar-info span { font-size: 12px; color: #666; line-height: 1.4; display: block; }
+.cms-pilar-texto { font-size: 12px; color: #666; line-height: 1.4; }
 
 .cms-item-icono {
   width: 40px;
@@ -967,9 +967,11 @@ body.panel-admin-page.autenticado #admin-contenido { display: flex !important; }
 .cms-slide-card .cms-slide-acc { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px; }
 
 .cms-pilar-item { cursor: default; }
-.cms-pilar-item .cms-pilar-info span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cms-pilar-texto { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 @media (max-width: 700px) {
   .cms-img-steps { grid-template-columns: 1fr; }
   .cms-img-bar { position: static; }
+  .cms-pilar-item { grid-template-columns: 40px minmax(0,1fr); }
+  .cms-pilar-acciones { grid-column: 1 / -1; justify-content: flex-end; }
 }

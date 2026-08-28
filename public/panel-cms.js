@@ -184,6 +184,10 @@ function esTabCmsImagen(tab) {
   return !!CMS_TABS_IMAGEN[tab];
 }
 
+function cmsEsSuperAdmin() {
+  return typeof esUnitic === 'function' && esUnitic();
+}
+
 function cmsImagenRetroceder() {
   var modal = document.getElementById('cms-modal');
   if (modal && modal.classList.contains('visible')) {
@@ -520,7 +524,8 @@ function guardarFotosEncabezado() {
 function renderEditorCarrusel() {
   var el = document.getElementById('editor-carrusel');
   if (!el) return;
-  if (document.getElementById('cms-hero-titulo')) {
+  var esSA = cmsEsSuperAdmin();
+  if (esSA && document.getElementById('cms-hero-titulo')) {
     cmsDataActual.heroTexto = {
       titulo: document.getElementById('cms-hero-titulo').value.trim(),
       subtitulo: document.getElementById('cms-hero-subtitulo') ? document.getElementById('cms-hero-subtitulo').value.trim() : '',
@@ -531,9 +536,26 @@ function renderEditorCarrusel() {
   var heroT  = cmsDataActual.heroTexto || {};
   var topbar = cmsDataActual.topbarLinks || {};
 
+  var heroP = document.getElementById('cms-carrusel-hero-txt');
+  if (heroP) {
+    heroP.innerHTML = esSA
+      ? 'El bloque grande de fotos de la <strong>página de inicio</strong>, el lema institucional y los botones de la barra verde (Intranet, Correo, etc.).'
+      : 'Aquí solo se editan las <strong>fotos grandes</strong> de la página de inicio. El lema del centro y los botones Intranet/Correo los gestiona el Super Admin.';
+  }
+  var stepsEl = document.getElementById('cms-carrusel-steps');
+  if (stepsEl) {
+    stepsEl.innerHTML = esSA
+      ? '<li><span class="n">1</span>Fotos del <b>carrusel</b> (diapositivas)</li>'
+        + '<li><span class="n">2</span>Textos del centro y <b>botones</b> superiores</li>'
+        + '<li><span class="n">3</span>Pulse <b>Grabar</b> para publicar todo</li>'
+      : '<li><span class="n">1</span>Añada o edite las <b>fotos</b> del carrusel</li>'
+        + '<li><span class="n">2</span>Ordénelas con las <b>flechas</b></li>'
+        + '<li><span class="n">3</span>Pulse <b>Grabar</b> para publicarlas</li>';
+  }
+
   var html = '<div class="cms-img-block">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'
-    + '<h3 style="margin:0;"><span class="tag">1</span> Diapositivas del carrusel</h3>'
+    + '<h3 style="margin:0;">' + (esSA ? '<span class="tag">1</span> ' : '') + 'Diapositivas del carrusel</h3>'
     + '<button type="button" class="btn btn-v" onclick="agregarSlideCMS()"><i class="fas fa-plus"></i> Añadir imagen</button>'
     + '</div>'
     + '<p class="cms-img-help">Fotos grandes del inicio. Pulse <b>Editar</b> para título y subtítulo. Las flechas cambian el orden.</p>';
@@ -564,9 +586,10 @@ function renderEditorCarrusel() {
   }
   html += '</div>';
 
+  if (esSA) {
   html += '<div class="cms-img-block">'
     + '<h3><span class="tag">2</span> Texto del centro (solo inicio)</h3>'
-    + '<p class="cms-img-help">Título, lema y eslogan que se superponen al carrusel en la portada.</p>'
+    + '<p class="cms-img-help">Título, lema y eslogan que se superponen al carrusel en la portada. Solo Super Admin.</p>'
     + '<div class="cms-modal-campo"><label class="cms-label">Título principal</label>'
     + '<input type="text" id="cms-hero-titulo" class="cms-input" value="' + escHtml(heroT.titulo || '') + '"/></div>'
     + '<div class="cms-modal-campo"><label class="cms-label">Lema (línea 2)</label>'
@@ -577,7 +600,7 @@ function renderEditorCarrusel() {
 
   html += '<div class="cms-img-block">'
     + '<h3><span class="tag">3</span> Botones de la barra verde</h3>'
-    + '<p class="cms-img-help">Se muestran a la izquierda de las redes sociales. Puede editar Intranet/Correo y agregar más, con el mismo estilo.</p>'
+    + '<p class="cms-img-help">Se muestran a la izquierda de las redes sociales. Solo Super Admin puede editar Intranet/Correo y agregar más.</p>'
     + '<div id="cms-topbar-botones-lista" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">';
 
   var topNorm = normalizarTopbarLinksCMS(topbar);
@@ -588,6 +611,7 @@ function renderEditorCarrusel() {
   html += '</div>'
     + '<button type="button" class="btn btn-v" onclick="agregarTopbarBotonCMS()"><i class="fas fa-plus"></i> Agregar botón</button>'
     + '</div>';
+  }
 
   el.innerHTML = html;
 }
@@ -630,6 +654,7 @@ function leerTopbarBotonesDesdeDOM() {
 }
 
 function agregarTopbarBotonCMS() {
+  if (!cmsEsSuperAdmin()) return;
   cmsDataActual.topbarLinks = leerTopbarBotonesDesdeDOM();
   cmsDataActual.topbarLinks.botones.push({
     id: 'btn_' + Date.now().toString(36),
@@ -643,6 +668,7 @@ function agregarTopbarBotonCMS() {
 }
 
 function eliminarTopbarBotonCMS(idx) {
+  if (!cmsEsSuperAdmin()) return;
   cmsDataActual.topbarLinks = leerTopbarBotonesDesdeDOM();
   var botones = (cmsDataActual.topbarLinks.botones || []).slice();
   if (idx < 0 || idx >= botones.length) return;
@@ -657,6 +683,7 @@ function eliminarTopbarBotonCMS(idx) {
 }
 
 function guardarTopbarLinksCMS() {
+  if (!cmsEsSuperAdmin()) return;
   cmsDataActual.topbarLinks = leerTopbarBotonesDesdeDOM();
   guardarSitioWeb();
 }
@@ -732,6 +759,7 @@ function previewSlideImg(input) {
 }
 
 function guardarHeroTexto() {
+  if (!cmsEsSuperAdmin()) return;
   cmsDataActual.heroTexto = {
     titulo:    document.getElementById('cms-hero-titulo')    ? document.getElementById('cms-hero-titulo').value.trim()    : '',
     subtitulo: document.getElementById('cms-hero-subtitulo') ? document.getElementById('cms-hero-subtitulo').value.trim() : '',
@@ -1292,14 +1320,15 @@ function renderPilaresCMS() {
   el.innerHTML = pilares.map(function(p, idx) {
     return '<div class="cms-pilar-item">'
       + '<div class="cms-pilar-preview"><i class="fas ' + escHtml(p.icono || 'fa-star') + '"></i></div>'
-      + '<div class="cms-pilar-info"><strong>' + escHtml(p.titulo) + '</strong><span>' + escHtml(p.texto) + '</span>'
-      + (p.imagen ? '<span style="display:block;margin-top:2px;color:#1a7a3a;font-size:10px;"><i class="fas fa-image"></i> Con imagen</span>' : '')
+      + '<div class="cms-pilar-info"><strong>' + escHtml(p.titulo) + '</strong>'
+      + '<span class="cms-pilar-texto">' + escHtml(p.texto) + '</span>'
+      + (p.imagen ? '<span class="cms-pilar-foto"><i class="fas fa-image"></i> Con imagen</span>' : '')
       + '</div>'
-      + '<div class="cms-item-acciones">'
+      + '<div class="cms-pilar-acciones">'
       + '<button type="button" class="btn-mini" onclick="moverPilarCMS(' + idx + ',-1)" title="Subir" ' + (idx === 0 ? 'disabled' : '') + '><i class="fas fa-arrow-up"></i></button>'
       + '<button type="button" class="btn-mini" onclick="moverPilarCMS(' + idx + ',1)" title="Bajar" ' + (idx >= pilares.length - 1 ? 'disabled' : '') + '><i class="fas fa-arrow-down"></i></button>'
-      + '<button type="button" class="btn-mini" onclick="editarPilarCMS(' + idx + ')"><i class="fas fa-edit"></i> Editar</button>'
-      + '<button type="button" class="btn-mini btn-mini-danger" onclick="eliminarPilarCMS(' + idx + ')"><i class="fas fa-trash"></i></button>'
+      + '<button type="button" class="btn-mini" onclick="editarPilarCMS(' + idx + ')" title="Editar"><i class="fas fa-edit"></i></button>'
+      + '<button type="button" class="btn-mini btn-mini-danger" onclick="eliminarPilarCMS(' + idx + ')" title="Quitar"><i class="fas fa-trash"></i></button>'
       + '</div></div>';
   }).join('');
 }
@@ -1517,7 +1546,7 @@ function recolectarDatosCMS() {
     data.novedades = ordenarNovedadesPorFecha(data.novedades);
   }
   data.actualizacion      = getVal('cms-actualizacion') || data.actualizacion;
-  if (document.getElementById('cms-hero-titulo')) {
+  if (cmsEsSuperAdmin() && document.getElementById('cms-hero-titulo')) {
     data.heroTexto = {
       titulo: getVal('cms-hero-titulo'),
       subtitulo: getVal('cms-hero-subtitulo'),
@@ -1549,7 +1578,7 @@ function recolectarDatosCMS() {
   data.nuestraLabor.imagenBanner = leerBannerImg('labor');
   if (!data.nuestraLabor.pilares) data.nuestraLabor.pilares = (cmsDataActual.nuestraLabor || {}).pilares || [];
   var topbarDom = document.getElementById('cms-topbar-botones-lista');
-  if (topbarDom) {
+  if (cmsEsSuperAdmin() && topbarDom) {
     data.topbarLinks = leerTopbarBotonesDesdeDOM();
   } else {
     data.topbarLinks = normalizarTopbarLinksCMS(cmsDataActual.topbarLinks || null);
