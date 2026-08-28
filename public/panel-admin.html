@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Panel UNITIC — REGPOL Callao</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <link rel="stylesheet" href="panel-admin.css?v=75"/>
+  <link rel="stylesheet" href="panel-admin.css?v=76"/>
   <link rel="stylesheet" href="responsive.css?v=1"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
@@ -46,6 +46,12 @@
     .sb-item.on{background:#e8f5e9;color:#004d3d;border-left-color:#004d3d;}
     .sb-item i{width:18px;text-align:center;color:#888;font-size:13px;}
     .sb-item.on i{color:#004d3d;}
+    .sb-item.sb-item-img{text-transform:none;letter-spacing:0;align-items:flex-start;padding:8px 14px;gap:10px;}
+    .sb-item.sb-item-img i{margin-top:3px;flex-shrink:0;}
+    .sb-img-txt{display:flex;flex-direction:column;gap:1px;min-width:0;}
+    .sb-img-txt b{font-size:11.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;}
+    .sb-img-txt small{font-size:10px;font-weight:600;color:#7a8a84;text-transform:none;letter-spacing:0;line-height:1.25;}
+    .sb-item.sb-item-img.on small{color:#3d6b5c;}
 
     
     .sb-group{}
@@ -457,6 +463,7 @@
     .btn-mini-azul:hover{background:#2471a3;color:#fff;}
     .btn-mini-pdf{background:#c0392b;color:#fff;border-color:#c0392b;min-width:38px;justify-content:center;}
     .btn-mini-pdf:hover{background:#a93226;color:#fff;}
+    .btn-mini:disabled{opacity:.35;cursor:not-allowed;pointer-events:none;}
     table.t-inscritos td{color:#1a1a1a;font-size:12.5px;vertical-align:middle;}
     table.t-inscritos td.col-num{color:#555;font-size:12px;}
     table.t-inscritos td.col-fecha{color:#1a1a1a;font-weight:600;font-size:12.5px;white-space:nowrap;}
@@ -872,15 +879,30 @@
       <div class="sb-item" data-cms-only-unitic data-page="menu-publicacion" onclick="ir('menu-publicacion',this)" style="background:rgba(200,169,74,.12);border-left:3px solid #c8a94a;">
         <i class="fas fa-toggle-on" style="color:#c8a94a;"></i> MENÚ PUBLICADO EN WEB
       </div>
-      <div class="sb-item" data-perm-cms-inicio data-cms-tab="encabezado" onclick="irCMS('encabezado',this)"><i class="fas fa-images"></i> PANEL SUPERIOR</div>
-      <div class="sb-item" data-perm-cms-inicio data-cms-tab="carrusel" onclick="irCMS('carrusel',this)"><i class="fas fa-home"></i> CARRUSEL CENTRAL</div>
-      <div class="sb-item" data-perm-cms-novedades data-cms-tab="novedades" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> NOVEDADES</div>
+      <div class="sb-item sb-item-img" data-perm-cms-inicio data-cms-tab="encabezado" onclick="irCMS('encabezado',this)">
+        <i class="fas fa-images"></i>
+        <span class="sb-img-txt"><b>Panel superior</b><small>Fotos del encabezado</small></span>
+      </div>
+      <div class="sb-item sb-item-img" data-perm-cms-inicio data-cms-tab="carrusel" onclick="irCMS('carrusel',this)">
+        <i class="fas fa-home"></i>
+        <span class="sb-img-txt"><b>Carrusel central</b><small>Diapositivas de inicio</small></span>
+      </div>
+      <div class="sb-item sb-item-img" data-perm-cms-novedades data-cms-tab="novedades" onclick="irCMS('novedades',this)">
+        <i class="fas fa-newspaper"></i>
+        <span class="sb-img-txt"><b>Novedades</b><small>Actualizar noticias</small></span>
+      </div>
       <div class="sb-item" data-cms-tab="convenios" data-perm-cms-convenios onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> CONVENIOS (WEB)</div>
       <div class="sb-item" data-cms-tab="cursos" onclick="irCMS('cursos',this)"><i class="fas fa-graduation-cap"></i> CURSOS (WEB)</div>
       <div class="sb-item" data-cms-tab="descansos" onclick="irCMS('descansos',this)"><i class="fas fa-notes-medical"></i> DESCANSOS (WEB)</div>
       <div class="sb-item" data-cms-only-unitic data-cms-tab="bienestar" onclick="irCMS('bienestar',this)"><i class="fas fa-heart"></i> BIENESTAR (WEB)</div>
-      <div class="sb-item" data-perm-cms-resena data-cms-tab="resena" onclick="irCMS('resena',this)"><i class="fas fa-landmark"></i> RESEÑA HISTÓRICA</div>
-      <div class="sb-item" data-perm-cms-labor data-cms-tab="labor" onclick="irCMS('labor',this)"><i class="fas fa-tasks"></i> NUESTRA LABOR</div>
+      <div class="sb-item sb-item-img" data-perm-cms-resena data-cms-tab="resena" onclick="irCMS('resena',this)">
+        <i class="fas fa-landmark"></i>
+        <span class="sb-img-txt"><b>Reseña histórica</b><small>Carrusel de la institución</small></span>
+      </div>
+      <div class="sb-item sb-item-img" data-perm-cms-labor data-cms-tab="labor" onclick="irCMS('labor',this)">
+        <i class="fas fa-tasks"></i>
+        <span class="sb-img-txt"><b>Nuestra labor</b><small>Pilares e imagen institucional</small></span>
+      </div>
       <div class="sb-item" data-cms-only-unitic data-cms-tab="menu" onclick="irCMS('menu',this)"><i class="fas fa-bars"></i> MENÚ DEL SITIO</div>
     </div>
 
@@ -1157,27 +1179,44 @@
     
     <div id="page-cms" class="page">
       <div class="card">
+        <div id="alerta-cms" class="alerta" style="display:none;"></div>
+        <div id="cms-global-head">
         <h3><i class="fas fa-globe"></i> Portal Web — contenido público</h3>
           <p style="font-size:12px;color:#666;margin:-8px 0 14px;">Edite y publique lo que se ve en la web. Super Admin: todo el portal. Oficina de Imagen: novedades, panel superior, carrusel, reseña y nuestra labor. Convenios / Cursos / Descansos: su módulo. Pulse <strong>Publicar cambios</strong> para sincronizar con el sitio.</p>
-
-        
-        <div id="alerta-cms" class="alerta" style="display:none;"></div>
-
-        
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
           <button class="btn btn-v" onclick="guardarSitioWeb()"><i class="fas fa-upload"></i> Publicar cambios</button>
           <span id="cms-publicado-meta" style="font-size:11px;color:#888;"></span>
           <input type="hidden" id="cms-actualizacion"/>
         </div>
+        </div>
 
         
-        <div id="cms-panel-novedades" class="cms-panel">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <strong style="color:#004d3d;">Novedades institucionales</strong>
-            <button class="btn btn-v" onclick="agregarNovedadCMS()"><i class="fas fa-plus"></i> Nueva novedad</button>
+        <div id="cms-panel-novedades" class="cms-panel cms-panel-imagen">
+          <div class="cms-img-hero">
+            <div class="cms-img-hero-icon"><i class="fas fa-newspaper"></i></div>
+            <div>
+              <h2>Novedades — actualizar noticias</h2>
+              <p>Estas noticias se ven en el portal, menú <strong>Novedades</strong>. Agregue título, foto, fecha y texto. Pulse <strong>Grabar</strong> para publicarlas.</p>
+            </div>
           </div>
-          <div id="cms-lista-novedades"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
-          <button class="btn btn-v" onclick="guardarSitioWeb()" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar Novedades</button>
+          <ol class="cms-img-steps">
+            <li><span class="n">1</span><b>Nueva</b> o <b>Editar</b> una noticia</li>
+            <li><span class="n">2</span>Pulse <b>Grabar</b> para subirla a la web</li>
+            <li><span class="n">3</span><b>Retroceder</b> vuelve al inicio del panel</li>
+          </ol>
+          <div class="cms-img-block">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+              <h3 style="margin:0;"><i class="fas fa-list"></i> Noticias publicadas</h3>
+              <button type="button" class="btn btn-v" onclick="agregarNovedadCMS()"><i class="fas fa-plus"></i> Nueva novedad</button>
+            </div>
+            <div id="cms-lista-novedades"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
+          </div>
+          <div class="cms-img-bar">
+            <button type="button" class="btn cms-btn-back" onclick="cmsImagenRetroceder()"><i class="fas fa-chevron-left"></i> Retroceder</button>
+            <span class="cms-pub-meta"></span>
+            <a class="cms-btn-web" href="index.html#novedades" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Ver en la web</a>
+            <button type="button" class="btn btn-v cms-btn-grabar" onclick="cmsImagenGrabar()"><i class="fas fa-save"></i> Grabar</button>
+          </div>
         </div>
 
         
@@ -1279,81 +1318,167 @@
         </div>
 
         
-        <div id="cms-panel-resena" class="cms-panel">
-          <p style="font-size:12px;color:#666;margin:0 0 12px;line-height:1.5;">En la web se muestra como <strong>carrusel</strong>: primero la introducción (con su imagen), luego cada párrafo en orden. Guarde y publique para sincronizar.</p>
-          <p style="font-size:11px;color:#004d3d;background:#eef7f3;border-left:3px solid #c8a94a;padding:8px 10px;margin:0 0 12px;line-height:1.45;"><i class="fas fa-image"></i> <strong>Puede subir cualquier foto</strong> (horizontal o vertical). La web la adapta sola para llenar el panel. Recomendado: JPG/WEBP, máx. 2 MB. Opcional óptimo: 1200×900 px.</p>
-          <div style="background:#f0f7f4;border:1.5px dashed #004d3d;border-radius:8px;padding:12px;margin-bottom:14px;">
-            <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Fotografía de la introducción (diapositiva 1 del carrusel)</strong>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-              <label style="flex:1;min-width:180px;">
-                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Subir foto (JPG/PNG máx 2MB)</span>
-                <input type="file" id="cms-resena-img-file" accept="image/jpeg,image/png,image/webp" style="font-size:12px;width:100%;" onchange="previewBannerImg(this,'resena')"/>
-              </label>
-              <label style="flex:1;min-width:180px;">
-                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">O pegar URL de imagen web</span>
-                <input type="text" id="cms-resena-img-url" placeholder="https://..." style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;" oninput="previewBannerUrl(this,'resena')"/>
-              </label>
-            </div>
-            <input type="hidden" id="cms-resena-img-data"/>
-            <div id="cms-resena-img-preview" style="margin-top:8px;display:none;">
-              <img id="cms-resena-img-thumb" src="" style="max-height:90px;border-radius:6px;border:1.5px solid #ccc;" alt=""/>
-              <button type="button" onclick="quitarBannerImg('resena')" style="margin-left:8px;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;"><i class="fas fa-times"></i> Quitar</button>
+        <div id="cms-panel-resena" class="cms-panel cms-panel-imagen">
+          <div class="cms-img-hero">
+            <div class="cms-img-hero-icon"><i class="fas fa-landmark"></i></div>
+            <div>
+              <h2>Reseña histórica</h2>
+              <p>Se muestra como <strong>carrusel</strong> en el portal: primero la introducción (diapositiva 1) y luego cada párrafo, en el mismo orden de esta lista.</p>
             </div>
           </div>
-          <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Título de la introducción (diapositiva 1)</label>
-          <input type="text" id="cms-resena-intro-titulo" class="cms-input" style="width:100%;margin-bottom:10px;" placeholder="Introducción"/>
-          <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Texto de introducción</label>
-          <textarea id="cms-resena-intro" rows="3" style="width:100%;padding:8px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;margin-bottom:12px;font-family:inherit;" placeholder="Texto introductorio de la reseña..."></textarea>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <strong style="color:#004d3d;font-size:13px;">Párrafos (diapositivas 2 en adelante)</strong>
-            <button class="btn btn-v" onclick="agregarParrafoResena()"><i class="fas fa-plus"></i> Agregar párrafo</button>
+          <ol class="cms-img-steps">
+            <li><span class="n">1</span>Complete foto y texto de la <b>introducción</b></li>
+            <li><span class="n">2</span>Agregue o edite los <b>párrafos</b> (diapositivas)</li>
+            <li><span class="n">3</span>Pulse <b>Grabar</b> para publicarlo</li>
+          </ol>
+          <p class="cms-img-tip"><i class="fas fa-image"></i> Puede subir cualquier foto (horizontal o vertical). La web la adapta. Recomendado: JPG/WEBP, máx. 2 MB. Óptimo: 1200×900 px.</p>
+          <div class="cms-img-block">
+            <h3><span class="tag">Diapositiva 1</span> Introducción</h3>
+            <p class="cms-img-help">Es lo primero que ve el visitante. Foto a la izquierda o arriba, título y texto.</p>
+            <div style="background:#f7faf7;border:1.5px dashed #004d3d;border-radius:10px;padding:12px;margin-bottom:14px;">
+              <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Fotografía de la introducción</strong>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <label style="flex:1;min-width:180px;">
+                  <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Subir foto (JPG/PNG máx 2MB)</span>
+                  <input type="file" id="cms-resena-img-file" accept="image/jpeg,image/png,image/webp" style="font-size:12px;width:100%;" onchange="previewBannerImg(this,'resena')"/>
+                </label>
+                <label style="flex:1;min-width:180px;">
+                  <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">O pegar URL de imagen web</span>
+                  <input type="text" id="cms-resena-img-url" placeholder="https://..." style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;" oninput="previewBannerUrl(this,'resena')"/>
+                </label>
+              </div>
+              <input type="hidden" id="cms-resena-img-data"/>
+              <div id="cms-resena-img-preview" style="margin-top:8px;display:none;">
+                <img id="cms-resena-img-thumb" src="" style="max-height:90px;border-radius:6px;border:1.5px solid #ccc;" alt=""/>
+                <button type="button" onclick="quitarBannerImg('resena')" style="margin-left:8px;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;"><i class="fas fa-times"></i> Quitar</button>
+              </div>
+            </div>
+            <label class="cms-label">Título de la introducción</label>
+            <input type="text" id="cms-resena-intro-titulo" class="cms-input" style="width:100%;margin-bottom:10px;" placeholder="Introducción"/>
+            <label class="cms-label">Texto de introducción</label>
+            <textarea id="cms-resena-intro" rows="3" class="cms-textarea" style="width:100%;margin-bottom:0;" placeholder="Texto introductorio de la reseña..."></textarea>
           </div>
-          <p style="font-size:11px;color:#666;margin:0 0 10px;line-height:1.45;">Todo el contenido se muestra en <strong>un solo carrusel</strong>: primero la introducción, luego cada párrafo con título, texto y fotografía.</p>
-          <div id="cms-lista-parrafos"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
-          <button class="btn btn-v" onclick="guardarSitioWeb()" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar Reseña</button>
+          <div class="cms-img-block">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+              <h3 style="margin:0;"><span class="tag">Diapositivas 2+</span> Párrafos</h3>
+              <button type="button" class="btn btn-v" onclick="agregarParrafoResena()"><i class="fas fa-plus"></i> Agregar párrafo</button>
+            </div>
+            <p class="cms-img-help">Cada párrafo es una diapositiva: título, texto y foto. El orden de la lista es el del carrusel. Use las flechas para reordenar.</p>
+            <div id="cms-lista-parrafos"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
+          </div>
+          <div class="cms-img-bar">
+            <button type="button" class="btn cms-btn-back" onclick="cmsImagenRetroceder()"><i class="fas fa-chevron-left"></i> Retroceder</button>
+            <span class="cms-pub-meta"></span>
+            <a class="cms-btn-web" href="index.html#resena" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Ver en la web</a>
+            <button type="button" class="btn btn-v cms-btn-grabar" onclick="cmsImagenGrabar()"><i class="fas fa-save"></i> Grabar</button>
+          </div>
         </div>
 
         
-        <div id="cms-panel-labor" class="cms-panel">
-          <p style="font-size:12px;color:#666;margin:0 0 12px;line-height:1.5;">En la web se muestra como <strong>carrusel</strong> (igual que Reseña): intro + cada pilar. Puede añadir ícono o imagen por pilar. El orden de la lista es el orden del carrusel.</p>
-          <p style="font-size:11px;color:#004d3d;background:#eef7f3;border-left:3px solid #c8a94a;padding:8px 10px;margin:0 0 12px;line-height:1.45;"><i class="fas fa-image"></i> <strong>Puede subir cualquier foto</strong> (horizontal o vertical). La web la adapta sola para llenar el panel. Recomendado: JPG/WEBP, máx. 2 MB. Opcional óptimo: 1200×900 px.</p>
-          <div style="background:#f0f7f4;border:1.5px dashed #004d3d;border-radius:8px;padding:12px;margin-bottom:14px;">
-            <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Imagen del banner superior</strong>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-              <label style="flex:1;min-width:180px;">
-                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Subir foto (JPG/PNG máx 2MB)</span>
-                <input type="file" id="cms-labor-img-file" accept="image/jpeg,image/png,image/webp" style="font-size:12px;width:100%;" onchange="previewBannerImg(this,'labor')"/>
-              </label>
-              <label style="flex:1;min-width:180px;">
-                <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">O pegar URL de imagen web</span>
-                <input type="text" id="cms-labor-img-url" placeholder="https://..." style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;" oninput="previewBannerUrl(this,'labor')"/>
-              </label>
-            </div>
-            <input type="hidden" id="cms-labor-img-data"/>
-            <div id="cms-labor-img-preview" style="margin-top:8px;display:none;">
-              <img id="cms-labor-img-thumb" src="" style="max-height:90px;border-radius:6px;border:1.5px solid #ccc;" alt=""/>
-              <button type="button" onclick="quitarBannerImg('labor')" style="margin-left:8px;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;"><i class="fas fa-times"></i> Quitar</button>
+        <div id="cms-panel-labor" class="cms-panel cms-panel-imagen">
+          <div class="cms-img-hero">
+            <div class="cms-img-hero-icon"><i class="fas fa-tasks"></i></div>
+            <div>
+              <h2>Nuestra labor</h2>
+              <p>Carrusel institucional: introducción + cada pilar. El orden de la lista es el que verá el visitante. Puede usar ícono o foto en cada pilar.</p>
             </div>
           </div>
-          <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Introducción</label>
-          <textarea id="cms-labor-intro" rows="3" style="width:100%;padding:8px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;margin-bottom:12px;font-family:inherit;" placeholder="Texto introductorio de Nuestra Labor..."></textarea>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <strong style="color:#004d3d;font-size:13px;">Pilares institucionales</strong>
-            <button class="btn btn-v" onclick="agregarPilarCMS()"><i class="fas fa-plus"></i> Agregar pilar</button>
+          <ol class="cms-img-steps">
+            <li><span class="n">1</span>Foto del banner e <b>introducción</b></li>
+            <li><span class="n">2</span>Agregue o edite los <b>pilares</b></li>
+            <li><span class="n">3</span>Pulse <b>Grabar</b> para publicarlo</li>
+          </ol>
+          <p class="cms-img-tip"><i class="fas fa-image"></i> Puede subir cualquier foto (horizontal o vertical). La web la adapta. Recomendado: JPG/WEBP, máx. 2 MB. Óptimo: 1200×900 px.</p>
+          <div class="cms-img-block">
+            <h3><span class="tag">Banner</span> Imagen e introducción</h3>
+            <div style="background:#f7faf7;border:1.5px dashed #004d3d;border-radius:10px;padding:12px;margin-bottom:14px;">
+              <strong style="color:#004d3d;font-size:12px;display:block;margin-bottom:8px;"><i class="fas fa-image"></i> Imagen del banner superior</strong>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <label style="flex:1;min-width:180px;">
+                  <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Subir foto (JPG/PNG máx 2MB)</span>
+                  <input type="file" id="cms-labor-img-file" accept="image/jpeg,image/png,image/webp" style="font-size:12px;width:100%;" onchange="previewBannerImg(this,'labor')"/>
+                </label>
+                <label style="flex:1;min-width:180px;">
+                  <span style="font-size:11px;color:#666;display:block;margin-bottom:3px;">O pegar URL de imagen web</span>
+                  <input type="text" id="cms-labor-img-url" placeholder="https://..." style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;" oninput="previewBannerUrl(this,'labor')"/>
+                </label>
+              </div>
+              <input type="hidden" id="cms-labor-img-data"/>
+              <div id="cms-labor-img-preview" style="margin-top:8px;display:none;">
+                <img id="cms-labor-img-thumb" src="" style="max-height:90px;border-radius:6px;border:1.5px solid #ccc;" alt=""/>
+                <button type="button" onclick="quitarBannerImg('labor')" style="margin-left:8px;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;"><i class="fas fa-times"></i> Quitar</button>
+              </div>
+            </div>
+            <label class="cms-label">Introducción</label>
+            <textarea id="cms-labor-intro" rows="3" class="cms-textarea" style="width:100%;" placeholder="Texto introductorio de Nuestra Labor..."></textarea>
           </div>
-          <div id="cms-lista-pilares"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
-          <button class="btn btn-v" onclick="guardarSitioWeb()" style="margin-top:12px;"><i class="fas fa-save"></i> Guardar Labor</button>
+          <div class="cms-img-block">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+              <h3 style="margin:0;"><span class="tag">Carrusel</span> Pilares institucionales</h3>
+              <button type="button" class="btn btn-v" onclick="agregarPilarCMS()"><i class="fas fa-plus"></i> Agregar pilar</button>
+            </div>
+            <p class="cms-img-help">Pulse <b>Editar</b> para cambiar título, texto, ícono o foto. Las flechas cambian el orden en la web.</p>
+            <div id="cms-lista-pilares"><p style="color:#bbb;font-size:12px;">Cargando...</p></div>
+          </div>
+          <div class="cms-img-bar">
+            <button type="button" class="btn cms-btn-back" onclick="cmsImagenRetroceder()"><i class="fas fa-chevron-left"></i> Retroceder</button>
+            <span class="cms-pub-meta"></span>
+            <a class="cms-btn-web" href="index.html#labor" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Ver en la web</a>
+            <button type="button" class="btn btn-v cms-btn-grabar" onclick="cmsImagenGrabar()"><i class="fas fa-save"></i> Grabar</button>
+          </div>
         </div>
 
         
-        <div id="cms-panel-encabezado" class="cms-panel">
-          <p style="font-size:12px;color:#666;margin:0 0 12px;line-height:1.45;">Fotos del <strong>panel superior</strong> de la web (encabezado institucional).</p>
+        <div id="cms-panel-encabezado" class="cms-panel cms-panel-imagen">
+          <div class="cms-img-hero">
+            <div class="cms-img-hero-icon"><i class="fas fa-images"></i></div>
+            <div>
+              <h2>Panel superior — fotos del encabezado</h2>
+              <p>Galería a la <strong>derecha del logo</strong>, en la franja verde de todas las páginas. No es el carrusel grande del inicio.</p>
+            </div>
+          </div>
+          <ol class="cms-img-steps">
+            <li><span class="n">1</span>Añada o cambie las <b>fotos</b></li>
+            <li><span class="n">2</span>Ordénelas con las <b>flechas</b></li>
+            <li><span class="n">3</span>Pulse <b>Grabar</b> para publicarlas</li>
+          </ol>
+          <div class="cms-img-map" aria-hidden="true">
+            <span class="on">LOGO + estas fotos (encabezado)</span>
+            <span class="off">Carrusel central de inicio — se edita en el menú Carrusel</span>
+          </div>
           <div id="editor-fotos-encabezado"><p style="color:#bbb;font-size:12px;">Cargando fotos del encabezado...</p></div>
+          <div class="cms-img-bar">
+            <button type="button" class="btn cms-btn-back" onclick="cmsImagenRetroceder()"><i class="fas fa-chevron-left"></i> Retroceder</button>
+            <span class="cms-pub-meta"></span>
+            <a class="cms-btn-web" href="index.html" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Ver en la web</a>
+            <button type="button" class="btn btn-v cms-btn-grabar" onclick="cmsImagenGrabar()"><i class="fas fa-save"></i> Grabar</button>
+          </div>
         </div>
 
-        <div id="cms-panel-carrusel" class="cms-panel">
-          <p style="font-size:12px;color:#666;margin:0 0 12px;line-height:1.45;">Diapositivas del <strong>carrusel central</strong> de la página de inicio.</p>
+        <div id="cms-panel-carrusel" class="cms-panel cms-panel-imagen">
+          <div class="cms-img-hero">
+            <div class="cms-img-hero-icon"><i class="fas fa-home"></i></div>
+            <div>
+              <h2>Carrusel central — diapositivas de inicio</h2>
+              <p>El bloque grande de fotos de la <strong>página de inicio</strong>, con el lema institucional y los botones de la barra verde (Intranet, Correo, etc.).</p>
+            </div>
+          </div>
+          <ol class="cms-img-steps">
+            <li><span class="n">1</span>Fotos del <b>carrusel</b> (diapositivas)</li>
+            <li><span class="n">2</span>Textos del centro y <b>botones</b> superiores</li>
+            <li><span class="n">3</span>Pulse <b>Grabar</b> para publicar todo</li>
+          </ol>
+          <div class="cms-img-map" aria-hidden="true">
+            <span class="off">Panel superior (fotos junto al logo)</span>
+            <span class="on">Estas diapositivas — centro de inicio</span>
+          </div>
           <div id="editor-carrusel"><p style="color:#bbb;font-size:12px;">Cargando editor de carrusel...</p></div>
+          <div class="cms-img-bar">
+            <button type="button" class="btn cms-btn-back" onclick="cmsImagenRetroceder()"><i class="fas fa-chevron-left"></i> Retroceder</button>
+            <span class="cms-pub-meta"></span>
+            <a class="cms-btn-web" href="index.html" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Ver en la web</a>
+            <button type="button" class="btn btn-v cms-btn-grabar" onclick="cmsImagenGrabar()"><i class="fas fa-save"></i> Grabar</button>
+          </div>
         </div>
 
         
@@ -1894,8 +2019,8 @@
         </div>
         <div class="cms-modal-body" id="cms-modal-body"></div>
         <div class="cms-modal-footer">
-          <button class="btn" style="background:#999;color:#fff;" onclick="cerrarCmsModal()">Cancelar</button>
-          <button id="cms-modal-guardar" class="btn btn-v"><i class="fas fa-save"></i> Guardar</button>
+          <button type="button" class="btn cms-btn-back" onclick="cerrarCmsModal()"><i class="fas fa-chevron-left"></i> Retroceder</button>
+          <button id="cms-modal-guardar" class="btn btn-v"><i class="fas fa-save"></i> Grabar</button>
         </div>
       </div>
     </div>
@@ -2751,7 +2876,7 @@
 <script src="portal-data.js?v=10"></script>
 <script src="portal.js?v=85"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=42"></script>
+<script src="panel-cms.js?v=43"></script>
 <script src="panel-descansos.js?v=4"></script>
 <script src="panel-faltos.js?v=1"></script>
 <script src="panel-rrhh.js?v=3"></script>

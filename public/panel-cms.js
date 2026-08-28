@@ -178,6 +178,30 @@ function fechaActualizacionHoy() {
   return hoy.getDate() + ' DE ' + meses[hoy.getMonth()] + ' ' + hoy.getFullYear();
 }
 
+var CMS_TABS_IMAGEN = { novedades: 1, encabezado: 1, carrusel: 1, resena: 1, labor: 1 };
+
+function esTabCmsImagen(tab) {
+  return !!CMS_TABS_IMAGEN[tab];
+}
+
+function cmsImagenRetroceder() {
+  var modal = document.getElementById('cms-modal');
+  if (modal && modal.classList.contains('visible')) {
+    cerrarCmsModal();
+    return;
+  }
+  var dash = document.querySelector('.sb-item[data-page="dashboard"]');
+  if (typeof ir === 'function' && dash) {
+    ir('dashboard', dash);
+    return;
+  }
+  if (typeof scrollPanelAlInicio === 'function') scrollPanelAlInicio();
+}
+
+function cmsImagenGrabar() {
+  guardarSitioWeb();
+}
+
 function cambiarTabCMS(tab) {
   if (typeof puedeEditarCmsTab === 'function' && !puedeEditarCmsTab(tab)) {
     tab = (typeof primerTabCmsPermitido === 'function') ? primerTabCmsPermitido() : tab;
@@ -191,6 +215,8 @@ function cambiarTabCMS(tab) {
   document.querySelectorAll('.sb-item[data-cms-tab]').forEach(function(item) {
     item.classList.toggle('on', item.getAttribute('data-cms-tab') === tab);
   });
+  var pageCms = document.getElementById('page-cms');
+  if (pageCms) pageCms.classList.toggle('cms-modo-imagen', esTabCmsImagen(tab));
   if (tab === 'convenios' || tab === 'cursos') {
     renderGestionConvocatoriasCMS(tab === 'convenios' ? 'cms-lista-convenios' : 'cms-lista-cursos', tab === 'convenios' ? 'convenio' : 'curso');
   }
@@ -335,19 +361,15 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
 }
 
 function actualizarMetaPublicacionCMS() {
-  var meta = document.getElementById('cms-publicado-meta');
-  if (!meta) return;
   var cuando = (cmsDataActual && cmsDataActual.cmsPublicadoEn) ? cmsDataActual.cmsPublicadoEn : '';
-  if (!cuando) {
-    meta.textContent = '';
-    return;
+  var texto = '';
+  if (cuando) {
+    try {
+      texto = 'Última publicación: ' + new Date(cuando).toLocaleString('es-PE');
+    } catch (e) { texto = ''; }
   }
-  try {
-    var d = new Date(cuando);
-    meta.textContent = 'Última publicación: ' + d.toLocaleString('es-PE');
-  } catch (e) {
-    meta.textContent = '';
-  }
+  var nodos = document.querySelectorAll('#cms-publicado-meta, .cms-pub-meta');
+  nodos.forEach(function(meta) { meta.textContent = texto; });
 }
 
 function poblarFormulariosCMS() {
@@ -416,19 +438,17 @@ function renderEditorFotosEncabezado() {
   var fotos = cmsDataActual.fotosEncabezado;
   if (!fotos.length) fotos.push('');
 
-  var html = '<div style="background:#f0f7f4;border:1.5px dashed #c8a94a;border-radius:10px;padding:14px;margin-bottom:20px;">'
+  var html = '<div class="cms-img-block">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'
-    + '<strong style="color:#004d3d;font-size:13px;"><i class="fas fa-images"></i> Carrusel de fotos del encabezado</strong>'
-    + '<button type="button" class="btn btn-v btn-sm" onclick="agregarFotoEncabezadoCMS()"><i class="fas fa-plus"></i> Añadir imagen</button>'
+    + '<h3 style="margin:0;"><i class="fas fa-images"></i> Fotos junto al logo</h3>'
+    + '<button type="button" class="btn btn-v" onclick="agregarFotoEncabezadoCMS()"><i class="fas fa-plus"></i> Añadir imagen</button>'
     + '</div>'
-    + '<p style="font-size:11px;color:#666;margin:0 0 12px;">Se muestran a la derecha del logo en la página principal. Use fotos <strong>anchas (mín. 800 px)</strong> en JPG/PNG/WEBP para máxima nitidez. Máx. 2 MB por imagen. <strong>No use enlaces de Facebook u otras redes</strong> (bloquean la carga); suba el archivo o use una ruta del sitio.</p>'
-    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:12px;">';
+    + '<p class="cms-img-help">Use fotos <strong>anchas (mín. 800 px)</strong> en JPG/PNG/WEBP. Máx. 2 MB. <strong>No pegue enlaces de Facebook</strong> (no cargan); suba el archivo.</p>'
+    + '<div class="cms-foto-grid">';
   for (var i = 0; i < fotos.length; i++) {
-    html += renderSlotFotoEncabezado(i);
+    html += renderSlotFotoEncabezado(i, fotos.length);
   }
-  html += '</div>'
-    + '<button class="btn btn-v btn-sm" onclick="guardarFotosEncabezado()"><i class="fas fa-save"></i> Guardar y publicar fotos</button>'
-    + '</div>';
+  html += '</div></div>';
   el.innerHTML = html;
 
   for (var j = 0; j < fotos.length; j++) {
@@ -437,7 +457,7 @@ function renderEditorFotosEncabezado() {
 }
 
 function agregarFotoEncabezadoCMS() {
-  cmsDataActual.fotosEncabezado = leerFotosEncabezado();
+  cmsDataActual.fotosEncabezado = leerFotosEncabezado(true);
   if (cmsDataActual.fotosEncabezado.length >= 20) {
     mostrarAlertaCMS('Máximo 20 imágenes en el carrusel del encabezado.', 'error');
     return;
@@ -447,34 +467,47 @@ function agregarFotoEncabezadoCMS() {
 }
 
 function eliminarFotoEncabezadoCMS(idx) {
-  cmsDataActual.fotosEncabezado = leerFotosEncabezado();
+  cmsDataActual.fotosEncabezado = leerFotosEncabezado(true);
   cmsDataActual.fotosEncabezado.splice(idx, 1);
   renderEditorFotosEncabezado();
 }
 
-function renderSlotFotoEncabezado(idx) {
+function moverFotoEncabezadoCMS(idx, dir) {
+  var arr = leerFotosEncabezado(true);
+  var j = idx + dir;
+  if (j < 0 || j >= arr.length) return;
+  var t = arr[idx]; arr[idx] = arr[j]; arr[j] = t;
+  cmsDataActual.fotosEncabezado = arr;
+  renderEditorFotosEncabezado();
+}
+
+function renderSlotFotoEncabezado(idx, total) {
   var sec = 'encabezado' + idx;
-  return '<div style="border:1.5px solid #e0e8e0;border-radius:8px;padding:10px;background:#fff;">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
-    + '<p style="font-size:11px;font-weight:700;color:#004d3d;margin:0;">Imagen ' + (idx + 1) + '</p>'
+  var n = total || (cmsDataActual.fotosEncabezado || []).length;
+  return '<div class="cms-foto-slot">'
+    + '<div class="cms-foto-top">'
+    + '<p>Foto ' + (idx + 1) + '</p>'
+    + '<div class="cms-foto-ord">'
+    + '<button type="button" class="btn-mini" onclick="moverFotoEncabezadoCMS(' + idx + ',-1)" title="Subir" ' + (idx === 0 ? 'disabled' : '') + '><i class="fas fa-arrow-up"></i></button>'
+    + '<button type="button" class="btn-mini" onclick="moverFotoEncabezadoCMS(' + idx + ',1)" title="Bajar" ' + (idx >= n - 1 ? 'disabled' : '') + '><i class="fas fa-arrow-down"></i></button>'
     + '<button type="button" class="btn-mini btn-mini-danger" onclick="eliminarFotoEncabezadoCMS(' + idx + ')" title="Quitar"><i class="fas fa-trash"></i></button>'
-    + '</div>'
+    + '</div></div>'
     + '<input type="hidden" id="cms-' + sec + '-img-data" />'
-    + '<input type="file" id="cms-' + sec + '-img-file" accept="image/jpeg,image/png,image/webp" onchange="previewBannerImg(this,\'' + sec + '\')" style="font-size:10px;width:100%;margin-bottom:6px;"/>'
-    + '<input type="text" id="cms-' + sec + '-img-url" placeholder="URL de imagen (opcional)" class="cms-input" style="font-size:10px;margin-bottom:6px;" onchange="previewBannerUrl(this,\'' + sec + '\')"/>'
+    + '<input type="file" id="cms-' + sec + '-img-file" accept="image/jpeg,image/png,image/webp" onchange="previewBannerImg(this,\'' + sec + '\')" style="font-size:11px;width:100%;margin-bottom:6px;"/>'
+    + '<input type="text" id="cms-' + sec + '-img-url" placeholder="URL de imagen (opcional)" class="cms-input" style="font-size:11px;margin-bottom:6px;" onchange="previewBannerUrl(this,\'' + sec + '\')"/>'
     + '<div id="cms-' + sec + '-img-preview" style="display:none;margin-bottom:6px;">'
-    + '<img id="cms-' + sec + '-img-thumb" style="width:100%;height:80px;object-fit:cover;border-radius:6px;" alt=""/>'
+    + '<img id="cms-' + sec + '-img-thumb" style="width:100%;height:110px;object-fit:cover;border-radius:8px;" alt=""/>'
     + '</div>'
     + '<button type="button" class="btn-mini btn-mini-danger" onclick="quitarBannerImg(\'' + sec + '\')"><i class="fas fa-times"></i> Limpiar</button>'
     + '</div>';
 }
 
-function leerFotosEncabezado() {
+function leerFotosEncabezado(incluirVacias) {
   var n = (cmsDataActual.fotosEncabezado || []).length;
   var arr = [];
   for (var i = 0; i < n; i++) {
     var v = leerBannerImg('encabezado' + i);
-    if (v) arr.push(v);
+    if (v || incluirVacias) arr.push(v || '');
   }
   return arr;
 }
@@ -487,49 +520,64 @@ function guardarFotosEncabezado() {
 function renderEditorCarrusel() {
   var el = document.getElementById('editor-carrusel');
   if (!el) return;
+  if (document.getElementById('cms-hero-titulo')) {
+    cmsDataActual.heroTexto = {
+      titulo: document.getElementById('cms-hero-titulo').value.trim(),
+      subtitulo: document.getElementById('cms-hero-subtitulo') ? document.getElementById('cms-hero-subtitulo').value.trim() : '',
+      parrafo: document.getElementById('cms-hero-parrafo') ? document.getElementById('cms-hero-parrafo').value.trim() : ''
+    };
+  }
   var slides = cmsDataActual.carrusel || [];
   var heroT  = cmsDataActual.heroTexto || {};
   var topbar = cmsDataActual.topbarLinks || {};
 
-  var html = '<div class="cms-section-head" style="margin-bottom:14px;">'
-    + '<strong style="color:#004d3d;font-size:13px;"><i class="fas fa-images"></i> Diapositivas del carrusel</strong>'
-    + '<button class="btn btn-v btn-sm" onclick="agregarSlideCMS()" style="margin-left:12px;"><i class="fas fa-plus"></i> Añadir imagen</button>'
-    + '</div>';
+  var html = '<div class="cms-img-block">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'
+    + '<h3 style="margin:0;"><span class="tag">1</span> Diapositivas del carrusel</h3>'
+    + '<button type="button" class="btn btn-v" onclick="agregarSlideCMS()"><i class="fas fa-plus"></i> Añadir imagen</button>'
+    + '</div>'
+    + '<p class="cms-img-help">Fotos grandes del inicio. Pulse <b>Editar</b> para título y subtítulo. Las flechas cambian el orden.</p>';
 
   if (!slides.length) {
-    html += '<p style="color:#aaa;font-size:12px;margin-bottom:16px;">No hay imágenes en el carrusel. Pulse "Añadir imagen".</p>';
+    html += '<div class="cms-img-empty"><i class="fas fa-images"></i><p>Aún no hay diapositivas.</p>'
+      + '<button type="button" class="btn btn-v" onclick="agregarSlideCMS()"><i class="fas fa-plus"></i> Añadir la primera</button></div>';
   } else {
-    html += '<div id="cms-lista-slides" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px;">';
+    html += '<div class="cms-foto-grid">';
     slides.forEach(function(s, idx) {
       var thumb = s.imagen
-        ? '<img src="' + s.imagen + '" style="width:100%;height:110px;object-fit:cover;border-radius:6px 6px 0 0;" alt=""/>'
-        : '<div style="width:100%;height:110px;background:#e0e8e0;border-radius:6px 6px 0 0;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image" style="font-size:28px;color:#bbb;"></i></div>';
-      html += '<div class="cms-slide-card" style="border:1.5px solid #e0e8e0;border-radius:8px;overflow:hidden;">'
+        ? '<img src="' + s.imagen + '" style="width:100%;height:120px;object-fit:cover;display:block;" alt=""/>'
+        : '<div style="height:120px;background:#eef2f0;display:flex;align-items:center;justify-content:center;"><i class="fas fa-image" style="font-size:28px;color:#bbb;"></i></div>';
+      html += '<div class="cms-slide-card">'
         + thumb
-        + '<div style="padding:8px;">'
-        + '<p style="font-size:11px;font-weight:700;color:#004d3d;margin:0 0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(s.titulo || 'Sin título') + '</p>'
-        + '<p style="font-size:10px;color:#888;margin:0 0 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(s.subtitulo || '') + '</p>'
-        + '<div style="display:flex;gap:6px;">'
-        + '<button class="btn-mini" onclick="editarSlideCMS(' + idx + ')" title="Editar"><i class="fas fa-edit"></i></button>'
-        + '<button class="btn-mini btn-mini-danger" onclick="eliminarSlideCMS(' + idx + ')" title="Eliminar"><i class="fas fa-trash"></i></button>'
-        + '</div></div></div>';
+        + '<div style="padding:10px 10px 0;">'
+        + '<p style="font-size:12px;font-weight:800;color:#004d3d;margin:0 0 2px;">' + (idx + 1) + '. ' + escHtml(s.titulo || 'Sin título') + '</p>'
+        + '<p style="font-size:11px;color:#888;margin:0 0 8px;min-height:16px;">' + escHtml(s.subtitulo || '') + '</p>'
+        + '</div>'
+        + '<div class="cms-slide-acc">'
+        + '<button type="button" class="btn-mini" onclick="moverSlideCMS(' + idx + ',-1)" title="Anterior" ' + (idx === 0 ? 'disabled' : '') + '><i class="fas fa-arrow-left"></i></button>'
+        + '<button type="button" class="btn-mini" onclick="moverSlideCMS(' + idx + ',1)" title="Siguiente" ' + (idx >= slides.length - 1 ? 'disabled' : '') + '><i class="fas fa-arrow-right"></i></button>'
+        + '<button type="button" class="btn-mini" onclick="editarSlideCMS(' + idx + ')"><i class="fas fa-edit"></i> Editar</button>'
+        + '<button type="button" class="btn-mini btn-mini-danger" onclick="eliminarSlideCMS(' + idx + ')"><i class="fas fa-trash"></i></button>'
+        + '</div></div>';
     });
     html += '</div>';
   }
+  html += '</div>';
 
-  html += '<hr style="margin:16px 0;border:none;border-top:1.5px solid #e0e8e0;"/>'
-    + '<strong style="color:#004d3d;font-size:13px;display:block;margin-bottom:10px;"><i class="fas fa-heading"></i> Texto del banner central (solo inicio)</strong>'
+  html += '<div class="cms-img-block">'
+    + '<h3><span class="tag">2</span> Texto del centro (solo inicio)</h3>'
+    + '<p class="cms-img-help">Título, lema y eslogan que se superponen al carrusel en la portada.</p>'
     + '<div class="cms-modal-campo"><label class="cms-label">Título principal</label>'
     + '<input type="text" id="cms-hero-titulo" class="cms-input" value="' + escHtml(heroT.titulo || '') + '"/></div>'
     + '<div class="cms-modal-campo"><label class="cms-label">Lema (línea 2)</label>'
     + '<input type="text" id="cms-hero-subtitulo" class="cms-input" value="' + escHtml(heroT.subtitulo || '') + '"/></div>'
-    + '<div class="cms-modal-campo"><label class="cms-label">Eslogan (línea 3)</label>'
+    + '<div class="cms-modal-campo" style="margin-bottom:0;"><label class="cms-label">Eslogan (línea 3)</label>'
     + '<textarea id="cms-hero-parrafo" class="cms-textarea" rows="2">' + safeTextareaContent(heroT.parrafo) + '</textarea></div>'
-    + '<button class="btn btn-v" onclick="guardarHeroTexto()"><i class="fas fa-save"></i> Guardar textos del hero</button>';
+    + '</div>';
 
-  html += '<hr style="margin:20px 0;border:none;border-top:1.5px solid #e0e8e0;"/>'
-    + '<strong style="color:#004d3d;font-size:13px;display:block;margin-bottom:8px;"><i class="fas fa-link"></i> Botones superiores (barra verde)</strong>'
-    + '<p style="font-size:11px;color:#666;margin:0 0 10px;">Se muestran a la izquierda de las redes sociales. Puede editar Intranet/Correo y <strong>agregar más botones</strong> hacia la derecha, con el mismo estilo.</p>'
+  html += '<div class="cms-img-block">'
+    + '<h3><span class="tag">3</span> Botones de la barra verde</h3>'
+    + '<p class="cms-img-help">Se muestran a la izquierda de las redes sociales. Puede editar Intranet/Correo y agregar más, con el mismo estilo.</p>'
     + '<div id="cms-topbar-botones-lista" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">';
 
   var topNorm = normalizarTopbarLinksCMS(topbar);
@@ -538,9 +586,7 @@ function renderEditorCarrusel() {
     html += htmlFilaTopbarBotonCMS(b, idx);
   });
   html += '</div>'
-    + '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">'
-    + '<button type="button" class="btn btn-v btn-sm" onclick="agregarTopbarBotonCMS()"><i class="fas fa-plus"></i> Agregar botón</button>'
-    + '<button type="button" class="btn btn-v" onclick="guardarTopbarLinksCMS()"><i class="fas fa-save"></i> Guardar y publicar botones</button>'
+    + '<button type="button" class="btn btn-v" onclick="agregarTopbarBotonCMS()"><i class="fas fa-plus"></i> Agregar botón</button>'
     + '</div>';
 
   el.innerHTML = html;
@@ -618,11 +664,19 @@ function guardarTopbarLinksCMS() {
 function agregarSlideCMS() { abrirModalSlide(null); }
 function editarSlideCMS(idx) { abrirModalSlide(idx); }
 
+function moverSlideCMS(idx, dir) {
+  var arr = cmsDataActual.carrusel || [];
+  var j = idx + dir;
+  if (j < 0 || j >= arr.length) return;
+  var t = arr[idx]; arr[idx] = arr[j]; arr[j] = t;
+  renderEditorCarrusel();
+}
+
 function eliminarSlideCMS(idx) {
   if (!confirm('¿Eliminar esta imagen del carrusel?')) return;
   cmsDataActual.carrusel.splice(idx, 1);
   renderEditorCarrusel();
-  mostrarAlertaCMS('Imagen eliminada. Pulse "Publicar cambios" para aplicar.', 'ok');
+  mostrarAlertaCMS('Imagen quitada. Pulse Grabar para publicarlo en la web.', 'ok');
 }
 
 function abrirModalSlide(idx) {
@@ -654,7 +708,7 @@ function abrirModalSlide(idx) {
     if (esNuevo) cmsDataActual.carrusel.push(nuevo);
     else         cmsDataActual.carrusel[idx] = nuevo;
     renderEditorCarrusel();
-    publicarCmsTrasEdicion('Carrusel actualizado en borrador. Pulse "Publicar cambios".');
+    publicarCmsTrasEdicion('Carrusel actualizado. Pulse Grabar para publicarlo en la web.');
     return true;
   });
 }
@@ -896,7 +950,7 @@ function cargarPaginaMenuPublicacion() {
 function publicarCmsTrasEdicion(mensajeBorrador) {
   guardarSitioWeb(function(ok) {
     if (!ok) {
-      mostrarAlertaCMS(mensajeBorrador || 'Cambios guardados en borrador. Pulse "Publicar cambios" para subir al portal.', 'ok');
+      mostrarAlertaCMS(mensajeBorrador || 'Cambios listos. Pulse Grabar para subirlos al portal.', 'ok');
     }
   });
 }
@@ -905,22 +959,27 @@ function renderListaNovedades(containerId, items) {
   var el = document.getElementById(containerId);
   if (!el) return;
   if (!items.length) {
-    el.innerHTML = '<p class="cms-vacio">No hay novedades.</p>';
+    el.innerHTML = '<div class="cms-img-empty"><i class="fas fa-newspaper"></i>'
+      + '<p>No hay noticias aún. Pulse <b>Nueva novedad</b> para publicar la primera.</p>'
+      + '<button type="button" class="btn btn-v" onclick="agregarNovedadCMS()"><i class="fas fa-plus"></i> Nueva novedad</button></div>';
     return;
   }
-  el.innerHTML = items.map(function(item, idx) {
+  el.innerHTML = '<div class="cms-nov-grid">' + items.map(function(item, idx) {
     var thumb = item.imagen
-      ? '<img src="' + item.imagen + '" style="width:48px;height:48px;object-fit:cover;border-radius:6px;flex-shrink:0;" alt=""/>'
-      : '<div class="cms-item-icono cms-item-icono-naranja"><i class="fas fa-newspaper"></i></div>';
-    return '<div class="cms-item">'
-      + thumb
-      + '<div class="cms-item-info"><strong>' + escHtml(item.titulo) + '</strong>'
-      + '<span>' + escHtml(item.fecha) + ' — ' + escHtml(item.categoria) + '</span></div>'
-      + '<div class="cms-item-acciones">'
-      + '<button type="button" class="btn-mini" onclick="editarNovedadCMS(' + idx + ')"><i class="fas fa-edit"></i></button>'
-      + '<button type="button" class="btn-mini btn-mini-danger" onclick="eliminarNovedadCMS(' + idx + ')"><i class="fas fa-trash"></i></button>'
-      + '</div></div>';
-  }).join('');
+      ? '<img src="' + item.imagen + '" alt=""/>'
+      : '<i class="fas fa-newspaper"></i>';
+    return '<article class="cms-nov-card">'
+      + '<div class="cms-nov-foto">' + thumb + '</div>'
+      + '<div class="cms-nov-body">'
+      + '<div class="cms-nov-meta"><span class="cms-nov-cat">' + escHtml(item.categoria || 'Institucional') + '</span>'
+      + '<span>' + escHtml(item.fecha || '') + '</span></div>'
+      + '<strong>' + escHtml(item.titulo) + '</strong>'
+      + '<p class="cms-nov-resumen">' + escHtml(item.resumen || '') + '</p>'
+      + '<div class="cms-nov-acc">'
+      + '<button type="button" class="btn-mini" onclick="editarNovedadCMS(' + idx + ')"><i class="fas fa-edit"></i> Editar</button>'
+      + '<button type="button" class="btn-mini btn-mini-danger" onclick="eliminarNovedadCMS(' + idx + ')"><i class="fas fa-trash"></i> Quitar</button>'
+      + '</div></div></article>';
+  }).join('') + '</div>';
 }
 
 function abrirModalNovedad(idx) {
@@ -933,12 +992,13 @@ function abrirModalNovedad(idx) {
   var imgPreviewSrc = item.imagen || '';
   var imgPreviewStyle = imgPreviewSrc ? 'display:block;' : 'display:none;';
 
-  var body = cmsCampo('Título', 'm-titulo', item.titulo)
-    + cmsCampo('Resumen breve', 'm-resumen', item.resumen, 'textarea')
-    + cmsCampo('Contenido completo (aparece al abrir la noticia)', 'm-contenido', item.contenido || '', 'textarea')
+  var body = '<p class="cms-img-help" style="margin-top:0;">El título y la foto son lo que se ve en la tarjeta. El contenido completo aparece al pulsar la noticia.</p>'
+    + cmsCampo('Título de la noticia', 'm-titulo', item.titulo)
+    + cmsCampo('Resumen breve (tarjeta)', 'm-resumen', item.resumen, 'textarea')
+    + cmsCampo('Contenido completo (al abrir la noticia)', 'm-contenido', item.contenido || '', 'textarea')
     + cmsCampo('Categoría', 'm-cat', item.categoria, 'select',
         ['Operativo', 'Tránsito', 'Comunitario', 'Institucional', 'Prevención'])
-    + cmsCampo('Fecha', 'm-fecha', item.fecha)
+    + cmsCampo('Fecha que se muestra', 'm-fecha', item.fecha)
     + '<div class="cms-modal-campo">'
     + '<label class="cms-label">Fotografía (JPG/PNG — máx 1.5 MB)</label>'
     + '<input type="file" id="m-foto-file" accept="image/jpeg,image/png,image/webp" style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;" onchange="previewNovedadImg(this)"/>'
@@ -966,7 +1026,7 @@ function abrirModalNovedad(idx) {
       cmsDataActual.novedades = ordenarNovedadesPorFecha(cmsDataActual.novedades);
     }
     renderListasCMS();
-    publicarCmsTrasEdicion('Guardado en borrador. Pulse "Publicar cambios" para subir al portal.');
+    publicarCmsTrasEdicion('Guardado. Pulse Grabar para subirlo al portal.');
     return true;
   });
 }
@@ -1154,8 +1214,11 @@ function renderParrafosResenaCMS() {
       + '<img id="cms-' + sec + '-img-thumb" style="max-height:80px;border-radius:6px;border:1px solid #ddd;" alt=""/>'
       + '<button type="button" onclick="quitarBannerImg(\'' + sec + '\')" style="margin-left:8px;font-size:11px;color:#c0392b;background:none;border:none;cursor:pointer;"><i class="fas fa-times"></i> Quitar</button>'
       + '</div></div></div>'
+      + '<div class="cms-item-acciones" style="flex-direction:column;">'
+      + '<button type="button" class="btn-mini" onclick="moverParrafoResena(' + idx + ',-1)" title="Subir" ' + (idx === 0 ? 'disabled' : '') + '><i class="fas fa-arrow-up"></i></button>'
+      + '<button type="button" class="btn-mini" onclick="moverParrafoResena(' + idx + ',1)" title="Bajar" ' + (idx >= parrafos.length - 1 ? 'disabled' : '') + '><i class="fas fa-arrow-down"></i></button>'
       + '<button type="button" class="btn-mini btn-mini-danger" title="Eliminar" onclick="eliminarParrafoResena(' + idx + ')"><i class="fas fa-trash"></i></button>'
-      + '</div>';
+      + '</div></div>';
   }).join('') + '</div>';
   parrafos.forEach(function(item, idx) {
     inicializarBannerImg('resena-p' + idx, item.imagen || '');
@@ -1202,6 +1265,15 @@ function agregarParrafoResena() {
   renderParrafosResenaCMS();
 }
 
+function moverParrafoResena(idx, dir) {
+  syncParrafosFromDOM();
+  var arr = cmsDataActual.resenaHistorica.parrafos || [];
+  var j = idx + dir;
+  if (j < 0 || j >= arr.length) return;
+  var t = arr[idx]; arr[idx] = arr[j]; arr[j] = t;
+  renderParrafosResenaCMS();
+}
+
 function eliminarParrafoResena(idx) {
   if (!confirm('¿Eliminar este párrafo?')) return;
   syncParrafosFromDOM();
@@ -1224,7 +1296,9 @@ function renderPilaresCMS() {
       + (p.imagen ? '<span style="display:block;margin-top:2px;color:#1a7a3a;font-size:10px;"><i class="fas fa-image"></i> Con imagen</span>' : '')
       + '</div>'
       + '<div class="cms-item-acciones">'
-      + '<button type="button" class="btn-mini" onclick="editarPilarCMS(' + idx + ')"><i class="fas fa-edit"></i></button>'
+      + '<button type="button" class="btn-mini" onclick="moverPilarCMS(' + idx + ',-1)" title="Subir" ' + (idx === 0 ? 'disabled' : '') + '><i class="fas fa-arrow-up"></i></button>'
+      + '<button type="button" class="btn-mini" onclick="moverPilarCMS(' + idx + ',1)" title="Bajar" ' + (idx >= pilares.length - 1 ? 'disabled' : '') + '><i class="fas fa-arrow-down"></i></button>'
+      + '<button type="button" class="btn-mini" onclick="editarPilarCMS(' + idx + ')"><i class="fas fa-edit"></i> Editar</button>'
       + '<button type="button" class="btn-mini btn-mini-danger" onclick="eliminarPilarCMS(' + idx + ')"><i class="fas fa-trash"></i></button>'
       + '</div></div>';
   }).join('');
@@ -1233,10 +1307,20 @@ function renderPilaresCMS() {
 function agregarPilarCMS()    { abrirModalPilar(null); }
 function editarPilarCMS(idx)  { abrirModalPilar(idx); }
 
+function moverPilarCMS(idx, dir) {
+  cmsDataActual.nuestraLabor = cmsDataActual.nuestraLabor || { pilares: [] };
+  var arr = cmsDataActual.nuestraLabor.pilares || [];
+  var j = idx + dir;
+  if (j < 0 || j >= arr.length) return;
+  var t = arr[idx]; arr[idx] = arr[j]; arr[j] = t;
+  renderPilaresCMS();
+}
+
 function eliminarPilarCMS(idx) {
   if (!confirm('¿Eliminar este pilar?')) return;
   cmsDataActual.nuestraLabor.pilares.splice(idx, 1);
   renderPilaresCMS();
+  mostrarAlertaCMS('Pilar quitado. Pulse Grabar para publicarlo en la web.', 'ok');
 }
 
 function abrirModalPilar(idx) {
@@ -1273,7 +1357,7 @@ function abrirModalPilar(idx) {
     if (esNuevo) cmsDataActual.nuestraLabor.pilares.push(nuevo);
     else         cmsDataActual.nuestraLabor.pilares[idx] = nuevo;
     renderPilaresCMS();
-    publicarCmsTrasEdicion('Pilar guardado en borrador. Pulse "Publicar cambios".');
+    publicarCmsTrasEdicion('Pilar actualizado. Pulse Grabar para publicarlo en la web.');
     return true;
   });
 }
@@ -1303,6 +1387,7 @@ function eliminarNovedadCMS(idx) {
   if (!confirm('¿Eliminar esta novedad?')) return;
   cmsDataActual.novedades.splice(idx, 1);
   renderListasCMS();
+  mostrarAlertaCMS('Novedad quitada. Pulse Grabar para publicarlo en la web.', 'ok');
 }
 function editarNovedadCMS(idx)     { abrirModalNovedad(idx); }
 
@@ -1432,6 +1517,13 @@ function recolectarDatosCMS() {
     data.novedades = ordenarNovedadesPorFecha(data.novedades);
   }
   data.actualizacion      = getVal('cms-actualizacion') || data.actualizacion;
+  if (document.getElementById('cms-hero-titulo')) {
+    data.heroTexto = {
+      titulo: getVal('cms-hero-titulo'),
+      subtitulo: getVal('cms-hero-subtitulo'),
+      parrafo: getVal('cms-hero-parrafo')
+    };
+  }
   data.resenaHistorica    = data.resenaHistorica || {};
   data.resenaHistorica.titulo  = 'Reseña Histórica';
   data.resenaHistorica.intro   = getVal('cms-resena-intro');
@@ -1502,7 +1594,11 @@ function recolectarDatosCMS() {
       icono: dmConPrev.icono || 'fa-search'
     }
   };
-  data.imagenBannerNovedades = leerBannerImg('novedades');
+  if (document.getElementById('cms-novedades-img-data')) {
+    data.imagenBannerNovedades = leerBannerImg('novedades');
+  } else if (cmsDataActual.imagenBannerNovedades) {
+    data.imagenBannerNovedades = cmsDataActual.imagenBannerNovedades;
+  }
   if (document.getElementById('editor-fotos-encabezado')) {
     data.fotosEncabezado = leerFotosEncabezado();
   } else if (cmsDataActual.fotosEncabezado) {
@@ -1599,7 +1695,7 @@ function publicarCmsDataAlServidor(onComplete) {
         if (ok) {
           if (typeof limpiarCachePortal === 'function') limpiarCachePortal();
           actualizarMetaPublicacionCMS();
-          mostrarAlertaCMS('¡Publicado! Los visitantes verán los cambios al recargar (Ctrl+F5). Use el botón «Ver portal» para comprobar.', 'ok');
+          mostrarAlertaCMS('Grabado. Los visitantes lo verán al recargar la web (Ctrl+F5). Use «Ver en la web» para comprobar.', 'ok');
         } else {
           mostrarAlertaCMS('No se publicó: ' + mensajeErrorSesionCms(res.status, res.data), 'error');
         }
@@ -1636,6 +1732,11 @@ function abrirCmsModal(titulo, htmlBody, onGuardar) {
   if (tituloEl) tituloEl.innerHTML = '<i class="fas fa-edit" style="color:#c8a94a;margin-right:6px;"></i>' + escHtml(titulo);
   if (bodyEl)   bodyEl.innerHTML = htmlBody;
   cmsModalGuardarFn = onGuardar;
+  var foot = document.querySelector('#cms-modal .cms-modal-footer');
+  if (foot) {
+    foot.innerHTML = '<button type="button" class="btn cms-btn-back" onclick="cerrarCmsModal()"><i class="fas fa-chevron-left"></i> Retroceder</button>'
+      + '<button type="button" id="cms-modal-guardar" class="btn btn-v"><i class="fas fa-save"></i> Grabar</button>';
+  }
   var modal = document.getElementById('cms-modal');
   if (modal) {
     modal.classList.add('visible');
