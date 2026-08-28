@@ -317,6 +317,7 @@
 
   <div id="repechaje-box" class="consulta-form repechaje-box" style="display:none;border-color:#c8a94a;">
     <h3 class="repechaje-box-titulo"><i class="fas fa-redo-alt"></i> Repechaje de convenios</h3>
+    <p style="font-size:12.5px;color:#6b5420;margin:0 0 10px;line-height:1.45;">Si no ocupa vacante puede inscribirse en cualquier convenio. Si está de vacaciones (aunque ya ocupe un cupo) también puede inscribirse y elegir cualquier día: trabaja PAR e IMPAR.</p>
     <div id="repechaje-lista" class="repechaje-lista-wrap"><p style="color:#888;font-size:13px;">Cargando convocatorias...</p></div>
   </div>
 
@@ -1236,7 +1237,11 @@ function cargarListaRepechaje() {
       }
       if (d.activo === false) {
         REPECHAJE_CACHE = [];
-        el.innerHTML = '<p style="color:#856404;font-size:13px;">El repechaje no está disponible por el momento.</p>';
+        var extra = '';
+        if (d.inicio || d.cierre) {
+          extra = ' Ventana: ' + (d.inicio || '—') + ' → ' + (d.cierre || '—') + ' (hora Lima).';
+        }
+        el.innerHTML = '<p style="color:#856404;font-size:13px;">El repechaje no está disponible por el momento.' + extra + '</p>';
         return;
       }
       var list = (d.convenios || []).filter(function(c) {
@@ -1247,7 +1252,10 @@ function cargarListaRepechaje() {
         el.innerHTML = '<p style="color:#856404;font-size:13px;">Por ahora no hay vacantes liberadas para repechaje.</p>';
         return;
       }
-      el.innerHTML = list.map(function(c) {
+      var ventanaTxt = d.cierre
+        ? '<p style="font-size:12.5px;color:#6b5420;margin:0 0 10px;">Abierto hasta <strong>' + escC(String(d.cierre).replace('T',' ')) + '</strong> (hora Lima).</p>'
+        : '';
+      el.innerHTML = ventanaTxt + list.map(function(c) {
         var disp = parseInt(c.disponibles, 10) || 0;
         return '<div class="repechaje-row" data-item-id="' + escC(String(c.id)) + '">'
           + '<div class="repechaje-row-info">'
@@ -1543,7 +1551,7 @@ function cerrarModalRepDetalle() {
 }
 
 var REP_ITEM_CACHE = {};
-var REP_FORM_V = '86';
+var REP_FORM_V = '87';
 
 function urlRepFormEmbed(itemId) {
   return 'detalle.html?id=' + encodeURIComponent(itemId) + '&tipo=convenio&repechaje=1&embed=1&v=' + REP_FORM_V;

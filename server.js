@@ -1385,12 +1385,51 @@ async function setConfig(clave, valor) {
   );
 }
 
-// ── Repechaje: activación global (Admin de convenios / Super Admin) ───────────
+// ── Repechaje: activación global + ventana de fechas (Admin de convenios / Super Admin) ─
 const CFG_REPECHAJE_ACTIVO = 'repechaje_activo';
+const CFG_REPECHAJE_INICIO = 'repechaje_inicio';
+const CFG_REPECHAJE_CIERRE = 'repechaje_cierre';
+
+function normalizarFechaHoraLima(s) {
+  const t = String(s || '').trim().replace('T', ' ');
+  const m = t.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::(\d{2}))?/);
+  if (!m) return '';
+  return m[1] + ' ' + m[2] + ':' + (m[3] || '00');
+}
+
+function fechaHoraLimaAMs(s) {
+  const norm = normalizarFechaHoraLima(s);
+  if (!norm) return null;
+  const p = norm.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
+  if (!p) return null;
+  return Date.UTC(
+    parseInt(p[1], 10), parseInt(p[2], 10) - 1, parseInt(p[3], 10),
+    parseInt(p[4], 10) + 5, parseInt(p[5], 10), parseInt(p[6], 10)
+  );
+}
+
+async function repechajeVentana() {
+  const flag = await getConfig(CFG_REPECHAJE_ACTIVO);
+  const habilitado = flag === '1';
+  const inicio = normalizarFechaHoraLima(await getConfig(CFG_REPECHAJE_INICIO));
+  const cierre = normalizarFechaHoraLima(await getConfig(CFG_REPECHAJE_CIERRE));
+  const now = Date.now();
+  let enVentana = true;
+  const t0 = fechaHoraLimaAMs(inicio);
+  const t1 = fechaHoraLimaAMs(cierre);
+  if (t0 != null && now < t0) enVentana = false;
+  if (t1 != null && now > t1) enVentana = false;
+  return {
+    habilitado: habilitado,
+    inicio: inicio,
+    cierre: cierre,
+    vigente: habilitado && enVentana
+  };
+}
 
 async function repechajeEstaActivo() {
-  const v = await getConfig(CFG_REPECHAJE_ACTIVO);
-  return v !== '0'; // por defecto activo si nunca se configuró
+  const v = await repechajeVentana();
+  return v.vigente;
 }
 
 function puedeGestionarRepechaje(admin) {
@@ -5643,6 +5682,51 @@ function cuposTienenTurnosPorLugar(cupos) {
   });
 }
 
+function validarSlotsVacacionesPublicados(cuposItem, turnosItem, slots, opts) {
+  var matriz = !!(opts && opts.matriz);
+  var list = Array.isArray(slots) ? slots : [];
+  for (var i = 0; i < list.length; i++) {
+    var s = list[i];
+    var dias = conveniosFlujo.diasCubiertosPostula(s.dia);
+    if (String(s.dia || '').toUpperCase() === 'TODOS' && !matriz) {
+      dias = ['PAR', 'IMPAR', 'PAR/IMPAR'];
+    }
+    if (matriz) {
+      var cia = String(s.lugar || '').trim().toUpperCase();
+      if (!cia) return 'Seleccione la comisaría para cada turno.';
+      var cupoCia = (cuposItem || []).find(function(c) {
+        return String(c.nombre || '').trim().toUpperCase() === cia;
+      });
+      if (!cupoCia) return 'La comisaría seleccionada no tiene vacantes.';
+      var diasOk = String(s.dia || '').toUpperCase() === 'TODOS' ? ['PAR', 'IMPAR'] : dias;
+      for (var d = 0; d < diasOk.length; d++) {
+        var ok = normalizarTurnos(cupoCia.turnos).some(function(t) {
+          return t.turno === s.turno && t.dia === diasOk[d] && (parseInt(t.vacantes, 10) || 0) > 0;
+        });
+        if (!ok) {
+          return 'No hay vacantes para ' + (s.turno || 'turno') + ' / ' + diasOk[d] + ' en esa comisaría.';
+        }
+      }
+    } else {
+      var turnosConVac = (turnosItem || []).filter(function(t) {
+        return t && t.turno && (parseInt(t.vacantes, 10) || 0) > 0;
+      });
+      if (!turnosConVac.length) continue;
+      var hay = turnosConVac.some(function(t) {
+        if (t.turno !== s.turno) return false;
+        if (!s.dia || s.dia === 'TODOS' || s.dia === 'PAR/IMPAR') return true;
+        if (t.dia === s.dia) return true;
+        if (t.dia === 'PAR/IMPAR') return true;
+        return false;
+      });
+      if (!hay) {
+        return 'El turno ' + (s.turno || '') + ' no está publicado o no tiene vacantes.';
+      }
+    }
+  }
+  return '';
+}
+
 function construirSlotsSorteoItem(item) {
   var cupos = normalizarCuposUnidades(item && item.cupos_unidades);
   var slots = [];
@@ -5695,8 +5779,8 @@ function construirSlotsSorteoItem(item) {
 function diaCompatibleSorteo(diaSlot, diaCand) {
   var a = String(diaSlot || '').toUpperCase();
   var b = String(diaCand || '').toUpperCase();
-  if (!a || a === 'PAR/IMPAR') return true;
-  if (!b || b === 'PAR/IMPAR') return true;
+  if (!a || a === 'PAR/IMPAR' || a === 'TODOS') return true;
+  if (!b || b === 'PAR/IMPAR' || b === 'TODOS') return true;
   return a === b;
 }
 
@@ -5713,16 +5797,21 @@ function canonLugarSlot(texto) {
 
 function candidatoEnCupoPostula(cand, slot) {
   if (!cand || !slot) return false;
-  var p = conveniosFlujo.parsePostulacionSlot(cand.comisaria_postula);
-  if (slot.lugar) {
-    if (canonLugarSlot(p.lugar || cand.comisaria_postula) !== canonLugarSlot(slot.lugar)) {
-      return false;
+  var list = conveniosFlujo.parsePostulacionSlots(cand.comisaria_postula, cand.postula_slots);
+  if (!list.length) {
+    list = [conveniosFlujo.parsePostulacionSlot(cand.comisaria_postula)];
+  }
+  return list.some(function(p) {
+    if (slot.lugar) {
+      if (canonLugarSlot(p.lugar || cand.comisaria_postula) !== canonLugarSlot(slot.lugar)) {
+        return false;
+      }
     }
-  }
-  if (slot.turno && slot.turno !== 'GENERAL') {
-    if (p.turno && p.turno !== slot.turno) return false;
-  }
-  return diaCompatibleSorteo(slot.dia, p.dia);
+    if (slot.turno && slot.turno !== 'GENERAL') {
+      if (p.turno && p.turno !== slot.turno) return false;
+    }
+    return diaCompatibleSorteo(slot.dia, p.dia || cand.dia_franco);
+  });
 }
 
 function candidatoCoincideSlotSorteo(cand, slot) {
@@ -5982,7 +6071,7 @@ async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
 
   if (cipKey) {
     const byCip = await pool.query(
-      `SELECT id, cip, dni, nombres, estado, nro_registro
+      `SELECT id, cip, dni, nombres, estado, nro_registro, disponibilidad
        FROM inscripciones
        WHERE item_id=$1 AND ${sqlCipKeyInscripcion('cip')}=$2
          AND ${vigenteMes}
@@ -5994,7 +6083,7 @@ async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
 
   if (dniNorm) {
     const byDni = await pool.query(
-      `SELECT id, cip, dni, nombres, estado, nro_registro
+      `SELECT id, cip, dni, nombres, estado, nro_registro, disponibilidad
        FROM inscripciones
        WHERE item_id=$1
          AND regexp_replace(COALESCE(dni,''), '[^0-9]', '', 'g') = $2
@@ -6007,7 +6096,7 @@ async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
 
   if (nombreNorm.length >= 8) {
     const byNom = await pool.query(
-      `SELECT id, cip, dni, nombres, estado, nro_registro
+      `SELECT id, cip, dni, nombres, estado, nro_registro, disponibilidad
        FROM inscripciones
        WHERE item_id=$1 AND ${sqlNombreInscripcion('nombres')} = $2
          AND ${vigenteMes}
@@ -6019,7 +6108,7 @@ async function buscarInscripcionDuplicadaPortal(itemId, cipNorm, dni, nombres) {
 
   if (tokensNorm.length >= 8) {
     const cand = await pool.query(
-      `SELECT id, cip, dni, nombres, estado, nro_registro
+      `SELECT id, cip, dni, nombres, estado, nro_registro, disponibilidad
        FROM inscripciones WHERE item_id=$1 AND ${vigenteMes} ORDER BY id ASC`,
       [itemId]
     );
@@ -6061,7 +6150,7 @@ async function buscarInscripcionConvenioEnMes(cipNorm, dni, nombres) {
 
   if (cipKey) {
     const byCip = await pool.query(
-      `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id
+      `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id, n.disponibilidad
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
        WHERE i.tipo = 'convenio'
@@ -6076,7 +6165,7 @@ async function buscarInscripcionConvenioEnMes(cipNorm, dni, nombres) {
 
   if (dniNorm) {
     const byDni = await pool.query(
-      `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id
+      `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id, n.disponibilidad
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
        WHERE i.tipo = 'convenio'
@@ -6091,7 +6180,7 @@ async function buscarInscripcionConvenioEnMes(cipNorm, dni, nombres) {
 
   if (nombreNorm.length >= 8) {
     const byNom = await pool.query(
-      `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id
+      `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id, n.disponibilidad
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
        WHERE i.tipo = 'convenio'
@@ -6106,7 +6195,7 @@ async function buscarInscripcionConvenioEnMes(cipNorm, dni, nombres) {
 
   if (tokensNorm.length >= 8) {
     const cand = await pool.query(
-      `SELECT n.id, n.nro_registro, n.estado, n.nombres, i.titulo, i.id AS item_id
+      `SELECT n.id, n.nro_registro, n.estado, n.nombres, i.titulo, i.id AS item_id, n.disponibilidad
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
        WHERE i.tipo = 'convenio'
@@ -6128,6 +6217,122 @@ function mensajeUnConvenioPorMes(row) {
   const titulo = String((row && row.titulo) || 'otro convenio').trim();
   return 'Solo puede inscribirse en un convenio por mes. Ya figura inscrito en «'
     + titulo + '». Consulte su estado solo con su CIP. El próximo mes podrá postular de nuevo.';
+}
+
+function mensajeOcupaVacanteRepechaje(row) {
+  const titulo = String((row && row.titulo) || 'un convenio').trim();
+  return 'Ya ocupa una vacante en «' + titulo + '». Quien es ganador, está en revisión, observado o con expediente aprobado no puede inscribirse en repechaje, salvo si está de vacaciones (puede trabajar todos los días).';
+}
+
+async function liberarOcupacionVacacionesParaRepechaje(cipNorm, dni, nombres, itemDestinoId) {
+  const cipKey = cipKeyInscripcion(cipNorm);
+  const dniNorm = normalizarDniDigits(dni);
+  const ocupan = conveniosFlujo.ESTADOS_OCUPAN_VACANTE;
+  const dest = parseInt(itemDestinoId, 10) || 0;
+  const mesSql = `to_char(timezone('America/Lima', COALESCE(n.fecha::timestamptz, NOW())), 'YYYY-MM')
+    = to_char(timezone('America/Lima', NOW()), 'YYYY-MM')`;
+  const nota = 'Cedió vacante para repechaje (vacaciones: puede trabajar todos los días).';
+  const setSql = `
+    SET estado = 'anulado_solicitud',
+        observacion = LEFT(TRIM(BOTH FROM (
+          CASE WHEN COALESCE(n.observacion,'') = '' THEN $3
+          ELSE n.observacion || ' · ' || $3 END
+        )), 500)
+  `;
+  const whereBase = `
+    FROM items_portal i
+    WHERE n.item_id = i.id
+      AND i.tipo = 'convenio'
+      AND n.estado = ANY($1::varchar[])
+      AND UPPER(COALESCE(n.disponibilidad,'')) = 'VACACIONES'
+      AND n.item_id <> $2
+      AND ${mesSql}
+  `;
+  if (cipKey) {
+    await pool.query(
+      `UPDATE inscripciones n ${setSql} ${whereBase} AND ${sqlCipKeyInscripcion('n.cip')} = $4`,
+      [ocupan, dest, nota, cipKey]
+    );
+  }
+  if (dniNorm) {
+    await pool.query(
+      `UPDATE inscripciones n ${setSql} ${whereBase}
+         AND regexp_replace(COALESCE(n.dni,''), '[^0-9]', '', 'g') = $4`,
+      [ocupan, dest, nota, dniNorm]
+    );
+  }
+}
+
+async function buscarInscripcionQueOcupaVacanteEnMes(cipNorm, dni, nombres) {
+  const cipKey = cipKeyInscripcion(cipNorm);
+  const dniNorm = normalizarDniDigits(dni);
+  const nombreNorm = normalizarNombreInscripcion(nombres);
+  const tokensNorm = nombreTokensOrdenados(nombres);
+  const mesSql = `to_char(timezone('America/Lima', COALESCE(n.fecha::timestamptz, NOW())), 'YYYY-MM')
+    = to_char(timezone('America/Lima', NOW()), 'YYYY-MM')`;
+  const ocupan = conveniosFlujo.ESTADOS_OCUPAN_VACANTE;
+  const filtroOcupa = `n.estado = ANY($1::varchar[]) AND ${mesSql}`;
+
+  if (cipKey) {
+    const byCip = await pool.query(
+      `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id, n.disponibilidad
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE i.tipo = 'convenio'
+         AND ${sqlCipKeyInscripcion('n.cip')} = $2
+         AND ${filtroOcupa}
+       ORDER BY n.id ASC LIMIT 1`,
+      [ocupan, cipKey]
+    );
+    if (byCip.rows.length) return { row: byCip.rows[0], motivo: 'cip' };
+  }
+
+  if (dniNorm) {
+    const byDni = await pool.query(
+      `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id, n.disponibilidad
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE i.tipo = 'convenio'
+         AND regexp_replace(COALESCE(n.dni,''), '[^0-9]', '', 'g') = $2
+         AND ${filtroOcupa}
+       ORDER BY n.id ASC LIMIT 1`,
+      [ocupan, dniNorm]
+    );
+    if (byDni.rows.length) return { row: byDni.rows[0], motivo: 'dni' };
+  }
+
+  if (nombreNorm.length >= 8) {
+    const byNom = await pool.query(
+      `SELECT n.id, n.nro_registro, n.estado, i.titulo, i.id AS item_id, n.disponibilidad
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE i.tipo = 'convenio'
+         AND ${sqlNombreInscripcion('n.nombres')} = $2
+         AND ${filtroOcupa}
+       ORDER BY n.id ASC LIMIT 1`,
+      [ocupan, nombreNorm]
+    );
+    if (byNom.rows.length) return { row: byNom.rows[0], motivo: 'nombres' };
+  }
+
+  if (tokensNorm.length >= 8) {
+    const cand = await pool.query(
+      `SELECT n.id, n.nro_registro, n.estado, n.nombres, i.titulo, i.id AS item_id, n.disponibilidad
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+       WHERE i.tipo = 'convenio'
+         AND ${filtroOcupa}
+       ORDER BY n.id ASC`,
+      [ocupan]
+    );
+    for (const row of cand.rows) {
+      if (nombreTokensOrdenados(row.nombres) === tokensNorm) {
+        return { row: row, motivo: 'nombres' };
+      }
+    }
+  }
+
+  return null;
 }
 
 function normalizarCipConsulta(cip) {
@@ -6719,7 +6924,7 @@ async function revertirReservasTurnosSinSorteo(pool, itemId) {
   const slots = construirSlotsSorteoItem(item);
   if (!slots.length) return { ok: true, revertidos: 0 };
   const ins = await pool.query(
-    `SELECT id, estado, observacion, comisaria_postula FROM inscripciones WHERE item_id=$1`,
+    `SELECT id, estado, observacion, comisaria_postula, postula_slots FROM inscripciones WHERE item_id=$1`,
     [itemId]
   );
   const ocupan = conveniosFlujo.ESTADOS_OCUPAN_VACANTE || [];
@@ -6765,7 +6970,7 @@ async function promoverVacantesNoCubiertasPorSlot(pool, itemId) {
   const slots = construirSlotsSorteoItem(item);
   if (!slots.length) return { ok: true, ganadores: 0 };
   const ins = await pool.query(
-    `SELECT id, estado, comisaria_postula, disponibilidad, dia_franco
+    `SELECT id, estado, comisaria_postula, postula_slots, disponibilidad, dia_franco
      FROM inscripciones WHERE item_id=$1`,
     [itemId]
   );
@@ -7807,7 +8012,7 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       dni, grado, area, arma, disponibilidad, dia_franco,
       fecha_egreso, tiempo_servicio,
       modalidad, modalidad_otro, codifin, region_policial,
-      comisaria_postula, turno_postula
+      comisaria_postula, turno_postula, postula_slots
     } = req.body || {};
     const cipNorm = normalizarCipDigits(cip);
     if (!cipNorm) return res.json({ ok: false, error: 'CIP inválido.' });
@@ -7826,12 +8031,13 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
     const modalidadNorm = conveniosFlujo.limpio(modalidad, 40).toUpperCase();
     const modalidadOtroNorm = conveniosFlujo.limpio(modalidad_otro, 120);
     const codifinNorm = String(codifin || '').replace(/\D/g, '');
-    const comisariaPostulaRaw = conveniosFlujo.limpio(comisaria_postula, 150);
+    const comisariaPostulaRaw = conveniosFlujo.limpio(comisaria_postula, 500);
     const turnoPostulaRaw = conveniosFlujo.limpio(turno_postula, 40);
     const cuposItem = itemRow.cupos_unidades;
     const turnosItem = itemRow.turnos;
     const esCeladorItem = String(itemRow.titulo || '').toUpperCase().indexOf('CELADOR') !== -1;
     let comisariaPostulaNorm = comisariaPostulaRaw;
+    let postulaSlotsNorm = [];
     let cuposConVacante = cuposItem.filter(function(c) { return (c.disponibles || 0) > 0; });
 
     if (esConvenio) {
@@ -7876,7 +8082,18 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
         }
       }
 
-      if ((esCeladorItem && cuposCeladorTienenMatrizTurnos(cuposItem)) || cuposTienenTurnosPorLugar(cuposItem)) {
+      const comboVacPre = !modoRepechaje && String(disponibilidad || '').toUpperCase() === 'VACACIONES';
+      const slotsBody = Array.isArray(postula_slots) ? postula_slots : [];
+      const usaMatriz = (esCeladorItem && cuposCeladorTienenMatrizTurnos(cuposItem)) || cuposTienenTurnosPorLugar(cuposItem);
+
+      if (comboVacPre && slotsBody.length) {
+        const chkCombo = conveniosFlujo.validarCombinacionVacaciones(slotsBody);
+        if (!chkCombo.ok) return res.json({ ok: false, error: chkCombo.error });
+        const errPub = validarSlotsVacacionesPublicados(cuposItem, turnosItem, chkCombo.slots, { matriz: usaMatriz });
+        if (errPub) return res.json({ ok: false, error: errPub });
+        postulaSlotsNorm = chkCombo.slots;
+        comisariaPostulaNorm = conveniosFlujo.formatearPostulacionSlots(chkCombo.slots);
+      } else if (usaMatriz) {
         const partes = comisariaPostulaRaw.split('|').map(function(p) { return String(p || '').trim(); });
         if (partes.length !== 3 || !partes[0] || !partes[1] || !partes[2]) {
           return res.json({ ok: false, error: 'Seleccione comisaría, turno y día a los que postula.' });
@@ -7895,8 +8112,9 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
         }
         comisariaPostulaNorm = conveniosFlujo.limpio(
           partes[0] + ' — ' + turnoNom + ' / ' + diaNom,
-          150
+          500
         );
+        postulaSlotsNorm = [{ lugar: partes[0], turno: turnoNom, dia: diaNom }];
       } else {
         var parsedPost = conveniosFlujo.parsePostulacionSlot(comisariaPostulaRaw);
         var lugarCand = parsedPost.lugar || comisariaPostulaRaw;
@@ -7912,41 +8130,40 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
           }
         }
 
-        // Turnos publicados en la ficha: obligar postulación a un turno válido
         var turnosConVac = turnosItem.filter(function(t) {
           return t && t.turno && (parseInt(t.vacantes, 10) || 0) > 0;
         });
         if (turnosConVac.length) {
           var turnoBody = String(turnoPostulaRaw || '').trim().toUpperCase();
-          var turnoNom = parsedPost.turno || '';
-          var diaNom = parsedPost.dia || '';
+          var turnoNomB = parsedPost.turno || '';
+          var diaNomB = parsedPost.dia || '';
           if (turnoBody.indexOf('|') >= 0) {
             var tp = turnoBody.split('|');
-            turnoNom = String(tp[0] || '').trim().toUpperCase() || turnoNom;
-            diaNom = String(tp[1] || '').trim().toUpperCase() || diaNom;
-          } else if (turnoBody && !turnoNom) {
-            turnoNom = turnoBody;
+            turnoNomB = String(tp[0] || '').trim().toUpperCase() || turnoNomB;
+            diaNomB = String(tp[1] || '').trim().toUpperCase() || diaNomB;
+          } else if (turnoBody && !turnoNomB) {
+            turnoNomB = turnoBody;
           }
-          if (!turnoNom) {
+          if (!turnoNomB) {
             return res.json({ ok: false, error: 'Seleccione el turno al que postula (según vacantes publicadas).' });
           }
           var slotExact = turnosConVac.find(function(t) {
-            return t.turno === turnoNom && t.dia === diaNom;
+            return t.turno === turnoNomB && t.dia === diaNomB;
           });
           var slotByTurnoDiaFlex = turnosConVac.find(function(t) {
-            if (t.turno !== turnoNom) return false;
-            if (!diaNom) return true;
-            if (t.dia === diaNom) return true;
-            if (t.dia === 'PAR/IMPAR' && (diaNom === 'PAR' || diaNom === 'IMPAR' || diaNom === 'PAR/IMPAR')) return true;
-            if (diaNom === 'PAR/IMPAR') return true;
+            if (t.turno !== turnoNomB) return false;
+            if (!diaNomB) return true;
+            if (t.dia === diaNomB) return true;
+            if (t.dia === 'PAR/IMPAR' && (diaNomB === 'PAR' || diaNomB === 'IMPAR' || diaNomB === 'PAR/IMPAR')) return true;
+            if (diaNomB === 'PAR/IMPAR') return true;
             return false;
           });
-          var slotByTurno = turnosConVac.find(function(t) { return t.turno === turnoNom; });
+          var slotByTurno = turnosConVac.find(function(t) { return t.turno === turnoNomB; });
           var slotTurno = slotExact || slotByTurnoDiaFlex || slotByTurno;
           if (!slotTurno) {
             return res.json({ ok: false, error: 'El turno seleccionado no está publicado o no tiene vacantes.' });
           }
-          var diaFinal = diaNom || slotTurno.dia || 'PAR/IMPAR';
+          var diaFinal = diaNomB || slotTurno.dia || 'PAR/IMPAR';
           if (String(disponibilidad || '').toUpperCase() === 'FRANCO' && dia_franco) {
             var df = String(dia_franco).toUpperCase();
             if (slotTurno.dia === 'PAR' || slotTurno.dia === 'IMPAR') {
@@ -7957,7 +8174,7 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
             } else {
               diaFinal = df;
             }
-          } else if (!diaNom || diaNom === 'PAR/IMPAR') {
+          } else if (!diaNomB || diaNomB === 'PAR/IMPAR') {
             diaFinal = slotTurno.dia || 'PAR/IMPAR';
           }
           var lugarBase = parsedPost.lugar
@@ -7966,19 +8183,21 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
             || 'Convenio';
           comisariaPostulaNorm = conveniosFlujo.limpio(
             lugarBase + ' — ' + slotTurno.turno + ' / ' + diaFinal,
-            150
+            500
           );
+          postulaSlotsNorm = [{ lugar: lugarBase, turno: slotTurno.turno, dia: diaFinal === 'PAR/IMPAR' ? 'TODOS' : diaFinal }];
+        } else if (lugarCand) {
+          postulaSlotsNorm = [{ lugar: lugarCand, turno: '', dia: '' }];
         }
+      }
+      if (!postulaSlotsNorm.length && comisariaPostulaNorm) {
+        postulaSlotsNorm = conveniosFlujo.parsePostulacionSlots(comisariaPostulaNorm, null);
       }
     }
 
     if (esConvenio && modoRepechaje) {
       if (!(await repechajeEstaActivo())) {
         return res.json({ ok: false, error: 'El repechaje está desactivado por el momento.' });
-      }
-      const vac = await conveniosFlujo.vacantesDisponibles(pool, req.params.id);
-      if (!vac.ok || vac.disponibles < 1) {
-        return res.json({ ok: false, error: 'No hay vacantes disponibles para repechaje en esta convocatoria.' });
       }
       const pdfBase64 = pdf_requisitos || '';
       if (!pdfBase64) return res.json({ ok: false, error: 'En repechaje debe subir el expediente PDF completo.' });
@@ -7988,23 +8207,56 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
     }
 
     const dup = await buscarInscripcionDuplicadaPortal(req.params.id, cipNorm, dniNorm || dni, nombresIns);
-    if (dup) {
-      return res.json({
-        ok: false,
-        error: mensajeDuplicadoInscripcion(dup.motivo),
-        codigo: 'duplicado_' + dup.motivo
-      });
-    }
-
-    if (esConvenio) {
-      const otroMes = await buscarInscripcionConvenioEnMes(cipNorm, dniNorm || dni, nombresIns);
-      if (otroMes) {
+    let reutilizarId = null;
+    if (esConvenio && modoRepechaje) {
+      if (dup && conveniosFlujo.estadoOcupaVacante(dup.row.estado)) {
+        if (String(dup.row.disponibilidad || '').toUpperCase() !== 'VACACIONES') {
+          return res.json({
+            ok: false,
+            error: 'Ya ocupa una vacante en esta convocatoria. No puede inscribirse en repechaje.',
+            codigo: 'ocupa_vacante'
+          });
+        }
+      }
+      if (dup) reutilizarId = dup.row.id;
+      const vac = await conveniosFlujo.vacantesDisponibles(pool, req.params.id);
+      var libresDest = (vac && vac.ok) ? (vac.disponibles || 0) : 0;
+      if (reutilizarId && dup && conveniosFlujo.estadoOcupaVacante(dup.row.estado)) {
+        libresDest += 1;
+      }
+      if (!vac || !vac.ok || libresDest < 1) {
+        return res.json({ ok: false, error: 'No hay vacantes disponibles para repechaje en esta convocatoria.' });
+      }
+      const ocupaMes = await buscarInscripcionQueOcupaVacanteEnMes(cipNorm, dniNorm || dni, nombresIns);
+      if (ocupaMes && Number(ocupaMes.row.id) !== Number(reutilizarId || 0)) {
+        if (String(ocupaMes.row.disponibilidad || '').toUpperCase() !== 'VACACIONES') {
+          return res.json({
+            ok: false,
+            error: mensajeOcupaVacanteRepechaje(ocupaMes.row),
+            codigo: 'ocupa_vacante',
+            convenio_titulo: ocupaMes.row.titulo || ''
+          });
+        }
+        await liberarOcupacionVacacionesParaRepechaje(cipNorm, dniNorm || dni, nombresIns, req.params.id);
+      }
+    } else {
+      if (dup) {
         return res.json({
           ok: false,
-          error: mensajeUnConvenioPorMes(otroMes.row),
-          codigo: 'un_convenio_por_mes',
-          convenio_titulo: otroMes.row.titulo || ''
+          error: mensajeDuplicadoInscripcion(dup.motivo),
+          codigo: 'duplicado_' + dup.motivo
         });
+      }
+      if (esConvenio) {
+        const otroMes = await buscarInscripcionConvenioEnMes(cipNorm, dniNorm || dni, nombresIns);
+        if (otroMes) {
+          return res.json({
+            ok: false,
+            error: mensajeUnConvenioPorMes(otroMes.row),
+            codigo: 'un_convenio_por_mes',
+            convenio_titulo: otroMes.row.titulo || ''
+          });
+        }
       }
     }
 
@@ -8044,23 +8296,41 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       pdfNom = pdf_nombre || 'requisitos.pdf';
     }
 
-    const ins = await pool.query(
-      `INSERT INTO inscripciones
-         (item_id,cip,nombres,unidad,cargo,telefono,email,pdf_requisitos,pdf_nombre,
-          dni,grado,area,arma,disponibilidad,dia_franco,fecha_egreso,tiempo_servicio,
-          estado,modo_ingreso,modalidad,modalidad_otro,codifin,region_policial,comisaria_postula)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
-       RETURNING id`,
-      [req.params.id, cipNorm, nombresIns, unidadNorm || unidad || '', cargo||'', telefono||'', email||'',
+    const insParams = [req.params.id, cipNorm, nombresIns, unidadNorm || unidad || '', cargo||'', telefono||'', email||'',
        pdfSave, pdfNom,
        dniNorm || dni || '', grado||'', area||'', arma||'', disponibilidad||'', dia_franco||'',
        feNorm, tiempo_servicio||'', estado, modo,
        modalidadNorm || '', modalidadOtroNorm || '',
        esConvenio ? codifinNorm : (codifinNorm || ''),
        regionNorm || '',
-       esConvenio ? comisariaPostulaNorm : '']);
-
-    const newId = ins.rows[0].id;
+       esConvenio ? comisariaPostulaNorm : '',
+       JSON.stringify(postulaSlotsNorm || [])];
+    let newId;
+    if (reutilizarId) {
+      const upd = await pool.query(
+        `UPDATE inscripciones SET
+           cip=$2, nombres=$3, unidad=$4, cargo=$5, telefono=$6, email=$7,
+           pdf_requisitos=$8, pdf_nombre=$9, dni=$10, grado=$11, area=$12, arma=$13,
+           disponibilidad=$14, dia_franco=$15, fecha_egreso=$16, tiempo_servicio=$17,
+           estado=$18, modo_ingreso=$19, modalidad=$20, modalidad_otro=$21,
+           codifin=$22, region_policial=$23, comisaria_postula=$24, postula_slots=$25::jsonb
+         WHERE id=$26 AND item_id=$1
+         RETURNING id`,
+        insParams.concat([reutilizarId])
+      );
+      if (!upd.rows.length) return res.json({ ok: false, error: 'No se pudo actualizar la inscripción para repechaje.' });
+      newId = upd.rows[0].id;
+    } else {
+      const ins = await pool.query(
+        `INSERT INTO inscripciones
+           (item_id,cip,nombres,unidad,cargo,telefono,email,pdf_requisitos,pdf_nombre,
+            dni,grado,area,arma,disponibilidad,dia_franco,fecha_egreso,tiempo_servicio,
+            estado,modo_ingreso,modalidad,modalidad_otro,codifin,region_policial,comisaria_postula,postula_slots)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25::jsonb)
+         RETURNING id`,
+        insParams);
+      newId = ins.rows[0].id;
+    }
     await conveniosFlujo.asegurarNroRegistro(pool, newId);
     let avisoFb = '';
     if (esConvenio) {
@@ -8103,8 +8373,17 @@ app.get('/portal/convenios/vacantes/:itemId', async (req, res) => {
 /** Lista pública de convenios con vacantes liberadas para repechaje */
 app.get('/portal/convenios/repechaje', async (req, res) => {
   try {
-    if (!(await repechajeEstaActivo())) {
-      return res.json({ ok: true, activo: false, total: 0, convenios: [] });
+    const ventana = await repechajeVentana();
+    if (!ventana.vigente) {
+      return res.json({
+        ok: true,
+        activo: false,
+        habilitado: ventana.habilitado,
+        inicio: ventana.inicio,
+        cierre: ventana.cierre,
+        total: 0,
+        convenios: []
+      });
     }
     const r = await pool.query(
       `SELECT id, titulo, descripcion, horario, vacantes, fecha_inicio, duracion, lugar,
@@ -8152,7 +8431,15 @@ app.get('/portal/convenios/repechaje', async (req, res) => {
         aviso_sorteo_fb: it.aviso_sorteo_fb || ''
       });
     }
-    res.json({ ok: true, activo: true, total: convenios.length, convenios: convenios });
+    res.json({
+      ok: true,
+      activo: true,
+      habilitado: ventana.habilitado,
+      inicio: ventana.inicio,
+      cierre: ventana.cierre,
+      total: convenios.length,
+      convenios: convenios
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -8162,7 +8449,15 @@ app.get('/admin/repechaje/estado', requireAuth, async (req, res) => {
     if (!puedeGestionarRepechaje(req.admin)) {
       return res.status(403).json({ ok: false, error: 'No tiene permiso para gestionar el repechaje.' });
     }
-    res.json({ ok: true, activo: await repechajeEstaActivo() });
+    const v = await repechajeVentana();
+    res.json({
+      ok: true,
+      activo: v.vigente,
+      habilitado: v.habilitado,
+      vigente: v.vigente,
+      inicio: v.inicio,
+      cierre: v.cierre
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -8171,19 +8466,43 @@ app.post('/admin/repechaje/estado', requireAuth, async (req, res) => {
     if (!puedeGestionarRepechaje(req.admin)) {
       return res.status(403).json({ ok: false, error: 'No tiene permiso para gestionar el repechaje.' });
     }
-    const activo = !!(req.body && req.body.activo);
-    await setConfig(CFG_REPECHAJE_ACTIVO, activo ? '1' : '0');
+    const body = req.body || {};
+    const inicio = normalizarFechaHoraLima(body.inicio);
+    const cierre = normalizarFechaHoraLima(body.cierre);
+    if (inicio && cierre) {
+      const t0 = fechaHoraLimaAMs(inicio);
+      const t1 = fechaHoraLimaAMs(cierre);
+      if (t0 != null && t1 != null && t1 <= t0) {
+        return res.json({ ok: false, error: 'La hora de cierre debe ser posterior al inicio.' });
+      }
+    }
+    if (inicio) await setConfig(CFG_REPECHAJE_INICIO, inicio);
+    if (cierre) await setConfig(CFG_REPECHAJE_CIERRE, cierre);
+    if (body.activo != null) {
+      await setConfig(CFG_REPECHAJE_ACTIVO, body.activo ? '1' : '0');
+    }
+    const v = await repechajeVentana();
     await adminAuth.registrarAuditoria(pool, {
       adminId: req.admin.id,
       cip: adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario),
       usuario: req.admin.usuario,
-      accion: activo ? 'activar_repechaje' : 'desactivar_repechaje',
+      accion: v.habilitado ? 'activar_repechaje' : 'desactivar_repechaje',
       modulo: 'convenios',
-      detalle: activo ? 'Repechaje activado' : 'Repechaje desactivado',
+      detalle: (v.habilitado ? 'Repechaje habilitado' : 'Repechaje deshabilitado')
+        + (v.inicio ? (' · inicio ' + v.inicio) : '')
+        + (v.cierre ? (' · cierre ' + v.cierre) : '')
+        + (v.vigente ? ' · vigente ahora' : ' · fuera de ventana'),
       ip: req.ip || '',
       ok: true
     });
-    res.json({ ok: true, activo: activo });
+    res.json({
+      ok: true,
+      activo: v.vigente,
+      habilitado: v.habilitado,
+      vigente: v.vigente,
+      inicio: v.inicio,
+      cierre: v.cierre
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -9001,7 +9320,7 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
       : ['verificado', 'aprobado', 'ganador', 'reserva'];
     const r = await pool.query(
       `SELECT id,cip,dni,grado,nombres,unidad,area,cargo,disponibilidad,dia_franco,tiempo_servicio,estado,
-              telefono,email,modo_ingreso,comisaria_postula,bloque_vacaciones
+              telefono,email,modo_ingreso,comisaria_postula,postula_slots,bloque_vacaciones
        FROM inscripciones WHERE item_id=$1 AND estado = ANY($2::varchar[])
        ORDER BY fecha ASC`, [req.params.id, estados]);
     const vac = esConvenio ? await conveniosFlujo.vacantesDisponibles(pool, req.params.id) : null;
@@ -9020,8 +9339,10 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
       return Object.assign({}, s, { ocupadas: ocupadas, disponibles: disponibles });
     });
     const candidatos = r.rows.map(function(c) {
-      var p = conveniosFlujo.parsePostulacionSlot(c.comisaria_postula);
+      var slotsP = conveniosFlujo.parsePostulacionSlots(c.comisaria_postula, c.postula_slots);
+      var p = slotsP[0] || conveniosFlujo.parsePostulacionSlot(c.comisaria_postula);
       return Object.assign({}, c, {
+        postula_slots: slotsP,
         slot_lugar: p.lugar || '',
         slot_turno: p.turno || '',
         slot_dia: p.dia || (c.dia_franco || ''),
@@ -9244,7 +9565,7 @@ app.post('/portal/inscripciones/:id/corregir-turno', async (req, res) => {
       return res.json({ ok: false, error: 'CIP obligatorio.' });
     }
     const turnoRaw = conveniosFlujo.limpio((req.body && req.body.turno_postula) || '', 40);
-    const comisariaRaw = conveniosFlujo.limpio((req.body && req.body.comisaria_postula) || '', 150);
+    const comisariaRaw = conveniosFlujo.limpio((req.body && req.body.comisaria_postula) || '', 500);
     const diaFrancoBody = String((req.body && req.body.dia_franco) || '').trim().toUpperCase();
 
     const cur = await pool.query(

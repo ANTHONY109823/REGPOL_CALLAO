@@ -217,6 +217,9 @@
     .modal.open{display:flex;}
     .modal-box{background:#fff;border-radius:12px;padding:28px;width:520px;
       max-width:96vw;max-height:90vh;overflow-y:auto;overflow-x:hidden;box-sizing:border-box;}
+    #modal-usuario .modal-box{width:min(680px,96vw);}
+    .perm-box-imagen{grid-column:1/-1;background:#fff8e6;border-color:#c8a94a;}
+    .perm-box-imagen .pb-title{color:#6b5420;}
     #modal-pdf-preinscritos{padding:12px;z-index:1200;}
     #modal-pdf-preinscritos .modal-box{
       width:min(1180px,96vw);max-width:96vw;max-height:94vh;padding:0;
@@ -603,7 +606,9 @@
     var tienePsico = esU || rol === 'bienestar' || tieneEval || tieneDesc;
     var tieneGestion = esU || tienePsico || tieneCursos || tieneConvenios || tieneDescansos || tieneFaltos || tieneRRHH;
 
-    var tienePortalCms = esU || tieneCursos || tieneConvenios || tieneDescansos;
+    var tieneImagen = esU || perms.indexOf('cms_inicio') !== -1 || perms.indexOf('cms_novedades') !== -1
+      || perms.indexOf('cms_resena') !== -1 || perms.indexOf('cms_labor') !== -1;
+    var tienePortalCms = esU || tieneCursos || tieneConvenios || tieneDescansos || tieneImagen;
     var st = document.getElementById('panel-perm-style');
     if (!st) {
       st = document.createElement('style');
@@ -614,6 +619,7 @@
       '[data-rol-unitic]{display:none!important}',
       '[data-perm-evaluaciones],[data-perm-descargas],[data-perm-preguntas]{display:none!important}',
       '[data-perm-cms-convenios],[data-perm-cms-cursos]{display:none!important}',
+      '[data-perm-cms-inicio],[data-perm-cms-novedades],[data-perm-cms-resena],[data-perm-cms-labor]{display:none!important}',
       '#sb-grp-psico,#sb-grp-convenios,#sb-grp-cursos,#sb-grp-descansos,#sb-grp-faltos,#sb-sec-gestion,#sb-sec-rrhh,#sb-sec-portal{display:none!important}',
       esU ? '[data-rol-unitic]{display:block!important}' : '',
       tienePortalCms ? '#sb-sec-portal{display:block!important}' : '',
@@ -621,6 +627,10 @@
       !esU && !tieneConvenios ? '[data-cms-tab="convenios"]{display:none!important}' : '',
       !esU && !tieneCursos ? '[data-cms-tab="cursos"]{display:none!important}' : '',
       !esU && !tieneDescansos ? '[data-cms-tab="descansos"]{display:none!important}' : '',
+      (esU || perms.indexOf('cms_inicio') !== -1) ? '[data-perm-cms-inicio]{display:flex!important}' : '',
+      (esU || perms.indexOf('cms_novedades') !== -1) ? '[data-perm-cms-novedades]{display:flex!important}' : '',
+      (esU || perms.indexOf('cms_resena') !== -1) ? '[data-perm-cms-resena]{display:flex!important}' : '',
+      (esU || perms.indexOf('cms_labor') !== -1) ? '[data-perm-cms-labor]{display:flex!important}' : '',
       tieneEval ? '[data-perm-evaluaciones],[data-perm-preguntas]{display:flex!important}' : '',
       tieneDesc ? '[data-perm-descargas]{display:flex!important}' : '',
       tienePsico ? '#sb-grp-psico{display:block!important}' : '',
@@ -638,7 +648,8 @@
     var badge = document.querySelector('.super-badge');
     if (badge) {
       if (esU) badge.textContent = 'SUPER ADMIN';
-      else if (tieneRRHH && !tieneCursos && !tieneConvenios && !tienePsico && !tieneDescansos && !tieneFaltos) badge.textContent = 'RECURSOS HUMANOS';
+      else if (tieneRRHH && !tieneCursos && !tieneConvenios && !tienePsico && !tieneDescansos && !tieneFaltos && !tieneImagen) badge.textContent = 'RECURSOS HUMANOS';
+      else if (tieneImagen && !tieneCursos && !tieneConvenios && !tienePsico && !tieneDescansos && !tieneFaltos && !tieneRRHH) badge.textContent = 'IMAGEN';
       else if (tieneFaltos && !tieneCursos && !tieneConvenios && !tienePsico && !tieneDescansos) badge.textContent = 'FALTOS';
       else if (tieneDescansos && !tieneCursos && !tieneConvenios && !tienePsico) badge.textContent = 'DESCANSOS MÉDICOS';
       else if (tieneCursos && tieneConvenios) badge.textContent = 'CONVENIOS + EDUCACIÓN';
@@ -816,17 +827,18 @@
     
     <div class="sb-section" id="sb-sec-portal">
       <div class="sb-section-label">Portal Web</div>
-      <div class="sb-item" data-page="menu-publicacion" data-cms-only-unitic onclick="ir('menu-publicacion',this)" style="background:rgba(200,169,74,.12);border-left:3px solid #c8a94a;">
+      <div class="sb-item" data-cms-only-unitic data-page="menu-publicacion" onclick="ir('menu-publicacion',this)" style="background:rgba(200,169,74,.12);border-left:3px solid #c8a94a;">
         <i class="fas fa-toggle-on" style="color:#c8a94a;"></i> MENÚ PUBLICADO EN WEB
       </div>
-      <div class="sb-item" data-cms-only-unitic data-cms-tab="carrusel" onclick="irCMS('carrusel',this)"><i class="fas fa-home"></i> INICIO / CARRUSEL</div>
-      <div class="sb-item" data-cms-only-unitic data-cms-tab="novedades" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> NOVEDADES</div>
+      <div class="sb-item" data-perm-cms-inicio data-cms-tab="encabezado" onclick="irCMS('encabezado',this)"><i class="fas fa-images"></i> PANEL SUPERIOR</div>
+      <div class="sb-item" data-perm-cms-inicio data-cms-tab="carrusel" onclick="irCMS('carrusel',this)"><i class="fas fa-home"></i> CARRUSEL CENTRAL</div>
+      <div class="sb-item" data-perm-cms-novedades data-cms-tab="novedades" onclick="irCMS('novedades',this)"><i class="fas fa-newspaper"></i> NOVEDADES</div>
       <div class="sb-item" data-cms-tab="convenios" data-perm-cms-convenios onclick="irCMS('convenios',this)"><i class="fas fa-handshake"></i> CONVENIOS (WEB)</div>
       <div class="sb-item" data-cms-tab="cursos" onclick="irCMS('cursos',this)"><i class="fas fa-graduation-cap"></i> CURSOS (WEB)</div>
       <div class="sb-item" data-cms-tab="descansos" onclick="irCMS('descansos',this)"><i class="fas fa-notes-medical"></i> DESCANSOS (WEB)</div>
       <div class="sb-item" data-cms-only-unitic data-cms-tab="bienestar" onclick="irCMS('bienestar',this)"><i class="fas fa-heart"></i> BIENESTAR (WEB)</div>
-      <div class="sb-item" data-cms-only-unitic data-cms-tab="resena" onclick="irCMS('resena',this)"><i class="fas fa-landmark"></i> RESEÑA HISTÓRICA</div>
-      <div class="sb-item" data-cms-only-unitic data-cms-tab="labor" onclick="irCMS('labor',this)"><i class="fas fa-tasks"></i> NUESTRA LABOR</div>
+      <div class="sb-item" data-perm-cms-resena data-cms-tab="resena" onclick="irCMS('resena',this)"><i class="fas fa-landmark"></i> RESEÑA HISTÓRICA</div>
+      <div class="sb-item" data-perm-cms-labor data-cms-tab="labor" onclick="irCMS('labor',this)"><i class="fas fa-tasks"></i> NUESTRA LABOR</div>
       <div class="sb-item" data-cms-only-unitic data-cms-tab="menu" onclick="irCMS('menu',this)"><i class="fas fa-bars"></i> MENÚ DEL SITIO</div>
     </div>
 
@@ -1104,7 +1116,7 @@
     <div id="page-cms" class="page">
       <div class="card">
         <h3><i class="fas fa-globe"></i> Portal Web — contenido público</h3>
-        <p style="font-size:12px;color:#666;margin:-8px 0 14px;">Edite y publique lo que se ve en la web. Super Admin: todo el portal. Admins: su módulo (Convenios / Cursos / Descansos). Pulse <strong>Publicar cambios</strong> para sincronizar con el sitio.</p>
+          <p style="font-size:12px;color:#666;margin:-8px 0 14px;">Edite y publique lo que se ve en la web. Super Admin: todo el portal. Oficina de Imagen: novedades, panel superior, carrusel, reseña y nuestra labor. Convenios / Cursos / Descansos: su módulo. Pulse <strong>Publicar cambios</strong> para sincronizar con el sitio.</p>
 
         
         <div id="alerta-cms" class="alerta" style="display:none;"></div>
@@ -1132,6 +1144,7 @@
             <div style="min-width:0;">
               <strong style="display:block;color:#6b5420;font-size:13.5px;"><i class="fas fa-redo-alt"></i> Repechaje de convenios</strong>
               <span id="repechaje-toggle-estado" style="font-size:12px;color:#8a6d1f;">Comprobando estado...</span>
+              <span style="display:block;font-size:11.5px;color:#8a6d1f;margin-top:4px;">La fecha y hora se configuran en <strong>3. Repechaje</strong>.</span>
             </div>
             <button type="button" id="repechaje-toggle-btn" class="btn-mini" style="padding:8px 14px;width:auto;min-width:150px;font-weight:800;" onclick="toggleRepechaje()" disabled>—</button>
           </div>
@@ -1291,8 +1304,13 @@
         </div>
 
         
-        <div id="cms-panel-carrusel" class="cms-panel">
+        <div id="cms-panel-encabezado" class="cms-panel">
+          <p style="font-size:12px;color:#666;margin:0 0 12px;line-height:1.45;">Fotos del <strong>panel superior</strong> de la web (encabezado institucional).</p>
           <div id="editor-fotos-encabezado"><p style="color:#bbb;font-size:12px;">Cargando fotos del encabezado...</p></div>
+        </div>
+
+        <div id="cms-panel-carrusel" class="cms-panel">
+          <p style="font-size:12px;color:#666;margin:0 0 12px;line-height:1.45;">Diapositivas del <strong>carrusel central</strong> de la página de inicio.</p>
           <div id="editor-carrusel"><p style="color:#bbb;font-size:12px;">Cargando editor de carrusel...</p></div>
         </div>
 
@@ -1450,8 +1468,25 @@
         <h3><i class="fas fa-redo" style="color:#8e44ad;"></i> Repechaje</h3>
         <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
           <strong>Libres para repechaje</strong> = N° vacantes − cubiertas. Baja cuando se cubre un cupo o alguien se inscribe por repechaje.
-          Los caducados (expediente no presentado) se ven en <strong>2. Ganadores y expedientes</strong>.
+          Pueden inscribirse caducados, reservas, preinscritos y personal nuevo, <strong>en cualquier convocatoria</strong>. <strong>No</strong> quien ya ocupa vacante (ganador, en revisión, observado o expediente aprobado), <strong>salvo vacaciones</strong>: ellos sí pueden reinscribirse (trabajan todos los días; eligen PAR o IMPAR).
         </p>
+        <div id="repechaje-config-box" style="display:none;background:#fff8e1;border:1.5px solid #c8a94a;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+          <strong style="display:block;color:#6b5420;font-size:13.5px;margin-bottom:8px;"><i class="fas fa-redo-alt"></i> Ventana de repechaje (hora de Lima)</strong>
+          <p id="rep-cfg-estado" style="font-size:12.5px;color:#8a6d1f;margin:0 0 12px;">Comprobando estado...</p>
+          <p id="rep-cfg-alerta" style="display:none;margin:0 0 10px;padding:8px 10px;border-radius:7px;font-size:12.5px;"></p>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+            <div>
+              <label for="rep-inicio" style="display:block;font-size:11.5px;font-weight:700;color:#6b5420;margin-bottom:4px;">Inicio</label>
+              <input type="datetime-local" id="rep-inicio" step="60" style="padding:8px 10px;border:1.5px solid #c8a94a;border-radius:6px;font-size:13px;">
+            </div>
+            <div>
+              <label for="rep-cierre" style="display:block;font-size:11.5px;font-weight:700;color:#6b5420;margin-bottom:4px;">Cierre</label>
+              <input type="datetime-local" id="rep-cierre" step="60" style="padding:8px 10px;border:1.5px solid #c8a94a;border-radius:6px;font-size:13px;">
+            </div>
+            <button type="button" class="btn btn-v" onclick="guardarVentanaRepechaje(true)"><i class="fas fa-save"></i> Guardar y activar</button>
+            <button type="button" id="rep-cfg-btn" class="btn" style="background:#e8eee9;color:#333;" onclick="toggleRepechaje()">Desactivar</button>
+          </div>
+        </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
           <button class="btn btn-v" type="button" onclick="cargarConvFlujoResumen('repechaje')"><i class="fas fa-sync"></i> Actualizar contadores</button>
         </div>
@@ -2410,6 +2445,15 @@
     <input type="text" id="mu-unidad" placeholder="Dejar vacío para acceso global"/>
     <label style="margin-bottom:8px;">Área de gestión asignada</label>
     <div class="perm-grid">
+      <div class="perm-box perm-box-imagen">
+        <div class="pb-title">Oficina de Imagen — portal web</div>
+        <p style="font-size:12px;color:#6b5420;margin:0 0 8px;line-height:1.4;">Marque qué va a gestionar en la web. Este es el perfil de Imagen.</p>
+        <label><input type="checkbox" value="cms_novedades" class="perm-chk perm-imagen"> Novedades (actualizar noticias)</label>
+        <label><input type="checkbox" value="cms_inicio" class="perm-chk perm-imagen"> Panel superior y carrusel central</label>
+        <label><input type="checkbox" value="cms_resena" class="perm-chk perm-imagen"> Reseña histórica</label>
+        <label><input type="checkbox" value="cms_labor" class="perm-chk perm-imagen"> Nuestra labor</label>
+        <button type="button" class="btn-mini btn-mini-ok" style="margin-top:8px;" onclick="marcarPerfilImagen()">Marcar las 4 de Imagen</button>
+      </div>
       <div class="perm-box">
         <div class="pb-title">Psicología / Bienestar</div>
         <label><input type="checkbox" value="evaluaciones" class="perm-chk"> Evaluaciones MMPI-2</label>
@@ -2436,10 +2480,6 @@
         <div class="pb-title">Recursos Humanos</div>
         <label><input type="checkbox" value="recursos_humanos" class="perm-chk"> Nómina, altas/bajas y cuadros de personal</label>
         <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Acceso solo al módulo RRHH (no visible en la web pública).</p>
-      </div>
-      <div class="perm-box" style="background:#fff8e6;border-color:#f0d78c;">
-        <div class="pb-title">Portal Web</div>
-        <p style="font-size:11px;color:#666;margin:0;line-height:1.45;">El contenido público del sitio (novedades, carrusel, tarjetas, menú) lo gestiona únicamente el <strong>Super Admin</strong>.</p>
       </div>
     </div>
     <div class="modal-footer">
@@ -2682,6 +2722,10 @@ var ETIQUETAS_PERM={
   cms_convenios:'Gestión Convenios',
   cms_cursos:'Gestión Cursos',
   cms_descansos:'Descansos médicos',
+  cms_inicio:'Panel / Carrusel',
+  cms_novedades:'Novedades',
+  cms_resena:'Reseña histórica',
+  cms_labor:'Nuestra labor',
   faltos_admin:'Faltos (admin área)',
   faltos_registrar:'Faltos (unidad)',
   recursos_humanos:'Recursos Humanos'
@@ -4079,6 +4123,12 @@ function iniciarPanel(s){
     ir('rrhh-nomina', rrhhEl);
     return;
   }
+  if (puedeGestionImagen() && !esUnitic() && !puedeGestionPsicologia() && !puedeGestionConvenios() && !puedeGestionCursos() && !puedeGestionDescansos() && !puedeGestionFaltos() && !puedeGestionRRHH()) {
+    var tabIni = primerTabCmsPermitido();
+    var cmsEl = document.querySelector('.sb-item[data-cms-tab="'+tabIni+'"]');
+    irCMS(tabIni, cmsEl);
+    return;
+  }
   var dashEl = document.querySelector('[data-page="dashboard"]');
   ir('dashboard', dashEl);
 }
@@ -4195,7 +4245,7 @@ function ir(page, el){
   if(page==='sorteos')             { aplicarModoSorteosUI(); cargarItemsSorteo(SORTEOS_TIPO_FILTRO||'convenio'); cargarSorteos(); }
   if(page==='conv-preinscritos')   { cargarConvFlujoResumen('preinscritos'); }
   if(page==='conv-ganadores')      { cargarConvFlujoResumen('ganadores'); }
-  if(page==='conv-repechaje')      { cargarConvFlujoResumen('repechaje'); }
+  if(page==='conv-repechaje')      { cargarConvFlujoResumen('repechaje'); if(typeof cargarEstadoRepechaje==='function') cargarEstadoRepechaje(); }
   if(page==='conv-plantillas')     { if(typeof cargarExpModelosGlobales==='function') cargarExpModelosGlobales(); }
   if(page==='conv-constancia')     { if(typeof cargarEditorConstancia==='function') cargarEditorConstancia(); }
   if(page==='descansos' || page==='descansos-dash' || page==='descansos-import'){
@@ -4216,22 +4266,34 @@ function ir(page, el){
   panelNavPush();
 }
 
+function puedeGestionImagen(){
+  return esUnitic() || tienePermiso('cms_inicio') || tienePermiso('cms_novedades')
+    || tienePermiso('cms_resena') || tienePermiso('cms_labor');
+}
 function puedeEditarPortalCMS(){
-  return esUnitic() || tienePermiso('cms_cursos') || tienePermiso('cms_descansos') || tienePermiso('cms_convenios');
+  return esUnitic() || tienePermiso('cms_cursos') || tienePermiso('cms_descansos') || tienePermiso('cms_convenios') || puedeGestionImagen();
 }
 function puedeEditarCmsTab(tab){
   if (esUnitic()) return true;
   if (tab === 'convenios') return tienePermiso('cms_convenios');
   if (tab === 'cursos') return tienePermiso('cms_cursos');
   if (tab === 'descansos') return tienePermiso('cms_descansos');
+  if (tab === 'carrusel' || tab === 'encabezado') return tienePermiso('cms_inicio');
+  if (tab === 'novedades') return tienePermiso('cms_novedades');
+  if (tab === 'resena') return tienePermiso('cms_resena');
+  if (tab === 'labor') return tienePermiso('cms_labor');
   return false;
 }
 function primerTabCmsPermitido(){
   if (esUnitic()) return 'carrusel';
+  if (tienePermiso('cms_novedades')) return 'novedades';
+  if (tienePermiso('cms_inicio')) return 'encabezado';
+  if (tienePermiso('cms_resena')) return 'resena';
+  if (tienePermiso('cms_labor')) return 'labor';
   if (tienePermiso('cms_convenios')) return 'convenios';
   if (tienePermiso('cms_cursos')) return 'cursos';
   if (tienePermiso('cms_descansos')) return 'descansos';
-  return 'carrusel';
+  return 'novedades';
 }
 function irCMS(tab, el){
   if(!puedeEditarPortalCMS()){alert('Sin permiso para editar el portal web.');return;}
@@ -4824,6 +4886,9 @@ function cargarUsuarios(){
     }).join('');
   });
   if(typeof cargarAuditoria==='function') cargarAuditoria();
+}
+function marcarPerfilImagen(){
+  document.querySelectorAll('.perm-chk.perm-imagen').forEach(function(c){ c.checked = true; });
 }
 function abrirModalUsuario(){
   document.getElementById('mu-id').value='';
@@ -5906,82 +5971,207 @@ function syncConveniosOficiales(){
 }
 
 var REPECHAJE_ACTIVO_CACHE = null;
+var REPECHAJE_HAB_CACHE = false;
 
 function puedeGestionarRepechajeUI(){ return esUnitic() || tienePermiso('cms_convenios'); }
 function esVistaLocalRepechaje(){
   return location.hostname==='localhost' || location.hostname==='127.0.0.1';
 }
-function estadoLocalRepechaje(){
+function limaAInputDatetime(s){
+  var t=String(s||'').trim().replace(' ','T');
+  if(t.length>=16) return t.slice(0,16);
+  return '';
+}
+function inputDatetimeALima(s){
+  var t=String(s||'').trim();
+  if(!t) return '';
+  return t.replace('T',' ') + (t.length===16 ? ':00' : '');
+}
+function leerLocalRepechaje(){
   try {
-    var v=localStorage.getItem('regpol_repechaje_preview');
-    return v===null ? true : v==='1';
-  } catch(e){ return true; }
+    var raw=localStorage.getItem('regpol_repechaje_preview');
+    if(raw==='0') return {habilitado:false,inicio:'',cierre:''};
+    if(raw==='1' || raw===null) return {habilitado:true,inicio:'',cierre:''};
+    var o=JSON.parse(raw);
+    return {
+      habilitado: !!o.habilitado || o.activo===true,
+      inicio: o.inicio||'',
+      cierre: o.cierre||''
+    };
+  } catch(e){ return {habilitado:true,inicio:'',cierre:''}; }
 }
-function guardarEstadoLocalRepechaje(activo, conAviso){
-  try { localStorage.setItem('regpol_repechaje_preview',activo?'1':'0'); } catch(e){}
-  pintarEstadoRepechaje(activo);
-  var estado=document.getElementById('repechaje-toggle-estado');
-  if(estado){
-    estado.textContent=activo
-      ? 'Activado en vista local: visible en la web local.'
-      : 'Desactivado en vista local: oculto en la web local.';
+function vigenteLocalRepechaje(cfg){
+  if(!cfg || !cfg.habilitado) return false;
+  var now=Date.now();
+  function ms(s){
+    var t=limaAInputDatetime(s);
+    if(!t) return null;
+    var d=new Date(t);
+    return isNaN(d.getTime()) ? null : d.getTime();
   }
-  if(conAviso) mostrarAlertaItems(activo?'Repechaje activado (vista local).':'Repechaje desactivado (vista local).','ok');
+  var t0=ms(cfg.inicio), t1=ms(cfg.cierre);
+  if(t0!=null && now<t0) return false;
+  if(t1!=null && now>t1) return false;
+  return true;
 }
-
-function pintarEstadoRepechaje(activo){
-  REPECHAJE_ACTIVO_CACHE = !!activo;
-  var box=document.getElementById('repechaje-toggle-box');
-  var estado=document.getElementById('repechaje-toggle-estado');
-  var btn=document.getElementById('repechaje-toggle-btn');
-  if(!box||!estado||!btn) return;
-  box.style.display = puedeGestionarRepechajeUI() ? 'flex' : 'none';
-  if(activo){
-    estado.textContent='Activado: visible para el personal en la web.';
-    btn.textContent='Desactivar repechaje';
-    btn.className='btn-mini btn-mini-danger';
-  } else {
-    estado.textContent='Desactivado: no se muestra en la web.';
-    btn.textContent='Activar repechaje';
-    btn.className='btn-mini btn-mini-ok';
-  }
-  btn.disabled=false;
+function textoEstadoRepechaje(d){
+  var hab=!!(d && (d.habilitado || d.activo));
+  var vig=!!(d && (d.vigente || d.activo));
+  var ini=d && d.inicio ? limaAInputDatetime(d.inicio).replace('T',' ') : '';
+  var cie=d && d.cierre ? limaAInputDatetime(d.cierre).replace('T',' ') : '';
+  if(!hab) return 'Desactivado: no se muestra en la web.' + (ini||cie ? (' Ventana: '+(ini||'—')+' → '+(cie||'—')+'.') : '');
+  if(vig) return 'Abierto ahora para el personal.' + (cie ? (' Cierra '+cie+' (Lima).') : '');
+  if(ini) return 'Habilitado, pero fuera de horario. Inicio '+ini+(cie?(' · cierre '+cie):'')+' (Lima).';
+  return 'Habilitado. Defina inicio y cierre para programar la ventana.';
+}
+function aplicarInputsRepechaje(d){
+  var ini=document.getElementById('rep-inicio');
+  var cie=document.getElementById('rep-cierre');
+  if(ini) ini.value = limaAInputDatetime((d && d.inicio) || '') || ini.value || '2026-08-27T09:00';
+  if(cie) cie.value = limaAInputDatetime((d && d.cierre) || '') || cie.value || '2026-08-27T17:00';
+}
+function pintarEstadoRepechaje(d){
+  if(typeof d==='boolean') d={ habilitado:d, vigente:d, activo:d };
+  d = d || {};
+  var hab = d.habilitado != null ? !!d.habilitado : !!d.activo;
+  var vig = d.vigente != null ? !!d.vigente : !!d.activo;
+  REPECHAJE_HAB_CACHE = hab;
+  REPECHAJE_ACTIVO_CACHE = vig;
+  var boxCms=document.getElementById('repechaje-toggle-box');
+  var boxCfg=document.getElementById('repechaje-config-box');
+  var puede=puedeGestionarRepechajeUI();
+  if(boxCms) boxCms.style.display = puede ? 'flex' : 'none';
+  if(boxCfg) boxCfg.style.display = puede ? 'block' : 'none';
+  var txt=textoEstadoRepechaje({habilitado:hab, vigente:vig, inicio:d.inicio, cierre:d.cierre, activo:vig});
+  var e1=document.getElementById('repechaje-toggle-estado');
+  var e2=document.getElementById('rep-cfg-estado');
+  if(e1) e1.textContent=txt;
+  if(e2) e2.textContent=txt;
+  aplicarInputsRepechaje(d);
+  var btnCms=document.getElementById('repechaje-toggle-btn');
+  var btnCfg=document.getElementById('rep-cfg-btn');
+  [btnCms, btnCfg].forEach(function(btn){
+    if(!btn) return;
+    if(hab){
+      btn.textContent='Desactivar repechaje';
+      if(btn.id==='rep-cfg-btn'){
+        btn.className='btn';
+        btn.style.background='#c0392b';
+        btn.style.color='#fff';
+      } else {
+        btn.className='btn-mini btn-mini-danger';
+      }
+    } else {
+      btn.textContent='Activar repechaje';
+      if(btn.id==='rep-cfg-btn'){
+        btn.className='btn btn-v';
+        btn.style.background='';
+        btn.style.color='';
+      } else {
+        btn.className='btn-mini btn-mini-ok';
+      }
+    }
+    btn.disabled=false;
+  });
 }
 
 function cargarEstadoRepechaje(){
   if(!puedeGestionarRepechajeUI()) return;
   var box=document.getElementById('repechaje-toggle-box');
   if(box) box.style.display='flex';
+  var boxCfg=document.getElementById('repechaje-config-box');
+  if(boxCfg) boxCfg.style.display='block';
   if(esVistaLocalRepechaje()){
-    guardarEstadoLocalRepechaje(estadoLocalRepechaje(), false);
+    var loc=leerLocalRepechaje();
+    pintarEstadoRepechaje({
+      habilitado: loc.habilitado,
+      vigente: vigenteLocalRepechaje(loc),
+      inicio: loc.inicio,
+      cierre: loc.cierre
+    });
     return;
   }
   fetch(API+'/admin/repechaje/estado',{headers:hdr()})
     .then(function(r){if(!r.ok) throw new Error('HTTP '+r.status); return r.json();})
     .then(function(d){
       if(!d.ok){ var e=document.getElementById('repechaje-toggle-estado'); if(e) e.textContent=d.error||'No se pudo leer el estado.'; return; }
-      pintarEstadoRepechaje(d.activo);
+      pintarEstadoRepechaje(d);
     })
     .catch(function(){ var e=document.getElementById('repechaje-toggle-estado'); if(e) e.textContent='Error de conexión.'; });
 }
 
+function mostrarAlertaRepechaje(texto,tipo){
+  var el=document.getElementById('rep-cfg-alerta');
+  if(el){
+    el.style.display='block';
+    el.textContent=texto;
+    el.style.background=tipo==='ok'?'#d4edda':'#f8d7da';
+    el.style.color=tipo==='ok'?'#1a7a3a':'#842029';
+    el.style.border='1px solid '+(tipo==='ok'?'#a5d6a7':'#f5c2c7');
+    setTimeout(function(){ el.style.display='none'; }, 5000);
+  }
+  if(typeof mostrarAlertaItems==='function') mostrarAlertaItems(texto,tipo);
+}
+
+function payloadVentanaRepechaje(activo){
+  var ini=document.getElementById('rep-inicio');
+  var cie=document.getElementById('rep-cierre');
+  return {
+    activo: activo,
+    inicio: inputDatetimeALima(ini && ini.value),
+    cierre: inputDatetimeALima(cie && cie.value)
+  };
+}
+
+function guardarVentanaRepechaje(activar){
+  if(!puedeGestionarRepechajeUI()){ alert('Sin permiso.'); return; }
+  var body=payloadVentanaRepechaje(activar !== false);
+  if(esVistaLocalRepechaje()){
+    try {
+      localStorage.setItem('regpol_repechaje_preview', JSON.stringify({
+        habilitado: !!body.activo,
+        inicio: body.inicio,
+        cierre: body.cierre
+      }));
+    } catch(e){}
+    pintarEstadoRepechaje({
+      habilitado: !!body.activo,
+      vigente: vigenteLocalRepechaje({habilitado:!!body.activo, inicio:body.inicio, cierre:body.cierre}),
+      inicio: body.inicio,
+      cierre: body.cierre
+    });
+    mostrarAlertaRepechaje(body.activo?'Repechaje guardado (vista local).':'Repechaje desactivado (vista local).','ok');
+    return;
+  }
+  fetch(API+'/admin/repechaje/estado',{method:'POST',headers:hdr(),body:JSON.stringify(body)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok){ mostrarAlertaRepechaje(d.error||'No se pudo guardar.','error'); return; }
+      pintarEstadoRepechaje(d);
+      mostrarAlertaRepechaje(d.vigente?'Repechaje abierto ahora.':(d.habilitado?'Ventana guardada. Se abrirá en el horario indicado.':'Repechaje desactivado.'),'ok');
+    })
+    .catch(function(){ mostrarAlertaRepechaje('Error de conexión','error'); });
+}
+
 function toggleRepechaje(){
   if(!puedeGestionarRepechajeUI()){ alert('Sin permiso.'); return; }
-  var nuevo = !REPECHAJE_ACTIVO_CACHE;
+  var nuevo = !REPECHAJE_HAB_CACHE;
   if(esVistaLocalRepechaje()){
-    guardarEstadoLocalRepechaje(nuevo, true);
+    guardarVentanaRepechaje(nuevo);
     return;
   }
   var btn=document.getElementById('repechaje-toggle-btn');
+  var btn2=document.getElementById('rep-cfg-btn');
   if(btn) btn.disabled=true;
-  fetch(API+'/admin/repechaje/estado',{method:'POST',headers:hdr(),body:JSON.stringify({activo:nuevo})})
+  if(btn2) btn2.disabled=true;
+  fetch(API+'/admin/repechaje/estado',{method:'POST',headers:hdr(),body:JSON.stringify(payloadVentanaRepechaje(nuevo))})
     .then(function(r){return r.json();})
     .then(function(d){
-      if(!d.ok){ if(btn) btn.disabled=false; mostrarAlertaItems(d.error||'No se pudo cambiar el estado.','error'); return; }
-      pintarEstadoRepechaje(d.activo);
-      mostrarAlertaItems(d.activo?'Repechaje activado.':'Repechaje desactivado.','ok');
+      if(!d.ok){ if(btn) btn.disabled=false; if(btn2) btn2.disabled=false; mostrarAlertaRepechaje(d.error||'No se pudo cambiar el estado.','error'); return; }
+      pintarEstadoRepechaje(d);
+      mostrarAlertaRepechaje(d.habilitado?(d.vigente?'Repechaje activado.':'Repechaje habilitado (fuera de horario).'):'Repechaje desactivado.','ok');
     })
-    .catch(function(){ if(btn) btn.disabled=false; mostrarAlertaItems('Error de conexión','error'); });
+    .catch(function(){ if(btn) btn.disabled=false; if(btn2) btn2.disabled=false; mostrarAlertaRepechaje('Error de conexión','error'); });
 }
 
 function mostrarAlertaItems(texto,tipo){

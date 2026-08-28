@@ -375,7 +375,8 @@ async function initColumnasFlujoConvenios(pool) {
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS modalidad_otro VARCHAR(120) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS codifin VARCHAR(12) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS region_policial VARCHAR(120) DEFAULT '';
-    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS comisaria_postula VARCHAR(150) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS comisaria_postula VARCHAR(500) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS postula_slots JSONB DEFAULT '[]'::jsonb;
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS bloque_vacaciones VARCHAR(10) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS token_constancia VARCHAR(64) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS aprobado_por_nombre VARCHAR(150) DEFAULT '';
@@ -392,6 +393,10 @@ async function initColumnasFlujoConvenios(pool) {
     CREATE INDEX IF NOT EXISTS idx_inscripciones_codifin ON inscripciones(codifin);
     CREATE INDEX IF NOT EXISTS idx_inscripciones_region ON inscripciones(region_policial);
     CREATE INDEX IF NOT EXISTS idx_inscripciones_cia_postula ON inscripciones(comisaria_postula);
+  `);
+  await pool.query(`
+    ALTER TABLE inscripciones ALTER COLUMN comisaria_postula TYPE VARCHAR(500);
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS postula_slots JSONB DEFAULT '[]'::jsonb;
     CREATE INDEX IF NOT EXISTS idx_inscripciones_dni ON inscripciones(dni);
     CREATE INDEX IF NOT EXISTS idx_inscripciones_item_cip ON inscripciones(item_id, cip);
     CREATE INDEX IF NOT EXISTS idx_inscripciones_token ON inscripciones(token_constancia);
@@ -561,6 +566,122 @@ function etiquetaBloqueVacaciones(bloque) {
   return '';
 }
 
+function estadoOcupaVacante(estado) {
+  return ESTADOS_OCUPAN_VACANTE.indexOf(String(estado || '')) >= 0;
+}
+
+function etiquetaDiaPostula(dia) {
+  var d = String(dia || '').trim().toUpperCase();
+  if (d === 'TODOS' || d === 'PAR/IMPAR') return 'todos los días';
+  return d || '';
+}
+
+function diasCubiertosPostula(dia) {
+  var d = String(dia || '').trim().toUpperCase();
+  if (!d || d === 'TODOS' || d === 'PAR/IMPAR') return ['PAR', 'IMPAR'];
+  return [d];
+}
+
+function parsePostulacionSlots(texto, jsonSlots) {
+  var out = [];
+  var seen = {};
+  function push(p) {
+    if (!p) return;
+    var lugar = String(p.lugar || '').trim();
+    var turno = canonTurnoPostulacion(p.turno);
+    var dia = String(p.dia || '').trim().toUpperCase();
+    if (dia === 'PAR/IMPAR') dia = 'TODOS';
+    if (!lugar && !turno) return;
+    var key = lugar.toUpperCase() + '|' + turno + '|' + dia;
+    if (seen[key]) return;
+    seen[key] = true;
+    out.push({ lugar: lugar, turno: turno, dia: dia });
+  }
+  if (Array.isArray(jsonSlots) && jsonSlots.length) {
+    jsonSlots.forEach(function(x) {
+      if (typeof x === 'string') push(parsePostulacionSlot(x));
+      else if (x && typeof x === 'object') push(x);
+    });
+  }
+  if (out.length) return out;
+  var raw = String(texto || '').trim();
+  if (!raw) return out;
+  var parts = raw.split(/\s*·\s*/).map(function(x) { return String(x || '').trim(); }).filter(Boolean);
+  if (parts.length > 1) {
+    var first = parsePostulacionSlot(parts[0]);
+    push(first);
+    for (var i = 1; i < parts.length; i++) {
+      var bit = parts[i];
+      var parsed = parsePostulacionSlot(bit);
+      if (parsed.turno && parsed.lugar) {
+        push(parsed);
+      } else {
+        var m = bit.match(/^(.+?)\s*\/\s*(.+)$/);
+        if (m) {
+          push({
+            lugar: first.lugar || '',
+            turno: m[1],
+            dia: m[2]
+          });
+        } else {
+          push(parsed);
+        }
+      }
+    }
+    return out;
+  }
+  push(parsePostulacionSlot(raw));
+  return out;
+}
+
+function formatearPostulacionSlots(slots) {
+  var list = parsePostulacionSlots('', slots);
+  if (!list.length) return '';
+  var lugar = list[0].lugar || '';
+  var bits = list.map(function(p) {
+    return (p.turno || 'TURNO') + ' / ' + (etiquetaDiaPostula(p.dia) || '—');
+  });
+  if (!lugar) return bits.join(' · ');
+  return limpio(lugar + ' — ' + bits.join(' · '), 500);
+}
+
+function validarCombinacionVacaciones(slots) {
+  var list = parsePostulacionSlots('', slots);
+  if (!list.length) {
+    return { ok: false, error: 'En vacaciones seleccione al menos un turno (mañana, tarde o noche).' };
+  }
+  for (var i = 0; i < list.length; i++) {
+    if (!list[i].turno) {
+      return { ok: false, error: 'Cada combinación debe tener un turno.' };
+    }
+    var dia = String(list[i].dia || '').toUpperCase();
+    if (dia && dia !== 'PAR' && dia !== 'IMPAR' && dia !== 'TODOS' && dia !== 'PAR/IMPAR') {
+      return { ok: false, error: 'Día inválido en la combinación de turnos.' };
+    }
+    for (var j = i + 1; j < list.length; j++) {
+      var a = list[i];
+      var b = list[j];
+      if (canonTurnoPostulacion(a.turno) !== canonTurnoPostulacion(b.turno)) continue;
+      var da = diasCubiertosPostula(a.dia);
+      var db = diasCubiertosPostula(b.dia);
+      var solapa = da.some(function(x) { return db.indexOf(x) >= 0; });
+      if (!solapa) continue;
+      var mismoLugar = String(a.lugar || '').trim().toUpperCase() === String(b.lugar || '').trim().toUpperCase();
+      if (!mismoLugar) {
+        return {
+          ok: false,
+          error: 'No puede estar en dos lugares a la misma hora (' + (a.turno || 'turno') + ').'
+        };
+      }
+      return {
+        ok: false,
+        error: 'Hay cruce o duplicado en ' + (a.turno || 'turno') + '. Mañana, tarde y noche sí se pueden combinar.'
+      };
+    }
+  }
+  return { ok: true, slots: list };
+}
+
 module.exports = {
   PLAZO_EXPEDIENTE_DIAS,
   PLAZO_SUBSANACION_HORAS,
@@ -582,5 +703,10 @@ module.exports = {
   soloDigitos,
   normalizarTelefonoPe,
   parsePostulacionSlot,
-  etiquetaBloqueVacaciones
+  parsePostulacionSlots,
+  formatearPostulacionSlots,
+  validarCombinacionVacaciones,
+  diasCubiertosPostula,
+  etiquetaBloqueVacaciones,
+  estadoOcupaVacante
 };

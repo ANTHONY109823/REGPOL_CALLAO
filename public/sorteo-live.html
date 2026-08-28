@@ -536,8 +536,8 @@ function irAlAdmin() {
 function diaCompatible(diaSlot, diaCand) {
   var a = String(diaSlot || '').toUpperCase();
   var b = String(diaCand || '').toUpperCase();
-  if (!a || a === 'PAR/IMPAR') return true;
-  if (!b || b === 'PAR/IMPAR') return true;
+  if (!a || a === 'PAR/IMPAR' || a === 'TODOS') return true;
+  if (!b || b === 'PAR/IMPAR' || b === 'TODOS') return true;
   return a === b;
 }
 
@@ -560,11 +560,10 @@ function canonTurnoSorteo(turno) {
     .trim();
 }
 
-function candidatoEnSlot(cand, slot) {
-  if (!cand || !slot) return false;
-  var lugar = String(cand.slot_lugar || '').trim();
-  var turno = String(cand.slot_turno || '').trim();
-  var dia = String(cand.slot_dia || cand.dia_franco || '').trim().toUpperCase();
+function candidatoCubreParte(p, cand, slot) {
+  var lugar = String((p && p.lugar) || cand.slot_lugar || '').trim();
+  var turno = String((p && p.turno) || cand.slot_turno || '').trim();
+  var dia = String((p && p.dia) || cand.slot_dia || cand.dia_franco || '').trim().toUpperCase();
   if (slot.lugar) {
     if (canonLugarSorteo(lugar || cand.comisaria_postula) !== canonLugarSorteo(slot.lugar)) return false;
   }
@@ -572,6 +571,15 @@ function candidatoEnSlot(cand, slot) {
     if (turno && canonTurnoSorteo(turno) !== canonTurnoSorteo(slot.turno)) return false;
   }
   return diaCompatible(slot.dia, dia);
+}
+
+function candidatoEnSlot(cand, slot) {
+  if (!cand || !slot) return false;
+  var list = Array.isArray(cand.postula_slots) ? cand.postula_slots : [];
+  if (list.length) {
+    return list.some(function(p) { return candidatoCubreParte(p, cand, slot); });
+  }
+  return candidatoCubreParte(null, cand, slot);
 }
 
 function resumenSlotActual() {
@@ -622,7 +630,11 @@ function slotActual() {
 function ganadoresDelSlot(slot) {
   if (!slot) return [];
   return GANADORES.filter(function(g) {
-    return g.slot_key === slot.key;
+    if (Array.isArray(g.slot_keys) && g.slot_keys.indexOf(slot.key) >= 0) return true;
+    if (g.slot_key === slot.key) return true;
+    var cand = null;
+    TODOS_CAND.forEach(function(c) { if (c.id === g.id) cand = c; });
+    return cand ? candidatoEnSlot(cand, slot) : false;
   });
 }
 
@@ -1001,11 +1013,13 @@ function iniciarSorteo() {
     if (IDS_GANADOS[c.id]) return;
     var slot = slotPreferidoVacaciones(c);
     if (SLOTS_SORTEO.length && (!slot || cupoRestanteSlot(slot) <= 0)) return;
+    var keys = SLOTS_SORTEO.filter(function(s) { return candidatoEnSlot(c, s); }).map(function(s) { return s.key; });
     var g = {
       id: c.id, grado: c.grado, nombres: c.nombres, unidad: c.unidad,
       area: c.area, cip: c.cip, tipo: 'vacaciones', nro: GANADORES.length + 1,
       slot_key: slot ? slot.key : '',
-      slot_label: slot ? slot.label : labelSlotCand(c),
+      slot_keys: keys.length ? keys : (slot ? [slot.key] : []),
+      slot_label: labelSlotCand(c),
       bloque_vacaciones: ''
     };
     GANADORES.push(g);

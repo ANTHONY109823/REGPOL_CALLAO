@@ -115,6 +115,11 @@
     .fi-alerta.ok{background:#d4edda;color:#1a7a3a;display:block;}
     .fi-alerta.error{background:#f8d7da;color:#842029;display:block;}
     .fi-hint{display:block;margin-top:5px;font-size:11px;color:#666;line-height:1.35;}
+    .fi-combo-vac-rows{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+    .fi-combo-row{display:grid;grid-template-columns:minmax(120px,160px) 1fr;gap:8px;align-items:center;background:#f4faf6;border:1px solid #d5e8dc;border-radius:8px;padding:8px 10px;}
+    .fi-combo-row strong{font-size:13px;color:#004d3d;}
+    .fi-combo-row select{width:100%;padding:8px 10px;border:1.5px solid #c5d9ce;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;}
+    @media(max-width:600px){.fi-combo-row{grid-template-columns:1fr;}}
     .btn-enviar-solicitud{display:inline-block;margin-top:8px;background:#004d3d;color:#fff;padding:13px 36px;border-radius:8px;border:none;font-size:14px;font-weight:800;letter-spacing:.4px;cursor:pointer;font-family:inherit;transition:background .2s;}
     .btn-enviar-solicitud:hover{background:#006b55;}
     .btn-enviar-solicitud:disabled{opacity:.65;cursor:wait;}
@@ -327,6 +332,10 @@ var ITEM_DATA = null;
 var DIVISIONES_PUBL = [];
 var MODO_REPECHAJE = /[?&]repechaje=1/.test(location.search || '');
 var EMBED_FORM = /[?&]embed=1/.test(location.search || '');
+
+function esModoRepechajeForm(){
+  return !!(MODO_REPECHAJE || /[?&]repechaje=1/.test(location.search || ''));
+}
 var PREINSCRIPCION_DESCARGADA = false;
 var PREINSCRIPCION_DATOS = null;
 var DETALLE_APLICADO = false;
@@ -689,7 +698,10 @@ function initCamposInscripcion(){
   var selTurno = document.getElementById('fi-turno-postula');
   var disp = document.getElementById('fi-disponibilidad');
   var dia = document.getElementById('fi-dia-franco');
-  if (disp && disp.value === 'VACACIONES') actualizarSelectorTurnos('PAR/IMPAR', true);
+  if (disp && disp.value === 'VACACIONES') {
+    if (esModoRepechajeForm()) actualizarSelectorTurnos('TODOS', true);
+    else aplicarModoComboVacaciones('VACACIONES');
+  }
   else if (disp && disp.value === 'FRANCO' && dia && dia.value) onCambioDiaFranco(dia.value);
   else if (selTurno || document.getElementById('fi-comisaria-postula')) actualizarSelectorTurnos('', false);
 }
@@ -891,7 +903,9 @@ function htmlSelectorComisariaPostula(item){
       +'</div>';
   }
   var hint = combinado
-    ? '<small class="fi-hint">Misma lógica que Celador: elija el lugar junto con el turno y el día (PAR / IMPAR) según las vacantes publicadas.</small>'
+    ? '<small class="fi-hint">'+(esModoRepechajeForm()
+      ? 'En repechaje, si está de vacaciones elija cualquier comisaría, turno y día (PAR o IMPAR); puede trabajar todos los días.'
+      : 'Misma lógica que Celador: elija el lugar junto con el turno y el día (PAR / IMPAR) según las vacantes publicadas.')+'</small>'
     : '';
   if(disponibles.length === 1){
     return '<div class="'+wrapCls+'">'
@@ -912,6 +926,167 @@ function htmlSelectorComisariaPostula(item){
     +'</select>'+hint+'</div>';
 }
 
+function lugaresUnicosPostula(item){
+  var todos = obtenerCuposConVacante(item);
+  var seen = {};
+  var out = [];
+  todos.forEach(function(c){
+    var nom = String(c.nombre || '').trim();
+    var lugar = esOpcionCombinada(nom) ? nom.split('|')[0] : nom;
+    if (!lugar) return;
+    var k = lugar.toUpperCase();
+    if (seen[k]) return;
+    seen[k] = true;
+    out.push({ nombre: lugar, label: lugar, disponibles: c.disponibles });
+  });
+  return out;
+}
+
+function turnosComboEnLugar(item, lugar){
+  var cia = String(lugar || '').trim().toUpperCase();
+  var porTurno = {};
+  function add(turno, dia, vac){
+    turno = String(turno || '').trim().toUpperCase();
+    dia = String(dia || '').trim().toUpperCase();
+    vac = parseInt(vac, 10) || 0;
+    if (!turno || vac <= 0) return;
+    if (!porTurno[turno]) {
+      porTurno[turno] = { turno: turno, label: labelTurnoHumano(turno), dias: {} };
+    }
+    porTurno[turno].dias[dia] = (porTurno[turno].dias[dia] || 0) + vac;
+  }
+  var cupos = Array.isArray(item && item.cupos_unidades) ? item.cupos_unidades : [];
+  var hayMatriz = esCeladorMatrizItem(item) || cupos.some(function(c){ return Array.isArray(c.turnos) && c.turnos.length; });
+  if (hayMatriz) {
+    cupos.forEach(function(c){
+      if (cia && String(c.nombre || '').trim().toUpperCase() !== cia) return;
+      (Array.isArray(c.turnos) ? c.turnos : []).forEach(function(t){
+        add(t.turno, t.dia, t.vacantes);
+      });
+    });
+  } else {
+    obtenerTurnosPublicados(item).forEach(function(t){ add(t.turno, t.dia, t.vacantes); });
+  }
+  var orden = { 'MAÑANA': 1, 'ATENCION AL CLIENTE': 2, 'TARDE': 3, 'NOCHE': 4 };
+  return Object.keys(porTurno).map(function(k){ return porTurno[k]; })
+    .sort(function(a, b){
+      var oa = esTurnoSedapalAtencion(a.turno) ? 2 : (orden[a.turno] || 99);
+      var ob = esTurnoSedapalAtencion(b.turno) ? 2 : (orden[b.turno] || 99);
+      return oa - ob;
+    });
+}
+
+function htmlOpcionesDiaCombo(info){
+  var dias = (info && info.dias) || {};
+  var hayPar = (dias.PAR || 0) > 0;
+  var hayImpar = (dias.IMPAR || 0) > 0;
+  var hayTodosPub = (dias['PAR/IMPAR'] || 0) > 0;
+  var html = '<option value="">No cubre este turno</option>';
+  if (hayTodosPub || (hayPar && hayImpar)) {
+    html += '<option value="TODOS">Todos los días (PAR e IMPAR)</option>';
+  }
+  if (hayPar || hayTodosPub) html += '<option value="PAR">Solo días PAR</option>';
+  if (hayImpar || hayTodosPub) html += '<option value="IMPAR">Solo días IMPAR</option>';
+  return html;
+}
+
+function lugarDesdeValorPostula(val){
+  var s = String(val || '').trim();
+  if (!s) return '';
+  if (esOpcionCombinada(s)) return s.split('|')[0];
+  var m = s.match(/^(.+?)\s*[—\-]\s+/);
+  return m ? m[1].trim() : s;
+}
+
+function poblarSelectorLugarVacaciones(){
+  var sel = document.getElementById('fi-comisaria-postula');
+  if (!sel || sel.disabled) return;
+  var prevLugar = lugarDesdeValorPostula(sel.value);
+  var lugares = lugaresUnicosPostula(ITEM_DATA);
+  if (!lugares.length) return;
+  var html = (lugares.length === 1 ? '' : '<option value="">Seleccionar comisaría / lugar</option>');
+  html += lugares.map(function(c){
+    var selAttr = (lugares.length === 1 || c.nombre === prevLugar) ? ' selected' : '';
+    return '<option value="'+escHtmlD(c.nombre)+'"'+selAttr+'>'+escHtmlD(c.label || c.nombre)+'</option>';
+  }).join('');
+  sel.innerHTML = html;
+  if (prevLugar && lugares.some(function(c){ return c.nombre === prevLugar; })) sel.value = prevLugar;
+  else if (lugares.length === 1) sel.value = lugares[0].nombre;
+  sel.onchange = function(){ renderComboVacacionesRows(); };
+  var lab = sel.closest('.fi-group');
+  var labEl = lab && lab.querySelector('label');
+  if (labEl) labEl.textContent = 'Comisaría / lugar al que postula *';
+}
+
+function restaurarSelectorComisariaNormal(){
+  var sel = document.getElementById('fi-comisaria-postula');
+  if (!sel || !ITEM_DATA) return;
+  sel.onchange = null;
+  var wrap = sel.closest('.fi-group');
+  if (!wrap) return;
+  var html = htmlSelectorComisariaPostula(ITEM_DATA);
+  var tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  var nuevo = tmp.firstChild;
+  if (nuevo) wrap.parentNode.replaceChild(nuevo, wrap);
+}
+
+function renderComboVacacionesRows(){
+  var box = document.getElementById('fi-combo-vac-rows');
+  if (!box) return;
+  var sel = document.getElementById('fi-comisaria-postula');
+  var lugar = sel ? String(sel.value || '').trim() : '';
+  if (!lugar) {
+    box.innerHTML = '<p class="fi-hint" style="margin:0;">Primero seleccione la comisaría / lugar.</p>';
+    return;
+  }
+  var turnos = turnosComboEnLugar(ITEM_DATA, lugar);
+  if (!turnos.length) {
+    box.innerHTML = '<p class="fi-hint" style="margin:0;">No hay turnos con vacantes en este lugar.</p>';
+    return;
+  }
+  box.innerHTML = turnos.map(function(t){
+    return '<div class="fi-combo-row">'
+      +'<strong>'+escHtmlD(t.label)+'</strong>'
+      +'<select data-turno="'+escHtmlD(t.turno)+'">'+htmlOpcionesDiaCombo(t)+'</select>'
+      +'</div>';
+  }).join('');
+}
+
+function leerSlotsComboVacaciones(){
+  var sel = document.getElementById('fi-comisaria-postula');
+  var lugar = sel ? String(sel.value || '').trim() : '';
+  var box = document.getElementById('fi-combo-vac-rows');
+  if (!box || !lugar) return [];
+  var out = [];
+  var rows = box.querySelectorAll('select[data-turno]');
+  for (var i = 0; i < rows.length; i++) {
+    var dia = String(rows[i].value || '').trim().toUpperCase();
+    if (!dia) continue;
+    out.push({ lugar: lugar, turno: String(rows[i].getAttribute('data-turno') || '').toUpperCase(), dia: dia });
+  }
+  return out;
+}
+
+function aplicarModoComboVacaciones(val){
+  var box = document.getElementById('fi-combo-vac-box');
+  var turnoBox = document.getElementById('fi-turno-postula-box');
+  var combo = (val === 'VACACIONES' && !esModoRepechajeForm());
+  if (combo) {
+    if (box) box.style.display = '';
+    if (turnoBox) {
+      turnoBox.style.display = 'none';
+      var ts = document.getElementById('fi-turno-postula');
+      if (ts) { ts.required = false; ts.value = ''; }
+    }
+    poblarSelectorLugarVacaciones();
+    renderComboVacacionesRows();
+  } else {
+    if (box) box.style.display = 'none';
+    restaurarSelectorComisariaNormal();
+  }
+}
+
 function htmlSelectorTurnoPostula(item){
   // Si el selector de lugar ya incluye turno/día (estilo Celador), no duplicar.
   var cupos = obtenerCuposConVacante(item);
@@ -920,16 +1095,42 @@ function htmlSelectorTurnoPostula(item){
   return '<div class="fi-group" id="fi-turno-postula-box" style="display:none;">'
     +'<label>Turno al que postula *</label>'
     +'<select id="fi-turno-postula">'
-    +'<option value="">Seleccione día de franco primero</option>'
+    +'<option value="">'+(esModoRepechajeForm() ? 'Seleccione turno y día' : 'Seleccione día de franco primero')+'</option>'
     +'</select>'
-    +'<small class="fi-hint" id="fi-turno-hint">Al elegir PAR o IMPAR aparecerán los turnos y lugares con vacantes publicadas.</small>'
+    +'<small class="fi-hint" id="fi-turno-hint">'+(esModoRepechajeForm()
+      ? 'Si está de vacaciones puede elegir PAR o IMPAR (trabaja todos los días).'
+      : 'Al elegir PAR o IMPAR aparecerán los turnos y lugares con vacantes publicadas.')+'</small>'
     +'</div>';
 }
 
 function turnosCompatiblesConDia(diaFranco){
   var dia = String(diaFranco || '').trim().toUpperCase();
   var todos = obtenerTurnosPublicados(ITEM_DATA);
-  if (!dia) return todos;
+  var vacRep = esModoRepechajeForm() && dia === 'TODOS';
+  if (vacRep || !dia) {
+    if (!dia && !vacRep) return todos;
+    var expandidos = [];
+    todos.forEach(function(t){
+      var d = String(t.dia || 'PAR/IMPAR').toUpperCase();
+      var dias = (vacRep && d === 'PAR/IMPAR') ? ['PAR', 'IMPAR'] : [d];
+      dias.forEach(function(diaOpt){
+        expandidos.push({
+          value: t.turno + '|' + diaOpt,
+          turno: t.turno,
+          dia: diaOpt,
+          vacantes: t.vacantes,
+          label: labelSlotHumano(t.turno, diaOpt) + ' (' + t.vacantes + ' vacantes)'
+        });
+      });
+    });
+    return expandidos.sort(function(a, b){
+      var orden = { 'MAÑANA': 1, 'ATENCION AL CLIENTE': 2, 'TARDE': 3, 'NOCHE': 4 };
+      var oa = esTurnoSedapalAtencion(a.turno) ? 2 : (orden[a.turno] || 99);
+      var ob = esTurnoSedapalAtencion(b.turno) ? 2 : (orden[b.turno] || 99);
+      if (oa !== ob) return oa - ob;
+      return String(a.dia).localeCompare(String(b.dia));
+    });
+  }
   var porTurno = {};
   todos.forEach(function(t){
     var d = String(t.dia || 'PAR/IMPAR').toUpperCase();
@@ -965,7 +1166,7 @@ function filtrarSelectorPostulaPorDia(diaFranco, forzarMostrar){
   var filtrados = todos.filter(function(o){
     if (!esOpcionCombinada(o.nombre)) return true;
     var d = String(o.dia || o.nombre.split('|')[2] || '').toUpperCase();
-    if (!dia || dia === 'PAR/IMPAR') return true;
+    if (!dia || dia === 'PAR/IMPAR' || dia === 'TODOS') return true;
     return d === dia || d === 'PAR/IMPAR';
   });
   var prev = sel.value;
@@ -1012,8 +1213,10 @@ function actualizarSelectorTurnos(diaFranco, forzarMostrar){
       return '<option value="'+escHtmlD(t.value)+'"'+selAttr+'>'+escHtmlD(t.label)+'</option>';
     }).join('');
   if (hint) {
-    hint.textContent = 'Turnos con vacantes para día ' + (diaFranco || 'publicado') + ': '
-      + turnos.map(function(t){ return t.turno; }).join(', ') + '.';
+    hint.textContent = (diaFranco === 'TODOS')
+      ? 'Vacaciones en repechaje: puede elegir PAR o IMPAR (trabaja todos los días).'
+      : ('Turnos con vacantes para día ' + (diaFranco || 'publicado') + ': '
+        + turnos.map(function(t){ return t.turno; }).join(', ') + '.');
   }
 }
 
@@ -1023,7 +1226,7 @@ function onCambioDiaFranco(val){
   if (situacion === 'FRANCO' && (val === 'PAR' || val === 'IMPAR')) {
     actualizarSelectorTurnos(val, true);
   } else if (situacion === 'VACACIONES') {
-    actualizarSelectorTurnos('PAR/IMPAR', true);
+    actualizarSelectorTurnos(esModoRepechajeForm() ? 'TODOS' : 'PAR/IMPAR', true);
   } else {
     actualizarSelectorTurnos('', false);
   }
@@ -1037,7 +1240,7 @@ function renderFormInscripcion(item){
   var introRep = esRepechaje
     ? (EMBED_FORM
       ? ''
-      : '<p class="fi-intro" style="color:#856404;background:#fff8e1;padding:8px 10px;border-radius:8px;font-size:12px;">Repechaje: complete y suba su PDF.</p>')
+      : '<p class="fi-intro" style="color:#856404;background:#fff8e1;padding:8px 10px;border-radius:8px;font-size:12px;">Repechaje: complete y suba su PDF. Si está de vacaciones puede elegir cualquier turno PAR o IMPAR (trabaja todos los días).</p>')
     : '';
   return '<form class="form-inscripcion" id="form-inscripcion" onsubmit="enviarInscripcion(event)">'
     + (EMBED_FORM ? '' : ('<h3>' + tituloForm + '</h3>'))
@@ -1107,8 +1310,12 @@ function renderFormInscripcion(item){
         +'<div class="fi-group"><label>Situación para el servicio *</label>'
         +'<select id="fi-disponibilidad" required onchange="onCambioDisponibilidad(this.value)">'
         +'<option value="">Seleccionar situación</option>'
-        +'<option value="VACACIONES">Vacaciones — vacante automática + sorteo de bloque (15 días)</option>'
-        +'<option value="FRANCO">Día de franco — participa en sorteo por turno/día</option>'
+        +'<option value="VACACIONES">'+(esRepechaje
+          ? 'Vacaciones — puede trabajar todos los días (PAR e IMPAR)'
+          : 'Vacaciones — varios turnos: todos los días, PAR o IMPAR')+'</option>'
+        +'<option value="FRANCO">'+(esRepechaje
+          ? 'Día de franco — elija PAR o IMPAR según su franco'
+          : 'Día de franco — participa en sorteo por turno/día')+'</option>'
         +'</select>'
         +'<small class="fi-hint" id="disp-aviso" style="display:none;"></small></div>'
         +'<div class="fi-group" id="fi-dia-franco-box" style="display:none;">'
@@ -1119,6 +1326,11 @@ function renderFormInscripcion(item){
         +'<option value="IMPAR">DÍA IMPAR</option>'
         +'</select></div>'
         +htmlSelectorTurnoPostula(item)
+        +'<div class="fi-group fi-full" id="fi-combo-vac-box" style="display:none;">'
+        +'<label>Turnos que cubrirá (puede elegir más de uno)</label>'
+        +'<small class="fi-hint">Puede trabajar mañana, tarde y noche si no se cruzan horarios. En cada turno elija todos los días, solo PAR o solo IMPAR. No es obligatorio elegir solo PAR o solo IMPAR.</small>'
+        +'<div id="fi-combo-vac-rows"></div>'
+        +'</div>'
       : '')
 
     
@@ -1162,7 +1374,9 @@ function onCambioDisponibilidad(val){
   if(aviso){
     if(val === 'VACACIONES'){
       aviso.style.display = 'block';
-      aviso.textContent = 'Ocupa vacante automáticamente. Luego, en el sorteo público se le asigna por sorteo el Bloque 1 (días 1–15) o el Bloque 2 (días 16–fin de mes). Elija también el lugar, turno y día.';
+      aviso.textContent = esModoRepechajeForm()
+        ? 'En repechaje, si está de vacaciones puede trabajar todos los días. Elija cualquier turno PAR o IMPAR.'
+        : 'Puede cubrir mañana, tarde y noche sin cruzar horarios. En cada turno elija todos los días, solo PAR o solo IMPAR. Ocupa vacante; el sorteo asigna Bloque 1 o Bloque 2 (15 días).';
     } else if(val === 'FRANCO'){
       aviso.style.display = 'block';
       aviso.textContent = 'Elija PAR o IMPAR. Luego seleccione el lugar con su turno según las vacantes publicadas.';
@@ -1172,12 +1386,13 @@ function onCambioDisponibilidad(val){
     }
   }
   toggleDiaFranco(val);
-  if (val === 'VACACIONES') {
-    actualizarSelectorTurnos('PAR/IMPAR', true);
+  aplicarModoComboVacaciones(val);
+  if (val === 'VACACIONES' && esModoRepechajeForm()) {
+    actualizarSelectorTurnos('TODOS', true);
   } else if (val === 'FRANCO') {
     var diaSel = document.getElementById('fi-dia-franco');
     onCambioDiaFranco(diaSel ? diaSel.value : '');
-  } else {
+  } else if (val !== 'VACACIONES') {
     actualizarSelectorTurnos('', false);
   }
 }
@@ -1394,6 +1609,20 @@ function enviarInscripcion(e){
     alerta.textContent='Ingrese un correo electrónico válido.';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
+  var esComboVacPre = ITEM_TIPO==='convenio' && !esRepechaje && disponibilidad === 'VACACIONES';
+  var slotsComboVac = [];
+  if (esComboVacPre) {
+    slotsComboVac = leerSlotsComboVacaciones();
+    if (!comisariaPostula) {
+      alerta.textContent='Seleccione la comisaría / lugar a la que postula.';
+      alerta.className='fi-alerta error'; alerta.style.display='block'; return;
+    }
+    if (!slotsComboVac.length) {
+      alerta.textContent='En vacaciones elija al menos un turno (mañana, tarde o noche) y si cubre todos los días, PAR o IMPAR.';
+      alerta.className='fi-alerta error'; alerta.style.display='block'; return;
+    }
+    turnoPostula = '';
+  } else {
   if(ITEM_TIPO==='convenio' && obtenerCuposConVacante(ITEM_DATA).length && !comisariaPostula){
     alerta.textContent='Seleccione el lugar, turno y día a los que postula (solo con vacantes disponibles).';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
@@ -1434,10 +1663,19 @@ function enviarInscripcion(e){
     var lugarBase = comisariaPostula
       || String((ITEM_DATA && ITEM_DATA.lugar) || '').trim()
       || 'Convenio';
-    // Si ya viene CIA|TURNO|DIA (Celador), no reescribir
     if (comisariaPostula.indexOf('|') < 0) {
       comisariaPostula = lugarBase + ' — ' + turnoNom + ' / ' + diaSlot;
     }
+  }
+  if (esRepechaje && disponibilidad === 'VACACIONES') {
+    var diaElegido = '';
+    if (esComboPostula) {
+      diaElegido = String(comisariaPostula.split('|')[2] || '').trim().toUpperCase();
+    } else if (turnoPostula) {
+      diaElegido = String(turnoPostula.split('|')[1] || '').trim().toUpperCase();
+    }
+    if (diaElegido === 'PAR' || diaElegido === 'IMPAR') dia_franco = diaElegido;
+  }
   }
   if(ITEM_TIPO==='curso' && !fecha_egreso){
     alerta.textContent='Ingrese su fecha de egreso de la Escuela PNP.';
@@ -1464,6 +1702,7 @@ function enviarInscripcion(e){
       codifin: codifin||'',
       comisaria_postula: comisariaPostula||'',
       turno_postula: turnoPostula||'',
+      postula_slots: slotsComboVac,
       pdf_requisitos: (ITEM_TIPO==='convenio' && !esRepechaje) ? '' : pdfData,
       pdf_nombre: pdfNomb,
       modo_repechaje: !!esRepechaje
