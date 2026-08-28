@@ -217,9 +217,51 @@
     .modal.open{display:flex;}
     .modal-box{background:#fff;border-radius:12px;padding:28px;width:520px;
       max-width:96vw;max-height:90vh;overflow-y:auto;overflow-x:hidden;box-sizing:border-box;}
-    #modal-usuario .modal-box{width:min(680px,96vw);}
-    .perm-box-imagen{grid-column:1/-1;background:#fff8e6;border-color:#c8a94a;}
-    .perm-box-imagen .pb-title{color:#6b5420;}
+    #modal-usuario .modal-box{width:min(720px,96vw);padding:22px 24px 16px;}
+    #modal-usuario h3{margin-bottom:16px;}
+    #modal-usuario .mu-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-bottom:6px;}
+    #modal-usuario .mu-fields > div{min-width:0;}
+    #modal-usuario .mu-span2{grid-column:1/-1;}
+    #modal-usuario .mu-fields label{margin-bottom:4px;}
+    #modal-usuario .mu-fields input[type="text"],
+    #modal-usuario .mu-fields input[type="password"]{margin-bottom:0;}
+    #modal-usuario .mu-nomina{font-size:11.5px;color:#1a7a3a;margin:4px 0 0;min-height:16px;line-height:1.35;}
+    #modal-usuario .mu-activo{
+      display:flex;align-items:center;gap:8px;margin:8px 0 14px;cursor:pointer;font-weight:700;color:#004d3d;
+    }
+    #modal-usuario .mu-activo input,
+    #modal-usuario .perm-box input[type="checkbox"]{
+      width:16px!important;height:16px!important;min-width:16px;margin:0!important;padding:0!important;
+      border:none!important;box-shadow:none!important;flex:0 0 16px;accent-color:#004d3d;cursor:pointer;
+    }
+    #modal-usuario .mu-sec{font-size:12px;font-weight:800;color:#004d3d;margin:0 0 8px;letter-spacing:.2px;}
+    #modal-usuario .perm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;align-items:stretch;}
+    #modal-usuario .perm-box{
+      display:flex;flex-direction:column;gap:6px;background:#f7faf8;border:1.5px solid #d5e4da;
+      border-radius:10px;padding:12px 14px;
+    }
+    #modal-usuario .perm-box .pb-title{font-size:11px;font-weight:800;color:#004d3d;text-transform:uppercase;
+      letter-spacing:.4px;margin:0 0 2px;}
+    #modal-usuario .perm-box label{
+      display:flex;align-items:flex-start;gap:8px;margin:0;font-size:12.5px;font-weight:500;color:#333;
+      line-height:1.35;cursor:pointer;
+    }
+    #modal-usuario .perm-box .pb-note{margin-top:auto;padding-top:8px;font-size:11px;color:#6b7c72;line-height:1.4;}
+    #modal-usuario .perm-box-imagen{grid-column:1/-1;background:#fffdf6;border-color:#e2c56a;}
+    #modal-usuario .perm-box-imagen .pb-title{color:#6b5420;}
+    #modal-usuario .perm-box-imagen .pb-help{margin:0;font-size:12px;color:#7a6840;line-height:1.4;}
+    #modal-usuario .perm-imagen-list{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;margin:4px 0 2px;}
+    #modal-usuario .btn-marcar-imagen{
+      align-self:flex-start;margin-top:4px;background:#004d3d;color:#fff;border:none;border-radius:6px;
+      padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
+    }
+    #modal-usuario .btn-marcar-imagen:hover{background:#006b55;}
+    #modal-usuario .modal-footer{margin-top:4px;padding-top:12px;border-top:1px solid #e6eee8;}
+    @media(max-width:640px){
+      #modal-usuario .mu-fields,
+      #modal-usuario .perm-grid,
+      #modal-usuario .perm-imagen-list{grid-template-columns:1fr;}
+    }
     #modal-pdf-preinscritos{padding:12px;z-index:1200;}
     #modal-pdf-preinscritos .modal-box{
       width:min(1180px,96vw);max-width:96vw;max-height:94vh;padding:0;
@@ -2423,63 +2465,66 @@
   <div class="modal-box">
     <h3><i class="fas fa-user-shield"></i> <span id="mu-titulo">Nuevo usuario</span></h3>
     <input type="hidden" id="mu-id"/>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <div class="mu-fields">
       <div>
         <label>CIP (login) *</label>
         <input type="text" id="mu-usuario" inputmode="numeric" placeholder="Ej: 12345678"
           onblur="buscarNominaParaUsuario()" onchange="buscarNominaParaUsuario()"/>
-        <p id="mu-nomina-msg" style="font-size:11px;color:#888;margin:4px 0 0;min-height:16px;"></p>
+        <p id="mu-nomina-msg" class="mu-nomina"></p>
       </div>
       <div>
         <label>Contraseña inicial <span id="mu-pass-hint" style="font-weight:400;color:#999;">(mín 10, letras y números)</span></label>
         <input type="password" id="mu-password" placeholder="Alfanumérica"/>
       </div>
+      <div>
+        <label>Nombre</label>
+        <input type="text" id="mu-nombre" placeholder="Apellidos y nombres (nómina)"/>
+      </div>
+      <div>
+        <label>Unidad asignada</label>
+        <input type="text" id="mu-unidad" placeholder="Vacío = global / desde nómina"/>
+      </div>
     </div>
-    <label style="display:flex;align-items:center;gap:8px;margin:4px 0 10px;cursor:pointer;">
-      <input type="checkbox" id="mu-activo" checked style="width:16px;height:16px;accent-color:#004d3d;"/>
-      <span style="font-size:12.5px;font-weight:600;color:#004d3d;">Usuario activo</span>
+    <label class="mu-activo">
+      <input type="checkbox" id="mu-activo" checked/>
+      Usuario activo
     </label>
-    <label>Nombre (se puede completar desde nómina)</label>
-    <input type="text" id="mu-nombre" placeholder="Apellidos y nombres"/>
-    <label>Unidad asignada <span style="font-weight:400;color:#999;">(vacío = global / desde nómina)</span></label>
-    <input type="text" id="mu-unidad" placeholder="Dejar vacío para acceso global"/>
-    <label style="margin-bottom:8px;">Área de gestión asignada</label>
+    <p class="mu-sec">Área de gestión asignada</p>
     <div class="perm-grid">
       <div class="perm-box perm-box-imagen">
         <div class="pb-title">Oficina de Imagen — portal web</div>
-        <p style="font-size:12px;color:#6b5420;margin:0 0 8px;line-height:1.4;">Marque qué va a gestionar en la web. Este es el perfil de Imagen.</p>
-        <label><input type="checkbox" value="cms_novedades" class="perm-chk perm-imagen"> Novedades (actualizar noticias)</label>
-        <label><input type="checkbox" value="cms_inicio" class="perm-chk perm-imagen"> Panel superior y carrusel central</label>
-        <label><input type="checkbox" value="cms_resena" class="perm-chk perm-imagen"> Reseña histórica</label>
-        <label><input type="checkbox" value="cms_labor" class="perm-chk perm-imagen"> Nuestra labor</label>
-        <button type="button" class="btn-mini btn-mini-ok" style="margin-top:8px;" onclick="marcarPerfilImagen()">Marcar las 4 de Imagen</button>
+        <p class="pb-help">Marque qué va a gestionar en la web. Este es el perfil de Imagen.</p>
+        <div class="perm-imagen-list">
+          <label><input type="checkbox" value="cms_novedades" class="perm-chk perm-imagen"> Novedades</label>
+          <label><input type="checkbox" value="cms_inicio" class="perm-chk perm-imagen"> Panel superior y carrusel</label>
+          <label><input type="checkbox" value="cms_resena" class="perm-chk perm-imagen"> Reseña histórica</label>
+          <label><input type="checkbox" value="cms_labor" class="perm-chk perm-imagen"> Nuestra labor</label>
+        </div>
+        <button type="button" class="btn-marcar-imagen" onclick="marcarPerfilImagen()">Marcar las 4 de Imagen</button>
       </div>
       <div class="perm-box">
         <div class="pb-title">Psicología / Bienestar</div>
         <label><input type="checkbox" value="evaluaciones" class="perm-chk"> Evaluaciones MMPI-2</label>
         <label><input type="checkbox" value="descargas" class="perm-chk"> RESPUESTAS</label>
-        <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Gestiona evaluaciones recibidas de personal. Las preguntas del test las edita Super Admin o quien tenga evaluaciones.</p>
+        <p class="pb-note">Gestiona evaluaciones recibidas. Las preguntas del test las edita Super Admin.</p>
       </div>
       <div class="perm-box">
         <div class="pb-title">Convenios</div>
         <label><input type="checkbox" value="cms_convenios" class="perm-chk"> Admin de Convenios (operativo + web)</label>
-        <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">
-          Preinscritos, ganadores/expedientes, repechaje, sorteos y <strong>editar fichas en la web</strong> (lugares, vacantes, horarios, inscripciones).
-          No modifica carrusel, novedades ni otras secciones del portal.
-        </p>
+        <p class="pb-note">Preinscritos, ganadores, repechaje y fichas web. No modifica novedades ni carrusel.</p>
       </div>
       <div class="perm-box">
         <div class="pb-title">Educación (Cursos)</div>
-        <label><input type="checkbox" value="cms_cursos" class="perm-chk"> Gestionar cursos e inscripciones</label>
-        <label><input type="checkbox" value="cms_descansos" class="perm-chk"> Descansos médicos (listado, dashboard, Excel)</label>
-        <label><input type="checkbox" value="faltos_admin" class="perm-chk"> Faltos — Admin área (dashboard, Excel histórico, solo consulta)</label>
-        <label><input type="checkbox" value="faltos_registrar" class="perm-chk"> Faltos — Unidad (registrar diario y cambiar situación; asignar unidad)</label>
-        <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Solo operaciones de cursos. No edita el portal web.</p>
+        <label><input type="checkbox" value="cms_cursos" class="perm-chk"> Cursos e inscripciones</label>
+        <label><input type="checkbox" value="cms_descansos" class="perm-chk"> Descansos médicos</label>
+        <label><input type="checkbox" value="faltos_admin" class="perm-chk"> Faltos — Admin área</label>
+        <label><input type="checkbox" value="faltos_registrar" class="perm-chk"> Faltos — Unidad</label>
+        <p class="pb-note">Solo operaciones de cursos. No edita el portal web.</p>
       </div>
       <div class="perm-box">
         <div class="pb-title">Recursos Humanos</div>
-        <label><input type="checkbox" value="recursos_humanos" class="perm-chk"> Nómina, altas/bajas y cuadros de personal</label>
-        <p style="font-size:10.5px;color:#888;margin:6px 0 0;line-height:1.4;">Acceso solo al módulo RRHH (no visible en la web pública).</p>
+        <label><input type="checkbox" value="recursos_humanos" class="perm-chk"> Nómina, altas/bajas y cuadros</label>
+        <p class="pb-note">Acceso solo al módulo RRHH (no visible en la web pública).</p>
       </div>
     </div>
     <div class="modal-footer">
