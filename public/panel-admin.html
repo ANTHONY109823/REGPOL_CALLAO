@@ -1672,9 +1672,11 @@
       <div class="card">
         <h3><i class="fas fa-history"></i> Auditoría por CIP</h3>
         <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
-          Historial de <strong>todos los meses</strong> de un efectivo. La consulta pública solo muestra el mes actual;
-          aquí se conserva el registro completo. El próximo mes el efectivo empieza de cero en el portal.
+          Aquí queda empaquetado el mes cerrado (preinscritos, ganadores, repechaje y expedientes).
+          La consulta pública y los menús operativos empiezan de cero cada mes.
+          <strong>Convenios (web)</strong> no se toca.
         </p>
+        <div id="aud-conv-paquetes" style="margin-bottom:16px;"></div>
         <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:16px;">
           <div>
             <label style="font-size:12px;font-weight:700;color:#004d3d;display:block;margin-bottom:4px;">CIP</label>
@@ -4423,6 +4425,7 @@ function ir(page, el){
   if(page==='conv-preinscritos')   { cargarConvFlujoResumen('preinscritos'); }
   if(page==='conv-ganadores')      { cargarConvFlujoResumen('ganadores'); }
   if(page==='conv-repechaje')      { cargarConvFlujoResumen('repechaje'); if(typeof cargarEstadoRepechaje==='function') cargarEstadoRepechaje(); }
+  if(page==='conv-auditoria-cip')  { cargarPaquetesAuditoriaConvenio(); }
   if(page==='conv-plantillas')     { if(typeof cargarExpModelosGlobales==='function') cargarExpModelosGlobales(); }
   if(page==='conv-constancia')     { if(typeof cargarEditorConstancia==='function') cargarEditorConstancia(); }
   if(page==='descansos' || page==='descansos-dash' || page==='descansos-import'){
@@ -9753,6 +9756,45 @@ function audConvAlerta(msg, tipo) {
   el.style.border = '1px solid ' + (tipo === 'error' ? '#f5c2c7' : (tipo === 'ok' ? '#a5d6a7' : '#b8daff'));
 }
 
+function cargarPaquetesAuditoriaConvenio() {
+  var box = document.getElementById('aud-conv-paquetes');
+  if (!box) return;
+  box.innerHTML = '<p style="color:#888;font-size:13px;padding:8px 0;"><i class="fas fa-spinner fa-spin"></i> Cargando paquetes archivados...</p>';
+  fetch(API + '/admin/convenios/auditoria-paquetes', { headers: hdr() })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) {
+        box.innerHTML = '<p style="color:#c0392b;font-size:13px;">' + escHtml(d.error || 'No se pudieron cargar los paquetes.') + '</p>';
+        return;
+      }
+      var list = d.paquetes || [];
+      if (!list.length) {
+        box.innerHTML = '<p style="font-size:13px;color:#666;background:#f4f7f5;border:1px solid #dce6e0;border-radius:8px;padding:12px 14px;margin:0;">Aún no hay meses empaquetados. Cuando cierre un mes, aparecerá aquí.</p>';
+        return;
+      }
+      box.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;">'
+        + list.map(function(p) {
+          var res = p.resumen || {};
+          var est = res.por_estado || {};
+          var nPre = (est.preinscrito || 0) + (est.pendiente || 0);
+          var nGan = (est.ganador || 0) + (est.en_revision || 0) + (est.observado || 0) + (est.expediente_ok || 0);
+          var nRep = (est.repechaje || 0) + (est.caducado || 0);
+          var cuando = p.archivado_en ? String(p.archivado_en).replace('T', ' ').slice(0, 16) : '';
+          return '<div style="background:#fff8e8;border:1.5px solid #e6d7a8;border-radius:10px;padding:12px 14px;">'
+            + '<div style="font-weight:800;color:#6b5420;font-size:14px;margin-bottom:4px;"><i class="fas fa-box-archive"></i> ' + escHtml(p.titulo || etiquetaMesAudCip(p.mes)) + '</div>'
+            + '<div style="font-size:12.5px;color:#555;line-height:1.45;">'
+            + (p.total_registros || 0) + ' registro(s) empaquetados'
+            + (cuando ? '<br>Guardado: ' + escHtml(cuando) : '')
+            + '<br>Preinscritos: ' + nPre + ' · Ganadores: ' + nGan + ' · Repechaje/caducados: ' + nRep
+            + '</div></div>';
+        }).join('')
+        + '</div>';
+    })
+    .catch(function() {
+      box.innerHTML = '<p style="color:#c0392b;font-size:13px;">Error de conexión al cargar auditoría.</p>';
+    });
+}
+
 function consultarHistorialCipConvenio() {
   var cip = (document.getElementById('aud-conv-cip').value || '').trim().replace(/\s/g, '');
   if (!/^\d{6,12}$/.test(cip)) {
@@ -9815,8 +9857,10 @@ function renderHistorialCipConvenio(lista, nombres) {
     var disp = r.disponibilidad === 'VACACIONES'
       ? 'Vacaciones'
       : (r.disponibilidad === 'FRANCO' ? ('Franco ' + (r.dia_franco || '')) : (r.disponibilidad || '—'));
+    var mesTxt = escHtml(etiquetaMesAudCip(r.mes));
+    if (r.archivado) mesTxt += ' <span style="font-size:10px;font-weight:700;color:#6b5420;background:#fff3cd;border-radius:4px;padding:1px 6px;">Archivado</span>';
     return '<tr>'
-      + '<td style="font-weight:800;color:#004d3d;white-space:nowrap;">' + escHtml(etiquetaMesAudCip(r.mes)) + '</td>'
+      + '<td style="font-weight:800;color:#004d3d;white-space:nowrap;">' + mesTxt + '</td>'
       + '<td class="col-nombres">' + escHtml(r.titulo || '—') + '</td>'
       + '<td><span class="badge badge-estado">' + escHtml(etiquetaEstadoFlujoInscripcion(r.estado, true)) + '</span></td>'
       + '<td class="col-postula">' + escHtml(r.comisaria_postula || '—') + '</td>'

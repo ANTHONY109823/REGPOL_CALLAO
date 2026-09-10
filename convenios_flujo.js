@@ -500,7 +500,9 @@ async function caducarExpedientesVencidos(pool) {
 async function contarOcupadas(pool, itemId) {
   const r = await pool.query(
     `SELECT COUNT(*)::int AS n FROM inscripciones
-     WHERE item_id=$1 AND estado = ANY($2::varchar[])`,
+     WHERE item_id=$1 AND estado = ANY($2::varchar[])
+       AND to_char(timezone('America/Lima', COALESCE(fecha::timestamptz, NOW())), 'YYYY-MM')
+         = to_char(timezone('America/Lima', NOW()), 'YYYY-MM')`,
     [itemId, ESTADOS_OCUPAN_VACANTE]
   );
   return r.rows[0].n || 0;
@@ -682,6 +684,318 @@ function validarCombinacionVacaciones(slots) {
   return { ok: true, slots: list };
 }
 
+const MESES_ES_AUD = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
+function etiquetaMesEs(yyyyMm) {
+  const p = String(yyyyMm || '').split('-');
+  const m = parseInt(p[1], 10);
+  if (!m || m < 1 || m > 12 || !p[0]) return yyyyMm || '';
+  return MESES_ES_AUD[m - 1] + ' ' + p[0];
+}
+
+function sqlMesInscripcionLima() {
+  return `to_char(timezone('America/Lima', COALESCE(n.fecha::timestamptz, NOW())), 'YYYY-MM')`;
+}
+
+async function initTablasAuditoriaConvenios(pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS convenios_auditoria_paquetes (
+      id SERIAL PRIMARY KEY,
+      mes VARCHAR(7) NOT NULL UNIQUE,
+      titulo VARCHAR(160) NOT NULL DEFAULT '',
+      archivado_en TIMESTAMPTZ DEFAULT NOW(),
+      total_registros INTEGER DEFAULT 0,
+      resumen JSONB NOT NULL DEFAULT '{}'::jsonb
+    );
+    CREATE TABLE IF NOT EXISTS convenios_auditoria_registros (
+      id SERIAL PRIMARY KEY,
+      paquete_id INTEGER NOT NULL REFERENCES convenios_auditoria_paquetes(id) ON DELETE CASCADE,
+      mes VARCHAR(7) NOT NULL,
+      inscripcion_id INTEGER,
+      item_id INTEGER,
+      titulo VARCHAR(200) DEFAULT '',
+      cip VARCHAR(20) DEFAULT '',
+      nombres VARCHAR(200) DEFAULT '',
+      dni VARCHAR(20) DEFAULT '',
+      grado VARCHAR(60) DEFAULT '',
+      unidad VARCHAR(150) DEFAULT '',
+      estado VARCHAR(40) DEFAULT '',
+      comisaria_postula VARCHAR(500) DEFAULT '',
+      disponibilidad VARCHAR(40) DEFAULT '',
+      dia_franco VARCHAR(10) DEFAULT '',
+      codifin VARCHAR(12) DEFAULT '',
+      region_policial VARCHAR(120) DEFAULT '',
+      modalidad VARCHAR(40) DEFAULT '',
+      telefono VARCHAR(30) DEFAULT '',
+      email VARCHAR(100) DEFAULT '',
+      fecha TIMESTAMPTZ,
+      snapshot JSONB NOT NULL DEFAULT '{}'::jsonb
+    );
+    CREATE INDEX IF NOT EXISTS idx_conv_aud_reg_cip ON convenios_auditoria_registros(cip);
+    CREATE INDEX IF NOT EXISTS idx_conv_aud_reg_mes ON convenios_auditoria_registros(mes);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_conv_aud_reg_insc
+      ON convenios_auditoria_registros(inscripcion_id)
+      WHERE inscripcion_id IS NOT NULL;
+    CREATE TABLE IF NOT EXISTS convenios_auditoria_adjuntos (
+      id SERIAL PRIMARY KEY,
+      paquete_id INTEGER NOT NULL REFERENCES convenios_auditoria_paquetes(id) ON DELETE CASCADE,
+      tipo VARCHAR(40) NOT NULL,
+      titulo VARCHAR(200) DEFAULT '',
+      meta JSONB NOT NULL DEFAULT '{}'::jsonb,
+      pdf_data TEXT DEFAULT '',
+      pdf_nombre VARCHAR(200) DEFAULT ''
+    );
+  `);
+}
+
+async function apagarRepechaje(client) {
+  await client.query(
+    `INSERT INTO configuracion (clave, valor, actualizado) VALUES ('repechaje_activo', '0', NOW())
+     ON CONFLICT (clave) DO UPDATE SET valor='0', actualizado=NOW()`
+  );
+  await client.query(
+    `INSERT INTO configuracion (clave, valor, actualizado) VALUES ('repechaje_inicio', '', NOW())
+     ON CONFLICT (clave) DO UPDATE SET valor='', actualizado=NOW()`
+  );
+  await client.query(
+    `INSERT INTO configuracion (clave, valor, actualizado) VALUES ('repechaje_cierre', '', NOW())
+     ON CONFLICT (clave) DO UPDATE SET valor='', actualizado=NOW()`
+  );
+}
+
+async function empaquetarSorteosYPdfsConvenio(client, paqueteId) {
+  const sorteos = await client.query(
+    `SELECT s.id, s.tipo, s.titulo, s.descripcion, s.fecha_sorteo, s.item_id,
+            s.publicado, s.orden, s.creado, i.titulo AS item_titulo
+     FROM sorteos_portal s
+     JOIN items_portal i ON i.id = s.item_id
+     WHERE i.tipo = 'convenio'`
+  );
+  let nSorteos = 0;
+  for (const s of sorteos.rows) {
+    const resu = await client.query(
+      `SELECT cip, nombres, unidad, cargo, orden
+       FROM resultados_sorteo WHERE sorteo_id=$1 ORDER BY orden, id`,
+      [s.id]
+    );
+    await client.query(
+      `INSERT INTO convenios_auditoria_adjuntos (paquete_id, tipo, titulo, meta)
+       VALUES ($1, 'sorteo', $2, $3::jsonb)`,
+      [paqueteId, s.titulo || s.item_titulo || 'Sorteo', JSON.stringify({
+        sorteo_id: s.id,
+        tipo: s.tipo,
+        descripcion: s.descripcion || '',
+        fecha_sorteo: s.fecha_sorteo || '',
+        item_id: s.item_id,
+        item_titulo: s.item_titulo || '',
+        publicado: !!s.publicado,
+        orden: s.orden || 0,
+        creado: s.creado,
+        resultados: resu.rows
+      })]
+    );
+    nSorteos++;
+  }
+  if (sorteos.rows.length) {
+    const ids = sorteos.rows.map(function(x) { return x.id; });
+    await client.query('DELETE FROM sorteos_portal WHERE id = ANY($1::int[])', [ids]);
+  }
+
+  const pdfs = await client.query(
+    `SELECT r.id, r.tipo, r.item_id, r.titulo, r.pdf_data, r.pdf_nombre, r.publicado, r.orden, r.creado,
+            i.titulo AS item_titulo
+     FROM resultados_pdf_portal r
+     LEFT JOIN items_portal i ON i.id = r.item_id
+     WHERE r.tipo = 'convenio' OR i.tipo = 'convenio'`
+  );
+  for (const p of pdfs.rows) {
+    await client.query(
+      `INSERT INTO convenios_auditoria_adjuntos (paquete_id, tipo, titulo, meta, pdf_data, pdf_nombre)
+       VALUES ($1, 'resultado_pdf', $2, $3::jsonb, $4, $5)`,
+      [
+        paqueteId,
+        p.titulo || p.item_titulo || 'Resultados',
+        JSON.stringify({
+          resultado_id: p.id,
+          item_id: p.item_id,
+          item_titulo: p.item_titulo || '',
+          publicado: !!p.publicado,
+          orden: p.orden || 0,
+          creado: p.creado
+        }),
+        p.pdf_data || '',
+        p.pdf_nombre || ''
+      ]
+    );
+  }
+  if (pdfs.rows.length) {
+    const ids = pdfs.rows.map(function(x) { return x.id; });
+    await client.query('DELETE FROM resultados_pdf_portal WHERE id = ANY($1::int[])', [ids]);
+  }
+  return { sorteos: nSorteos, resultados_pdf: pdfs.rows.length };
+}
+
+async function archivarUnMes(client, mes) {
+  const titulo = etiquetaMesEs(mes);
+  const pack = await client.query(
+    `INSERT INTO convenios_auditoria_paquetes (mes, titulo, resumen)
+     VALUES ($1, $2, '{}'::jsonb)
+     ON CONFLICT (mes) DO UPDATE SET titulo=EXCLUDED.titulo, archivado_en=NOW()
+     RETURNING id, total_registros`,
+    [mes, titulo]
+  );
+  const paqueteId = pack.rows[0].id;
+
+  const ins = await client.query(
+    `INSERT INTO convenios_auditoria_registros (
+       paquete_id, mes, inscripcion_id, item_id, titulo, cip, nombres, dni, grado, unidad,
+       estado, comisaria_postula, disponibilidad, dia_franco, codifin, region_policial,
+       modalidad, telefono, email, fecha, snapshot
+     )
+     SELECT $1, $2, n.id, n.item_id, i.titulo, n.cip, n.nombres, n.dni, n.grado, n.unidad,
+            n.estado, n.comisaria_postula, n.disponibilidad, n.dia_franco, n.codifin, n.region_policial,
+            n.modalidad, n.telefono, n.email, n.fecha, to_jsonb(n)
+     FROM inscripciones n
+     JOIN items_portal i ON i.id = n.item_id
+     WHERE i.tipo = 'convenio'
+       AND ${sqlMesInscripcionLima()} = $2
+       AND NOT EXISTS (
+         SELECT 1 FROM convenios_auditoria_registros a WHERE a.inscripcion_id = n.id
+       )
+     RETURNING id, estado, titulo`,
+    [paqueteId, mes]
+  );
+
+  const del = await client.query(
+    `DELETE FROM inscripciones n
+     USING items_portal i
+     WHERE n.item_id = i.id
+       AND i.tipo = 'convenio'
+       AND ${sqlMesInscripcionLima()} = $1
+     RETURNING n.id`,
+    [mes]
+  );
+
+  const porEstado = {};
+  const porConvenio = {};
+  ins.rows.forEach(function(r) {
+    porEstado[r.estado || ''] = (porEstado[r.estado || ''] || 0) + 1;
+    porConvenio[r.titulo || ''] = (porConvenio[r.titulo || ''] || 0) + 1;
+  });
+
+  const totalRow = await client.query(
+    'SELECT COUNT(*)::int AS n FROM convenios_auditoria_registros WHERE paquete_id=$1',
+    [paqueteId]
+  );
+  const total = totalRow.rows[0].n || 0;
+  await client.query(
+    `UPDATE convenios_auditoria_paquetes
+     SET total_registros=$1, archivado_en=NOW()
+     WHERE id=$2`,
+    [total, paqueteId]
+  );
+
+  return {
+    id: paqueteId,
+    mes: mes,
+    titulo: titulo,
+    copiados: ins.rows.length,
+    eliminados: del.rows.length,
+    total: total,
+    por_estado: porEstado,
+    por_convenio: porConvenio
+  };
+}
+
+/**
+ * Empaqueta inscripciones de convenios de meses anteriores (Lima), las guarda
+ * en Auditoría CIP y las quita de preinscritos / ganadores / repechaje.
+ * Conserva items_portal (carpeta web), plantillas y constancia.
+ */
+async function archivarMesesAnteriores(pool) {
+  const actual = await pool.query(
+    `SELECT to_char(timezone('America/Lima', NOW()), 'YYYY-MM') AS mes`
+  );
+  const mesActual = actual.rows[0].mes;
+  const pend = await pool.query(
+    `SELECT DISTINCT ${sqlMesInscripcionLima()} AS mes
+     FROM inscripciones n
+     JOIN items_portal i ON i.id = n.item_id
+     WHERE i.tipo = 'convenio'
+       AND ${sqlMesInscripcionLima()} < $1
+     ORDER BY 1`,
+    [mesActual]
+  );
+  const meses = pend.rows.map(function(r) { return r.mes; });
+  if (!meses.length) {
+    return { ok: true, mes_actual: mesActual, meses: [], total_registros: 0, paquetes: [] };
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const paquetes = [];
+    let totalReg = 0;
+    for (let i = 0; i < meses.length; i++) {
+      const p = await archivarUnMes(client, meses[i]);
+      paquetes.push(p);
+      totalReg += p.copiados;
+    }
+    const ancla = paquetes[paquetes.length - 1];
+    const adj = await empaquetarSorteosYPdfsConvenio(client, ancla.id);
+    await apagarRepechaje(client);
+
+    const resumen = {
+      por_estado: ancla.por_estado,
+      por_convenio: ancla.por_convenio,
+      meses: meses,
+      sorteos: adj.sorteos,
+      resultados_pdf: adj.resultados_pdf,
+      repechaje_apagado: true,
+      carpeta_web_conservada: true
+    };
+    await client.query(
+      `UPDATE convenios_auditoria_paquetes SET resumen=$1::jsonb WHERE id=$2`,
+      [JSON.stringify(resumen), ancla.id]
+    );
+
+    await client.query('COMMIT');
+    return {
+      ok: true,
+      mes_actual: mesActual,
+      meses: meses,
+      total_registros: totalReg,
+      sorteos: adj.sorteos,
+      resultados_pdf: adj.resultados_pdf,
+      paquetes: paquetes
+    };
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (e2) {}
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+async function listarPaquetesAuditoria(pool) {
+  const r = await pool.query(
+    `SELECT id, mes, titulo, archivado_en, total_registros,
+            jsonb_build_object(
+              'por_estado', COALESCE(resumen->'por_estado', '{}'::jsonb),
+              'por_convenio', COALESCE(resumen->'por_convenio', '{}'::jsonb),
+              'sorteos', COALESCE(resumen->'sorteos', '0'::jsonb),
+              'resultados_pdf', COALESCE(resumen->'resultados_pdf', '0'::jsonb),
+              'repechaje_apagado', COALESCE(resumen->'repechaje_apagado', 'false'::jsonb)
+            ) AS resumen
+     FROM convenios_auditoria_paquetes
+     ORDER BY mes DESC`
+  );
+  return r.rows;
+}
+
 module.exports = {
   PLAZO_EXPEDIENTE_DIAS,
   PLAZO_SUBSANACION_HORAS,
@@ -693,6 +1007,7 @@ module.exports = {
   etiquetaObservacion,
   notificarInscripcion,
   initColumnasFlujoConvenios,
+  initTablasAuditoriaConvenios,
   migrarEstadosConvenios,
   caducarExpedientesVencidos,
   vacantesDisponibles,
@@ -708,5 +1023,8 @@ module.exports = {
   validarCombinacionVacaciones,
   diasCubiertosPostula,
   etiquetaBloqueVacaciones,
-  estadoOcupaVacante
+  estadoOcupaVacante,
+  archivarMesesAnteriores,
+  listarPaquetesAuditoria,
+  etiquetaMesEs
 };

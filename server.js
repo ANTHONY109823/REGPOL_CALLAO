@@ -666,7 +666,28 @@ async function initDB() {
   await descansosMedicos.initTablasDescansos(pool);
   await faltosMod.initTablasFaltos(pool);
   await conveniosFlujo.initColumnasFlujoConvenios(pool);
+  await conveniosFlujo.initTablasAuditoriaConvenios(pool);
   await conveniosFlujo.migrarEstadosConvenios(pool);
+  try {
+    const cierre = await conveniosFlujo.archivarMesesAnteriores(pool);
+    if (cierre && cierre.total_registros) {
+      console.log(
+        'Convenios: empaquetado en auditoría ' + (cierre.meses || []).join(', ') +
+          ' — ' + cierre.total_registros + ' registros. Carpeta web conservada.'
+      );
+      await adminAuth.registrarAuditoria(pool, {
+        usuario: 'sistema',
+        accion: 'archivar_mes_convenios',
+        modulo: 'convenios',
+        entidad: 'paquete',
+        entidadId: (cierre.meses || []).join(','),
+        detalle: 'Meses ' + (cierre.meses || []).join(', ') +
+          ' — ' + cierre.total_registros + ' registros. Preinscritos, ganadores, repechaje y sorteos vaciados. Carpeta web conservada.'
+      });
+    }
+  } catch (e) {
+    console.warn('convenios archivo mensual:', e && e.message ? e.message : e);
+  }
   await recursosHumanos.initTablasRRHH(pool);
   await adminAuth.initAuthTablas(pool);
   await adminAuth.bootstrapSuperAdminSiFalta(pool);
@@ -2923,7 +2944,8 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
       `SELECT COUNT(n.id)::int AS total,
         SUM(CASE WHEN n.estado='pendiente' THEN 1 ELSE 0 END)::int AS pendientes,
         SUM(CASE WHEN n.estado='ganador' THEN 1 ELSE 0 END)::int AS ganadores
-       FROM inscripciones n JOIN items_portal i ON i.id=n.item_id WHERE i.tipo='convenio'`);
+       FROM inscripciones n JOIN items_portal i ON i.id=n.item_id
+       WHERE i.tipo='convenio' AND ${sqlMesActualLima('n.fecha')}`);
     const inscCurso = await pool.query(
       `SELECT COUNT(n.id)::int AS total,
         SUM(CASE WHEN n.estado='pendiente' THEN 1 ELSE 0 END)::int AS pendientes,
@@ -5317,10 +5339,14 @@ app.get('/admin/stats-gestion', requireAuth, async (req, res) => {
     const ultimasR = await pool.query(
       `SELECT ${sqlFechaTxt('n.fecha')} AS fecha, n.nombres, n.estado, i.titulo AS convocatoria
        FROM inscripciones n JOIN items_portal i ON i.id=n.item_id
-       WHERE i.tipo=$1 ORDER BY n.fecha DESC LIMIT 8`, [tipo]);
+       WHERE i.tipo=$1
+         AND ($1 <> 'convenio' OR ${sqlMesActualLima('n.fecha')})
+       ORDER BY n.fecha DESC LIMIT 8`, [tipo]);
     const activasR = await pool.query(
       `SELECT i.id, i.titulo, i.estado,
-        (SELECT COUNT(*)::int FROM inscripciones n WHERE n.item_id=i.id) AS inscritos
+        (SELECT COUNT(*)::int FROM inscripciones n
+         WHERE n.item_id=i.id
+           AND ($1 <> 'convenio' OR ${sqlMesActualLima('n.fecha')})) AS inscritos
        FROM items_portal i WHERE i.tipo=$1 ORDER BY i.orden, i.id DESC LIMIT 6`, [tipo]);
 
     res.json({
@@ -6751,17 +6777,34 @@ app.get('/admin/convenios/historial-cip', requireAuth, async (req, res) => {
     const cip = normalizarCipConsulta(req.query.cip);
     if (!cip) return res.json({ ok: false, error: 'Ingrese un CIP válido.' });
     const r = await pool.query(
-      `SELECT n.id, n.cip, n.nombres, n.dni, n.grado, n.unidad, n.estado,
-              n.comisaria_postula, n.disponibilidad, n.dia_franco, n.codifin,
-              n.region_policial, n.modalidad, n.telefono, n.email,
-              ${sqlFechaTxt('n.fecha')} AS fecha,
-              ${sqlMesLima('n.fecha')} AS mes,
-              i.id AS item_id, i.titulo, i.tipo
-       FROM inscripciones n
-       JOIN items_portal i ON i.id = n.item_id
-       WHERE ${sqlCipIgual('n.cip')} = $1
-         AND i.tipo = 'convenio'
-       ORDER BY n.fecha DESC, n.id DESC`,
+      `SELECT id, cip, nombres, dni, grado, unidad, estado,
+              comisaria_postula, disponibilidad, dia_franco, codifin,
+              region_policial, modalidad, telefono, email, fecha, mes,
+              item_id, titulo, tipo, archivado
+       FROM (
+         SELECT n.id, n.cip, n.nombres, n.dni, n.grado, n.unidad, n.estado,
+                n.comisaria_postula, n.disponibilidad, n.dia_franco, n.codifin,
+                n.region_policial, n.modalidad, n.telefono, n.email,
+                ${sqlFechaTxt('n.fecha')} AS fecha,
+                ${sqlMesLima('n.fecha')} AS mes,
+                n.fecha AS fecha_ord,
+                i.id AS item_id, i.titulo, i.tipo, FALSE AS archivado
+         FROM inscripciones n
+         JOIN items_portal i ON i.id = n.item_id
+         WHERE ${sqlCipIgual('n.cip')} = $1
+           AND i.tipo = 'convenio'
+         UNION ALL
+         SELECT a.inscripcion_id, a.cip, a.nombres, a.dni, a.grado, a.unidad, a.estado,
+                a.comisaria_postula, a.disponibilidad, a.dia_franco, a.codifin,
+                a.region_policial, a.modalidad, a.telefono, a.email,
+                ${sqlFechaTxt('a.fecha')} AS fecha,
+                a.mes,
+                a.fecha AS fecha_ord,
+                a.item_id, a.titulo, 'convenio' AS tipo, TRUE AS archivado
+         FROM convenios_auditoria_registros a
+         WHERE ${sqlCipIgual('a.cip')} = $1
+       ) h
+       ORDER BY fecha_ord DESC NULLS LAST, id DESC`,
       [cip]
     );
     res.json({
@@ -6771,6 +6814,17 @@ app.get('/admin/convenios/historial-cip', requireAuth, async (req, res) => {
       total: r.rows.length,
       registros: r.rows
     });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── GET /admin/convenios/auditoria-paquetes — meses empaquetados ──────────────
+app.get('/admin/convenios/auditoria-paquetes', requireAuth, async (req, res) => {
+  try {
+    if (!puedeOperarInscritos(req.admin, 'convenio')) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    }
+    const paquetes = await conveniosFlujo.listarPaquetesAuditoria(pool);
+    res.json({ ok: true, paquetes: paquetes });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -7810,6 +7864,7 @@ async function cargarListaConvenioPdf(itemId, estados) {
             CASE WHEN pdf_requisitos IS NOT NULL AND pdf_requisitos<>'' THEN true ELSE false END AS tiene_pdf
      FROM inscripciones
      WHERE item_id=$1 AND estado = ANY($2::varchar[])
+       AND ${sqlMesActualLima('fecha')}
      ORDER BY fecha ASC`,
     [id, estados]
   );
@@ -8705,7 +8760,7 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
     for (const it of items.rows) {
       const counts = await pool.query(
         `SELECT estado, COUNT(*)::int AS n
-         FROM inscripciones WHERE item_id=$1 GROUP BY estado`,
+         FROM inscripciones WHERE item_id=$1 AND ${sqlMesActualLima('fecha')} GROUP BY estado`,
         [it.id]
       );
       const mapa = {};
@@ -8714,7 +8769,8 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
       const pendPdf = await pool.query(
         `SELECT COUNT(*)::int AS n FROM inscripciones
          WHERE item_id=$1 AND estado='ganador'
-           AND COALESCE(pdf_requisitos,'')=''`,
+           AND COALESCE(pdf_requisitos,'')=''
+           AND ${sqlMesActualLima('fecha')}`,
         [it.id]
       );
       const desglose = await pool.query(
@@ -8728,7 +8784,7 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
                AND UPPER(COALESCE(disponibilidad,'')) <> 'VACACIONES'
                AND LOWER(COALESCE(modo_ingreso,'')) <> 'repechaje'
            )::int AS sorteo
-         FROM inscripciones WHERE item_id=$1`,
+         FROM inscripciones WHERE item_id=$1 AND ${sqlMesActualLima('fecha')}`,
         [it.id, ['ganador', 'en_revision', 'observado', 'expediente_ok']]
       );
       const pre =
@@ -8746,7 +8802,8 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
       let requiereSorteo = pre > (vac.disponibles != null ? vac.disponibles : 0);
       if (pre > 0) {
         const slotRows = await pool.query(
-          `SELECT estado, comisaria_postula FROM inscripciones WHERE item_id=$1`,
+          `SELECT estado, comisaria_postula FROM inscripciones
+           WHERE item_id=$1 AND ${sqlMesActualLima('fecha')}`,
           [it.id]
         );
         requiereSorteo = hayTurnosQueRequierenSorteo(itemSlots, slotRows.rows);
@@ -9043,7 +9100,9 @@ app.get('/admin/items', requireAuth, async (req, res) => {
               i.inscripcion_inicio, i.inscripcion_cierre,
               i.formulario_url, i.inscripciones_abiertas, i.visible, i.orden, i.uniforme,
               i.contactos_responsables, i.aviso_sorteo_fb, i.cupos_unidades, i.turnos,
-              (SELECT COUNT(*) FROM inscripciones n WHERE n.item_id=i.id) AS total_inscritos
+              (SELECT COUNT(*) FROM inscripciones n
+               WHERE n.item_id=i.id
+                 AND (i.tipo <> 'convenio' OR ${sqlMesActualLima('n.fecha')})) AS total_inscritos
        FROM items_portal i`;
     if (!esU) {
       // Admin de área: lista completa del tipo que puede gestionar (editar web / lugares)
@@ -9070,7 +9129,7 @@ app.get('/admin/items', requireAuth, async (req, res) => {
         [tipo]);
       return res.json({ ok: true, items: r.rows });
     }
-    let q = 'SELECT i.*, (SELECT COUNT(*) FROM inscripciones n WHERE n.item_id=i.id) AS total_inscritos FROM items_portal i WHERE 1=1';
+    let q = `SELECT i.*, (SELECT COUNT(*) FROM inscripciones n WHERE n.item_id=i.id AND (i.tipo <> 'convenio' OR ${sqlMesActualLima('n.fecha')})) AS total_inscritos FROM items_portal i WHERE 1=1`;
     const args = [];
     if (tipo) {
       q += ` AND i.tipo=$${args.length+1}`;
@@ -9240,7 +9299,10 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
               preins_correccion_fecha,
               CASE WHEN pdf_requisitos IS NOT NULL AND pdf_requisitos<>'' THEN true ELSE false END AS tiene_pdf,
               pdf_nombre
-       FROM inscripciones WHERE item_id=$1 ORDER BY fecha ASC`, [req.params.id]);
+       FROM inscripciones
+       WHERE item_id=$1
+         AND ($2::text IS NULL OR ${sqlMesActualLima('fecha')})
+       ORDER BY fecha ASC`, [req.params.id, cur.rows[0].tipo === 'convenio' ? 'mes' : null]);
     const vac = cur.rows[0].tipo === 'convenio'
       ? await conveniosFlujo.vacantesDisponibles(pool, req.params.id)
       : null;
