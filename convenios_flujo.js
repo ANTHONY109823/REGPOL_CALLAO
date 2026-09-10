@@ -842,7 +842,7 @@ async function archivarUnMes(client, mes) {
   const titulo = etiquetaMesEs(mes);
   const pack = await client.query(
     `INSERT INTO convenios_auditoria_paquetes (mes, titulo, resumen)
-     VALUES ($1, $2, '{}'::jsonb)
+     VALUES ($1::varchar, $2::varchar, '{}'::jsonb)
      ON CONFLICT (mes) DO UPDATE SET titulo=EXCLUDED.titulo, archivado_en=NOW()
      RETURNING id, total_registros`,
     [mes, titulo]
@@ -855,13 +855,13 @@ async function archivarUnMes(client, mes) {
        estado, comisaria_postula, disponibilidad, dia_franco, codifin, region_policial,
        modalidad, telefono, email, fecha, snapshot
      )
-     SELECT $1, $2, n.id, n.item_id, i.titulo, n.cip, n.nombres, n.dni, n.grado, n.unidad,
+     SELECT $1::int, $2::varchar, n.id, n.item_id, i.titulo, n.cip, n.nombres, n.dni, n.grado, n.unidad,
             n.estado, n.comisaria_postula, n.disponibilidad, n.dia_franco, n.codifin, n.region_policial,
             n.modalidad, n.telefono, n.email, n.fecha, to_jsonb(n)
      FROM inscripciones n
      JOIN items_portal i ON i.id = n.item_id
      WHERE i.tipo = 'convenio'
-       AND ${sqlMesInscripcionLima()} = $2
+       AND ${sqlMesInscripcionLima()} = $2::varchar
        AND NOT EXISTS (
          SELECT 1 FROM convenios_auditoria_registros a WHERE a.inscripcion_id = n.id
        )
@@ -874,7 +874,7 @@ async function archivarUnMes(client, mes) {
      USING items_portal i
      WHERE n.item_id = i.id
        AND i.tipo = 'convenio'
-       AND ${sqlMesInscripcionLima()} = $1
+       AND ${sqlMesInscripcionLima()} = $1::varchar
      RETURNING n.id`,
     [mes]
   );
@@ -925,7 +925,7 @@ async function archivarMesesAnteriores(pool) {
      FROM inscripciones n
      JOIN items_portal i ON i.id = n.item_id
      WHERE i.tipo = 'convenio'
-       AND ${sqlMesInscripcionLima()} < $1
+       AND ${sqlMesInscripcionLima()} < $1::varchar
      ORDER BY 1`,
     [mesActual]
   );
