@@ -6031,18 +6031,6 @@ function sqlNombreInscripcion(campo) {
   return `regexp_replace(upper(trim(translate(${campo}, 'áéíóúàèìòùäëïöüñÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÑ', 'aeiouaeiouaeiouaeiouaeiounAEIOUAEIOUAEIOUAEIOUN'))), '[^A-Z0-9]+', ' ', 'g')`;
 }
 
-function sqlApellidosInscripcion(campo) {
-  return `CASE
-    WHEN position(',' in COALESCE(${campo},'')) > 0 THEN
-      ${sqlNombreInscripcion(`split_part(${campo}, ',', 1)`)}
-    ELSE
-      trim(both ' ' from concat_ws(' ',
-        split_part(${sqlNombreInscripcion(campo)}, ' ', 1),
-        NULLIF(split_part(${sqlNombreInscripcion(campo)}, ' ', 2), '')
-      ))
-  END`;
-}
-
 function esRegionPolicialCallao(region) {
   const t = String(region || '').toUpperCase();
   return t.indexOf('CALLAO') >= 0 && t.indexOf('MUNICIPALIDAD') < 0;
@@ -7877,10 +7865,6 @@ function nombreArchivoListaConvenio(prefijo, titulo, extra) {
   return String(prefijo || 'Lista') + '_' + (t || 'convenio') + (s ? '_' + s : '') + '.pdf';
 }
 
-function nombreArchivoPreinscritos(titulo, extra) {
-  return nombreArchivoListaConvenio('Preinscritos', titulo, extra);
-}
-
 function canonFiltroPreinscritos(v) {
   return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toUpperCase().replace(/\s+/g, ' ').trim();
@@ -8038,10 +8022,6 @@ async function responderPdfListaConvenio(req, res, opts) {
   res.setHeader('Content-Disposition', 'attachment; filename="' + nombre + '"');
   res.setHeader('Cache-Control', 'no-store');
   res.send(buf);
-}
-
-async function cargarPreinscritosListaPdf(itemId) {
-  return cargarListaConvenioPdf(itemId, ESTADOS_PREINSCRITOS_LISTA);
 }
 
 // ── GET /admin/items/:id/preinscritos.pdf — PDF lista de preinscritos ─────────

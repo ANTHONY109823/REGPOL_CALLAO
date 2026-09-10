@@ -1709,14 +1709,6 @@ function siglaGradoListaPdf(grado) {
   return raw.toUpperCase();
 }
 
-function siglaRegionListaPdf(region) {
-  var r = String(region || '').trim();
-  if (!r) return '—';
-  var n = r.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-  if (n.indexOf('OTRA DEPENDENCIA') !== -1 || n === 'OTRO' || n === 'OTRA') return 'OTRO';
-  return r.replace(/^REGI[OÓ]N\s+POLICIAL\s+/i, 'RP ');
-}
-
 function formatearFechaHoraListaPdf(valor) {
   if (!valor) return '—';
   var d = valor instanceof Date ? valor : new Date(valor);

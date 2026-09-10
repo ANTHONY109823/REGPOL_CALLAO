@@ -555,13 +555,6 @@ function splitApellidosNombres(nombresCompletos) {
   return { apellidos: s, nombres: '—' };
 }
 
-function resumenConvenioConsulta(ins) {
-  var partes = [];
-  if (ins.comisaria_postula) partes.push('Postula a: ' + ins.comisaria_postula);
-  if (ins.vacantes != null && ins.vacantes !== '') partes.push('Vacantes: ' + ins.vacantes);
-  return partes.length ? partes.join(' · ') : (ins.convocatoria || '—');
-}
-
 function labelSituacionConsulta(disp, dia) {
   if (disp === 'VACACIONES') return 'Vacaciones';
   if (disp === 'FRANCO') return 'Franco' + (dia ? (' — ' + dia) : '');
@@ -797,15 +790,6 @@ function iniciarTickPlazosConsulta() {
   if (document.querySelector('[data-plazo-exp]')) {
     _tickPlazosConsulta = setInterval(actualizarPlazosConsulta, 1000);
   }
-}
-
-function fileToDataUrl(file) {
-  return new Promise(function(resolve, reject) {
-    var r = new FileReader();
-    r.onload = function() { resolve(r.result); };
-    r.onerror = reject;
-    r.readAsDataURL(file);
-  });
 }
 
 function turnosCorreccionCompatibles(ins, diaSel) {

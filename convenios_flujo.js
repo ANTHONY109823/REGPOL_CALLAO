@@ -998,8 +998,6 @@ async function listarPaquetesAuditoria(pool) {
 
 module.exports = {
   PLAZO_EXPEDIENTE_DIAS,
-  PLAZO_SUBSANACION_HORAS,
-  ESTADOS_CONVENIO,
   ESTADOS_OCUPAN_VACANTE,
   CATALOGO_OBSERVACIONES,
   MODALIDADES_TRABAJO,
@@ -1015,8 +1013,6 @@ module.exports = {
   plazoSubsanacionDesdeAhora,
   asegurarNroRegistro,
   limpio,
-  soloDigitos,
-  normalizarTelefonoPe,
   parsePostulacionSlot,
   parsePostulacionSlots,
   formatearPostulacionSlots,
@@ -1025,6 +1021,5 @@ module.exports = {
   etiquetaBloqueVacaciones,
   estadoOcupaVacante,
   archivarMesesAnteriores,
-  listarPaquetesAuditoria,
-  etiquetaMesEs
+  listarPaquetesAuditoria
 };
