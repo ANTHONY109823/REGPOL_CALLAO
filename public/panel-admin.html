@@ -6873,6 +6873,30 @@ function vacTurnoCelador(cupo, turno, dia){
   return 0;
 }
 
+function sumaVacantesTurnosUI(turnos){
+  return (Array.isArray(turnos) ? turnos : []).reduce(function(a, t){
+    return a + (parseInt(t && t.vacantes, 10) || 0);
+  }, 0);
+}
+
+function nocheSinVacantesUI(turnos){
+  var list = Array.isArray(turnos) ? turnos : [];
+  var noches = list.filter(function(t){ return String(t && t.turno || '').toUpperCase() === 'NOCHE'; });
+  if (!noches.length) return true;
+  return noches.every(function(t){ return (parseInt(t.vacantes, 10) || 0) <= 0; });
+}
+
+function repartirVacantesSeisCeldasUI(total, slots){
+  var list = Array.isArray(slots) && slots.length ? slots : CONVENIO_TURNOS_SLOTS;
+  var t = parseInt(total, 10) || 0;
+  var n = list.length || 1;
+  var base = Math.floor(t / n);
+  var resto = t % n;
+  return list.map(function(s, i){
+    return { turno: s.turno, dia: s.dia, vacantes: base + (i < resto ? 1 : 0) };
+  });
+}
+
 function asegurarTurnosConvenioEnCupo(cupo){
   if (esLugarSedapalAtencion(cupo && cupo.nombre)) {
     return asegurarTurnosSedapalAtencionEnCupo(cupo);
@@ -6886,19 +6910,22 @@ function asegurarTurnosConvenioEnCupo(cupo){
   var turnos = CONVENIO_TURNOS_SLOTS.map(function(s){
     var exact = prevMap[s.turno+'|'+s.dia];
     var vac = exact ? (parseInt(exact.vacantes, 10) || 0) : 0;
-    if (!exact && s.dia === 'PAR') {
+    if (vac <= 0 && s.dia === 'PAR') {
       var ambos = prevMap[s.turno+'|PAR/IMPAR'];
       if (ambos) vac = parseInt(ambos.vacantes, 10) || 0;
     }
     return { turno: s.turno, dia: s.dia, vacantes: vac };
   });
-  var suma = turnos.reduce(function(a, t){ return a + (parseInt(t.vacantes, 10) || 0); }, 0);
+  var suma = sumaVacantesTurnosUI(turnos);
   if (suma === 0) {
     var prevTotal = parseInt(c.vacantes, 10) || 0;
     if (prevTotal > 0) {
-      turnos[1].vacantes = prevTotal;
+      turnos = repartirVacantesSeisCeldasUI(prevTotal, CONVENIO_TURNOS_SLOTS);
       suma = prevTotal;
     }
+  } else if (nocheSinVacantesUI(turnos)) {
+    turnos = repartirVacantesSeisCeldasUI(suma, CONVENIO_TURNOS_SLOTS);
+    suma = sumaVacantesTurnosUI(turnos);
   }
   var insc = parseInt(c.inscritos, 10) || 0;
   return {
@@ -6913,32 +6940,23 @@ function asegurarTurnosConvenioEnCupo(cupo){
 
 function asegurarTurnosCeladorEnCupo(cupo){
   var c = cupo || { nombre: '', vacantes: 0, inscritos: 0, disponibles: 0, direccion: '' };
-  var prevMap = {};
-  (Array.isArray(c.turnos) ? c.turnos : []).forEach(function(t){
-    prevMap[String(t.turno||'').toUpperCase()+'|'+String(t.dia||'').toUpperCase()] = t;
-  });
-  var hayPrev = Object.keys(prevMap).length > 0;
+  var prevList = Array.isArray(c.turnos) ? c.turnos : [];
+  var prevSuma = sumaVacantesTurnosUI(prevList);
+  var total = prevSuma > 0 ? prevSuma : (parseInt(c.vacantes, 10) || 0);
   var turnos;
-  if (hayPrev) {
+  if (prevList.length && !nocheSinVacantesUI(prevList)) {
+    var prevMap = {};
+    prevList.forEach(function(t){
+      prevMap[String(t.turno||'').toUpperCase()+'|'+String(t.dia||'').toUpperCase()] = t;
+    });
     turnos = CELADOR_TURNOS_SLOTS.map(function(s){
       var prev = prevMap[s.turno+'|'+s.dia];
       return { turno: s.turno, dia: s.dia, vacantes: prev ? (parseInt(prev.vacantes, 10) || 0) : 0 };
     });
   } else {
-    var total = parseInt(c.vacantes, 10) || 0;
-    var slotsDia = CELADOR_TURNOS_SLOTS.filter(function(s){ return s.turno !== 'NOCHE'; });
-    var n = slotsDia.length || 1;
-    var base = Math.floor(total / n);
-    var resto = total % n;
-    var i = 0;
-    turnos = CELADOR_TURNOS_SLOTS.map(function(s){
-      if (s.turno === 'NOCHE') return { turno: s.turno, dia: s.dia, vacantes: 0 };
-      var vac = base + (i < resto ? 1 : 0);
-      i += 1;
-      return { turno: s.turno, dia: s.dia, vacantes: vac };
-    });
+    turnos = repartirVacantesSeisCeldasUI(total, CELADOR_TURNOS_SLOTS);
   }
-  var suma = turnos.reduce(function(a, t){ return a + (parseInt(t.vacantes, 10) || 0); }, 0);
+  var suma = sumaVacantesTurnosUI(turnos);
   var insc = parseInt(c.inscritos, 10) || 0;
   return {
     nombre: c.nombre,

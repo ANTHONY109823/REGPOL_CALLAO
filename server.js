@@ -5557,7 +5557,26 @@ function sumaVacantesTurnos(turnos) {
   }, 0);
 }
 
-/** Celador: mismas 6 celdas que el resto (Noche inicia en 0). */
+/** Reparte un total en 6 celdas: Mañana/Tarde/Noche × PAR/IMPAR. */
+function repartirVacantesSeisCeldas(total, slots) {
+  var list = Array.isArray(slots) && slots.length ? slots : CONVENIO_TURNOS_SLOTS;
+  var t = parseInt(total, 10) || 0;
+  var n = list.length || 1;
+  var base = Math.floor(t / n);
+  var resto = t % n;
+  return list.map(function(s, i) {
+    return { turno: s.turno, dia: s.dia, vacantes: base + (i < resto ? 1 : 0) };
+  });
+}
+
+function nocheSinVacantes(turnos) {
+  var list = normalizarTurnos(turnos);
+  var noches = list.filter(function(t) { return String(t.turno || '') === 'NOCHE'; });
+  if (!noches.length) return true;
+  return noches.every(function(t) { return (parseInt(t.vacantes, 10) || 0) <= 0; });
+}
+
+/** Celador y resto: 6 celdas fijas, Noche incluida. */
 const CELADOR_TURNOS_SLOTS = [
   { turno: 'MAÑANA', dia: 'PAR' },
   { turno: 'TARDE', dia: 'PAR' },
@@ -5588,7 +5607,7 @@ function asegurarTurnosConvenioEnCupo(cupo) {
   var turnos = CONVENIO_TURNOS_SLOTS.map(function(s) {
     var exact = prevMap[s.turno + '|' + s.dia];
     var vac = exact ? (parseInt(exact.vacantes, 10) || 0) : 0;
-    if (!exact && s.dia === 'PAR') {
+    if (vac <= 0 && s.dia === 'PAR') {
       var ambos = prevMap[s.turno + '|PAR/IMPAR'];
       if (ambos) vac = parseInt(ambos.vacantes, 10) || 0;
     }
@@ -5598,9 +5617,12 @@ function asegurarTurnosConvenioEnCupo(cupo) {
   if (suma === 0) {
     var prevTotal = parseInt(c.vacantes, 10) || 0;
     if (prevTotal > 0) {
-      turnos[1].vacantes = prevTotal;
+      turnos = repartirVacantesSeisCeldas(prevTotal, CONVENIO_TURNOS_SLOTS);
       suma = prevTotal;
     }
+  } else if (nocheSinVacantes(turnos)) {
+    turnos = repartirVacantesSeisCeldas(suma, CONVENIO_TURNOS_SLOTS);
+    suma = sumaVacantesTurnos(turnos);
   }
   var insc = parseInt(c.inscritos, 10) || 0;
   return {
@@ -5631,9 +5653,18 @@ function expandirCuposConvenioSeisCeldas(titulo, cupos, turnosGlobales) {
       }
     }
   }
+  var globNight = normalizarTurnos(turnosGlobales).filter(function(t) {
+    return t.turno === 'NOCHE' && (parseInt(t.vacantes, 10) || 0) > 0;
+  });
   return list.map(function(c) {
     if (esLugarSedapalAtencion(c && c.nombre)) return asegurarTurnosSedapalAtencionEnCupo(c);
-    return asegurarTurnosConvenioEnCupo(c);
+    var cupoWork = c;
+    if (globNight.length && nocheSinVacantes(c && c.turnos)) {
+      cupoWork = Object.assign({}, c, {
+        turnos: normalizarTurnos(c && c.turnos).concat(globNight)
+      });
+    }
+    return asegurarTurnosConvenioEnCupo(cupoWork);
   });
 }
 
@@ -5648,29 +5679,20 @@ function direccionDefaultComisariaCelador(nombre) {
 }
 
 function plantillaTurnosCeladorCia(vacantesCia, prevTurnos) {
-  var total = parseInt(vacantesCia, 10) || 0;
-  var prevMap = {};
-  normalizarTurnos(prevTurnos).forEach(function(t) {
-    prevMap[t.turno + '|' + t.dia] = t;
-  });
-  var hayPrev = Object.keys(prevMap).length > 0;
-  if (hayPrev) {
+  var prevNorm = normalizarTurnos(prevTurnos);
+  var prevSuma = sumaVacantesTurnos(prevNorm);
+  var total = prevSuma > 0 ? prevSuma : (parseInt(vacantesCia, 10) || 0);
+  if (prevNorm.length && !nocheSinVacantes(prevNorm)) {
+    var prevMap = {};
+    prevNorm.forEach(function(t) {
+      prevMap[t.turno + '|' + t.dia] = t;
+    });
     return CELADOR_TURNOS_SLOTS.map(function(s) {
       var prev = prevMap[s.turno + '|' + s.dia];
       return { turno: s.turno, dia: s.dia, vacantes: prev ? (parseInt(prev.vacantes, 10) || 0) : 0 };
     });
   }
-  var slotsDia = CELADOR_TURNOS_SLOTS.filter(function(s) { return s.turno !== 'NOCHE'; });
-  var n = slotsDia.length || 1;
-  var base = Math.floor(total / n);
-  var resto = total % n;
-  var i = 0;
-  return CELADOR_TURNOS_SLOTS.map(function(s) {
-    if (s.turno === 'NOCHE') return { turno: s.turno, dia: s.dia, vacantes: 0 };
-    var vac = base + (i < resto ? 1 : 0);
-    i += 1;
-    return { turno: s.turno, dia: s.dia, vacantes: vac };
-  });
+  return repartirVacantesSeisCeldas(total, CELADOR_TURNOS_SLOTS);
 }
 
 function turnosAgregadosCelador(cupos) {
@@ -5909,7 +5931,9 @@ const CONVENIOS_DATOS_HOJA = {
       { turno: 'MAÑANA', dia: 'PAR', vacantes: 0 },
       { turno: 'MAÑANA', dia: 'IMPAR', vacantes: 0 },
       { turno: 'TARDE', dia: 'PAR', vacantes: 0 },
-      { turno: 'TARDE', dia: 'IMPAR', vacantes: 0 }
+      { turno: 'TARDE', dia: 'IMPAR', vacantes: 0 },
+      { turno: 'NOCHE', dia: 'PAR', vacantes: 0 },
+      { turno: 'NOCHE', dia: 'IMPAR', vacantes: 0 }
     ],
     redistribuirCupos: false
   }
@@ -7603,16 +7627,31 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
         row.vacantes = suma;
         console.log('Celador: matriz CIA×turno×día aplicada (' + nuevos.length + ' CIAs, ' + suma + ' vacantes).');
       } else {
-        const turnosAgg = turnosAgregadosCelador(cuposActuales);
+        const redistribuidos = cuposActuales.map(function(c) {
+          const turnosCia = plantillaTurnosCeladorCia(c.vacantes, c.turnos);
+          const vacCia = sumaVacantesTurnos(turnosCia);
+          const insc = parseInt(c.inscritos, 10) || 0;
+          return Object.assign({}, c, {
+            turnos: turnosCia,
+            vacantes: vacCia,
+            disponibles: Math.max(0, vacCia - insc)
+          });
+        });
+        const turnosAgg = turnosAgregadosCelador(redistribuidos);
         const sumaCupos = sumaVacantesTurnos(turnosAgg);
         const horarioTxt = horarioDesdeTurnos(turnosAgg);
-        await db.query(
-          'UPDATE items_portal SET turnos=$1::jsonb, vacantes=$2, horario=$3 WHERE id=$4',
-          [JSON.stringify(turnosAgg), sumaCupos, horarioTxt, row.id]
-        );
-        row.turnos = turnosAgg;
-        row.vacantes = sumaCupos;
-        cuposActualizados++;
+        const cambioCupos = JSON.stringify(cuposActuales) !== JSON.stringify(redistribuidos);
+        const cambioTurnos = JSON.stringify(normalizarTurnos(row.turnos)) !== JSON.stringify(turnosAgg);
+        if (cambioCupos || cambioTurnos || (sumaCupos !== (parseInt(row.vacantes, 10) || 0))) {
+          await db.query(
+            'UPDATE items_portal SET cupos_unidades=$1::jsonb, turnos=$2::jsonb, vacantes=$3, horario=$4 WHERE id=$5',
+            [JSON.stringify(redistribuidos), JSON.stringify(turnosAgg), sumaCupos, horarioTxt, row.id]
+          );
+          row.cupos_unidades = redistribuidos;
+          row.turnos = turnosAgg;
+          row.vacantes = sumaCupos;
+          cuposActualizados++;
+        }
       }
     } else if (!cuposActuales.length) {
       const vac = parseInt(row.vacantes, 10) || 0;
