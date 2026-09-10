@@ -6978,7 +6978,8 @@ async function revertirReservasTurnosSinSorteo(pool, itemId) {
   const slots = construirSlotsSorteoItem(item);
   if (!slots.length) return { ok: true, revertidos: 0 };
   const ins = await pool.query(
-    `SELECT id, estado, observacion, comisaria_postula, postula_slots FROM inscripciones WHERE item_id=$1`,
+    `SELECT id, estado, observacion, comisaria_postula, postula_slots
+     FROM inscripciones WHERE item_id=$1 AND ${sqlMesActualLima('fecha')}`,
     [itemId]
   );
   const ocupan = conveniosFlujo.ESTADOS_OCUPAN_VACANTE || [];
@@ -7025,7 +7026,7 @@ async function promoverVacantesNoCubiertasPorSlot(pool, itemId) {
   if (!slots.length) return { ok: true, ganadores: 0 };
   const ins = await pool.query(
     `SELECT id, estado, comisaria_postula, postula_slots, disponibilidad, dia_franco
-     FROM inscripciones WHERE item_id=$1`,
+     FROM inscripciones WHERE item_id=$1 AND ${sqlMesActualLima('fecha')}`,
     [itemId]
   );
   const ocupan = conveniosFlujo.ESTADOS_OCUPAN_VACANTE || [];
@@ -9383,8 +9384,10 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
     const r = await pool.query(
       `SELECT id,cip,dni,grado,nombres,unidad,area,cargo,disponibilidad,dia_franco,tiempo_servicio,estado,
               telefono,email,modo_ingreso,comisaria_postula,postula_slots,bloque_vacaciones
-       FROM inscripciones WHERE item_id=$1 AND estado = ANY($2::varchar[])
-       ORDER BY fecha ASC`, [req.params.id, estados]);
+       FROM inscripciones
+       WHERE item_id=$1 AND estado = ANY($2::varchar[])
+         AND (NOT $3::boolean OR ${sqlMesActualLima('fecha')})
+       ORDER BY fecha ASC`, [req.params.id, estados, esConvenio]);
     const vac = esConvenio ? await conveniosFlujo.vacantesDisponibles(pool, req.params.id) : null;
     const itemRow = cur.rows[0];
     itemRow.turnos = normalizarTurnos(itemRow.turnos);
