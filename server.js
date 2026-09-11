@@ -5445,7 +5445,9 @@ function normalizarTurnos(raw) {
 }
 
 function horarioDesdeTurnos(turnos) {
-  var list = normalizarTurnos(turnos);
+  var list = normalizarTurnos(turnos).filter(function(t) {
+    return (parseInt(t.vacantes, 10) || 0) > 0;
+  });
   if (!list.length) return '';
   var nombres = [];
   var dias = {};
@@ -5557,26 +5559,42 @@ function sumaVacantesTurnos(turnos) {
   }, 0);
 }
 
-/** Reparte un total en 6 celdas: Mañana/Tarde/Noche × PAR/IMPAR. */
-function repartirVacantesSeisCeldas(total, slots) {
+/** Copia las 6 celdas; 0 en Noche se respeta (no se rellena solo). */
+function copiarTurnosSeisCeldas(prevTurnos, slots) {
   var list = Array.isArray(slots) && slots.length ? slots : CONVENIO_TURNOS_SLOTS;
-  var t = parseInt(total, 10) || 0;
-  var n = list.length || 1;
-  var base = Math.floor(t / n);
-  var resto = t % n;
-  return list.map(function(s, i) {
-    return { turno: s.turno, dia: s.dia, vacantes: base + (i < resto ? 1 : 0) };
+  var prevMap = {};
+  normalizarTurnos(prevTurnos).forEach(function(t) {
+    prevMap[t.turno + '|' + t.dia] = t;
+  });
+  return list.map(function(s) {
+    var exact = prevMap[s.turno + '|' + s.dia];
+    var vac = exact ? (parseInt(exact.vacantes, 10) || 0) : 0;
+    if (vac <= 0 && s.dia === 'PAR' && !exact) {
+      var ambos = prevMap[s.turno + '|PAR/IMPAR'];
+      if (ambos) vac = parseInt(ambos.vacantes, 10) || 0;
+    }
+    return { turno: s.turno, dia: s.dia, vacantes: vac };
   });
 }
 
-function nocheSinVacantes(turnos) {
-  var list = normalizarTurnos(turnos);
-  var noches = list.filter(function(t) { return String(t.turno || '') === 'NOCHE'; });
-  if (!noches.length) return true;
-  return noches.every(function(t) { return (parseInt(t.vacantes, 10) || 0) <= 0; });
+/** Si no hay matriz previa: Mañana/Tarde; Noche queda en 0 hasta que el admin la publique. */
+function repartirVacantesSinNoche(total, slots) {
+  var list = Array.isArray(slots) && slots.length ? slots : CONVENIO_TURNOS_SLOTS;
+  var t = parseInt(total, 10) || 0;
+  var dia = list.filter(function(s) { return s.turno !== 'NOCHE'; });
+  var n = dia.length || 1;
+  var base = Math.floor(t / n);
+  var resto = t % n;
+  var i = 0;
+  return list.map(function(s) {
+    if (s.turno === 'NOCHE') return { turno: s.turno, dia: s.dia, vacantes: 0 };
+    var vac = base + (i < resto ? 1 : 0);
+    i += 1;
+    return { turno: s.turno, dia: s.dia, vacantes: vac };
+  });
 }
 
-/** Celador y resto: 6 celdas fijas, Noche incluida. */
+/** Celador y resto: 6 celdas fijas, Noche incluida (puede ser 0). */
 const CELADOR_TURNOS_SLOTS = [
   { turno: 'MAÑANA', dia: 'PAR' },
   { turno: 'TARDE', dia: 'PAR' },
@@ -5599,31 +5617,16 @@ const CONVENIO_TURNOS_SLOTS = [
 function asegurarTurnosConvenioEnCupo(cupo) {
   if (esLugarSedapalAtencion(cupo && cupo.nombre)) return asegurarTurnosSedapalAtencionEnCupo(cupo);
   var c = cupo || { nombre: '', vacantes: 0, inscritos: 0, disponibles: 0, direccion: '' };
-  var prevMap = {};
-  normalizarTurnos(c.turnos).forEach(function(t) {
-    if (esTurnoSedapalAtencion(t.turno)) return;
-    prevMap[t.turno + '|' + t.dia] = t;
+  var prevNorm = normalizarTurnos(c.turnos).filter(function(t) {
+    return !esTurnoSedapalAtencion(t.turno);
   });
-  var turnos = CONVENIO_TURNOS_SLOTS.map(function(s) {
-    var exact = prevMap[s.turno + '|' + s.dia];
-    var vac = exact ? (parseInt(exact.vacantes, 10) || 0) : 0;
-    if (vac <= 0 && s.dia === 'PAR') {
-      var ambos = prevMap[s.turno + '|PAR/IMPAR'];
-      if (ambos) vac = parseInt(ambos.vacantes, 10) || 0;
-    }
-    return { turno: s.turno, dia: s.dia, vacantes: vac };
-  });
-  var suma = sumaVacantesTurnos(turnos);
-  if (suma === 0) {
-    var prevTotal = parseInt(c.vacantes, 10) || 0;
-    if (prevTotal > 0) {
-      turnos = repartirVacantesSeisCeldas(prevTotal, CONVENIO_TURNOS_SLOTS);
-      suma = prevTotal;
-    }
-  } else if (nocheSinVacantes(turnos)) {
-    turnos = repartirVacantesSeisCeldas(suma, CONVENIO_TURNOS_SLOTS);
-    suma = sumaVacantesTurnos(turnos);
+  var turnos;
+  if (prevNorm.length) {
+    turnos = copiarTurnosSeisCeldas(prevNorm, CONVENIO_TURNOS_SLOTS);
+  } else {
+    turnos = repartirVacantesSinNoche(parseInt(c.vacantes, 10) || 0, CONVENIO_TURNOS_SLOTS);
   }
+  var suma = sumaVacantesTurnos(turnos);
   var insc = parseInt(c.inscritos, 10) || 0;
   return {
     nombre: c.nombre,
@@ -5653,18 +5656,9 @@ function expandirCuposConvenioSeisCeldas(titulo, cupos, turnosGlobales) {
       }
     }
   }
-  var globNight = normalizarTurnos(turnosGlobales).filter(function(t) {
-    return t.turno === 'NOCHE' && (parseInt(t.vacantes, 10) || 0) > 0;
-  });
   return list.map(function(c) {
     if (esLugarSedapalAtencion(c && c.nombre)) return asegurarTurnosSedapalAtencionEnCupo(c);
-    var cupoWork = c;
-    if (globNight.length && nocheSinVacantes(c && c.turnos)) {
-      cupoWork = Object.assign({}, c, {
-        turnos: normalizarTurnos(c && c.turnos).concat(globNight)
-      });
-    }
-    return asegurarTurnosConvenioEnCupo(cupoWork);
+    return asegurarTurnosConvenioEnCupo(c);
   });
 }
 
@@ -5680,19 +5674,8 @@ function direccionDefaultComisariaCelador(nombre) {
 
 function plantillaTurnosCeladorCia(vacantesCia, prevTurnos) {
   var prevNorm = normalizarTurnos(prevTurnos);
-  var prevSuma = sumaVacantesTurnos(prevNorm);
-  var total = prevSuma > 0 ? prevSuma : (parseInt(vacantesCia, 10) || 0);
-  if (prevNorm.length && !nocheSinVacantes(prevNorm)) {
-    var prevMap = {};
-    prevNorm.forEach(function(t) {
-      prevMap[t.turno + '|' + t.dia] = t;
-    });
-    return CELADOR_TURNOS_SLOTS.map(function(s) {
-      var prev = prevMap[s.turno + '|' + s.dia];
-      return { turno: s.turno, dia: s.dia, vacantes: prev ? (parseInt(prev.vacantes, 10) || 0) : 0 };
-    });
-  }
-  return repartirVacantesSeisCeldas(total, CELADOR_TURNOS_SLOTS);
+  if (prevNorm.length) return copiarTurnosSeisCeldas(prevNorm, CELADOR_TURNOS_SLOTS);
+  return repartirVacantesSinNoche(parseInt(vacantesCia, 10) || 0, CELADOR_TURNOS_SLOTS);
 }
 
 function turnosAgregadosCelador(cupos) {
