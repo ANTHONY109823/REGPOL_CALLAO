@@ -688,6 +688,14 @@ async function initDB() {
   } catch (e) {
     console.warn('convenios archivo mensual:', e && e.message ? e.message : e);
   }
+  try {
+    const repOff = await conveniosFlujo.apagarRepechajeSiInscripcionesAbiertas(pool);
+    if (repOff && repOff.apagado) {
+      console.log('Convenios: repechaje apagado — hay ventana de inscripción abierta (mes nuevo).');
+    }
+  } catch (e) {
+    console.warn('convenios apagar repechaje:', e && e.message ? e.message : e);
+  }
   await recursosHumanos.initTablasRRHH(pool);
   await adminAuth.initAuthTablas(pool);
   await adminAuth.bootstrapSuperAdminSiFalta(pool);
@@ -2942,8 +2950,9 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
        FROM items_portal WHERE tipo='curso'`);
     const inscConv = await pool.query(
       `SELECT COUNT(n.id)::int AS total,
+        SUM(CASE WHEN n.estado IN ('preinscrito','pendiente','aprobado','verificado') THEN 1 ELSE 0 END)::int AS preinscritos,
         SUM(CASE WHEN n.estado='pendiente' THEN 1 ELSE 0 END)::int AS pendientes,
-        SUM(CASE WHEN n.estado='ganador' THEN 1 ELSE 0 END)::int AS ganadores
+        SUM(CASE WHEN n.estado IN ('ganador','en_revision','observado','expediente_ok') THEN 1 ELSE 0 END)::int AS ganadores
        FROM inscripciones n JOIN items_portal i ON i.id=n.item_id
        WHERE i.tipo='convenio' AND ${sqlMesActualLima('n.fecha')}`);
     const inscCurso = await pool.query(
@@ -3082,6 +3091,7 @@ app.get('/admin/stats-sistema', requireAuth, async (req, res) => {
         convenios_convocatorias: convItems.rows[0].convocatorias || 0,
         convenios_inscripciones_abiertas: convItems.rows[0].abiertas || 0,
         convenios_inscritos: inscConv.rows[0].total || 0,
+        convenios_preinscritos: inscConv.rows[0].preinscritos || 0,
         convenios_pendientes: inscConv.rows[0].pendientes || 0,
         convenios_ganadores: inscConv.rows[0].ganadores || 0,
         cursos_convocatorias: cursoItems.rows[0].convocatorias || 0,
@@ -6824,6 +6834,73 @@ app.get('/admin/convenios/auditoria-paquetes', requireAuth, async (req, res) => 
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
+function requireSuperAdmin(req, res) {
+  if (!req.admin || req.admin.rol !== 'unitic') {
+    res.status(403).json({ ok: false, error: 'Solo Super Admin' });
+    return false;
+  }
+  return true;
+}
+
+app.get('/admin/convenios/cierre-mes', requireAuth, async (req, res) => {
+  try {
+    if (!requireSuperAdmin(req, res)) return;
+    const r = await conveniosFlujo.resumenCierreMes(pool);
+    res.json(r);
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.post('/admin/convenios/cierre-mes/archivar-anteriores', requireAuth, async (req, res) => {
+  try {
+    if (!requireSuperAdmin(req, res)) return;
+    const r = await conveniosFlujo.archivarMesesAnteriores(pool);
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario),
+      usuario: req.admin.usuario,
+      accion: 'archivar_meses_anteriores',
+      modulo: 'convenios',
+      entidad: 'paquete',
+      entidadId: (r.meses || []).join(','),
+      detalle: 'Residuos ' + ((r.meses || []).join(', ') || 'ninguno') +
+        ' — ' + (r.total_registros || 0) + ' registros a Auditoría CIP. Carpeta web conservada.',
+      ip: req.ip || '',
+      ok: true
+    });
+    res.json(r);
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.post('/admin/convenios/cierre-mes/cerrar-actual', requireAuth, async (req, res) => {
+  try {
+    if (!requireSuperAdmin(req, res)) return;
+    const body = req.body || {};
+    const mes = String(body.confirmar_mes || body.mes || '').trim();
+    if (!body.descargue) {
+      return res.json({
+        ok: false,
+        error: 'Marque que ya descargó las listas PDF de preinscritos, ganadores y expedientes.'
+      });
+    }
+    const r = await conveniosFlujo.archivarMesOperativo(pool, mes, { incluirAdjuntos: true });
+    if (!r.ok) return res.json(r);
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario),
+      usuario: req.admin.usuario,
+      accion: 'cerrar_mes_convenios',
+      modulo: 'convenios',
+      entidad: 'paquete',
+      entidadId: r.mes || mes,
+      detalle: 'Cierre de ' + (r.etiqueta || mes) + ' — ' + (r.eliminados || 0) +
+        ' inscripciones a Auditoría CIP. Repechaje apagado. Carpeta web conservada.',
+      ip: req.ip || '',
+      ok: true
+    });
+    res.json(r);
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 // ── GET /portal/inscripciones/:id/constancia-vacante?cip= — PDF ganador ───────
 app.get('/portal/inscripciones/:id/constancia-vacante', async (req, res) => {
   try {
@@ -6979,7 +7056,7 @@ async function revertirPromocionesAutomaticasPrematuras(db) {
        AND i.tipo = 'convenio'
        AND i.visible = TRUE
        AND ${sqlMesActualLima('n.fecha')}
-       AND n.estado IN ('ganador', 'en_revision')
+       AND n.estado IN ('ganador', 'en_revision', 'caducado')
        AND COALESCE(n.observacion, '') ILIKE 'Asignado por vacante no cubierta%'
        AND ${sqlInscripcionesAbiertasExpr('i')}
      RETURNING n.id`
@@ -8478,6 +8555,18 @@ app.get('/portal/convenios/vacantes/:itemId', async (req, res) => {
 /** Lista pública de convenios con vacantes liberadas para repechaje */
 app.get('/portal/convenios/repechaje', async (req, res) => {
   try {
+    if (await conveniosFlujo.hayInscripcionesConvenioAbiertas(pool)) {
+      return res.json({
+        ok: true,
+        activo: false,
+        habilitado: false,
+        inicio: '',
+        cierre: '',
+        total: 0,
+        convenios: [],
+        motivo: 'inscripciones_abiertas'
+      });
+    }
     const ventana = await repechajeVentana();
     if (!ventana.vigente) {
       return res.json({
@@ -8584,6 +8673,12 @@ app.post('/admin/repechaje/estado', requireAuth, async (req, res) => {
     if (inicio) await setConfig(CFG_REPECHAJE_INICIO, inicio);
     if (cierre) await setConfig(CFG_REPECHAJE_CIERRE, cierre);
     if (body.activo != null) {
+      if (body.activo && await conveniosFlujo.hayInscripcionesConvenioAbiertas(pool)) {
+        return res.json({
+          ok: false,
+          error: 'El repechaje es posterior al sorteo y a la presentación de expedientes. Las inscripciones del mes aún están abiertas.'
+        });
+      }
       await setConfig(CFG_REPECHAJE_ACTIVO, body.activo ? '1' : '0');
     }
     const v = await repechajeVentana();
@@ -9339,8 +9434,8 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
     if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     if (cur.rows[0].tipo === 'convenio') {
-      await conveniosFlujo.caducarExpedientesVencidos(pool);
       await revertirPromocionesAutomaticasPrematuras(pool);
+      await conveniosFlujo.caducarExpedientesVencidos(pool);
       await revertirReservasTurnosSinSorteo(pool, parseInt(req.params.id, 10));
     }
     const r = await pool.query(
@@ -9433,8 +9528,8 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const esConvenio = cur.rows[0].tipo === 'convenio';
     if (esConvenio) {
-      await conveniosFlujo.caducarExpedientesVencidos(pool);
       await revertirPromocionesAutomaticasPrematuras(pool);
+      await conveniosFlujo.caducarExpedientesVencidos(pool);
     }
     const estados = esConvenio
       ? ['preinscrito', 'pendiente', 'aprobado', 'verificado', 'ganador', 'reserva']

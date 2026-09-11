@@ -421,7 +421,29 @@ async function initColumnasFlujoConvenios(pool) {
       AND COALESCE(n.nro_registro, '') = ''
   `);
 }
+function sqlVentanaInscripcionAbierta(alias) {
+  const a = alias || 'i';
+  return `(${a}.tipo = 'convenio'
+    AND ${a}.inscripcion_inicio IS NOT NULL
+    AND ${a}.inscripcion_cierre IS NOT NULL
+    AND (CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima')::date >= ${a}.inscripcion_inicio
+    AND (CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima')::date <= ${a}.inscripcion_cierre)`;
+}
+
+function sqlMesOperativoLima() {
+  return `to_char(timezone('America/Lima', NOW()), 'YYYY-MM')`;
+}
+
+async function hayInscripcionesConvenioAbiertas(db) {
+  const r = await db.query(
+    `SELECT COUNT(*)::int AS n FROM items_portal i
+     WHERE ${sqlVentanaInscripcionAbierta('i')} AND COALESCE(i.visible, TRUE) = TRUE`
+  );
+  return (r.rows[0].n || 0) > 0;
+}
+
 async function migrarEstadosConvenios(pool) {
+  const mesFiltro = `AND ${sqlMesInscripcionLima()} = ${sqlMesOperativoLima()}`;
   // Preinscripción unificada (ya no verifican/aprueban antes del sorteo)
   await pool.query(`
     UPDATE inscripciones n
@@ -431,9 +453,11 @@ async function migrarEstadosConvenios(pool) {
     WHERE n.item_id = i.id
       AND i.tipo = 'convenio'
       AND n.estado IN ('pendiente', 'verificado', 'aprobado')
+      ${mesFiltro}
   `);
 
-  // Ganadores con PDF ya cargado → en revisión (no reabrir plazo)
+  // Ganadores con PDF ya cargado → en revisión (no reabrir plazo).
+  // No aplicar mientras la inscripción sigue abierta: eso no es sorteo ni repechaje.
   await pool.query(`
     UPDATE inscripciones n
     SET estado = 'en_revision',
@@ -444,6 +468,8 @@ async function migrarEstadosConvenios(pool) {
       AND i.tipo = 'convenio'
       AND n.estado = 'ganador'
       AND COALESCE(n.pdf_requisitos,'') <> ''
+      AND NOT ${sqlVentanaInscripcionAbierta('i')}
+      ${mesFiltro}
   `);
 
   // Observados actuales: 24 h desde ahora (una sola vez, si aún no hay fecha_observacion)
@@ -456,6 +482,7 @@ async function migrarEstadosConvenios(pool) {
       AND i.tipo = 'convenio'
       AND n.estado = 'observado'
       AND n.fecha_observacion IS NULL
+      ${mesFiltro}
   `, [String(PLAZO_SUBSANACION_HORAS)]);
 
   await caducarExpedientesVencidos(pool);
@@ -492,6 +519,7 @@ async function caducarExpedientesVencidos(pool) {
       AND n.plazo_expediente IS NOT NULL
       AND n.plazo_expediente < NOW()
       AND COALESCE(n.pdf_requisitos,'') = ''
+      AND NOT ${sqlVentanaInscripcionAbierta('i')}
     RETURNING n.id
   `);
   return (r.rows || []).map(function(x) { return x.id; });
@@ -934,6 +962,7 @@ async function archivarMesesAnteriores(pool) {
     return { ok: true, mes_actual: mesActual, meses: [], total_registros: 0, paquetes: [] };
   }
 
+  const ventanaAbierta = await hayInscripcionesConvenioAbiertas(pool);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -945,7 +974,10 @@ async function archivarMesesAnteriores(pool) {
       totalReg += p.copiados;
     }
     const ancla = paquetes[paquetes.length - 1];
-    const adj = await empaquetarSorteosYPdfsConvenio(client, ancla.id);
+    let adj = { sorteos: 0, resultados_pdf: 0 };
+    if (!ventanaAbierta) {
+      adj = await empaquetarSorteosYPdfsConvenio(client, ancla.id);
+    }
     await apagarRepechaje(client);
 
     const resumen = {
@@ -996,6 +1028,154 @@ async function listarPaquetesAuditoria(pool) {
   return r.rows;
 }
 
+async function apagarRepechajeSiInscripcionesAbiertas(db) {
+  if (!(await hayInscripcionesConvenioAbiertas(db))) return { apagado: false };
+  await apagarRepechaje(db);
+  return { apagado: true };
+}
+
+async function resumenCierreMes(pool) {
+  const actual = await pool.query(`SELECT ${sqlMesOperativoLima()} AS mes`);
+  const mesActual = actual.rows[0].mes;
+  const abiertas = await hayInscripcionesConvenioAbiertas(pool);
+  let repechajeOn = false;
+  try {
+    const flag = await pool.query("SELECT valor FROM configuracion WHERE clave='repechaje_activo'");
+    repechajeOn = !!(flag.rows[0] && String(flag.rows[0].valor) === '1');
+  } catch (e) {}
+  const vivos = await pool.query(
+    `SELECT n.estado, COUNT(*)::int AS n
+     FROM inscripciones n
+     JOIN items_portal i ON i.id = n.item_id
+     WHERE i.tipo = 'convenio' AND ${sqlMesInscripcionLima()} = $1
+     GROUP BY n.estado`,
+    [mesActual]
+  );
+  const anteriores = await pool.query(
+    `SELECT ${sqlMesInscripcionLima()} AS mes, COUNT(*)::int AS n
+     FROM inscripciones n
+     JOIN items_portal i ON i.id = n.item_id
+     WHERE i.tipo = 'convenio' AND ${sqlMesInscripcionLima()} < $1
+     GROUP BY 1 ORDER BY 1`,
+    [mesActual]
+  );
+  const web = await pool.query(
+    "SELECT COUNT(*)::int AS n FROM items_portal WHERE tipo='convenio' AND visible=TRUE"
+  );
+  const mapa = {};
+  let total = 0;
+  vivos.rows.forEach(function(r) {
+    mapa[r.estado] = r.n;
+    total += r.n;
+  });
+  const pre = (mapa.preinscrito || 0) + (mapa.pendiente || 0) + (mapa.aprobado || 0) + (mapa.verificado || 0);
+  const gan = (mapa.ganador || 0) + (mapa.en_revision || 0) + (mapa.observado || 0) + (mapa.expediente_ok || 0);
+  return {
+    ok: true,
+    mes_actual: mesActual,
+    etiqueta: etiquetaMesEs(mesActual),
+    inscripciones_abiertas: abiertas,
+    repechaje_habilitado: repechajeOn,
+    convenios_web: web.rows[0].n || 0,
+    vivos: {
+      total: total,
+      preinscritos: pre,
+      ganadores: gan,
+      ganador: mapa.ganador || 0,
+      en_revision: mapa.en_revision || 0,
+      observado: mapa.observado || 0,
+      expediente_ok: mapa.expediente_ok || 0,
+      reserva: mapa.reserva || 0,
+      caducado: mapa.caducado || 0,
+      repechaje: mapa.repechaje || 0
+    },
+    meses_anteriores: anteriores.rows.map(function(r) {
+      return { mes: r.mes, etiqueta: etiquetaMesEs(r.mes), n: r.n };
+    }),
+    puede_archivar_anteriores: anteriores.rows.length > 0,
+    puede_cerrar_actual: !abiertas && total > 0
+  };
+}
+
+/**
+ * Cierra el mes operativo: copia a Auditoría CIP y vacía inscripciones de convenios.
+ * No borra la carpeta web (items_portal). Repechaje se apaga.
+ * Incluir sorteos/PDFs solo cuando ya no hay ventana de inscripción abierta.
+ */
+async function archivarMesOperativo(pool, mes, opts) {
+  const o = opts || {};
+  const actualR = await pool.query(`SELECT ${sqlMesOperativoLima()} AS mes`);
+  const mesActual = actualR.rows[0].mes;
+  const mesNorm = String(mes || '').trim();
+  if (!/^\d{4}-\d{2}$/.test(mesNorm)) {
+    return { ok: false, error: 'Indique el mes en formato AAAA-MM.' };
+  }
+  if (mesNorm > mesActual) {
+    return { ok: false, error: 'No se puede archivar un mes futuro.' };
+  }
+  const ventanaAbierta = await hayInscripcionesConvenioAbiertas(pool);
+  const esActual = mesNorm === mesActual;
+  if (esActual && ventanaAbierta) {
+    return {
+      ok: false,
+      error: 'Las inscripciones del mes siguen abiertas. El cierre se hace al terminar inscripción, sorteo y presentación de expedientes.'
+    };
+  }
+  const hay = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM inscripciones n
+     JOIN items_portal i ON i.id = n.item_id
+     WHERE i.tipo = 'convenio' AND ${sqlMesInscripcionLima()} = $1`,
+    [mesNorm]
+  );
+  if (!(hay.rows[0].n || 0)) {
+    return { ok: false, error: 'No hay inscripciones de convenio para ' + etiquetaMesEs(mesNorm) + '.' };
+  }
+
+  const incluirAdjuntos = o.incluirAdjuntos !== false && !ventanaAbierta;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const p = await archivarUnMes(client, mesNorm);
+    let adj = { sorteos: 0, resultados_pdf: 0 };
+    if (incluirAdjuntos) {
+      adj = await empaquetarSorteosYPdfsConvenio(client, p.id);
+    }
+    await apagarRepechaje(client);
+    const resumen = {
+      por_estado: p.por_estado,
+      por_convenio: p.por_convenio,
+      meses: [mesNorm],
+      sorteos: adj.sorteos,
+      resultados_pdf: adj.resultados_pdf,
+      repechaje_apagado: true,
+      carpeta_web_conservada: true,
+      cierre_manual: true
+    };
+    await client.query(
+      'UPDATE convenios_auditoria_paquetes SET resumen=$1::jsonb WHERE id=$2',
+      [JSON.stringify(resumen), p.id]
+    );
+    await client.query('COMMIT');
+    return {
+      ok: true,
+      mes: mesNorm,
+      mes_actual: mesActual,
+      etiqueta: p.titulo,
+      copiados: p.copiados,
+      eliminados: p.eliminados,
+      total: p.total,
+      sorteos: adj.sorteos,
+      resultados_pdf: adj.resultados_pdf,
+      paquetes: [p]
+    };
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (e2) {}
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   PLAZO_EXPEDIENTE_DIAS,
   ESTADOS_OCUPAN_VACANTE,
@@ -1021,5 +1201,9 @@ module.exports = {
   etiquetaBloqueVacaciones,
   estadoOcupaVacante,
   archivarMesesAnteriores,
+  archivarMesOperativo,
+  resumenCierreMes,
+  hayInscripcionesConvenioAbiertas,
+  apagarRepechajeSiInscripcionesAbiertas,
   listarPaquetesAuditoria
 };

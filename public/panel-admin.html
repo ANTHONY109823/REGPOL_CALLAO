@@ -867,6 +867,9 @@
       <div class="sb-item" data-page="divisiones" onclick="ir('divisiones',this)">
         <i class="fas fa-sitemap"></i> DIVISIONES / UNIDADES
       </div>
+      <div class="sb-item" data-page="cierre-mes" onclick="ir('cierre-mes',this)">
+        <i class="fas fa-broom"></i> CIERRE DE MES / LIMPIEZA
+      </div>
     </div>
 
     
@@ -1066,6 +1069,26 @@
             <tbody id="tabla-auditoria"><tr><td colspan="8" style="color:#bbb;text-align:center;">Pulse Actualizar</td></tr></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <div id="page-cierre-mes" class="page">
+      <div class="card">
+        <h3><i class="fas fa-broom"></i> Cierre de mes y limpieza — Super Admin</h3>
+        <p style="font-size:13px;color:#555;margin:-4px 0 14px;line-height:1.55;">
+          Flujo del mes: <strong>preinscripción</strong> → al cerrar la ventana el Admin de Convenios hace el
+          <strong>sorteo</strong> → ganadores suben expediente → revisión.
+          El <strong>repechaje</strong> es posterior (vacantes que caducaron). No se mezcla con la inscripción.
+        </p>
+        <p style="font-size:13px;color:#555;margin:0 0 16px;line-height:1.55;">
+          Use esta pantalla <strong>a fin de mes</strong>, cuando ya descargó las listas PDF
+          (Preinscritos, Ganadores y expedientes) y terminó inscripción, sorteo y presentación.
+          Los registros pasan a <strong>Auditoría CIP</strong> y se vacían los menús operativos.
+          La carpeta web de convenios <strong>no se borra</strong>.
+        </p>
+        <div id="cierre-mes-alerta" style="display:none;padding:10px 12px;border-radius:7px;font-size:13px;margin-bottom:12px;"></div>
+        <div id="cierre-mes-resumen"><p style="color:#888;text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Cargando estado del mes...</p></div>
+        <div id="cierre-mes-acciones" style="display:none;margin-top:16px;"></div>
       </div>
     </div>
 
@@ -1675,6 +1698,7 @@
           Aquí queda empaquetado el mes cerrado (preinscritos, ganadores, repechaje y expedientes).
           La consulta pública y los menús operativos empiezan de cero cada mes.
           <strong>Convenios (web)</strong> no se toca.
+          El Super Admin cierra y limpia el mes en <strong>Administración → Cierre de mes / Limpieza</strong>, después de descargar las listas.
         </p>
         <div id="aud-conv-paquetes" style="margin-bottom:16px;"></div>
         <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:16px;">
@@ -4397,7 +4421,7 @@ function ir(page, el){
   if((page==='faltos'||page==='faltos-dash'||page==='faltos-import')&&!puedeGestionFaltos()){alert('Sin acceso a Faltos.');return;}
   if(page==='faltos-import'&&!puedeFaltosAdmin()){alert('Solo el admin del área puede subir el Excel histórico.');return;}
   if((page==='rrhh-nomina'||page==='rrhh-reportes')&&!puedeGestionRRHH()){alert('Sin acceso a Recursos Humanos.');return;}
-  if((page==='usuarios'||page==='divisiones'||page==='menu-publicacion')&&!esUnitic()){alert('Solo el Super Admin puede acceder a esta sección.');return;}
+  if((page==='usuarios'||page==='divisiones'||page==='menu-publicacion'||page==='cierre-mes')&&!esUnitic()){alert('Solo el Super Admin puede acceder a esta sección.');return;}
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
   var pg=document.getElementById('page-'+page);
   if(pg) pg.classList.add('on');
@@ -4411,6 +4435,7 @@ function ir(page, el){
   }
   if(page==='preguntas' && !ya)    cargarPreguntas();
   if(page==='usuarios' && !ya)     cargarUsuarios();
+  if(page==='cierre-mes')          cargarCierreMesSuperAdmin();
   if(page==='descargas'){
     if(!ya) cargarFiltrosTabla();
     actualizarBotonesRespuestas();
@@ -4571,10 +4596,12 @@ function cargarStatsSistema(){
     if (conv) {
       conv.innerHTML = sysModKpi('Convocatorias', r.convenios_convocatorias || 0)
         + sysModKpi('Inscripciones abiertas', r.convenios_inscripciones_abiertas || 0)
+        + sysModKpi('Preinscritos (mes)', r.convenios_preinscritos || 0)
         + sysModKpi('Total inscritos', r.convenios_inscritos || 0)
         + sysModKpi('Pendientes de revisión', r.convenios_pendientes || 0)
-        + sysModKpi('Ganadores registrados', r.convenios_ganadores || 0)
-        + sysModKpi('Resultados publicados en web', r.sorteos_publicados || 0);
+        + sysModKpi('Ganadores / expedientes', r.convenios_ganadores || 0)
+        + sysModKpi('Resultados publicados en web', r.sorteos_publicados || 0)
+        + '<p style="margin:10px 0 0;font-size:11px;color:#666;">Cierre y limpieza del mes: <strong>Administración → Cierre de mes / Limpieza</strong>.</p>';
     }
     var cursos = document.getElementById('sys-mod-cursos');
     if (cursos) {
@@ -8702,6 +8729,127 @@ function irConvPlantillas(el){
 
 function irConvConstancia(el){
   ir('conv-constancia', el);
+}
+
+function cierreMesAlerta(msg, tipo){
+  var el = document.getElementById('cierre-mes-alerta');
+  if(!el) return;
+  if(!msg){ el.style.display='none'; el.textContent=''; return; }
+  el.style.display='block';
+  el.textContent = msg;
+  el.style.background = tipo==='error' ? '#f8d7da' : (tipo==='ok' ? '#d4edda' : '#fff8e1');
+  el.style.color = tipo==='error' ? '#842029' : (tipo==='ok' ? '#1a5c32' : '#6b5420');
+  el.style.border = '1px solid ' + (tipo==='error' ? '#f5c2c7' : (tipo==='ok' ? '#a5d6a7' : '#e6d7a8'));
+}
+
+function cargarCierreMesSuperAdmin(){
+  if(!esUnitic()) return;
+  var box = document.getElementById('cierre-mes-resumen');
+  var acc = document.getElementById('cierre-mes-acciones');
+  if(box) box.innerHTML = '<p style="color:#888;text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Cargando estado del mes...</p>';
+  if(acc) acc.style.display = 'none';
+  cierreMesAlerta('', '');
+  fetch(API+'/admin/convenios/cierre-mes',{headers:hdr()})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){
+        if(box) box.innerHTML = '<p style="color:#c0392b;">'+escHtml(d.error||'No se pudo cargar el estado.')+'</p>';
+        return;
+      }
+      var v = d.vivos || {};
+      var ant = d.meses_anteriores || [];
+      var antHtml = ant.length
+        ? ant.map(function(m){ return escHtml(m.etiqueta||m.mes)+': '+m.n+' registro(s)'; }).join(' · ')
+        : 'Ninguno (mes nuevo limpio)';
+      if(box){
+        box.innerHTML =
+          '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px;">'
+          +'<div class="stat"><div class="n" style="font-size:18px;">'+escHtml(d.etiqueta||d.mes_actual||'')+'</div><div class="l">Mes Lima</div></div>'
+          +'<div class="stat"><div class="n" style="font-size:18px;color:'+(d.inscripciones_abiertas?'#1a7a3a':'#856404')+'">'+(d.inscripciones_abiertas?'Abiertas':'Cerradas')+'</div><div class="l">Inscripciones</div></div>'
+          +'<div class="stat"><div class="n" style="font-size:18px;">'+(v.preinscritos||0)+'</div><div class="l">Preinscritos</div></div>'
+          +'<div class="stat"><div class="n" style="font-size:18px;">'+(v.ganadores||0)+'</div><div class="l">Ganadores / exp.</div></div>'
+          +'<div class="stat"><div class="n" style="font-size:18px;">'+(v.repechaje||0)+'</div><div class="l">Repechaje</div></div>'
+          +'<div class="stat"><div class="n" style="font-size:18px;">'+(v.total||0)+'</div><div class="l">Total vivos</div></div>'
+          +'</div>'
+          +'<p style="font-size:13px;color:#444;line-height:1.5;margin:0 0 8px;"><strong>Repechaje:</strong> '+(d.repechaje_habilitado?'habilitado (no corresponde durante la inscripción)':'apagado')+'</p>'
+          +'<p style="font-size:13px;color:#444;line-height:1.5;margin:0 0 8px;"><strong>Convenios en la web:</strong> '+(d.convenios_web||0)+' (se conservan)</p>'
+          +'<p style="font-size:13px;color:#444;line-height:1.5;margin:0;"><strong>Residuos de meses anteriores:</strong> '+antHtml+'</p>';
+      }
+      if(!acc) return;
+      acc.style.display = 'block';
+      var html = '';
+      if(ant.length){
+        html += '<div style="background:#fff5f5;border:1.5px solid #e8b4b4;border-radius:10px;padding:14px 16px;margin-bottom:12px;">'
+          +'<strong style="color:#842029;">Hay registros de meses anteriores en la base operativa.</strong>'
+          +'<p style="margin:8px 0 12px;font-size:13px;color:#555;">Páselos a Auditoría CIP para que septiembre (u el mes actual) no se mezcle con el mes pasado. No borra la web.</p>'
+          +'<button type="button" class="btn btn-o" id="btn-archivar-anteriores" onclick="archivarMesesAnterioresSuperAdmin()"><i class="fas fa-box-archive"></i> Archivar meses anteriores</button>'
+          +'</div>';
+      }
+      html += '<div style="background:#f4f7f5;border:1.5px solid #dce6e0;border-radius:10px;padding:14px 16px;">'
+        +'<strong style="color:#004d3d;">Cerrar y limpiar el mes actual</strong>'
+        +'<p style="margin:8px 0 10px;font-size:13px;color:#555;line-height:1.45;">Hágalo a fin de mes, después de descargar PDF en Preinscritos y en Ganadores. Vacía preinscritos, ganadores, repechaje y expedientes del mes. Quedan en Auditoría CIP.</p>';
+      if(d.inscripciones_abiertas){
+        html += '<p style="margin:0;padding:8px 10px;background:#fff8e1;border:1px solid #f0d78c;border-radius:8px;color:#856404;font-size:13px;">Las inscripciones siguen abiertas. El cierre no está disponible hasta que termine el flujo (inscripción, sorteo y expedientes).</p>';
+      } else if(!(v.total)){
+        html += '<p style="margin:0;font-size:13px;color:#666;">No hay inscripciones vivas de este mes para limpiar.</p>';
+      } else {
+        html += '<label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;margin:0 0 10px;cursor:pointer;">'
+          +'<input type="checkbox" id="cierre-mes-descargue" style="margin-top:3px;"> Ya descargué las listas PDF de preinscritos, ganadores y expedientes.</label>'
+          +'<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">'
+          +'<input type="text" id="cierre-mes-confirmar" maxlength="7" placeholder="Escriba '+escHtml(d.mes_actual||'AAAA-MM')+'" style="padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;width:160px;">'
+          +'<button type="button" class="btn btn-mini-danger" style="background:#c0392b;color:#fff;padding:8px 14px;border:none;border-radius:6px;font-weight:800;cursor:pointer;" onclick="cerrarMesActualSuperAdmin(\''+escJs(d.mes_actual||'')+'\')"><i class="fas fa-broom"></i> Cerrar y limpiar '+escHtml(d.etiqueta||'')+'</button>'
+          +'</div>';
+      }
+      html += '</div>';
+      acc.innerHTML = html;
+    })
+    .catch(function(){
+      if(box) box.innerHTML = '<p style="color:#c0392b;">Error de conexión.</p>';
+    });
+}
+
+function archivarMesesAnterioresSuperAdmin(){
+  if(!esUnitic()) return;
+  if(!confirm('¿Archivar los meses anteriores en Auditoría CIP y quitarlos de Preinscritos / Ganadores / Repechaje?\n\nLa carpeta web de convenios no se borra.')) return;
+  var btn = document.getElementById('btn-archivar-anteriores');
+  if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Archivando...'; }
+  fetch(API+'/admin/convenios/cierre-mes/archivar-anteriores',{method:'POST',headers:hdr(),body:'{}'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ cierreMesAlerta(d.error||'No se pudo archivar.','error'); if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-box-archive"></i> Archivar meses anteriores'; } return; }
+      var n = d.total_registros||0;
+      cierreMesAlerta(n ? ('Listo. Se empaquetaron '+(d.meses||[]).join(', ')+' ('+n+' registros) en Auditoría CIP.') : 'No había residuos de meses anteriores.','ok');
+      cargarCierreMesSuperAdmin();
+    })
+    .catch(function(){ cierreMesAlerta('Error de conexión.','error'); if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-box-archive"></i> Archivar meses anteriores'; } });
+}
+
+function cerrarMesActualSuperAdmin(mes){
+  if(!esUnitic()) return;
+  var chk = document.getElementById('cierre-mes-descargue');
+  var inp = document.getElementById('cierre-mes-confirmar');
+  if(!chk || !chk.checked){
+    cierreMesAlerta('Marque que ya descargó las listas PDF.','error');
+    return;
+  }
+  var escrito = (inp && inp.value || '').trim();
+  if(escrito !== mes){
+    cierreMesAlerta('Escriba el mes exacto '+mes+' para confirmar.','error');
+    return;
+  }
+  if(!confirm('Esto vacía Preinscritos, Ganadores, Repechaje y expedientes de '+mes+'.\nQuedan guardados en Auditoría CIP.\nLa web de convenios no se borra.\n\n¿Cerrar y limpiar el mes?')) return;
+  fetch(API+'/admin/convenios/cierre-mes/cerrar-actual',{
+    method:'POST',
+    headers:hdr(),
+    body: JSON.stringify({ confirmar_mes: mes, descargue: true })
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ cierreMesAlerta(d.error||'No se pudo cerrar el mes.','error'); return; }
+      cierreMesAlerta('Mes '+ (d.etiqueta||mes) +' cerrado. '+(d.eliminados||0)+' registros en Auditoría CIP. Repechaje apagado.','ok');
+      cargarCierreMesSuperAdmin();
+    })
+    .catch(function(){ cierreMesAlerta('Error de conexión.','error'); });
 }
 
 function volverDesdeInscritos(){
