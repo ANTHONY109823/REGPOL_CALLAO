@@ -788,13 +788,18 @@ function cargarCandidatos() {
       renderListaTotalPreview();
 
       var puedeIniciar = LISTA_APROBADOS.length >= 1 && FALTAN_INICIAL > 0;
+      var ventanaAbierta = !ENSAYO && !!(ITEM_DATA && ITEM_DATA.inscripciones_abiertas);
+      if (ventanaAbierta) puedeIniciar = false;
       document.getElementById('btn-iniciar').disabled = !puedeIniciar;
       var lock = document.getElementById('lock-msg');
-      if (FALTAN_INICIAL <= 0) {
+      if (ventanaAbierta) {
+        lock.style.display = 'block';
+        lock.textContent = 'Las inscripciones siguen abiertas. Los postulantes quedan como preinscritos. El Admin de Convenios hace el sorteo al cerrar la ventana.';
+      } else if (FALTAN_INICIAL <= 0) {
         lock.style.display = 'block';
         lock.textContent = SLOTS_SORTEO.length
           ? 'No hay vacantes disponibles en los turnos pendientes.'
-          : 'No hay turnos pendientes de sorteo. Los que tenían menos inscritos que vacantes ya pasaron a ganador.';
+          : 'No hay turnos pendientes de sorteo.';
       } else if (!LISTA_APROBADOS.length) {
         lock.style.display = 'block';
         lock.textContent = 'No hay preinscritos disponibles para sortear.';
@@ -975,6 +980,10 @@ function slotPreferidoVacaciones(c) {
 }
 
 function iniciarSorteo() {
+  if (!ENSAYO && ITEM_DATA && ITEM_DATA.inscripciones_abiertas) {
+    alert('Las inscripciones siguen abiertas. Los postulantes quedan como preinscritos. El Admin de Convenios hace el sorteo al cerrar la ventana.');
+    return;
+  }
   if (!LISTA_APROBADOS.length || FALTAN_INICIAL <= 0) return;
 
   VACACIONES_CAND = LISTA_APROBADOS.filter(function(c) { return c.disponibilidad === 'VACACIONES'; });

@@ -5382,6 +5382,7 @@ function onSelectConvocatoriaSorteo(){
       var enRev = list.filter(function(i){ return i.estado==='en_revision'||i.estado==='repechaje'; }).length;
       var gan = list.filter(function(i){ return i.estado==='ganador'||i.estado==='expediente_ok'; }).length;
       var vacLibres = (d.vacantes_info && d.vacantes_info.disponibles != null) ? d.vacantes_info.disponibles : '—';
+      var ventanaAbierta = convenioInscripcionesAbiertas(d.item || SORTEO_CONV_ACTIVO);
       if(stats){
         stats.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">'
           +'<div><strong style="color:#004d3d;">'+list.length+'</strong><br><span style="color:#888;">Total</span></div>'
@@ -5391,11 +5392,13 @@ function onSelectConvocatoriaSorteo(){
           +'<div><strong style="color:#004d3d;">'+(SORTEO_CONV_ACTIVO.vacantes||'—')+'</strong><br><span style="color:#888;">Vacantes cupo</span></div>'
           +'<div><strong style="color:#004d3d;">'+vacLibres+'</strong><br><span style="color:#888;">Vac. libres</span></div>'
           +'</div>'
-          +(preins
+          +(ventanaAbierta
+            ? '<p style="margin-top:10px;color:#856404;"><i class="fas fa-hourglass-half"></i> Las inscripciones siguen abiertas. Los postulantes quedan como <strong>preinscritos</strong>. El sorteo lo hace Convenios al cerrar la ventana.</p>'
+            : (preins
             ? '<p style="margin-top:10px;color:#1a7a3a;"><i class="fas fa-check-circle"></i> Listo para sorteo en vivo con <strong>'+preins+'</strong> preinscritos (sin filtrar).</p>'
-            : '<p style="margin-top:10px;color:#856404;"><i class="fas fa-exclamation-triangle"></i> Aún no hay preinscritos para el sorteo.</p>');
+            : '<p style="margin-top:10px;color:#856404;"><i class="fas fa-exclamation-triangle"></i> Aún no hay preinscritos para el sorteo.</p>'));
       }
-      if(btnLive) btnLive.disabled = preins < 1;
+      if(btnLive) btnLive.disabled = preins < 1 || ventanaAbierta;
       if(btnEnsayo) btnEnsayo.disabled = preins < 1;
     })
     .catch(function(){
@@ -5407,6 +5410,10 @@ function onSelectConvocatoriaSorteo(){
 
 function abrirSorteoEnVivoConvenio(){
   if(!SORTEO_CONV_ACTIVO) return;
+  if(convenioInscripcionesAbiertas(SORTEO_CONV_ACTIVO)){
+    alert(MSG_SORTEO_TRAS_CIERRE);
+    return;
+  }
   if(!confirm('¿Abrir SORTEO REAL?\n\nCada ganador se guarda de inmediato en la base de datos.\nPara ensayo use el botón «Prueba (ensayo)».')) return;
   abrirSorteoDesdeItem(SORTEO_CONV_ACTIVO.id);
 }
@@ -6117,7 +6124,7 @@ function renderTablaItems(items){
         +'<td class="col-acciones"><div class="btn-acciones-celda">'
         +'<button class="btn-mini" onclick="verInscritos('+item.id+',\''+escJs(item.titulo)+'\',\'preinscripcion\')"><i class="fas fa-users"></i> Inscritos</button>'
         +(item.tipo==='convenio'
-          ? '<button class="btn-mini btn-mini-ok" onclick="abrirSorteoDesdeItem('+item.id+')" title="Abrir sorteo en vivo"><i class="fas fa-random"></i> Mandar a sorteo</button>'
+          ? '<button class="btn-mini btn-mini-ok" onclick="abrirSorteoDesdeItem('+item.id+')" '+(item.inscripciones_abiertas?'disabled title="Las inscripciones siguen abiertas. El sorteo se hace al cerrar la ventana."':'title="Abrir sorteo en vivo"')+'><i class="fas fa-random"></i> Mandar a sorteo</button>'
           : '')
         +(puedeEditarItemTipo(item.tipo)
           ? '<button class="btn-mini" onclick="abrirModalItem('+item.id+')" title="Editar convocatoria, lugares y vacantes"><i class="fas fa-map-marker-alt"></i> Lugares</button>'
@@ -8261,8 +8268,23 @@ function convenioRequiereSorteo(c){
   return pre > 0 && pre > lib;
 }
 
+var MSG_SORTEO_TRAS_CIERRE = 'Las inscripciones siguen abiertas. Los postulantes quedan como preinscritos. El Admin de Convenios hace el sorteo (o el pase a ganador) al cerrar la ventana.';
+
+function convenioInscripcionesAbiertas(src){
+  if(src && typeof src.inscripciones_abiertas === 'boolean') return !!src.inscripciones_abiertas;
+  return !!window.INSCRITOS_VENTANA_ABIERTA;
+}
+
 function abrirSorteoDesdeItem(itemId){
   if(!itemId) return;
+  var id = parseInt(itemId, 10);
+  var info = (window.INSCRITOS_ITEM_INFO && Number(window.INSCRITOS_ITEM_INFO.id)===id) ? window.INSCRITOS_ITEM_INFO : null;
+  var conv = (typeof CONV_FLUJO_CACHE!=='undefined' ? CONV_FLUJO_CACHE : []).find(function(c){ return Number(c.id)===id; });
+  var itemSorteo = (typeof ITEMS_SORTEO_CACHE!=='undefined' ? ITEMS_SORTEO_CACHE : []).find(function(i){ return Number(i.id)===id; });
+  if(convenioInscripcionesAbiertas(info || conv || itemSorteo || null)){
+    alert(MSG_SORTEO_TRAS_CIERRE);
+    return;
+  }
   var w = window.open('sorteo-live.html?item_id='+itemId, 'regpol_sorteo_live');
   if(!w){
     alert('El navegador bloqueó la ventana del sorteo. Permita ventanas emergentes para este sitio.');
@@ -8280,6 +8302,12 @@ function candidatosPreinscritosAGanador(){
 function pasarPreinscritosAGanador(itemId){
   var id = parseInt(itemId || ITEM_ACTIVO_ID, 10);
   if(!id){ alert('Seleccione un convenio.'); return; }
+  var info = (window.INSCRITOS_ITEM_INFO && Number(window.INSCRITOS_ITEM_INFO.id)===id) ? window.INSCRITOS_ITEM_INFO : null;
+  var conv = (typeof CONV_FLUJO_CACHE!=='undefined' ? CONV_FLUJO_CACHE : []).find(function(c){ return Number(c.id)===id; });
+  if(convenioInscripcionesAbiertas(info || conv || null)){
+    alert(MSG_SORTEO_TRAS_CIERRE);
+    return;
+  }
   function confirmarYEnviar(cand, vacLibres){
     if(!puedePasarPreinscritosVacantesNoCubiertas(cand.length, vacLibres)){
       alert('Hay más preinscritos que vacantes: debe realizarse el sorteo.');
@@ -8731,13 +8759,15 @@ function renderConvPreinscritosCuadros(list){
         +'<div style="display:flex;flex-direction:column;gap:8px;">'
         +'<button type="button" class="btn btn-v" style="width:100%;justify-content:center;" onclick="abrirConvenioPreinscritos('+c.id+',\''+escJs(c.titulo)+'\')">'
         +'<i class="fas fa-users"></i> Ver inscritos</button>'
-        +'<button type="button" class="btn btn-o" style="width:100%;justify-content:center;" onclick="abrirSorteoDesdeItem('+c.id+')" '
+        +(c.inscripciones_abiertas
+          ? '<p style="margin:0;padding:8px 10px;background:#fff8e1;border:1px solid #f0d78c;border-radius:8px;color:#856404;font-size:12px;line-height:1.35;"><i class="fas fa-hourglass-half"></i> Inscripciones abiertas. Los postulantes quedan como preinscritos. El sorteo lo hace Convenios al cerrar la ventana.</p>'
+          : ('<button type="button" class="btn btn-o" style="width:100%;justify-content:center;" onclick="abrirSorteoDesdeItem('+c.id+')" '
         +(c.preinscritos<1||(!convenioRequiereSorteo(c) && puedePasarPreinscritosVacantesNoCubiertas(c.preinscritos, c.disponibles))?'disabled title="No hace falta sorteo: hay igual o menos preinscritos que vacantes en cada turno"':'title="Hay turnos con más preinscritos que vacantes"')+'>'
         +'<i class="fas fa-random"></i> Mandar a sorteo</button>'
         +((!convenioRequiereSorteo(c) && puedePasarPreinscritosVacantesNoCubiertas(c.preinscritos, c.disponibles))
           ? ('<button type="button" class="btn" style="width:100%;justify-content:center;background:#1a7a3a;color:#fff;" onclick="pasarPreinscritosAGanador('+c.id+')">'
             +'<i class="fas fa-user-check"></i> Pasar todos a ganador (sin sorteo)</button>')
-          : '')
+          : '')))
         +'</div></div>';
     }).join('')
     +'</div>';
@@ -9077,6 +9107,7 @@ function verInscritos(itemId, titulo, modo){
   ITEM_ACTIVO_ID=itemId;
   window.INSCRITOS_ITEM_INFO={titulo:titulo||''};
   window.INSCRITOS_REQUIERE_SORTEO=false;
+  window.INSCRITOS_VENTANA_ABIERTA=false;
   ir('inscritos',null);
   var icon = INSCRITOS_MODO==='ganadores' ? 'fa-trophy' : (INSCRITOS_MODO==='repechaje' ? 'fa-redo' : 'fa-users');
   var pref = INSCRITOS_MODO==='ganadores' ? 'Ganadores / expedientes' : (INSCRITOS_MODO==='repechaje' ? 'Repechaje' : 'Inscritos');
@@ -9111,6 +9142,7 @@ function verInscritos(itemId, titulo, modo){
       window.INSCRITOS_VACANTES_INFO=d.vacantes_info||null;
       window.INSCRITOS_REQUIERE_SORTEO=!!d.requiere_sorteo;
       window.INSCRITOS_ITEM_INFO=d.item||{titulo:titulo||''};
+      window.INSCRITOS_VENTANA_ABIERTA=!!(d.item && d.item.inscripciones_abiertas);
       window.CATALOGO_OBS_CONV=d.catalogo_observaciones||[];
       INSCRITOS_TIPO_ACTUAL=d.tipo||'convenio';
       aplicarVisibilidadFiltrosInscritos();
@@ -9359,10 +9391,14 @@ function renderInscritos(list, tipo){
   if(esConvenio && INSCRITOS_MODO==='preinscripcion'){
     var vacLibresBtn = (vacInfo && vacInfo.disponibles) || 0;
     var requiereSorteo = !!window.INSCRITOS_REQUIERE_SORTEO;
-    var mostrarPasar = !requiereSorteo && puedePasarPreinscritosVacantesNoCubiertas(aptos, vacLibresBtn);
-    var sorteoOff = aptos<1 || mostrarPasar;
+    var ventanaAbierta = !!window.INSCRITOS_VENTANA_ABIERTA;
+    var mostrarPasar = !ventanaAbierta && !requiereSorteo && puedePasarPreinscritosVacantesNoCubiertas(aptos, vacLibresBtn);
+    var sorteoOff = ventanaAbierta || aptos<1 || mostrarPasar;
     btnAccion='<div style="display:flex;flex-direction:column;gap:8px;margin-left:8px;min-width:260px;">'
-      +'<button type="button" class="btn btn-o" style="margin:0;justify-content:center;" onclick="abrirSorteoDesdeItem('+ITEM_ACTIVO_ID+')" '+(sorteoOff?'disabled':'')+' title="'+(sorteoOff?(aptos<1?'No hay preinscritos para sortear':'No hace falta sorteo: hay igual o menos preinscritos que vacantes en cada turno'):'Hay turnos con más preinscritos que vacantes')+'">'
+      +(ventanaAbierta
+        ? '<p style="margin:0;padding:8px 10px;background:#fff8e1;border:1px solid #f0d78c;border-radius:8px;color:#856404;font-size:12px;line-height:1.35;"><i class="fas fa-hourglass-half"></i> Inscripciones abiertas. Los postulantes quedan como preinscritos. El sorteo lo hace Convenios al cerrar la ventana.</p>'
+        : '')
+      +'<button type="button" class="btn btn-o" style="margin:0;justify-content:center;" onclick="abrirSorteoDesdeItem('+ITEM_ACTIVO_ID+')" '+(sorteoOff?'disabled':'')+' title="'+(ventanaAbierta?MSG_SORTEO_TRAS_CIERRE:(sorteoOff?(aptos<1?'No hay preinscritos para sortear':'No hace falta sorteo: hay igual o menos preinscritos que vacantes en cada turno'):'Hay turnos con más preinscritos que vacantes'))+'">'
       +'<i class="fas fa-random"></i> MANDAR A SORTEO ('+aptos+' preinscritos)</button>'
       +(mostrarPasar
         ? ('<button type="button" class="btn" id="btn-pasar-ganador-vacantes" style="margin:0;justify-content:center;background:#1a7a3a;color:#fff;" onclick="pasarPreinscritosAGanador('+ITEM_ACTIVO_ID+')" title="Hay menos preinscritos que vacantes: todos pasan a ganador">'

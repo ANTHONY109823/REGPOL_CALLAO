@@ -6591,6 +6591,7 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
     if (!cip) return res.json({ ok: false, error: 'Ingrese un CIP válido (solo números, 6 a 12 dígitos).' });
     const cipKey = cipKeyInscripcion(cip);
     if (!cipKey) return res.json({ ok: false, error: 'Ingrese un CIP válido (solo números, 6 a 12 dígitos).' });
+    await revertirPromocionesAutomaticasPrematuras(pool);
     const r = await pool.query(
       `SELECT n.id, n.cip, n.nombres, n.unidad, n.cargo, n.grado, n.estado, n.observacion,
               ${sqlFechaTxt('n.fecha')} AS fecha,
@@ -6886,6 +6887,9 @@ app.post('/admin/items/:id/aplicar-sorteo', requireAuth, async (req, res) => {
     if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const esConvenio = cur.rows[0].tipo === 'convenio';
+    if (esConvenio && await itemConvenioVentanaAbierta(pool, itemId)) {
+      return res.json({ ok: false, error: MSG_SORTEO_TRAS_CIERRE });
+    }
     const ganadores = Array.isArray(req.body.ganadores) ? req.body.ganadores : [];
     const reservas = Array.isArray(req.body.reservas) ? req.body.reservas : [];
     let nGan = 0;
@@ -6959,6 +6963,39 @@ app.post('/admin/items/:id/aplicar-sorteo', requireAuth, async (req, res) => {
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
+const MSG_SORTEO_TRAS_CIERRE =
+  'Las inscripciones siguen abiertas. Los postulantes quedan como preinscritos. El Admin de Convenios hace el sorteo (o el pase a ganador) al cerrar la ventana.';
+
+/** Si aún está la ventana abierta, no se promociona a ganador al listar inscritos. */
+async function revertirPromocionesAutomaticasPrematuras(db) {
+  const r = await db.query(
+    `UPDATE inscripciones n
+        SET estado = 'preinscrito',
+            observacion = '',
+            plazo_expediente = NULL,
+            fecha_ganador = NULL
+      FROM items_portal i
+     WHERE n.item_id = i.id
+       AND i.tipo = 'convenio'
+       AND i.visible = TRUE
+       AND ${sqlMesActualLima('n.fecha')}
+       AND n.estado IN ('ganador', 'en_revision')
+       AND COALESCE(n.observacion, '') ILIKE 'Asignado por vacante no cubierta%'
+       AND ${sqlInscripcionesAbiertasExpr('i')}
+     RETURNING n.id`
+  );
+  return (r.rowCount || 0);
+}
+
+async function itemConvenioVentanaAbierta(db, itemId) {
+  const r = await db.query(
+    'SELECT tipo, inscripcion_inicio, inscripcion_cierre FROM items_portal WHERE id=$1',
+    [itemId]
+  );
+  if (!r.rows.length || r.rows[0].tipo !== 'convenio') return false;
+  return inscripcionesAbiertasPorFechas(r.rows[0].inscripcion_inicio, r.rows[0].inscripcion_cierre);
+}
+
 async function revertirReservasTurnosSinSorteo(pool, itemId) {
   const cur = await pool.query(
     'SELECT id, tipo, titulo, vacantes, cupos_unidades, turnos FROM items_portal WHERE id=$1',
@@ -7007,6 +7044,9 @@ async function revertirReservasTurnosSinSorteo(pool, itemId) {
 }
 
 async function promoverVacantesNoCubiertasPorSlot(pool, itemId) {
+  if (await itemConvenioVentanaAbierta(pool, itemId)) {
+    return { ok: false, ganadores: 0, error: MSG_SORTEO_TRAS_CIERRE };
+  }
   const cur = await pool.query(
     'SELECT id, tipo, titulo, vacantes, cupos_unidades, turnos FROM items_portal WHERE id=$1',
     [itemId]
@@ -7074,6 +7114,9 @@ app.post('/admin/items/:id/pasar-preinscritos-ganador', requireAuth, async (req,
     if (!puedeOperarInscritos(req.admin, 'convenio'))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const promo = await promoverVacantesNoCubiertasPorSlot(pool, itemId);
+    if (promo && promo.error && !promo.ganadores) {
+      return res.json({ ok: false, error: promo.error });
+    }
     const vac2 = await conveniosFlujo.vacantesDisponibles(pool, itemId);
     if (!promo.ganadores) {
       return res.json({
@@ -7675,6 +7718,10 @@ async function sincronizarConveniosOficiales(db, invalidarCache = true) {
   }
 
   if (invalidarCache) invalidarPortalItemsCache();
+  const promoRevert = await revertirPromocionesAutomaticasPrematuras(db);
+  if (promoRevert) {
+    console.log('Preinscritos restaurados (promoción automática prematura): ' + promoRevert);
+  }
   return {
     total: CONVENIOS_OFICIALES.length,
     cupos_actualizados: cuposActualizados,
@@ -8752,9 +8799,10 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
     if (!puedeOperarInscritos(req.admin, 'convenio'))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     await conveniosFlujo.caducarExpedientesVencidos(pool);
+    await revertirPromocionesAutomaticasPrematuras(pool);
     const items = await pool.query(
       `SELECT id, titulo, vacantes, estado, horario, fecha_inicio, duracion, lugar, orden,
-              cupos_unidades, turnos
+              cupos_unidades, turnos, inscripcion_inicio, inscripcion_cierre
        FROM items_portal
        WHERE tipo='convenio' AND visible=TRUE
        ORDER BY orden, id`
@@ -8836,7 +8884,10 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
         repechaje: mapa.repechaje || 0,
         reservas: mapa.reserva || 0,
         pendientes_expediente: pendPdf.rows[0].n || 0,
-        requiere_sorteo: !!requiereSorteo
+        requiere_sorteo: !!requiereSorteo,
+        inscripciones_abiertas: inscripcionesAbiertasPorFechas(it.inscripcion_inicio, it.inscripcion_cierre),
+        inscripcion_inicio: fechaISOSolo(it.inscripcion_inicio),
+        inscripcion_cierre: fechaISOSolo(it.inscripcion_cierre)
       });
     }
     res.json({ ok: true, convenios: out });
@@ -9281,7 +9332,7 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
   try {
     const cur = await pool.query(
       `SELECT tipo, titulo, vacantes, horario, duracion, lugar, fecha_inicio, aviso_sorteo_fb,
-              cupos_unidades, turnos
+              cupos_unidades, turnos, inscripcion_inicio, inscripcion_cierre
        FROM items_portal WHERE id=$1`,
       [req.params.id]);
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
@@ -9289,8 +9340,8 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     if (cur.rows[0].tipo === 'convenio') {
       await conveniosFlujo.caducarExpedientesVencidos(pool);
+      await revertirPromocionesAutomaticasPrematuras(pool);
       await revertirReservasTurnosSinSorteo(pool, parseInt(req.params.id, 10));
-      await promoverVacantesNoCubiertasPorSlot(pool, parseInt(req.params.id, 10));
     }
     const r = await pool.query(
       `SELECT id,item_id,cip,dni,grado,nombres,unidad,area,cargo,telefono,email,
@@ -9317,7 +9368,7 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
       });
       requiereSorteo = hayTurnosQueRequierenSorteo(itemSlots, r.rows);
     }
-    const itemInfo = {
+    const itemInfo = enriquecerItemInscripciones({
       id: parseInt(req.params.id, 10),
       tipo: cur.rows[0].tipo,
       titulo: cur.rows[0].titulo || '',
@@ -9326,8 +9377,10 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
       duracion: cur.rows[0].duracion || '',
       lugar: cur.rows[0].lugar || '',
       fecha_inicio: cur.rows[0].fecha_inicio || '',
-      aviso_sorteo_fb: cur.rows[0].aviso_sorteo_fb || ''
-    };
+      aviso_sorteo_fb: cur.rows[0].aviso_sorteo_fb || '',
+      inscripcion_inicio: cur.rows[0].inscripcion_inicio,
+      inscripcion_cierre: cur.rows[0].inscripcion_cierre
+    });
     res.json({
       ok: true,
       inscritos: r.rows,
@@ -9372,14 +9425,17 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
   try {
     const cur = await pool.query(
       `SELECT tipo,titulo,vacantes,horario,duracion,lugar,fecha_inicio,descripcion,
-              turnos,cupos_unidades
+              turnos,cupos_unidades,inscripcion_inicio,inscripcion_cierre
        FROM items_portal WHERE id=$1`,
       [req.params.id]);
     if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
     if (!puedeOperarInscritos(req.admin, cur.rows[0].tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     const esConvenio = cur.rows[0].tipo === 'convenio';
-    if (esConvenio) await conveniosFlujo.caducarExpedientesVencidos(pool);
+    if (esConvenio) {
+      await conveniosFlujo.caducarExpedientesVencidos(pool);
+      await revertirPromocionesAutomaticasPrematuras(pool);
+    }
     const estados = esConvenio
       ? ['preinscrito', 'pendiente', 'aprobado', 'verificado', 'ganador', 'reserva']
       : ['verificado', 'aprobado', 'ganador', 'reserva'];
@@ -9419,7 +9475,7 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
     res.json({
       ok: true,
       candidatos: candidatos,
-      item: itemRow,
+      item: enriquecerItemInscripciones(itemRow),
       flujo: esConvenio ? 'convenio_v2' : 'curso',
       vacantes_info: vac,
       slots_sorteo: slots
@@ -9445,6 +9501,10 @@ app.put('/admin/inscripciones/:id', requireAuth, async (req, res) => {
       });
     }
     const { estado, observacion, telefono, email } = req.body;
+    if (cur.rows[0].tipo === 'convenio' && estado === 'ganador'
+        && await itemConvenioVentanaAbierta(pool, cur.rows[0].item_id)) {
+      return res.json({ ok: false, error: MSG_SORTEO_TRAS_CIERRE });
+    }
     const sets = ['estado=$1', 'observacion=$2'];
     const params = [estado || 'pendiente', observacion || ''];
     let i = 3;
