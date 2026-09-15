@@ -6927,7 +6927,9 @@ function mesCerradoValido(mes, mesActual) {
 
 app.get('/admin/convenios/cierre-mes/expedientes-archivados', requireAuth, async (req, res) => {
   try {
-    if (!requireSuperAdmin(req, res)) return;
+    if (!puedeOperarInscritos(req.admin, 'convenio')) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso de Convenios' });
+    }
     const mesActual = await mesLimaActual(pool);
     const chk = mesCerradoValido(req.query.mes || '2026-08', mesActual);
     if (!chk.ok) return res.json(chk);
@@ -6961,7 +6963,9 @@ app.get('/admin/convenios/cierre-mes/expedientes-archivados', requireAuth, async
 
 app.get('/admin/convenios/cierre-mes/expedientes-archivados.zip', requireAuth, async (req, res) => {
   try {
-    if (!requireSuperAdmin(req, res)) return;
+    if (!puedeOperarInscritos(req.admin, 'convenio')) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso de Convenios' });
+    }
     const mesActual = await mesLimaActual(pool);
     const chk = mesCerradoValido(req.query.mes || '2026-08', mesActual);
     if (!chk.ok) return res.status(400).json(chk);
