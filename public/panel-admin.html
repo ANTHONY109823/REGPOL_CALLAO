@@ -8847,30 +8847,39 @@ function cargarExpedientesAgostoConvenios(){
           +'<strong style="color:#004d3d;">Expedientes PDF de agosto (convenios)</strong>'
           +'<p style="margin:8px 0 0;font-size:13px;color:#555;">No quedan PDF de convenios de agosto. Bienestar no se toca.</p></div>';
       } else {
+        var listo = !!d.listo_para_eliminar;
         var filas = list.map(function(c){
+          var ok = !!c.descargado;
           return '<tr>'
             +'<td style="font-weight:700;color:#004d3d;">'+escHtml(c.titulo)+'</td>'
             +'<td style="text-align:center;">'+c.archivos+'</td>'
             +'<td style="text-align:center;">'+fmtBytesCierre(c.bytes)+'</td>'
+            +'<td style="text-align:center;white-space:nowrap;">'
+            +'<label style="display:inline-flex;align-items:center;gap:6px;font-weight:700;color:'+(ok?'#1a7a4c':'#888')+';">'
+            +'<input type="checkbox" disabled '+(ok?'checked':'')+'> '
+            +(ok?'Descargado':'Pendiente')
+            +'</label></td>'
             +'<td><button type="button" class="btn-mini btn-mini-ok" onclick="descargarZipConvenioAgosto('+Number(c.item_id)+',\''+escJs(c.titulo)+'\')"><i class="fas fa-download"></i> ZIP</button></td>'
             +'</tr>';
         }).join('');
-        var btnBorrar = esUnitic()
-          ? '<button type="button" class="btn" id="btn-eliminar-pdf-agosto" style="background:#c0392b;color:#fff;" onclick="eliminarPdfAgostoConvenios()"><i class="fas fa-trash"></i> Eliminar PDF de agosto (después de descargar)</button>'
-          : '';
+        var btnBorrar = '<button type="button" class="btn btn-eliminar-pdf-agosto" '
+          +(listo?'style="background:#c0392b;color:#fff;"':'style="background:#9aa8a3;color:#fff;cursor:not-allowed;" disabled')
+          +' onclick="eliminarPdfAgostoConvenios()"><i class="fas fa-trash"></i> '
+          +(listo?'Eliminar PDF de agosto':'Eliminar (descargue todos primero)')
+          +'</button>';
         html = '<div style="background:#eef6f3;border:1.5px solid #b7d4c8;border-radius:10px;padding:14px 16px;">'
           +'<strong style="color:#004d3d;display:block;margin-bottom:6px;"><i class="fas fa-file-zipper"></i> Expedientes PDF de agosto — solo convenios</strong>'
           +'<p style="margin:0 0 12px;font-size:13px;color:#555;line-height:1.45;">'
           +(d.total_archivos||0)+' archivos · '+fmtBytesCierre(d.total_bytes)
-          +'. Un ZIP por convenio. No incluye video de Bienestar ni imágenes del portal. Septiembre no se toca.</p>'
+          +'. Un ZIP por convenio. Al terminar cada descarga se marca <strong>Descargado</strong>. Recién entonces se puede eliminar. No incluye video de Bienestar ni imágenes del portal. Septiembre no se toca.</p>'
           +'<div style="overflow-x:auto;margin-bottom:12px;"><table class="t" style="margin:0;font-size:13px;">'
-          +'<thead><tr><th>Convenio</th><th>PDF</th><th>Tamaño</th><th></th></tr></thead>'
+          +'<thead><tr><th>Convenio</th><th>PDF</th><th>Tamaño</th><th>Estado</th><th></th></tr></thead>'
           +'<tbody>'+filas+'</tbody></table></div>'
           +'<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">'
-          +'<button type="button" class="btn btn-v" id="btn-descargar-todos-agosto" onclick="descargarTodosZipAgosto()"><i class="fas fa-download"></i> Descargar todos (un ZIP por convenio)</button>'
+          +'<button type="button" class="btn btn-v btn-descargar-todos-agosto" onclick="descargarTodosZipAgosto()"><i class="fas fa-download"></i> Descargar todos (un ZIP por convenio)</button>'
           +btnBorrar
           +'</div>'
-          +'<p id="cierre-mes-agosto-prog" style="margin:10px 0 0;font-size:12.5px;color:#666;"></p>'
+          +'<p class="cierre-mes-agosto-prog" style="margin:10px 0 0;font-size:12.5px;color:#666;"></p>'
           +'</div>';
       }
       boxes.forEach(function(box){ box.innerHTML = html; });
@@ -8884,11 +8893,26 @@ function cargarExpedientesAgostoConvenios(){
 }
 
 function setProgAgosto(msg){
-  var el = document.getElementById('cierre-mes-agosto-prog');
-  if (el) el.textContent = msg || '';
+  document.querySelectorAll('.cierre-mes-agosto-prog').forEach(function(el){ el.textContent = msg || ''; });
 }
 
-function descargarZipConvenioAgosto(itemId, titulo){
+function botonesAgosto(sel, fn){
+  document.querySelectorAll(sel).forEach(fn);
+}
+
+function marcarZipAgostoDescargado(itemId){
+  return fetch(API+'/admin/convenios/cierre-mes/marcar-descargado',{
+    method:'POST',
+    headers:hdr(),
+    body: JSON.stringify({ mes:'2026-08', item_id:itemId })
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if (!d || !d.ok) throw new Error((d && d.error) || 'No se pudo marcar como descargado.');
+    return d;
+  });
+}
+
+function descargarZipConvenioAgosto(itemId, titulo, opts){
+  opts = opts || {};
   setProgAgosto('Preparando ZIP de '+(titulo||'convenio')+'...');
   return fetch(API+'/admin/convenios/cierre-mes/expedientes-archivados.zip?mes=2026-08&item_id='+encodeURIComponent(itemId), {
     headers: { 'x-admin-token': TOKEN }
@@ -8910,6 +8934,14 @@ function descargarZipConvenioAgosto(itemId, titulo){
     a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 2500);
     setProgAgosto('Descargado: '+d.nombre);
+    return marcarZipAgostoDescargado(itemId).then(function(){
+      var list = window.CIERRE_AGOSTO_CONVENIOS || [];
+      list.forEach(function(c){
+        if (Number(c.item_id) === Number(itemId)) c.descargado = true;
+      });
+      setProgAgosto('Marcado como descargado: '+d.nombre);
+      if (!opts.silencio) cargarExpedientesAgostoConvenios();
+    });
   }).catch(function(e){
     setProgAgosto('');
     cierreMesAlerta(e.message || 'Error al descargar el ZIP.','error');
@@ -8921,19 +8953,25 @@ function descargarTodosZipAgosto(){
   var list = window.CIERRE_AGOSTO_CONVENIOS || [];
   if (!list.length) { cierreMesAlerta('No hay convenios con PDF de agosto.','error'); return; }
   if (!confirm('Se descargarán '+list.length+' ZIP (uno por convenio), en secuencia.\nPermita descargas múltiples en el navegador.\nBienestar no se incluye.\n\n¿Descargar todos?')) return;
-  var btn = document.getElementById('btn-descargar-todos-agosto');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Descargando...'; }
+  botonesAgosto('.btn-descargar-todos-agosto', function(btn){
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Descargando...';
+  });
   var i = 0;
   function siguiente(){
     if (i >= list.length) {
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> Descargar todos (un ZIP por convenio)'; }
-      setProgAgosto('Listo. Revise la carpeta de descargas ('+list.length+' ZIP). Luego puede eliminar los PDF de agosto.');
-      cierreMesAlerta('Descarga de agosto terminada. Verifique los ZIP antes de eliminar.','ok');
+      botonesAgosto('.btn-descargar-todos-agosto', function(btn){
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-download"></i> Descargar todos (un ZIP por convenio)';
+      });
+      setProgAgosto('Listo. Cada convenio descargado queda marcado. Si todos están marcados, ya puede eliminar.');
+      cierreMesAlerta('Descarga de agosto terminada. Revise los ZIP; los descargados ya están marcados.','ok');
+      cargarExpedientesAgostoConvenios();
       return Promise.resolve();
     }
     var c = list[i];
     setProgAgosto('Descargando '+(i+1)+'/'+list.length+': '+(c.titulo||'')+' ('+c.archivos+' PDF · '+fmtBytesCierre(c.bytes)+')');
-    return descargarZipConvenioAgosto(c.item_id, c.titulo)
+    return descargarZipConvenioAgosto(c.item_id, c.titulo, { silencio:true })
       .catch(function(){ /* ya avisó */ })
       .then(function(){
         i++;
@@ -8944,15 +8982,26 @@ function descargarTodosZipAgosto(){
 }
 
 function eliminarPdfAgostoConvenios(){
-  if (!esUnitic()) { alert('Solo el Super Admin puede eliminar los PDF del disco.'); return; }
-  if (!confirm('Esto BORRA los PDF de convenios de agosto (~3 GB) para bajar el disco.\nEl historial CIP se queda en Auditoría.\nNO se toca Bienestar ni septiembre.\n\n¿Ya descargó los ZIP de cada convenio?')) return;
+  if (typeof puedeOperarInscritosConvenio === 'function' && !puedeOperarInscritosConvenio()) {
+    alert('Sin permiso de Convenios.');
+    return;
+  }
+  var list = window.CIERRE_AGOSTO_CONVENIOS || [];
+  var falta = list.filter(function(c){ return !c.descargado; });
+  if (falta.length) {
+    cierreMesAlerta('Primero descargue el ZIP de cada convenio. Faltan '+falta.length+' por marcar como descargado.','error');
+    return;
+  }
+  if (!confirm('Esto BORRA los PDF de convenios de agosto (~3 GB) para bajar el disco.\nEl historial CIP se queda en Auditoría.\nNO se toca Bienestar ni septiembre.\n\nTodos los ZIP ya están marcados como descargados. ¿Eliminar?')) return;
   var escrito = prompt('Escriba 2026-08 para confirmar la eliminación de PDF de convenios de agosto:');
   if (String(escrito||'').trim() !== '2026-08') {
     cierreMesAlerta('No se eliminó nada. Debía escribir 2026-08.','error');
     return;
   }
-  var btn = document.getElementById('btn-eliminar-pdf-agosto');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando y compactando...'; }
+  botonesAgosto('.btn-eliminar-pdf-agosto', function(btn){
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando y compactando...';
+  });
   setProgAgosto('Eliminando PDF de convenios de agosto y compactando el volumen...');
   fetch(API+'/admin/convenios/cierre-mes/eliminar-expedientes-archivados',{
     method:'POST',
@@ -8963,7 +9012,10 @@ function eliminarPdfAgostoConvenios(){
     .then(function(d){
       if (!d.ok) {
         cierreMesAlerta(d.error||'No se pudo eliminar.','error');
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-trash"></i> Eliminar PDF de agosto (después de descargar)'; }
+        botonesAgosto('.btn-eliminar-pdf-agosto', function(btn){
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-trash"></i> Eliminar PDF de agosto';
+        });
         return;
       }
       cierreMesAlerta(d.mensaje || ('Eliminados '+(d.eliminados||0)+' PDF de convenios de agosto.'),'ok');
@@ -8972,7 +9024,10 @@ function eliminarPdfAgostoConvenios(){
     })
     .catch(function(){
       cierreMesAlerta('Error de conexión al eliminar.','error');
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-trash"></i> Eliminar PDF de agosto (después de descargar)'; }
+      botonesAgosto('.btn-eliminar-pdf-agosto', function(btn){
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-trash"></i> Eliminar PDF de agosto';
+      });
     });
 }
 

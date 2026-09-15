@@ -6925,6 +6925,37 @@ function mesCerradoValido(mes, mesActual) {
   return { ok: true, mes: m };
 }
 
+function claveMarcasPdfMes(mes) {
+  return 'conv_pdf_descargados_' + String(mes || '');
+}
+
+async function leerMarcasPdfMes(mes) {
+  try {
+    const raw = await getConfig(claveMarcasPdfMes(mes));
+    if (!raw) return {};
+    const j = JSON.parse(raw);
+    return j && typeof j === 'object' && !Array.isArray(j) ? j : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function enriquecerConveniosDescarga(rows, marcas) {
+  const mapa = marcas || {};
+  return (rows || []).map(function(r) {
+    const m = mapa[String(r.item_id)] || null;
+    return Object.assign({}, r, {
+      descargado: !!(m && m.at),
+      descargado_en: m && m.at ? m.at : '',
+      descargado_por: m && m.usuario ? m.usuario : ''
+    });
+  });
+}
+
+function todosConveniosDescargados(convenios) {
+  return !!(convenios && convenios.length && convenios.every(function(c) { return c.descargado; }));
+}
+
 app.get('/admin/convenios/cierre-mes/expedientes-archivados', requireAuth, async (req, res) => {
   try {
     if (!puedeOperarInscritos(req.admin, 'convenio')) {
@@ -6950,13 +6981,16 @@ app.get('/admin/convenios/cierre-mes/expedientes-archivados', requireAuth, async
     const tot = list.rows.reduce(function(s, r) {
       return { archivos: s.archivos + r.archivos, bytes: s.bytes + Number(r.bytes || 0) };
     }, { archivos: 0, bytes: 0 });
+    const marcas = await leerMarcasPdfMes(chk.mes);
+    const convenios = enriquecerConveniosDescarga(list.rows, marcas);
     res.json({
       ok: true,
       mes: chk.mes,
       mes_actual: mesActual,
       total_archivos: tot.archivos,
       total_bytes: tot.bytes,
-      convenios: list.rows
+      listo_para_eliminar: todosConveniosDescargados(convenios),
+      convenios: convenios
     });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
@@ -7037,14 +7071,87 @@ app.get('/admin/convenios/cierre-mes/expedientes-archivados.zip', requireAuth, a
   }
 });
 
+app.post('/admin/convenios/cierre-mes/marcar-descargado', requireAuth, async (req, res) => {
+  try {
+    if (!puedeOperarInscritos(req.admin, 'convenio')) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso de Convenios' });
+    }
+    const mesActual = await mesLimaActual(pool);
+    const chk = mesCerradoValido((req.body && req.body.mes) || '2026-08', mesActual);
+    if (!chk.ok) return res.json(chk);
+    const itemId = parseInt(req.body && req.body.item_id, 10);
+    if (Number.isNaN(itemId)) {
+      return res.json({ ok: false, error: 'Falta el convenio.' });
+    }
+    const existe = await pool.query(
+      `SELECT 1
+         FROM portal_archivos p
+         JOIN convenios_auditoria_registros a
+           ON p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
+        WHERE a.mes = $1
+          AND COALESCE(a.item_id, 0) = $2
+          AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+        LIMIT 1`,
+      [chk.mes, itemId]
+    );
+    if (!existe.rows.length) {
+      return res.json({ ok: false, error: 'Ese convenio no tiene PDF de expedientes en el mes indicado.' });
+    }
+    const marcas = await leerMarcasPdfMes(chk.mes);
+    marcas[String(itemId)] = {
+      at: new Date().toISOString(),
+      usuario: String(req.admin.usuario || req.admin.cip || '').slice(0, 60)
+    };
+    await setConfig(claveMarcasPdfMes(chk.mes), JSON.stringify(marcas));
+    const list = await pool.query(
+      `SELECT COALESCE(a.item_id, 0) AS item_id
+         FROM portal_archivos p
+         JOIN convenios_auditoria_registros a
+           ON p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
+        WHERE a.mes = $1
+          AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+        GROUP BY 1`,
+      [chk.mes]
+    );
+    const convenios = enriquecerConveniosDescarga(list.rows, marcas);
+    res.json({
+      ok: true,
+      mes: chk.mes,
+      item_id: itemId,
+      listo_para_eliminar: todosConveniosDescargados(convenios)
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 app.post('/admin/convenios/cierre-mes/eliminar-expedientes-archivados', requireAuth, async (req, res) => {
   try {
-    if (!requireSuperAdmin(req, res)) return;
+    if (!puedeOperarInscritos(req.admin, 'convenio')) {
+      return res.status(403).json({ ok: false, error: 'Sin permiso de Convenios' });
+    }
     const mesActual = await mesLimaActual(pool);
     const chk = mesCerradoValido((req.body && req.body.mes) || '2026-08', mesActual);
     if (!chk.ok) return res.json(chk);
     if (!(req.body && req.body.confirmar)) {
       return res.json({ ok: false, error: 'Confirme la eliminación de los PDF de convenios de ese mes.' });
+    }
+    const list = await pool.query(
+      `SELECT COALESCE(a.item_id, 0) AS item_id
+         FROM portal_archivos p
+         JOIN convenios_auditoria_registros a
+           ON p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
+        WHERE a.mes = $1
+          AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+        GROUP BY 1`,
+      [chk.mes]
+    );
+    const marcas = await leerMarcasPdfMes(chk.mes);
+    const convenios = enriquecerConveniosDescarga(list.rows, marcas);
+    if (!todosConveniosDescargados(convenios)) {
+      const falta = convenios.filter(function(c) { return !c.descargado; }).length;
+      return res.json({
+        ok: false,
+        error: 'Primero descargue el ZIP de cada convenio. Faltan ' + falta + ' por marcar como descargado.'
+      });
     }
     req.setTimeout(0);
     res.setTimeout(0);
@@ -7057,6 +7164,7 @@ app.post('/admin/convenios/cierre-mes/eliminar-expedientes-archivados', requireA
         RETURNING p.clave`,
       [chk.mes]
     );
+    try { await setConfig(claveMarcasPdfMes(chk.mes), '{}'); } catch (e3) {}
     let vacuum = false;
     try {
       await pool.query('VACUUM FULL portal_archivos');
