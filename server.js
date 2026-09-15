@@ -18,6 +18,7 @@ const faltosMod = require('./faltos');
 const conveniosFlujo = require('./convenios_flujo');
 const recursosHumanos = require('./recursos_humanos');
 const adminAuth = require('./admin_auth');
+const { ZipStoreWriter, slugNombre } = require('./zip_store');
 
 // Carga .env local (no se sube a git) para desarrollo en localhost
 (function cargarEnvLocal() {
@@ -1303,7 +1304,12 @@ app.get('/health', function(req, res) {
 });
 
 app.use(cors());
-app.use(compression()); // gzip para HTML/JS/JSON — acelera panel y formulario
+app.use(compression({
+  filter: function(req, res) {
+    if (req.path && req.path.indexOf('expedientes-archivados.zip') >= 0) return false;
+    return compression.filter(req, res);
+  }
+}));
 app.use(function(req, res, next) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   next();
@@ -6898,6 +6904,183 @@ app.post('/admin/convenios/cierre-mes/cerrar-actual', requireAuth, async (req, r
       ok: true
     });
     res.json(r);
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+function mesLimaActualSql() {
+  return `to_char(timezone('America/Lima', NOW()), 'YYYY-MM')`;
+}
+
+async function mesLimaActual(db) {
+  const r = await db.query('SELECT ' + mesLimaActualSql() + ' AS mes');
+  return r.rows[0].mes;
+}
+
+function mesCerradoValido(mes, mesActual) {
+  const m = String(mes || '').trim();
+  if (!/^\d{4}-\d{2}$/.test(m)) return { ok: false, error: 'Indique el mes en formato AAAA-MM.' };
+  if (m >= mesActual) {
+    return { ok: false, error: 'Solo se empaquetan convenios de meses anteriores. El mes actual no se toca.' };
+  }
+  return { ok: true, mes: m };
+}
+
+app.get('/admin/convenios/cierre-mes/expedientes-archivados', requireAuth, async (req, res) => {
+  try {
+    if (!requireSuperAdmin(req, res)) return;
+    const mesActual = await mesLimaActual(pool);
+    const chk = mesCerradoValido(req.query.mes || '2026-08', mesActual);
+    if (!chk.ok) return res.json(chk);
+    const list = await pool.query(
+      `SELECT COALESCE(a.item_id, 0) AS item_id,
+              COALESCE(NULLIF(TRIM(a.titulo), ''), 'SIN CONVENIO') AS titulo,
+              COUNT(*)::int AS archivos,
+              COALESCE(SUM(octet_length(p.data)), 0)::bigint AS bytes
+         FROM portal_archivos p
+         JOIN convenios_auditoria_registros a
+           ON p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
+        WHERE a.mes = $1
+          AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+        GROUP BY 1, 2
+        ORDER BY 2`,
+      [chk.mes]
+    );
+    const tot = list.rows.reduce(function(s, r) {
+      return { archivos: s.archivos + r.archivos, bytes: s.bytes + Number(r.bytes || 0) };
+    }, { archivos: 0, bytes: 0 });
+    res.json({
+      ok: true,
+      mes: chk.mes,
+      mes_actual: mesActual,
+      total_archivos: tot.archivos,
+      total_bytes: tot.bytes,
+      convenios: list.rows
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.get('/admin/convenios/cierre-mes/expedientes-archivados.zip', requireAuth, async (req, res) => {
+  try {
+    if (!requireSuperAdmin(req, res)) return;
+    const mesActual = await mesLimaActual(pool);
+    const chk = mesCerradoValido(req.query.mes || '2026-08', mesActual);
+    if (!chk.ok) return res.status(400).json(chk);
+    const itemId = parseInt(req.query.item_id, 10);
+    if (Number.isNaN(itemId)) {
+      return res.status(400).json({ ok: false, error: 'Falta el convenio (item_id).' });
+    }
+    const meta = await pool.query(
+      `SELECT COALESCE(NULLIF(TRIM(a.titulo), ''), 'SIN CONVENIO') AS titulo,
+              COUNT(*)::int AS n
+         FROM portal_archivos p
+         JOIN convenios_auditoria_registros a
+           ON p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
+        WHERE a.mes = $1
+          AND COALESCE(a.item_id, 0) = $2
+          AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+        GROUP BY 1`,
+      [chk.mes, itemId]
+    );
+    if (!meta.rows.length || !meta.rows[0].n) {
+      return res.status(404).json({ ok: false, error: 'No hay expedientes PDF de convenios para ese mes y convocatoria.' });
+    }
+    const titulo = meta.rows[0].titulo;
+    const filas = await pool.query(
+      `SELECT a.inscripcion_id, a.cip, a.nombres, a.estado, a.titulo, p.nombre AS pdf_nombre
+         FROM portal_archivos p
+         JOIN convenios_auditoria_registros a
+           ON p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
+        WHERE a.mes = $1
+          AND COALESCE(a.item_id, 0) = $2
+          AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+        ORDER BY a.cip, a.inscripcion_id`,
+      [chk.mes, itemId]
+    );
+    const zipName = slugNombre('expedientes_' + chk.mes + '_' + titulo, 90) + '.zip';
+    req.setTimeout(0);
+    res.setTimeout(0);
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="' + zipName + '"');
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    const zip = new ZipStoreWriter(res);
+    const lineas = ['CIP\tNOMBRES\tESTADO\tARCHIVO'];
+    const usados = {};
+    for (let i = 0; i < filas.rows.length; i++) {
+      if (req.aborted) return;
+      const row = filas.rows[i];
+      const blob = await pool.query(
+        'SELECT data FROM portal_archivos WHERE clave=$1',
+        ['inscripcion-pdf-' + row.inscripcion_id]
+      );
+      if (!blob.rows.length || !blob.rows[0].data) continue;
+      let nom = slugNombre(
+        (row.cip || 'sincip') + '_' + (row.nombres || 'efectivo') + '_' + (row.estado || 'exp'),
+        70
+      ) + '.pdf';
+      if (usados[nom]) nom = slugNombre(nom.replace(/\.pdf$/, ''), 60) + '_' + row.inscripcion_id + '.pdf';
+      usados[nom] = true;
+      await zip.addFile(nom, blob.rows[0].data);
+      lineas.push(
+        (row.cip || '') + '\t' + (row.nombres || '') + '\t' + (row.estado || '') + '\t' + nom
+      );
+    }
+    await zip.addFile('indice.txt', Buffer.from(lineas.join('\n'), 'utf8'));
+    await zip.end();
+  } catch (e) {
+    if (!res.headersSent) res.status(500).json({ ok: false, error: e.message });
+    else try { res.end(); } catch (e2) {}
+  }
+});
+
+app.post('/admin/convenios/cierre-mes/eliminar-expedientes-archivados', requireAuth, async (req, res) => {
+  try {
+    if (!requireSuperAdmin(req, res)) return;
+    const mesActual = await mesLimaActual(pool);
+    const chk = mesCerradoValido((req.body && req.body.mes) || '2026-08', mesActual);
+    if (!chk.ok) return res.json(chk);
+    if (!(req.body && req.body.confirmar)) {
+      return res.json({ ok: false, error: 'Confirme la eliminación de los PDF de convenios de ese mes.' });
+    }
+    req.setTimeout(0);
+    res.setTimeout(0);
+    const del = await pool.query(
+      `DELETE FROM portal_archivos p
+        USING convenios_auditoria_registros a
+        WHERE p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
+          AND a.mes = $1
+          AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+        RETURNING p.clave`,
+      [chk.mes]
+    );
+    let vacuum = false;
+    try {
+      await pool.query('VACUUM FULL portal_archivos');
+      vacuum = true;
+    } catch (e) {
+      try { await pool.query('VACUUM portal_archivos'); } catch (e2) {}
+    }
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario),
+      usuario: req.admin.usuario,
+      accion: 'eliminar_pdf_convenios_mes',
+      modulo: 'convenios',
+      entidad: 'portal_archivos',
+      entidadId: chk.mes,
+      detalle: 'Eliminados ' + (del.rowCount || 0) + ' PDF de convenios de ' + chk.mes +
+        '. No se tocó Bienestar ni imágenes del portal. VACUUM=' + vacuum,
+      ip: req.ip || '',
+      ok: true
+    });
+    res.json({
+      ok: true,
+      mes: chk.mes,
+      eliminados: del.rowCount || 0,
+      vacuum: vacuum,
+      mensaje: 'Se eliminaron ' + (del.rowCount || 0) + ' expedientes PDF de convenios de ' + chk.mes +
+        '. Bienestar y el resto de archivos no se tocaron.'
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
