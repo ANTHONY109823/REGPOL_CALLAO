@@ -6618,7 +6618,7 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
               n.aprobado_por_nombre, n.aprobado_por_usuario, n.fecha_aprobacion,
               n.preins_correccion_motivo, n.preins_correccion_admin, n.preins_correccion_usuario,
               n.preins_correccion_fecha,
-              CASE WHEN COALESCE(n.pdf_requisitos,'')<>'' THEN true ELSE false END AS tiene_pdf,
+              CASE WHEN COALESCE(n.pdf_requisitos,'')<>'' AND n.pdf_requisitos NOT LIKE 'purged%' THEN true ELSE false END AS tiene_pdf,
               i.id AS item_id, i.tipo, i.titulo, i.horario, i.lugar, i.fecha_inicio, i.duracion,
               i.descripcion, i.observaciones AS item_observaciones, i.vacantes,
               i.uniforme, i.contactos_responsables, i.requisitos, i.aviso_sorteo_fb,
@@ -8405,7 +8405,7 @@ async function cargarListaConvenioPdf(itemId, estados) {
     `SELECT cip, dni, grado, nombres, unidad, region_policial, comisaria_postula,
             estado, fecha, modalidad, modalidad_otro, disponibilidad, dia_franco,
             modo_ingreso, bloque_vacaciones,
-            CASE WHEN pdf_requisitos IS NOT NULL AND pdf_requisitos<>'' THEN true ELSE false END AS tiene_pdf
+            CASE WHEN COALESCE(pdf_requisitos,'')<>'' AND pdf_requisitos NOT LIKE 'purged%' THEN true ELSE false END AS tiene_pdf
      FROM inscripciones
      WHERE item_id=$1 AND estado = ANY($2::varchar[])
        AND ${sqlMesActualLima('fecha')}
@@ -9240,6 +9240,12 @@ async function resolverPdfInscripcion(pdfRef, pdfNombre) {
   const ref = String(pdfRef || '');
   const nombre = pdfNombre || 'requisitos.pdf';
   if (!ref) return { ok: false, error: 'Sin PDF' };
+  if (ref === 'purged' || ref.indexOf('purged') === 0) {
+    return {
+      ok: false,
+      error: 'El PDF ya se descargó y se retiró de la base. Queda el registro (CIP, estado y constancia).'
+    };
+  }
   if (ref.indexOf('ref:') === 0) {
     const clave = ref.slice(4).slice(0, 64);
     const a = await pool.query('SELECT data, mime, nombre FROM portal_archivos WHERE clave=$1', [clave]);
@@ -9252,6 +9258,37 @@ async function resolverPdfInscripcion(pdfRef, pdfNombre) {
     };
   }
   return { ok: true, pdf: ref, nombre: nombre };
+}
+
+function clavePdfExpedienteInscripcion(id) {
+  return ('inscripcion-pdf-' + id).slice(0, 64);
+}
+
+async function purgarPdfExpedienteAprobado(db, id) {
+  const cur = await db.query(
+    `SELECT n.id, n.estado, n.pdf_requisitos, i.tipo
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+      WHERE n.id=$1`,
+    [id]
+  );
+  if (!cur.rows.length) return { ok: false, error: 'No encontrado' };
+  if (cur.rows[0].tipo !== 'convenio') return { ok: false, error: 'Solo convenios' };
+  if (cur.rows[0].estado !== 'expediente_ok') {
+    return { ok: false, error: 'Solo se retira el PDF de expedientes ya aprobados.' };
+  }
+  const ref = String(cur.rows[0].pdf_requisitos || '');
+  if (!ref) return { ok: true, ya_purgado: true };
+  if (ref === 'purged' || ref.indexOf('purged') === 0) {
+    return { ok: true, ya_purgado: true };
+  }
+  const clave = clavePdfExpedienteInscripcion(id);
+  await db.query('DELETE FROM portal_archivos WHERE clave=$1', [clave]);
+  await db.query(
+    `UPDATE inscripciones SET pdf_requisitos='purged' WHERE id=$1 AND estado='expediente_ok'`,
+    [id]
+  );
+  return { ok: true, ya_purgado: false };
 }
 
 
@@ -9489,7 +9526,9 @@ app.post('/admin/inscripciones/:id/revisar-expediente', requireAuth, async (req,
         notificacion: n,
         aprobado_por_nombre: nombreAprob,
         aprobado_por_usuario: usuarioAprob,
-        fecha_aprobacion: new Date().toISOString()
+        fecha_aprobacion: new Date().toISOString(),
+        pdf_nombre: cur.rows[0].pdf_nombre || 'expediente.pdf',
+        tiene_pdf: !!(cur.rows[0].pdf_requisitos && String(cur.rows[0].pdf_requisitos).indexOf('purged') !== 0)
       });
     }
 
@@ -9552,6 +9591,38 @@ app.post('/admin/inscripciones/:id/revisar-expediente', requireAuth, async (req,
     }
 
     return res.json({ ok: false, error: 'Acción inválida (aprobar | observar | rechazar)' });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.post('/admin/inscripciones/:id/purgar-pdf-expediente', requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.json({ ok: false, error: 'Inscripción inválida' });
+    if (!puedeOperarInscritos(req.admin, 'convenio'))
+      return res.status(403).json({ ok: false, error: 'Sin permiso' });
+    const r = await purgarPdfExpedienteAprobado(pool, id);
+    if (!r.ok) return res.json(r);
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario),
+      usuario: req.admin.usuario,
+      accion: 'purgar_pdf_expediente',
+      modulo: 'convenios',
+      entidad: 'inscripcion',
+      entidadId: String(id),
+      detalle: r.ya_purgado
+        ? 'PDF ya estaba retirado. Registro conservado.'
+        : 'PDF descargado y retirado de la base. Queda el registro y la constancia.',
+      ip: req.ip || '',
+      ok: true
+    });
+    res.json({
+      ok: true,
+      ya_purgado: !!r.ya_purgado,
+      mensaje: r.ya_purgado
+        ? 'El PDF ya no estaba en la base. El registro se mantiene.'
+        : 'PDF retirado. En la web queda el registro, no el expediente.'
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -9859,7 +9930,8 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
               codifin,region_policial,comisaria_postula,bloque_vacaciones,
               preins_correccion_motivo, preins_correccion_admin, preins_correccion_usuario,
               preins_correccion_fecha,
-              CASE WHEN pdf_requisitos IS NOT NULL AND pdf_requisitos<>'' THEN true ELSE false END AS tiene_pdf,
+              CASE WHEN COALESCE(pdf_requisitos,'')<>'' AND pdf_requisitos NOT LIKE 'purged%' THEN true ELSE false END AS tiene_pdf,
+              CASE WHEN COALESCE(pdf_requisitos,'') LIKE 'purged%' THEN true ELSE false END AS pdf_purgado,
               pdf_nombre
        FROM inscripciones
        WHERE item_id=$1
