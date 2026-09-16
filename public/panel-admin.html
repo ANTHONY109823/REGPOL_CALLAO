@@ -1650,9 +1650,10 @@
       <div class="card">
         <h3><i class="fas fa-trophy" style="color:#c8a94a;"></i> Ganadores y expedientes</h3>
         <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
-          Clic en el convenio para abrir la lista. Ahí se avisa a ganadores, se reciben expedientes y se observa.
-          El ganador tiene <strong>4 días</strong> para presentar su expediente.
-          <strong>Sin edición de datos</strong> del efectivo. Caducados = no presentaron expediente a tiempo.
+          El efectivo ganador <strong>sube</strong> el expediente (4 días). Convenios <strong>revisa</strong> el PDF.
+          Al <strong>aprobar</strong> se <strong>descarga</strong> en este equipo y se <strong>borra</strong> de la base.
+          En la web queda el registro (CIP, estado, constancia), no el archivo. No se dejan meses en Postgres.
+          <strong>Sin edición de datos</strong> del efectivo. Caducados = no presentaron a tiempo.
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
           <button class="btn btn-v" type="button" onclick="cargarConvFlujoResumen('ganadores')"><i class="fas fa-sync"></i> Actualizar</button>
@@ -1837,7 +1838,7 @@
 
         <div id="sorteo-convenio-panel" style="background:#f0f7f0;border:1.5px solid #c8e6c9;border-radius:10px;padding:16px;margin-bottom:18px;">
           <strong style="color:#004d3d;display:block;margin-bottom:10px;font-size:13px;"><i class="fas fa-handshake"></i> Sorteo de convenio</strong>
-  <p style="font-size:12px;color:#666;margin-bottom:12px;">Convenios: preinscripción (sin PDF) → sorteo directo → aviso WA/correo → expediente 4 días → revisión. Repechaje sube PDF completo (sin sorteo). Cursos mantienen verificación/aprobación.</p>
+  <p style="font-size:12px;color:#666;margin-bottom:12px;">Convenios: preinscripción (sin PDF) → sorteo → aviso WA/correo → el ganador sube expediente (4 días) → Convenios revisa → al aprobar se descarga y se borra de la BD. Repechaje sube PDF (sin sorteo). Cursos mantienen verificación/aprobación.</p>
           <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
             <div style="flex:1;min-width:280px;">
               <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Convocatoria de convenio</label>
@@ -9848,7 +9849,8 @@ function renderInscritos(list, tipo){
       +'<i class="fas fa-file-pdf"></i> DESCARGAR PDF</button>'
       +'</div>';
   } else if(esConvenio && INSCRITOS_MODO==='ganadores'){
-    btnAccion='<div style="display:flex;flex-direction:column;gap:8px;margin-left:8px;min-width:260px;">'
+    btnAccion='<div style="display:flex;flex-direction:column;gap:8px;margin-left:8px;min-width:280px;">'
+      +'<p style="margin:0;padding:8px 10px;background:#f0f7f0;border:1px solid #c8e6c9;border-radius:8px;color:#1a4d3d;font-size:12px;line-height:1.4;"><i class="fas fa-info-circle"></i> Flujo: el ganador <strong>sube</strong> → Convenios <strong>revisa</strong> → al aprobar se <strong>descarga y borra</strong> el PDF. En la web queda el registro, no el archivo.</p>'
       +'<button type="button" class="btn btn-v" id="btn-pdf-ganadores" style="margin:0;justify-content:center;background:#004d3d;color:#fff;" onclick="abrirModalPdfListaConvenio(\'ganadores\')" '+(total<1?'disabled':'')+'>'
       +'<i class="fas fa-file-pdf"></i> DESCARGAR PDF</button>'
       +'</div>';
@@ -9956,7 +9958,8 @@ function renderInscritos(list, tipo){
       var sinEditar = INSCRITOS_MODO==='ganadores' || INSCRITOS_MODO==='repechaje';
       if(esConvenio){
         if(ins.estado==='en_revision'||ins.estado==='repechaje'){
-          acciones='<button type="button" class="btn-mini btn-mini-ok" onclick="abrirModalAprobarExpediente('+ins.id+')" title="Aprobar expediente"><i class="fas fa-check"></i> APROBAR</button> '
+          acciones='<button type="button" class="btn-mini btn-mini-pdf" onclick="verPdfInscripcion('+ins.id+')" title="Revisar el PDF antes de aprobar"><i class="fas fa-file-pdf"></i> Revisar PDF</button> '
+            +'<button type="button" class="btn-mini btn-mini-ok" onclick="abrirModalAprobarExpediente('+ins.id+')" title="Aprobar: descarga el PDF y lo retira de la base"><i class="fas fa-check"></i> APROBAR</button> '
             +'<button type="button" class="btn-mini btn-mini-solid" onclick="abrirRevisionExpediente('+ins.id+')" title="Observar expediente"><i class="fas fa-exclamation"></i> OBSERVAR</button> ';
         }
         if(ins.estado==='ganador'){
