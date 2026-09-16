@@ -7167,11 +7167,9 @@ app.post('/admin/convenios/cierre-mes/eliminar-expedientes-archivados', requireA
     try { await setConfig(claveMarcasPdfMes(chk.mes), '{}'); } catch (e3) {}
     let vacuum = false;
     try {
-      await pool.query('VACUUM FULL portal_archivos');
+      await pool.query('VACUUM portal_archivos');
       vacuum = true;
-    } catch (e) {
-      try { await pool.query('VACUUM portal_archivos'); } catch (e2) {}
-    }
+    } catch (e) {}
     await adminAuth.registrarAuditoria(pool, {
       adminId: req.admin.id,
       cip: adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario),
