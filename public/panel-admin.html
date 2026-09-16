@@ -9000,9 +9000,9 @@ function eliminarPdfAgostoConvenios(){
   }
   botonesAgosto('.btn-eliminar-pdf-agosto', function(btn){
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando y compactando...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando PDF...';
   });
-  setProgAgosto('Eliminando PDF de convenios de agosto y compactando el volumen...');
+  setProgAgosto('Eliminando PDF de convenios de agosto. Auditoría CIP se conserva.');
   fetch(API+'/admin/convenios/cierre-mes/eliminar-expedientes-archivados',{
     method:'POST',
     headers:hdr(),

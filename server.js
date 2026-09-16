@@ -7155,15 +7155,29 @@ app.post('/admin/convenios/cierre-mes/eliminar-expedientes-archivados', requireA
     }
     req.setTimeout(0);
     res.setTimeout(0);
-    const del = await pool.query(
-      `DELETE FROM portal_archivos p
-        USING convenios_auditoria_registros a
-        WHERE p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
-          AND a.mes = $1
-          AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
-        RETURNING p.clave`,
-      [chk.mes]
-    );
+    await pool.query('SET statement_timeout = 0');
+    let eliminados = 0;
+    for (;;) {
+      const del = await pool.query(
+        `WITH doomed AS (
+           SELECT p.clave
+             FROM portal_archivos p
+             JOIN convenios_auditoria_registros a
+               ON p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
+            WHERE a.mes = $1
+              AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+            LIMIT 80
+         )
+         DELETE FROM portal_archivos p
+          USING doomed d
+          WHERE p.clave = d.clave
+         RETURNING p.clave`,
+        [chk.mes]
+      );
+      const n = del.rowCount || 0;
+      eliminados += n;
+      if (!n) break;
+    }
     try { await setConfig(claveMarcasPdfMes(chk.mes), '{}'); } catch (e3) {}
     let vacuum = false;
     try {
@@ -7178,7 +7192,7 @@ app.post('/admin/convenios/cierre-mes/eliminar-expedientes-archivados', requireA
       modulo: 'convenios',
       entidad: 'portal_archivos',
       entidadId: chk.mes,
-      detalle: 'Eliminados ' + (del.rowCount || 0) + ' PDF de convenios de ' + chk.mes +
+      detalle: 'Eliminados ' + eliminados + ' PDF de convenios de ' + chk.mes +
         '. No se tocó Bienestar ni imágenes del portal. VACUUM=' + vacuum,
       ip: req.ip || '',
       ok: true
@@ -7186,9 +7200,9 @@ app.post('/admin/convenios/cierre-mes/eliminar-expedientes-archivados', requireA
     res.json({
       ok: true,
       mes: chk.mes,
-      eliminados: del.rowCount || 0,
+      eliminados: eliminados,
       vacuum: vacuum,
-      mensaje: 'Se eliminaron ' + (del.rowCount || 0) + ' expedientes PDF de convenios de ' + chk.mes +
+      mensaje: 'Se eliminaron ' + eliminados + ' expedientes PDF de convenios de ' + chk.mes +
         '. Bienestar y el resto de archivos no se tocaron.'
     });
   } catch (e) { res.json({ ok: false, error: e.message }); }
