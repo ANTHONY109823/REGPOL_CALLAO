@@ -6919,10 +6919,77 @@ async function mesLimaActual(db) {
 function mesCerradoValido(mes, mesActual) {
   const m = String(mes || '').trim();
   if (!/^\d{4}-\d{2}$/.test(m)) return { ok: false, error: 'Indique el mes en formato AAAA-MM.' };
-  if (m >= mesActual) {
-    return { ok: false, error: 'Solo se empaquetan convenios de meses anteriores. El mes actual no se toca.' };
+  if (m > mesActual) {
+    return { ok: false, error: 'No se opera un mes futuro.' };
   }
   return { ok: true, mes: m };
+}
+
+function sqlFuenteExpedientesMes() {
+  const mesLive = conveniosFlujo.sqlMesInscripcionLima();
+  return `
+    SELECT a.inscripcion_id,
+           COALESCE(a.item_id, 0) AS item_id,
+           COALESCE(NULLIF(TRIM(a.titulo), ''), 'SIN CONVENIO') AS titulo,
+           a.cip, a.nombres, a.estado
+      FROM convenios_auditoria_registros a
+     WHERE a.mes = $1
+    UNION ALL
+    SELECT n.id,
+           COALESCE(n.item_id, 0),
+           COALESCE(NULLIF(TRIM(i.titulo), ''), 'SIN CONVENIO'),
+           n.cip, n.nombres, n.estado
+      FROM inscripciones n
+      JOIN items_portal i ON i.id = n.item_id
+     WHERE i.tipo = 'convenio'
+       AND ${mesLive} = $1
+       AND NOT EXISTS (
+         SELECT 1 FROM convenios_auditoria_registros x WHERE x.inscripcion_id = n.id
+       )`;
+}
+
+async function pendientesRevisionExpedientes(mes) {
+  const r = await pool.query(
+    `SELECT COUNT(*)::int AS n
+       FROM inscripciones n
+       JOIN items_portal i ON i.id = n.item_id
+      WHERE i.tipo = 'convenio'
+        AND ${conveniosFlujo.sqlMesInscripcionLima()} = $1
+        AND n.estado IN ('ganador', 'en_revision', 'observado', 'repechaje')`,
+    [mes]
+  );
+  return r.rows[0].n || 0;
+}
+
+async function validarMesExpedientesPdf(mes, mesActual) {
+  const chk = mesCerradoValido(mes, mesActual);
+  if (!chk.ok) return chk;
+  if (chk.mes === mesActual) {
+    const abiertas = await conveniosFlujo.hayInscripcionesConvenioAbiertas(pool);
+    if (abiertas) {
+      return {
+        ok: false,
+        error: 'Las inscripciones del mes siguen abiertas. El ZIP se arma al terminar la recepción y la aprobación de expedientes.'
+      };
+    }
+    try {
+      const flag = await getConfig('repechaje_activo');
+      if (String(flag || '') === '1') {
+        return {
+          ok: false,
+          error: 'El repechaje sigue activo. El ZIP se arma cuando ya se recibió y aprobó la totalidad.'
+        };
+      }
+    } catch (e) {}
+  }
+  const pend = await pendientesRevisionExpedientes(chk.mes);
+  if (pend > 0) {
+    return {
+      ok: false,
+      error: 'Faltan ' + pend + ' expedientes por recibir o aprobar. El ZIP se genera cuando la totalidad está revisada.'
+    };
+  }
+  return chk;
 }
 
 function claveMarcasPdfMes(mes) {
@@ -6962,18 +7029,63 @@ app.get('/admin/convenios/cierre-mes/expedientes-archivados', requireAuth, async
       return res.status(403).json({ ok: false, error: 'Sin permiso de Convenios' });
     }
     const mesActual = await mesLimaActual(pool);
-    const chk = mesCerradoValido(req.query.mes || '2026-08', mesActual);
+    const mesQ = String(req.query.mes || '').trim();
+    const fuenteMeses = `
+      SELECT a.inscripcion_id, a.mes
+        FROM convenios_auditoria_registros a
+      UNION ALL
+      SELECT n.id, ${conveniosFlujo.sqlMesInscripcionLima()}
+        FROM inscripciones n
+        JOIN items_portal i ON i.id = n.item_id
+       WHERE i.tipo = 'convenio'
+         AND NOT EXISTS (
+           SELECT 1 FROM convenios_auditoria_registros x WHERE x.inscripcion_id = n.id
+         )`;
+    if (!mesQ) {
+      const meses = await pool.query(
+        `SELECT src.mes,
+                COUNT(*)::int AS archivos,
+                COALESCE(SUM(octet_length(p.data)), 0)::bigint AS bytes
+           FROM portal_archivos p
+           JOIN (${fuenteMeses}) src
+             ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
+          WHERE p.clave ~ '^inscripcion-pdf-[0-9]+$'
+            AND src.mes <= $1
+          GROUP BY src.mes
+          ORDER BY src.mes DESC`,
+        [mesActual]
+      );
+      const lista = [];
+      for (let i = 0; i < meses.rows.length; i++) {
+        const row = meses.rows[i];
+        const val = await validarMesExpedientesPdf(row.mes, mesActual);
+        lista.push({
+          mes: row.mes,
+          etiqueta: conveniosFlujo.etiquetaMesEs(row.mes),
+          archivos: row.archivos,
+          bytes: Number(row.bytes || 0),
+          listo_para_zip: !!val.ok,
+          motivo: val.ok ? '' : (val.error || '')
+        });
+      }
+      return res.json({
+        ok: true,
+        mes_actual: mesActual,
+        etiqueta_actual: conveniosFlujo.etiquetaMesEs(mesActual),
+        meses: lista
+      });
+    }
+    const chk = await validarMesExpedientesPdf(mesQ, mesActual);
     if (!chk.ok) return res.json(chk);
     const list = await pool.query(
-      `SELECT COALESCE(a.item_id, 0) AS item_id,
-              COALESCE(NULLIF(TRIM(a.titulo), ''), 'SIN CONVENIO') AS titulo,
+      `SELECT src.item_id,
+              src.titulo,
               COUNT(*)::int AS archivos,
               COALESCE(SUM(octet_length(p.data)), 0)::bigint AS bytes
          FROM portal_archivos p
-         JOIN convenios_auditoria_registros a
-           ON p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
-        WHERE a.mes = $1
-          AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+         JOIN (${sqlFuenteExpedientesMes()}) src
+           ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
+        WHERE p.clave ~ '^inscripcion-pdf-[0-9]+$'
         GROUP BY 1, 2
         ORDER BY 2`,
       [chk.mes]
@@ -6986,6 +7098,7 @@ app.get('/admin/convenios/cierre-mes/expedientes-archivados', requireAuth, async
     res.json({
       ok: true,
       mes: chk.mes,
+      etiqueta: conveniosFlujo.etiquetaMesEs(chk.mes),
       mes_actual: mesActual,
       total_archivos: tot.archivos,
       total_bytes: tot.bytes,
@@ -7001,20 +7114,18 @@ app.get('/admin/convenios/cierre-mes/expedientes-archivados.zip', requireAuth, a
       return res.status(403).json({ ok: false, error: 'Sin permiso de Convenios' });
     }
     const mesActual = await mesLimaActual(pool);
-    const chk = mesCerradoValido(req.query.mes || '2026-08', mesActual);
+    const chk = await validarMesExpedientesPdf(req.query.mes, mesActual);
     if (!chk.ok) return res.status(400).json(chk);
     const itemId = parseInt(req.query.item_id, 10);
     if (Number.isNaN(itemId)) {
       return res.status(400).json({ ok: false, error: 'Falta el convenio (item_id).' });
     }
     const meta = await pool.query(
-      `SELECT COALESCE(NULLIF(TRIM(a.titulo), ''), 'SIN CONVENIO') AS titulo,
-              COUNT(*)::int AS n
+      `SELECT src.titulo, COUNT(*)::int AS n
          FROM portal_archivos p
-         JOIN convenios_auditoria_registros a
-           ON p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
-        WHERE a.mes = $1
-          AND COALESCE(a.item_id, 0) = $2
+         JOIN (${sqlFuenteExpedientesMes()}) src
+           ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
+        WHERE COALESCE(src.item_id, 0) = $2
           AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
         GROUP BY 1`,
       [chk.mes, itemId]
@@ -7024,14 +7135,13 @@ app.get('/admin/convenios/cierre-mes/expedientes-archivados.zip', requireAuth, a
     }
     const titulo = meta.rows[0].titulo;
     const filas = await pool.query(
-      `SELECT a.inscripcion_id, a.cip, a.nombres, a.estado, a.titulo, p.nombre AS pdf_nombre
+      `SELECT src.inscripcion_id, src.cip, src.nombres, src.estado, src.titulo, p.nombre AS pdf_nombre
          FROM portal_archivos p
-         JOIN convenios_auditoria_registros a
-           ON p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
-        WHERE a.mes = $1
-          AND COALESCE(a.item_id, 0) = $2
+         JOIN (${sqlFuenteExpedientesMes()}) src
+           ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
+        WHERE COALESCE(src.item_id, 0) = $2
           AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
-        ORDER BY a.cip, a.inscripcion_id`,
+        ORDER BY src.cip, src.inscripcion_id`,
       [chk.mes, itemId]
     );
     const zipName = slugNombre('expedientes_' + chk.mes + '_' + titulo, 90) + '.zip';
@@ -7077,7 +7187,7 @@ app.post('/admin/convenios/cierre-mes/marcar-descargado', requireAuth, async (re
       return res.status(403).json({ ok: false, error: 'Sin permiso de Convenios' });
     }
     const mesActual = await mesLimaActual(pool);
-    const chk = mesCerradoValido((req.body && req.body.mes) || '2026-08', mesActual);
+    const chk = await validarMesExpedientesPdf((req.body && req.body.mes) || '', mesActual);
     if (!chk.ok) return res.json(chk);
     const itemId = parseInt(req.body && req.body.item_id, 10);
     if (Number.isNaN(itemId)) {
@@ -7086,10 +7196,9 @@ app.post('/admin/convenios/cierre-mes/marcar-descargado', requireAuth, async (re
     const existe = await pool.query(
       `SELECT 1
          FROM portal_archivos p
-         JOIN convenios_auditoria_registros a
-           ON p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
-        WHERE a.mes = $1
-          AND COALESCE(a.item_id, 0) = $2
+         JOIN (${sqlFuenteExpedientesMes()}) src
+           ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
+        WHERE COALESCE(src.item_id, 0) = $2
           AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
         LIMIT 1`,
       [chk.mes, itemId]
@@ -7104,12 +7213,11 @@ app.post('/admin/convenios/cierre-mes/marcar-descargado', requireAuth, async (re
     };
     await setConfig(claveMarcasPdfMes(chk.mes), JSON.stringify(marcas));
     const list = await pool.query(
-      `SELECT COALESCE(a.item_id, 0) AS item_id
+      `SELECT src.item_id
          FROM portal_archivos p
-         JOIN convenios_auditoria_registros a
-           ON p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
-        WHERE a.mes = $1
-          AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+         JOIN (${sqlFuenteExpedientesMes()}) src
+           ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
+        WHERE p.clave ~ '^inscripcion-pdf-[0-9]+$'
         GROUP BY 1`,
       [chk.mes]
     );
@@ -7129,18 +7237,17 @@ app.post('/admin/convenios/cierre-mes/eliminar-expedientes-archivados', requireA
       return res.status(403).json({ ok: false, error: 'Sin permiso de Convenios' });
     }
     const mesActual = await mesLimaActual(pool);
-    const chk = mesCerradoValido((req.body && req.body.mes) || '2026-08', mesActual);
+    const chk = await validarMesExpedientesPdf((req.body && req.body.mes) || '', mesActual);
     if (!chk.ok) return res.json(chk);
     if (!(req.body && req.body.confirmar)) {
       return res.json({ ok: false, error: 'Confirme la eliminación de los PDF de convenios de ese mes.' });
     }
     const list = await pool.query(
-      `SELECT COALESCE(a.item_id, 0) AS item_id
+      `SELECT src.item_id
          FROM portal_archivos p
-         JOIN convenios_auditoria_registros a
-           ON p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
-        WHERE a.mes = $1
-          AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+         JOIN (${sqlFuenteExpedientesMes()}) src
+           ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
+        WHERE p.clave ~ '^inscripcion-pdf-[0-9]+$'
         GROUP BY 1`,
       [chk.mes]
     );
@@ -7162,10 +7269,9 @@ app.post('/admin/convenios/cierre-mes/eliminar-expedientes-archivados', requireA
         `WITH doomed AS (
            SELECT p.clave
              FROM portal_archivos p
-             JOIN convenios_auditoria_registros a
-               ON p.clave = ('inscripcion-pdf-' || a.inscripcion_id::text)
-            WHERE a.mes = $1
-              AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+             JOIN (${sqlFuenteExpedientesMes()}) src
+               ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
+            WHERE p.clave ~ '^inscripcion-pdf-[0-9]+$'
             LIMIT 80
          )
          DELETE FROM portal_archivos p

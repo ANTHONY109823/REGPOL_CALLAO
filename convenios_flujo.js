@@ -1205,5 +1205,7 @@ module.exports = {
   resumenCierreMes,
   hayInscripcionesConvenioAbiertas,
   apagarRepechajeSiInscripcionesAbiertas,
-  listarPaquetesAuditoria
+  listarPaquetesAuditoria,
+  etiquetaMesEs,
+  sqlMesInscripcionLima
 };
