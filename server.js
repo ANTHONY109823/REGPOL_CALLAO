@@ -5904,6 +5904,7 @@ function hayTurnosQueRequierenSorteo(item, rows) {
       else if (pendEst.indexOf(list[j].estado) >= 0) pend++;
     }
     const libres = Math.max(0, vac - ocupadas);
+    if (libres < 1) continue;
     if (pend > 0 && pend > libres) return true;
   }
   return false;
@@ -6469,7 +6470,7 @@ function etiquetaEstadoPublico(estado, tipo) {
       en_revision: 'Documentación en verificación por Convenios',
       observado: 'Expediente OBSERVADO — subsanar a la brevedad',
       expediente_ok: 'Documentación APROBADA — vacante ocupada',
-      reserva: 'Lista de reserva — no ocupó vacante en el sorteo',
+      reserva: 'NO OCUPÓ UNA VACANTE — ESPERE REPECHAJE',
       rechazado: 'Expediente no admitido — revise observaciones',
       caducado: 'Plazo vencido — vacante liberada para repechaje',
       repechaje: 'Repechaje — documentación en verificación'
@@ -7571,20 +7572,22 @@ app.post('/admin/items/:id/pasar-preinscritos-ganador', requireAuth, async (req,
       return res.json({ ok: false, error: promo.error });
     }
     const vac2 = await conveniosFlujo.vacantesDisponibles(pool, itemId);
-    if (!promo.ganadores) {
+    if (!promo.ganadores && !promo.reservas) {
       return res.json({
         ok: false,
         error: 'No hay vacaciones pendientes ni turnos con menos preinscritos que vacantes para pasar a ganador sin sorteo.',
         vacaciones: 0,
         directo: 0,
+        reservas: 0,
         detalle: []
       });
     }
     res.json({
       ok: true,
-      ganadores: promo.ganadores,
+      ganadores: promo.ganadores || 0,
       vacaciones: promo.vacaciones || 0,
       directo: promo.directo || 0,
+      reservas: promo.reservas || 0,
       detalle: promo.detalle || [],
       titulo: promo.titulo || (cur.rows[0] && cur.rows[0].titulo) || '',
       vacantes_libres: (vac2 && vac2.ok) ? vac2.disponibles : 0,

@@ -31,7 +31,9 @@ const pool = new Pool({
 });
 
 function lineaDetalle(d) {
-  const tipo = d.tipo === 'vacaciones' ? 'VACACIONES' : 'VACANTE NO CUBIERTA';
+  var tipo = 'VACANTE NO CUBIERTA';
+  if (d.tipo === 'vacaciones') tipo = 'VACACIONES';
+  else if (d.tipo === 'reserva_turno_completo') tipo = 'NO SALIÓ (turno lleno)';
   return '    - [' + tipo + '] ' + (d.slot || '—') + ': ' + d.n;
 }
 
@@ -44,15 +46,18 @@ function lineaDetalle(d) {
   console.log('Mes Lima:', mes.rows[0].mes, APPLY ? 'APLICAR' : 'SOLO LECTURA');
   const r = await promo.promoverTodosConveniosMes(pool, { apply: APPLY });
   if (!r.convenios.length) {
-    console.log('Nada por pasar a ganador (vacaciones pendientes o vacantes no cubiertas).');
+    console.log('Nada por pasar a ganador ni a reserva (turnos llenos).');
   } else {
     r.convenios.forEach(function(c) {
       console.log('');
-      console.log(c.titulo + ' → ganadores ' + c.ganadores + ' (vacaciones ' + c.vacaciones + ' + directo ' + c.directo + ')');
+      console.log(c.titulo + ' → ganadores ' + (c.ganadores || 0)
+        + ' (vacaciones ' + (c.vacaciones || 0) + ' + directo ' + (c.directo || 0) + ')'
+        + ' | no salieron ' + (c.reservas || 0));
       (c.detalle || []).forEach(function(d) { console.log(lineaDetalle(d)); });
     });
     console.log('');
-    console.log('TOTAL', r.ganadores, '| vacaciones', r.vacaciones, '| vacante no cubierta', r.directo, APPLY ? '| APLICADO' : '| dry-run');
+    console.log('TOTAL ganadores', r.ganadores, '| vacaciones', r.vacaciones, '| vacante no cubierta', r.directo,
+      '| no salieron', r.reservas || 0, APPLY ? '| APLICADO' : '| dry-run');
   }
   await pool.end();
 })().catch(function(e) {

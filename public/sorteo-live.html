@@ -1140,8 +1140,13 @@ function persistirReservasPendientes() {
   var reservas = TODOS_CAND.filter(function(c) {
     if (idsGan.indexOf(c.id) >= 0) return false;
     if (!(c.estado === 'aprobado' || c.estado === 'preinscrito' || c.estado === 'pendiente' || c.estado === 'verificado')) return false;
-    var slot = slotDeCandidato(c);
-    if (!slot) return !SLOTS_SORTEO.length;
+    var slots = (SLOTS_TODOS && SLOTS_TODOS.length) ? SLOTS_TODOS : SLOTS_SORTEO;
+    if (!slots.length) return true;
+    var conCupo = slots.filter(function(s) {
+      return candidatoEnSlot(c, s) && cupoRestanteSlot(s) > 0;
+    });
+    if (!conCupo.length) return true;
+    var slot = slotDeCandidato(c) || conCupo[0];
     if (cupoRestanteSlot(slot) < 1) return true;
     if (slotTuvoSorteoPublico(slot)) return true;
     return false;

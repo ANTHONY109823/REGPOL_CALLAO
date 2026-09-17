@@ -272,12 +272,34 @@ function planificarPromocion(slots, rows) {
     });
   });
 
+  const reservas = [];
+  (rows || []).forEach(function(c) {
+    if (pendientesEst.indexOf(c.estado) < 0) return;
+    if (ya[c.id]) return;
+    if (esVacaciones(c)) return;
+    const conCupo = (slots || []).filter(function(s) {
+      if (!candidatoEnCupoPostula(c, s)) return false;
+      const vac = parseInt(s.vacantes, 10) || 0;
+      return vac - (ocupadasMap[s.key] || 0) > 0;
+    });
+    if (conCupo.length) return;
+    reservas.push(c);
+    ya[c.id] = true;
+    detalle.push({
+      tipo: 'reserva_turno_completo',
+      slot: labelDeCandidato(c),
+      n: 1
+    });
+  });
+
   return {
     vacaciones: vacaciones,
     directo: directo,
+    reservas: reservas,
     detalle: detalle,
     nVacaciones: vacaciones.length,
-    nDirecto: directo.reduce(function(a, x) { return a + x.rows.length; }, 0)
+    nDirecto: directo.reduce(function(a, x) { return a + x.rows.length; }, 0),
+    nReservas: reservas.length
   };
 }
 
@@ -304,6 +326,7 @@ async function promover(pool, itemId, opts) {
   );
   const plan = planificarPromocion(slots, ins.rows);
   const nPlan = plan.nVacaciones + plan.nDirecto;
+  const nResPlan = plan.nReservas || 0;
   if (!opts.apply) {
     return {
       ok: true,
@@ -311,19 +334,9 @@ async function promover(pool, itemId, opts) {
       titulo: item.titulo,
       vacaciones: plan.nVacaciones,
       directo: plan.nDirecto,
+      reservas: nResPlan,
       detalle: compactarDetalle(plan.detalle),
       aplicado: false
-    };
-  }
-  if (!nPlan) {
-    return {
-      ok: true,
-      ganadores: 0,
-      titulo: item.titulo,
-      vacaciones: 0,
-      directo: 0,
-      detalle: [],
-      aplicado: true
     };
   }
 
@@ -331,8 +344,10 @@ async function promover(pool, itemId, opts) {
   const plazo = conveniosFlujo.plazoDesdeAhora();
   const obsVac = 'Asignado por vacaciones (sin sorteo)';
   const obsDir = 'Asignado por vacante no cubierta (turno sin sorteo)';
+  const obsRes = 'No cubrió vacante (turno completo)';
   let nVac = 0;
   let nDir = 0;
+  let nRes = 0;
 
   for (let i = 0; i < plan.vacaciones.length; i++) {
     const row = plan.vacaciones[i];
@@ -359,6 +374,16 @@ async function promover(pool, itemId, opts) {
       if (r.rowCount) nDir++;
     }
   }
+  for (let i = 0; i < (plan.reservas || []).length; i++) {
+    const row = plan.reservas[i];
+    const r = await pool.query(
+      `UPDATE inscripciones SET
+         estado='reserva', observacion=$1
+       WHERE id=$2 AND item_id=$3 AND estado = ANY($4::varchar[])`,
+      [obsRes, row.id, itemId, ['preinscrito', 'pendiente', 'aprobado', 'verificado']]
+    );
+    if (r.rowCount) nRes++;
+  }
 
   return {
     ok: true,
@@ -366,6 +391,7 @@ async function promover(pool, itemId, opts) {
     titulo: item.titulo,
     vacaciones: nVac,
     directo: nDir,
+    reservas: nRes,
     detalle: compactarDetalle(plan.detalle),
     aplicado: true
   };
@@ -405,17 +431,19 @@ async function promoverTodosConveniosMes(pool, opts) {
   let totalDir = 0;
   for (let i = 0; i < items.rows.length; i++) {
     const r = await promover(pool, items.rows[i].id, { apply: apply });
-    if (!r.ok || !r.ganadores) continue;
+    if (!r.ok || !(r.ganadores || r.reservas)) continue;
     convenios.push(r);
     totalVac += r.vacaciones || 0;
     totalDir += r.directo || 0;
   }
+  const totalRes = convenios.reduce(function(a, c) { return a + (c.reservas || 0); }, 0);
   return {
     ok: true,
     aplicado: apply,
     convenios: convenios,
     vacaciones: totalVac,
     directo: totalDir,
+    reservas: totalRes,
     ganadores: totalVac + totalDir
   };
 }
