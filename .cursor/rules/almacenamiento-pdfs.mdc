@@ -1,0 +1,12 @@
+---
+description: Conservar PDF de convenios en Railway Buckets, no en Postgres BYTEA
+alwaysApply: true
+---
+
+# PDF de expedientes (convenios)
+
+- Conservar los PDF a largo plazo en **Railway Buckets** (S3 del mismo proyecto), no en `portal_archivos` BYTEA.
+- Postgres solo guarda el registro (CIP, estado, fechas) y la clave del objeto. El archivo se abre con URL firmada (minutos), bucket **privado**.
+- No volver a subir el video tutorial de Bienestar a la BD (fue el gasto de salida).
+- No usar Verpex/Hostinger solo para archivar. Cloudflare R2 es plan B; no usar Buckets y R2 a la vez.
+- No implementar buckets la noche de un sorteo. No poner URL pública ni dominio abierto a expedientes.

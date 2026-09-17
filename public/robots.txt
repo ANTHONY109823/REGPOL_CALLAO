@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /login.html
+Disallow: /panel-admin.html
+Disallow: /panel-usuario.html
+Disallow: /sorteo-live.html
+Disallow: /faltos.html
+Disallow: /admin
+
+Sitemap: https://www.regionpolicialcallao.pe/sitemap.xml
