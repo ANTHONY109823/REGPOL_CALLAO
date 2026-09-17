@@ -645,13 +645,15 @@
     html.panel-listo .layout { visibility: visible; }
 
     .conv-cuadro{position:relative;overflow:hidden;background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(0,77,61,.06);}
-    .conv-cuadro-sorteado{opacity:.9;}
+    .conv-cuadro-sorteado{opacity:.96;}
     .conv-sello-sorteado{
       position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-      pointer-events:none;z-index:2;font-size:28px;font-weight:900;letter-spacing:4px;
-      color:#c0392b;transform:rotate(-22deg);text-shadow:0 1px 0 #fff,0 0 8px #fff;opacity:.82;
+      pointer-events:none;z-index:20;font-size:34px;font-weight:900;letter-spacing:5px;
+      color:#b71c1c;transform:rotate(-22deg);
+      text-shadow:1px 1px 0 rgba(255,255,255,.55),-1px -1px 0 rgba(255,255,255,.35);
+      -webkit-text-stroke:1px #7f0000;paint-order:stroke fill;opacity:.96;
     }
-    .conv-cuadro-acciones{position:relative;z-index:3;}
+    .conv-cuadro-acciones{position:relative;z-index:4;}
   </style>
   <script>
   window.regpolAplicarPermisosPanel = function(s) {
@@ -9208,8 +9210,8 @@ function renderConvPreinscritosCuadros(list){
       var sorteado = convenioEstaSorteado(c);
       return '<div class="conv-cuadro'+(sorteado?' conv-cuadro-sorteado':'')+'">'
         +(sorteado?'<div class="conv-sello-sorteado">SORTEADO</div>':'')
-        +'<div style="font-weight:800;color:#004d3d;font-size:14px;margin-bottom:10px;line-height:1.3;position:relative;z-index:3;">'+escHtml(c.titulo)+'</div>'
-        +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;position:relative;z-index:3;">'
+        +'<div style="font-weight:800;color:#004d3d;font-size:14px;margin-bottom:10px;line-height:1.3;">'+escHtml(c.titulo)+'</div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;">'
         +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#004d3d;">'+inscT+'</div><div class="l">Inscritos</div></div>'
         +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#856404;">'+ganT+'</div><div class="l">Ganadores</div></div>'
         +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#6c757d;">'+noSal+'</div><div class="l">No salieron</div></div>'

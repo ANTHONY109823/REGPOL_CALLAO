@@ -16,6 +16,7 @@ const { calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, 
 const descansosMedicos = require('./descansos_medicos');
 const faltosMod = require('./faltos');
 const conveniosFlujo = require('./convenios_flujo');
+const promoVacantesDirecto = require('./promover_vacantes_directo');
 const recursosHumanos = require('./recursos_humanos');
 const adminAuth = require('./admin_auth');
 const { ZipStoreWriter, slugNombre } = require('./zip_store');
@@ -7550,62 +7551,9 @@ async function revertirReservasTurnosSinSorteo(pool, itemId) {
 
 async function promoverVacantesNoCubiertasPorSlot(pool, itemId) {
   if (await itemConvenioVentanaAbierta(pool, itemId)) {
-    return { ok: false, ganadores: 0, error: MSG_SORTEO_TRAS_CIERRE };
+    return { ok: false, ganadores: 0, vacaciones: 0, directo: 0, detalle: [], error: MSG_SORTEO_TRAS_CIERRE };
   }
-  const cur = await pool.query(
-    'SELECT id, tipo, titulo, vacantes, cupos_unidades, turnos FROM items_portal WHERE id=$1',
-    [itemId]
-  );
-  if (!cur.rows.length || cur.rows[0].tipo !== 'convenio') {
-    return { ok: false, ganadores: 0 };
-  }
-  const item = cur.rows[0];
-  item.cupos_unidades = normalizarCuposUnidades(item.cupos_unidades);
-  item.turnos = normalizarTurnos(item.turnos);
-  const slots = construirSlotsSorteoItem(item);
-  if (!slots.length) return { ok: true, ganadores: 0 };
-  const ins = await pool.query(
-    `SELECT id, estado, comisaria_postula, postula_slots, disponibilidad, dia_franco
-     FROM inscripciones WHERE item_id=$1 AND ${sqlMesActualLima('fecha')}`,
-    [itemId]
-  );
-  const ocupan = conveniosFlujo.ESTADOS_OCUPAN_VACANTE || [];
-  const pendientesEst = ['reserva', 'preinscrito', 'pendiente', 'aprobado', 'verificado'];
-  const plazo = conveniosFlujo.plazoDesdeAhora();
-  const obs = 'Asignado por vacante no cubierta (turno sin sorteo)';
-  const ya = {};
-  let nGan = 0;
-  for (let i = 0; i < slots.length; i++) {
-    const slot = slots[i];
-    const vac = parseInt(slot.vacantes, 10) || 0;
-    if (vac < 1) continue;
-    const ocupadas = ins.rows.filter(function(c) {
-      return ocupan.indexOf(c.estado) >= 0 && candidatoEnCupoPostula(c, slot);
-    }).length;
-    const libres = Math.max(0, vac - ocupadas);
-    if (libres < 1) continue;
-    const pend = ins.rows.filter(function(c) {
-      return pendientesEst.indexOf(c.estado) >= 0
-        && !ya[c.id]
-        && candidatoEnCupoPostula(c, slot);
-    });
-    if (!pend.length || pend.length > libres) continue;
-    for (let j = 0; j < pend.length; j++) {
-      const row = pend[j];
-      const r = await pool.query(
-        `UPDATE inscripciones SET
-           estado='ganador', observacion=$1, modo_ingreso=COALESCE(NULLIF(modo_ingreso,''),'sorteo'),
-           fecha_ganador=COALESCE(fecha_ganador, NOW()), plazo_expediente=COALESCE(plazo_expediente, $2)
-         WHERE id=$3 AND item_id=$4 AND estado = ANY($5::varchar[])`,
-        [obs, plazo.toISOString(), row.id, itemId, pendientesEst]
-      );
-      if (!r.rowCount) continue;
-      nGan++;
-      ya[row.id] = true;
-      row.estado = 'ganador';
-    }
-  }
-  return { ok: true, ganadores: nGan };
+  return promoVacantesDirecto.promover(pool, itemId, { apply: true });
 }
 
 app.post('/admin/items/:id/pasar-preinscritos-ganador', requireAuth, async (req, res) => {
@@ -7626,12 +7574,19 @@ app.post('/admin/items/:id/pasar-preinscritos-ganador', requireAuth, async (req,
     if (!promo.ganadores) {
       return res.json({
         ok: false,
-        error: 'No hay turnos con menos preinscritos que vacantes para pasar a ganador sin sorteo.'
+        error: 'No hay vacaciones pendientes ni turnos con menos preinscritos que vacantes para pasar a ganador sin sorteo.',
+        vacaciones: 0,
+        directo: 0,
+        detalle: []
       });
     }
     res.json({
       ok: true,
       ganadores: promo.ganadores,
+      vacaciones: promo.vacaciones || 0,
+      directo: promo.directo || 0,
+      detalle: promo.detalle || [],
+      titulo: promo.titulo || (cur.rows[0] && cur.rows[0].titulo) || '',
       vacantes_libres: (vac2 && vac2.ok) ? vac2.disponibles : 0,
       notificaciones: []
     });
@@ -10067,13 +10022,19 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
         bloque_vacaciones_etiqueta: conveniosFlujo.etiquetaBloqueVacaciones(c.bloque_vacaciones)
       });
     });
+    const planDirecto = esConvenio ? promoVacantesDirecto.planificarPromocion(slots, r.rows) : null;
     res.json({
       ok: true,
       candidatos: candidatos,
       item: enriquecerItemInscripciones(itemRow),
       flujo: esConvenio ? 'convenio_v2' : 'curso',
       vacantes_info: vac,
-      slots_sorteo: slots
+      slots_sorteo: slots,
+      vacaciones_pendientes: planDirecto ? planDirecto.nVacaciones : 0,
+      slots_directo: planDirecto ? (planDirecto.directo || []).map(function(g) {
+        return Object.assign({}, g.slot, { n_directo: (g.rows || []).length });
+      }) : [],
+      detalle_directo: planDirecto ? promoVacantesDirecto.compactarDetalle(planDirecto.detalle) : []
     });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
