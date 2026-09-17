@@ -703,7 +703,7 @@ function renderResultados(lista) {
         + '<div><span>Situación</span><strong>' + escC(labelSituacionConsulta(ins.disponibilidad, ins.dia_franco)) + '</strong></div>'
         + (ins.plazo_expediente
           ? '<div><span>Plazo para presentarlo</span><strong>' + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</strong></div>'
-          : '')
+          : '<div><span>Ventana de entrega</span><strong>18/09/2026 00:00 — 21/09/2026 17:00 hrs (Lima)</strong></div>')
         + '</div>'
         + '<div class="obs-box alerta-repechaje">'
         + '<strong>Importante:</strong> Si no presenta su documentación dentro del plazo, su vacante pasará a <strong>repechaje</strong>.'
@@ -720,6 +720,24 @@ function renderResultados(lista) {
         + '<input type="file" id="exp-file-' + ins.id + '" accept="application/pdf"/>'
         + '<button type="button" class="btn-pdf-ver" onclick="subirExpediente(' + ins.id + ')"><i class="fas fa-cloud-upload-alt"></i> SUBIR EXPEDIENTE</button>'
         + '<p id="exp-msg-' + ins.id + '" style="font-size:12px;margin:0;min-height:18px;"></p>'
+        + '</div></div>';
+    } else if (ins.estado === 'ganador') {
+      html += '<div class="consulta-meta">'
+        + '<div><span>Grado</span><strong>' + escC(ins.grado || '—') + '</strong></div>'
+        + '<div><span>Apellidos</span><strong>' + escC(nombreParts.apellidos) + '</strong></div>'
+        + '<div><span>Nombres</span><strong>' + escC(nombreParts.nombres) + '</strong></div>'
+        + '<div><span>Postulación (lugar / turno / día)</span><strong>' + escC(ins.comisaria_postula || '—') + '</strong></div>'
+        + '<div><span>Situación</span><strong>' + escC(labelSituacionConsulta(ins.disponibilidad, ins.dia_franco)) + '</strong></div>'
+        + '<div><span>Ventana de entrega</span><strong>18/09/2026 00:00 — 21/09/2026 17:00 hrs (Lima)</strong></div>'
+        + '</div>'
+        + '<div class="expediente-box">'
+        + '<div class="expediente-box-top">'
+        + '<p><i class="fas fa-clock" style="color:#004d3d;"></i> '
+        + (ins.presentacion_aun_no_abre
+          ? 'Aún no abre la entrega. Podrá subir su PDF desde el <strong>18/09/2026 a las 00:00 hrs</strong> hasta el <strong>21/09/2026 a las 17:00 hrs</strong> (hora Lima).'
+          : 'La ventana de entrega de expediente está cerrada (21/09/2026 17:00 hrs). Si no presentó el PDF, su vacante pasa a repechaje.')
+        + '</p>'
+        + htmlBotonesModeloExp()
         + '</div></div>';
     } else {
       html += '<div class="consulta-meta">'
@@ -911,15 +929,46 @@ async function subirExpediente(id) {
   if (msg) { msg.style.color = '#666'; msg.textContent = 'Subiendo PDF (' + Math.max(1, Math.round(file.size / 1024)) + ' KB)...'; }
   if (btn) btn.disabled = true;
   try {
-    // Subida binaria (sin base64): ~33% menos datos y sin FileReader
+    var nombrePdf = file.name || 'expediente.pdf';
+    var urlPresign = API_PUBLIC + '/portal/inscripciones/' + id + '/expediente-url';
+    var rUrl = await fetch(urlPresign, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CIP': CIP_CONSULTA || '' },
+      body: JSON.stringify({ cip: CIP_CONSULTA, nombre: nombrePdf })
+    });
+    var dUrl = await rUrl.json();
+    if (dUrl && dUrl.ok && dUrl.put_url) {
+      if (msg) msg.textContent = 'Enviando PDF al archivo seguro...';
+      var rPut = await fetch(dUrl.put_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/pdf' },
+        body: file
+      });
+      if (!rPut.ok) throw new Error('No se pudo enviar el PDF (código ' + rPut.status + ')');
+      var rConf = await fetch(API_PUBLIC + '/portal/inscripciones/' + id + '/expediente-confirmar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CIP': CIP_CONSULTA || '' },
+        body: JSON.stringify({ cip: CIP_CONSULTA, key: dUrl.key, nombre: nombrePdf })
+      });
+      var d = await rConf.json();
+      if (!d.ok) {
+        if (msg) { msg.style.color = '#c0392b'; msg.textContent = d.error || 'Error'; }
+        return;
+      }
+      if (msg) { msg.style.color = '#1a7a3a'; msg.textContent = d.mensaje || 'Enviado'; }
+      mostrarModalVerificacion(d.mensaje);
+      setTimeout(function() { try { consultarCip(); } catch (e) {} }, 80);
+      return;
+    }
+    if (msg) msg.textContent = 'Subiendo PDF por el servidor...';
     var url = API_PUBLIC + '/portal/inscripciones/' + id + '/expediente'
       + '?cip=' + encodeURIComponent(CIP_CONSULTA)
-      + '&nombre=' + encodeURIComponent(file.name || 'expediente.pdf');
+      + '&nombre=' + encodeURIComponent(nombrePdf);
     var r = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/pdf',
-        'X-Filename': file.name || 'expediente.pdf',
+        'X-Filename': nombrePdf,
         'X-CIP': CIP_CONSULTA || ''
       },
       body: file
@@ -934,7 +983,7 @@ async function subirExpediente(id) {
     // Refrescar consulta en segundo plano (no bloquea el modal de éxito)
     setTimeout(function() { try { consultarCip(); } catch (e) {} }, 80);
   } catch (e) {
-    if (msg) { msg.style.color = '#c0392b'; msg.textContent = 'Error de conexión'; }
+    if (msg) { msg.style.color = '#c0392b'; msg.textContent = (e && e.message) ? e.message : 'Error de conexión'; }
   } finally {
     if (btn) btn.disabled = false;
   }

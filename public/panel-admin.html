@@ -1661,7 +1661,7 @@
       <div class="card">
         <h3><i class="fas fa-trophy" style="color:#c8a94a;"></i> Ganadores y expedientes</h3>
         <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
-          El efectivo ganador <strong>sube</strong> el expediente (4 días). Convenios <strong>revisa</strong> el PDF.
+          El efectivo ganador <strong>sube</strong> el expediente del 18/09 00:00 al 21/09 17:00 hrs (Lima). Convenios <strong>revisa</strong> el PDF.
           Al <strong>aprobar</strong> se <strong>descarga</strong> en este equipo y se <strong>borra</strong> de la base.
           En la web queda el registro (CIP, estado, constancia), no el archivo. No se dejan meses en Postgres.
           <strong>Sin edición de datos</strong> del efectivo. Caducados = no presentaron a tiempo.
@@ -1712,7 +1712,7 @@
           La consulta pública y los menús operativos empiezan de cero cada mes.
           <strong>Convenios (web)</strong> no se toca.
           El Super Admin cierra y limpia el mes en <strong>Administración → Cierre de mes / Limpieza</strong>, después de descargar las listas.
-          Los expedientes PDF se descargan <strong>al aprobar</strong> (el archivo sale de la base; queda el registro CIP).
+          Los expedientes PDF quedan en el <strong>bucket privado</strong> (Railway). Al aprobar se abre el PDF; no se borra.
           Si queda alguno, aquí hay ZIP por convenio para bajarlo y luego borrar. Bienestar no se toca.
         </p>
         <div id="aud-conv-paquetes" style="margin-bottom:16px;"></div>
@@ -1849,7 +1849,7 @@
 
         <div id="sorteo-convenio-panel" style="background:#f0f7f0;border:1.5px solid #c8e6c9;border-radius:10px;padding:16px;margin-bottom:18px;">
           <strong style="color:#004d3d;display:block;margin-bottom:10px;font-size:13px;"><i class="fas fa-handshake"></i> Sorteo de convenio</strong>
-  <p style="font-size:12px;color:#666;margin-bottom:12px;">Convenios: preinscripción (sin PDF) → sorteo → aviso WA/correo → el ganador sube expediente (4 días) → Convenios revisa → al aprobar se descarga y se borra de la BD. Repechaje sube PDF (sin sorteo). Cursos mantienen verificación/aprobación.</p>
+  <p style="font-size:12px;color:#666;margin-bottom:12px;">Convenios: preinscripción (sin PDF) → sorteo → aviso WA/correo → el ganador sube expediente del 18/09 00:00 al 21/09 17:00 hrs (Lima) → Convenios revisa. El PDF queda en el bucket privado. Repechaje sube PDF (sin sorteo). Cursos mantienen verificación/aprobación.</p>
           <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
             <div style="flex:1;min-width:280px;">
               <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Convocatoria de convenio</label>
@@ -2524,8 +2524,7 @@
     <input type="hidden" id="mapr-id"/>
     <p style="font-size:12.5px;color:#666;margin:-4px 0 12px;line-height:1.45;">
       Confirme con su <strong>CIP de sesión</strong> y contraseña. Quedarán registrados en la constancia.
-      Al aprobar se <strong>descarga el PDF</strong> en este equipo y se <strong>retira de la base</strong>:
-      en la web queda el registro (CIP, estado y constancia), no el expediente.
+      Al aprobar se habilita la constancia. El PDF permanece en el archivo privado; puede verlo o descargarlo cuando lo necesite.
     </p>
     <label>CIP (sesión) *</label>
     <input type="text" id="mapr-usuario" autocomplete="username" readonly
@@ -8359,7 +8358,7 @@ function pasarPreinscritosAGanador(itemId){
       return;
     }
     var n = cand.length;
-    if(!confirm('Hay '+n+' preinscrito(s) y '+vacLibres+' vacante(s) libre(s).\nComo no se cubre el cupo, no hay sorteo.\n\n¿Pasar a TODOS a ganador?\nPlazo de expediente: 4 días.')) return;
+    if(!confirm('Hay '+n+' preinscrito(s) y '+vacLibres+' vacante(s) libre(s).\nComo no se cubre el cupo, no hay sorteo.\n\n¿Pasar a TODOS a ganador?\nPlazo de expediente: 18/09 00:00 al 21/09 17:00 hrs (Lima).')) return;
     var ids = cand.slice(0, n).map(function(i){ return i.id; });
     var btn = document.getElementById('btn-pasar-ganador-vacantes');
     if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pasando...'; }
@@ -8874,7 +8873,7 @@ function cargarExpedientesPdfConvenios(){
       if (!meses.length) {
         var vacio = '<div style="background:#f4f7f5;border:1.5px solid #dce6e0;border-radius:10px;padding:14px 16px;">'
           +'<strong style="color:#004d3d;">Expedientes PDF de convenios</strong>'
-          +'<p style="margin:8px 0 0;font-size:13px;color:#555;">No hay PDF pendientes en disco. Al aprobar un expediente se descarga y se retira de la base; aquí solo aparecería un ZIP si quedara alguno. Bienestar no se toca.</p></div>';
+          +'<p style="margin:8px 0 0;font-size:13px;color:#555;">No hay ZIP pendiente. Los PDF de convenios se guardan en el bucket privado; al cierre de mes se arma un ZIP por convocatoria. Bienestar no se toca.</p></div>';
         boxes.forEach(function(box){ box.innerHTML = vacio; });
         return;
       }
@@ -8958,7 +8957,7 @@ function htmlTablaExpedientesPdfMes(d){
     +'<strong style="color:#004d3d;display:block;margin-bottom:6px;"><i class="fas fa-file-zipper"></i> Expedientes PDF — '+escHtml(etiqueta)+' (solo convenios)</strong>'
     +'<p style="margin:0 0 12px;font-size:13px;color:#555;line-height:1.45;">'
     +(d.total_archivos||0)+' archivos · '+fmtBytesCierre(d.total_bytes)
-    +'. Un ZIP por convenio solo si aún quedan PDF en disco. Al aprobar, el expediente ya se descarga y se retira. Al terminar cada descarga de ZIP se marca <strong>Descargado</strong>. Recién entonces se puede eliminar. No incluye Bienestar.</p>'
+    +'. Un ZIP por convenio con los PDF del bucket (y copias antiguas si quedaran). Al terminar cada descarga de ZIP se marca <strong>Descargado</strong>. Eliminar solo borra copias BYTEA viejas; el bucket se conserva. No incluye Bienestar.</p>'
     +'<div style="overflow-x:auto;margin-bottom:12px;"><table class="t" style="margin:0;font-size:13px;">'
     +'<thead><tr><th>Convenio</th><th>PDF</th><th>Tamaño</th><th>Estado</th><th></th></tr></thead>'
     +'<tbody>'+filas+'</tbody></table></div>'
@@ -9998,7 +9997,7 @@ function renderInscritos(list, tipo){
             +'<button type="button" class="btn-mini" onclick="notificarInscripcionConv('+ins.id+',\'expediente_ok\')" title="Avisar constancia"><i class="fab fa-whatsapp"></i> <i class="fas fa-envelope"></i> Avisar</button>'
             +'<button type="button" class="btn-mini btn-mini-solid" title="Ver constancia igual que en Consulta CIP" onclick="abrirConstanciaGanador('+ins.id+')"><i class="fas fa-file-alt"></i> Ver</button>'
             +(ins.tiene_pdf
-              ? '<button type="button" class="btn-mini btn-mini-pdf" title="Descargar el expediente y retirarlo de la base" onclick="descargarYRetirarPdfExpediente('+ins.id+')"><i class="fas fa-download"></i> Descargar y retirar</button>'
+              ? '<button type="button" class="btn-mini btn-mini-pdf" title="Descargar el expediente" onclick="descargarPdfExpedienteSolo('+ins.id+')"><i class="fas fa-download"></i> Descargar</button>'
               : '')
             +'</span> ';
         }
@@ -10491,28 +10490,22 @@ function confirmarAprobarExpediente(){
       if(err){ err.style.display='block'; err.textContent=d.error||'No se pudo aprobar'; }
       return;
     }
-    if(btn) btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Descargando PDF...';
+    if(btn) btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Abriendo PDF...';
     var nombre=d.pdf_nombre||'expediente.pdf';
     var seguir=d.tiene_pdf
-      ? descargarPdfExpedienteArchivo(id, nombre).then(function(){
-          return fetch(API+'/admin/inscripciones/'+id+'/purgar-pdf-expediente',{method:'POST',headers:hdr()})
-            .then(function(r){return r.json();});
-        })
+      ? abrirODescargarPdfExpediente(id, nombre, false).catch(function(){ return {ok:true, sin_descarga:true}; })
       : Promise.resolve({ok:true, sin_pdf:true});
-    return seguir.then(function(p){
+    return seguir.then(function(){
       cerrarModal('modal-aprobar-exp');
       document.getElementById('mapr-password').value='';
       if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-check"></i> Confirmar aprobación'; }
-      var extra = (p && p.ok && !p.sin_pdf)
-        ? ' El PDF se descargó y se retiró de la base. En la web queda el registro y la constancia.'
-        : (p && p.sin_pdf ? ' Constancia habilitada.' : ' Aprobado. Si el PDF no bajó, use «Descargar y retirar».');
-      alert('Expediente aprobado por '+(d.aprobado_por_nombre||usuario)+'.'+extra);
+      alert('Expediente aprobado por '+(d.aprobado_por_nombre||usuario)+'. El PDF permanece en el archivo privado. Constancia habilitada.');
       if(d.notificacion) mostrarLinksNotificacion(d.notificacion);
       refrescarInscritosActivos();
     }).catch(function(e){
       if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-check"></i> Confirmar aprobación'; }
       cerrarModal('modal-aprobar-exp');
-      alert('Expediente aprobado, pero no se pudo descargar/retirar el PDF. Use «Descargar y retirar». '+(e && e.message ? e.message : ''));
+      alert('Expediente aprobado. Si el PDF no se abrió, use «PDF» o «Descargar». '+(e && e.message ? e.message : ''));
       refrescarInscritosActivos();
     });
   }).catch(function(){
@@ -11021,6 +11014,7 @@ function verPdfInscripcion(id){
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d.ok){alert('No hay PDF adjunto o error: '+(d.error||''));return;}
+      if(d.url){ window.open(d.url,'_blank'); return; }
       var blob=blobDesdeRespuestaPdf(d);
       if(!blob){alert('No se pudo leer el PDF.');return;}
       window.open(URL.createObjectURL(blob),'_blank');
@@ -11036,16 +11030,32 @@ function blobDesdeRespuestaPdf(d){
   }catch(e){ return null; }
 }
 
-function descargarPdfExpedienteArchivo(id, nombre){
+function abrirODescargarPdfExpediente(id, nombre, forzarDescarga){
   return fetch(API+'/admin/inscripciones/'+id+'/pdf',{headers:hdr()})
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d.ok) throw new Error(d.error||'PDF no disponible');
+      if(d.url){
+        if(forzarDescarga){
+          var a=document.createElement('a');
+          a.href=d.url;
+          a.download=nombre||d.nombre||'expediente.pdf';
+          a.target='_blank';
+          a.rel='noopener';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } else {
+          window.open(d.url,'_blank');
+        }
+        return d;
+      }
       var blob=blobDesdeRespuestaPdf(d);
       if(!blob) throw new Error('No se pudo armar el archivo');
       var a=document.createElement('a');
       a.href=URL.createObjectURL(blob);
-      a.download=nombre||d.nombre||'expediente.pdf';
+      if(forzarDescarga) a.download=nombre||d.nombre||'expediente.pdf';
+      else a.target='_blank';
       document.body.appendChild(a);
       a.click();
       setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
@@ -11053,19 +11063,19 @@ function descargarPdfExpedienteArchivo(id, nombre){
     });
 }
 
-function descargarYRetirarPdfExpediente(id){
+function descargarPdfExpedienteArchivo(id, nombre){
+  return abrirODescargarPdfExpediente(id, nombre, true);
+}
+
+function descargarPdfExpedienteSolo(id){
   if(!id) return;
-  if(!confirm('Se descargará el PDF en este equipo y se retirará de la base.\nEn la web quedará el registro (CIP, estado y constancia), no el expediente.\n\n¿Continuar?')) return;
-  descargarPdfExpedienteArchivo(id, 'expediente.pdf').then(function(){
-    return fetch(API+'/admin/inscripciones/'+id+'/purgar-pdf-expediente',{method:'POST',headers:hdr()})
-      .then(function(r){return r.json();});
-  }).then(function(d){
-    if(!d.ok){ alert(d.error||'Se descargó, pero no se pudo retirar de la base.'); return; }
-    alert(d.mensaje||'PDF retirado. Queda el registro.');
-    refrescarInscritosActivos();
-  }).catch(function(e){
-    alert('No se retiró el PDF de la base: '+(e && e.message ? e.message : 'error de conexión'));
+  descargarPdfExpedienteArchivo(id, 'expediente.pdf').catch(function(e){
+    alert('No se pudo descargar el PDF: '+(e && e.message ? e.message : 'error de conexión'));
   });
+}
+
+function descargarYRetirarPdfExpediente(id){
+  descargarPdfExpedienteSolo(id);
 }
 
 function guardarEstadoInscripcion(){

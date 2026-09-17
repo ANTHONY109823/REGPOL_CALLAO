@@ -16,6 +16,7 @@ const { calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, 
 const descansosMedicos = require('./descansos_medicos');
 const faltosMod = require('./faltos');
 const conveniosFlujo = require('./convenios_flujo');
+const expedientesS3 = require('./expedientes_s3');
 const promoVacantesDirecto = require('./promover_vacantes_directo');
 const recursosHumanos = require('./recursos_humanos');
 const adminAuth = require('./admin_auth');
@@ -5339,7 +5340,12 @@ app.get('/admin/inscripciones/:id/pdf', requireAuth, async (req, res) => {
       return res.json({ ok: false, error: 'Este inscrito no adjuntó PDF' });
     const resuelto = await resolverPdfInscripcion(r.rows[0].pdf_requisitos, r.rows[0].pdf_nombre);
     if (!resuelto.ok) return res.json({ ok: false, error: resuelto.error || 'PDF no disponible' });
-    res.json({ ok: true, pdf: resuelto.pdf, nombre: resuelto.nombre || 'requisitos.pdf' });
+    res.json({
+      ok: true,
+      pdf: resuelto.pdf || '',
+      url: resuelto.url || '',
+      nombre: resuelto.nombre || 'requisitos.pdf'
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -6466,7 +6472,7 @@ function etiquetaEstadoPublico(estado, tipo) {
       anulado_solicitud: 'Preinscripción ANULADA a solicitud — puede inscribirse en otro convenio',
       verificado: 'Preinscrito — a la espera del sorteo',
       aprobado: 'Preinscrito — a la espera del sorteo',
-      ganador: 'GANADOR — debe subir expediente (plazo 4 días)',
+      ganador: 'GANADOR — subir expediente del 18/09 00:00 al 21/09 17:00 hrs (Lima)',
       en_revision: 'Documentación en verificación por Convenios',
       observado: 'Expediente OBSERVADO — subsanar a la brevedad',
       expediente_ok: 'Documentación APROBADA — vacante ocupada',
@@ -6666,8 +6672,10 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
         }
       }
       const plazoVencido = !!(row.plazo_expediente && new Date(row.plazo_expediente) < new Date());
+      const ventanaEntrega = conveniosFlujo.presentacionVentanaAbierta();
+      const puedeSubirGanador = estado === 'ganador' && !plazoVencido && ventanaEntrega;
       const puedeSubir = row.tipo === 'convenio' && !plazoVencido && (
-        estado === 'ganador'
+        puedeSubirGanador
         || estado === 'observado'
         || (estado === 'rechazado' && !!row.plazo_expediente)
       );
@@ -6772,6 +6780,10 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
         plazo_expediente: row.plazo_expediente || null,
         fecha_ganador: row.fecha_ganador || null,
         plazo_vencido: plazoVencido,
+        presentacion_inicio: conveniosFlujo.INICIO_PRESENTACION_LIMA,
+        presentacion_cierre: conveniosFlujo.CIERRE_PRESENTACION_LIMA,
+        presentacion_abierta: ventanaEntrega,
+        presentacion_aun_no_abre: estado === 'ganador' && conveniosFlujo.presentacionAunNoAbre(),
         es_ganador: estado === 'ganador' || estado === 'expediente_ok' || estado === 'en_revision' || estado === 'observado',
         puede_subir_expediente: puedeSubir,
         puede_descargar_constancia: puedeConstancia,
@@ -6948,14 +6960,18 @@ function sqlFuenteExpedientesMes() {
     SELECT a.inscripcion_id,
            COALESCE(a.item_id, 0) AS item_id,
            COALESCE(NULLIF(TRIM(a.titulo), ''), 'SIN CONVENIO') AS titulo,
-           a.cip, a.nombres, a.estado
+           a.cip, a.nombres, a.estado,
+           COALESCE(a.snapshot->>'pdf_requisitos', '') AS pdf_requisitos,
+           COALESCE(a.snapshot->>'pdf_nombre', '') AS pdf_nombre
       FROM convenios_auditoria_registros a
      WHERE a.mes = $1
     UNION ALL
     SELECT n.id,
            COALESCE(n.item_id, 0),
            COALESCE(NULLIF(TRIM(i.titulo), ''), 'SIN CONVENIO'),
-           n.cip, n.nombres, n.estado
+           n.cip, n.nombres, n.estado,
+           COALESCE(n.pdf_requisitos, ''),
+           COALESCE(n.pdf_nombre, '')
       FROM inscripciones n
       JOIN items_portal i ON i.id = n.item_id
      WHERE i.tipo = 'convenio'
@@ -6963,6 +6979,38 @@ function sqlFuenteExpedientesMes() {
        AND NOT EXISTS (
          SELECT 1 FROM convenios_auditoria_registros x WHERE x.inscripcion_id = n.id
        )`;
+}
+
+function sqlHayPdfExpediente(alias) {
+  return `COALESCE(${alias}.pdf_requisitos, '') <> '' AND ${alias}.pdf_requisitos NOT LIKE 'purged%'`;
+}
+
+function clavePdfExpedienteInscripcion(id) {
+  return ('inscripcion-pdf-' + id).slice(0, 64);
+}
+
+async function bufferPdfInscripcion(pdfRef, inscripcionId) {
+  const ref = String(pdfRef || '');
+  if (expedientesS3.esRefS3(ref)) {
+    try {
+      return await expedientesS3.getBuffer(expedientesS3.keyDesdeRef(ref));
+    } catch (e) {
+      console.warn('S3 get expediente', inscripcionId, e && e.message);
+    }
+  }
+  if (ref.indexOf('ref:') === 0) {
+    const clave = ref.slice(4).slice(0, 64);
+    const a = await pool.query('SELECT data FROM portal_archivos WHERE clave=$1', [clave]);
+    if (a.rows.length && a.rows[0].data) return Buffer.from(a.rows[0].data);
+  }
+  if (ref && ref.indexOf('purged') !== 0 && ref.length > 80) {
+    const b = expedientesS3.bufferDesdeBase64(ref);
+    if (b && b.length > 5) return b;
+  }
+  const clave = clavePdfExpedienteInscripcion(inscripcionId);
+  const a = await pool.query('SELECT data FROM portal_archivos WHERE clave=$1', [clave]);
+  if (a.rows.length && a.rows[0].data) return Buffer.from(a.rows[0].data);
+  return null;
 }
 
 async function pendientesRevisionExpedientes(mes) {
@@ -7060,16 +7108,31 @@ app.get('/admin/convenios/cierre-mes/expedientes-archivados', requireAuth, async
          )`;
     if (!mesQ) {
       const meses = await pool.query(
-        `SELECT src.mes,
+        `SELECT u.mes,
                 COUNT(*)::int AS archivos,
-                COALESCE(SUM(octet_length(p.data)), 0)::bigint AS bytes
-           FROM portal_archivos p
-           JOIN (${fuenteMeses}) src
-             ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
-          WHERE p.clave ~ '^inscripcion-pdf-[0-9]+$'
-            AND src.mes <= $1
-          GROUP BY src.mes
-          ORDER BY src.mes DESC`,
+                0::bigint AS bytes
+           FROM (
+             SELECT a.mes, a.inscripcion_id
+               FROM convenios_auditoria_registros a
+              WHERE COALESCE(a.snapshot->>'pdf_requisitos','') <> ''
+                AND a.snapshot->>'pdf_requisitos' NOT LIKE 'purged%'
+             UNION
+             SELECT ${conveniosFlujo.sqlMesInscripcionLima()}, n.id
+               FROM inscripciones n
+               JOIN items_portal i ON i.id = n.item_id
+              WHERE i.tipo = 'convenio'
+                AND COALESCE(n.pdf_requisitos,'') <> ''
+                AND n.pdf_requisitos NOT LIKE 'purged%'
+             UNION
+             SELECT src.mes, src.inscripcion_id
+               FROM portal_archivos p
+               JOIN (${fuenteMeses}) src
+                 ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
+              WHERE p.clave ~ '^inscripcion-pdf-[0-9]+$'
+           ) u
+          WHERE u.mes <= $1
+          GROUP BY u.mes
+          ORDER BY u.mes DESC`,
         [mesActual]
       );
       const lista = [];
@@ -7098,11 +7161,9 @@ app.get('/admin/convenios/cierre-mes/expedientes-archivados', requireAuth, async
       `SELECT src.item_id,
               src.titulo,
               COUNT(*)::int AS archivos,
-              COALESCE(SUM(octet_length(p.data)), 0)::bigint AS bytes
-         FROM portal_archivos p
-         JOIN (${sqlFuenteExpedientesMes()}) src
-           ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
-        WHERE p.clave ~ '^inscripcion-pdf-[0-9]+$'
+              0::bigint AS bytes
+         FROM (${sqlFuenteExpedientesMes()}) src
+        WHERE ${sqlHayPdfExpediente('src')}
         GROUP BY 1, 2
         ORDER BY 2`,
       [chk.mes]
@@ -7139,11 +7200,9 @@ app.get('/admin/convenios/cierre-mes/expedientes-archivados.zip', requireAuth, a
     }
     const meta = await pool.query(
       `SELECT src.titulo, COUNT(*)::int AS n
-         FROM portal_archivos p
-         JOIN (${sqlFuenteExpedientesMes()}) src
-           ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
+         FROM (${sqlFuenteExpedientesMes()}) src
         WHERE COALESCE(src.item_id, 0) = $2
-          AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+          AND ${sqlHayPdfExpediente('src')}
         GROUP BY 1`,
       [chk.mes, itemId]
     );
@@ -7152,12 +7211,11 @@ app.get('/admin/convenios/cierre-mes/expedientes-archivados.zip', requireAuth, a
     }
     const titulo = meta.rows[0].titulo;
     const filas = await pool.query(
-      `SELECT src.inscripcion_id, src.cip, src.nombres, src.estado, src.titulo, p.nombre AS pdf_nombre
-         FROM portal_archivos p
-         JOIN (${sqlFuenteExpedientesMes()}) src
-           ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
+      `SELECT src.inscripcion_id, src.cip, src.nombres, src.estado, src.titulo,
+              src.pdf_requisitos, src.pdf_nombre
+         FROM (${sqlFuenteExpedientesMes()}) src
         WHERE COALESCE(src.item_id, 0) = $2
-          AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+          AND ${sqlHayPdfExpediente('src')}
         ORDER BY src.cip, src.inscripcion_id`,
       [chk.mes, itemId]
     );
@@ -7174,18 +7232,15 @@ app.get('/admin/convenios/cierre-mes/expedientes-archivados.zip', requireAuth, a
     for (let i = 0; i < filas.rows.length; i++) {
       if (req.aborted) return;
       const row = filas.rows[i];
-      const blob = await pool.query(
-        'SELECT data FROM portal_archivos WHERE clave=$1',
-        ['inscripcion-pdf-' + row.inscripcion_id]
-      );
-      if (!blob.rows.length || !blob.rows[0].data) continue;
+      const blob = await bufferPdfInscripcion(row.pdf_requisitos, row.inscripcion_id);
+      if (!blob || !blob.length) continue;
       let nom = slugNombre(
         (row.cip || 'sincip') + '_' + (row.nombres || 'efectivo') + '_' + (row.estado || 'exp'),
         70
       ) + '.pdf';
       if (usados[nom]) nom = slugNombre(nom.replace(/\.pdf$/, ''), 60) + '_' + row.inscripcion_id + '.pdf';
       usados[nom] = true;
-      await zip.addFile(nom, blob.rows[0].data);
+      await zip.addFile(nom, blob);
       lineas.push(
         (row.cip || '') + '\t' + (row.nombres || '') + '\t' + (row.estado || '') + '\t' + nom
       );
@@ -7212,11 +7267,9 @@ app.post('/admin/convenios/cierre-mes/marcar-descargado', requireAuth, async (re
     }
     const existe = await pool.query(
       `SELECT 1
-         FROM portal_archivos p
-         JOIN (${sqlFuenteExpedientesMes()}) src
-           ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
+         FROM (${sqlFuenteExpedientesMes()}) src
         WHERE COALESCE(src.item_id, 0) = $2
-          AND p.clave ~ '^inscripcion-pdf-[0-9]+$'
+          AND ${sqlHayPdfExpediente('src')}
         LIMIT 1`,
       [chk.mes, itemId]
     );
@@ -7231,10 +7284,8 @@ app.post('/admin/convenios/cierre-mes/marcar-descargado', requireAuth, async (re
     await setConfig(claveMarcasPdfMes(chk.mes), JSON.stringify(marcas));
     const list = await pool.query(
       `SELECT src.item_id
-         FROM portal_archivos p
-         JOIN (${sqlFuenteExpedientesMes()}) src
-           ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
-        WHERE p.clave ~ '^inscripcion-pdf-[0-9]+$'
+         FROM (${sqlFuenteExpedientesMes()}) src
+        WHERE ${sqlHayPdfExpediente('src')}
         GROUP BY 1`,
       [chk.mes]
     );
@@ -7261,10 +7312,8 @@ app.post('/admin/convenios/cierre-mes/eliminar-expedientes-archivados', requireA
     }
     const list = await pool.query(
       `SELECT src.item_id
-         FROM portal_archivos p
-         JOIN (${sqlFuenteExpedientesMes()}) src
-           ON p.clave = ('inscripcion-pdf-' || src.inscripcion_id::text)
-        WHERE p.clave ~ '^inscripcion-pdf-[0-9]+$'
+         FROM (${sqlFuenteExpedientesMes()}) src
+        WHERE ${sqlHayPdfExpediente('src')}
         GROUP BY 1`,
       [chk.mes]
     );
@@ -7325,8 +7374,8 @@ app.post('/admin/convenios/cierre-mes/eliminar-expedientes-archivados', requireA
       mes: chk.mes,
       eliminados: eliminados,
       vacuum: vacuum,
-      mensaje: 'Se eliminaron ' + eliminados + ' expedientes PDF de convenios de ' + chk.mes +
-        '. Bienestar y el resto de archivos no se tocaron.'
+      mensaje: 'Se eliminaron ' + eliminados + ' copias BYTEA antiguas de ' + chk.mes +
+        '. Los PDF del bucket privado se conservan. Bienestar no se tocó.'
     });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
@@ -8848,11 +8897,18 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
     let modo = '';
     let pdfSave = '';
     let pdfNom = '';
+    let pdfBufRepechaje = null;
     if (esConvenio && modoRepechaje) {
       estado = 'repechaje';
       modo = 'repechaje';
-      pdfSave = pdfBase64;
       pdfNom = pdf_nombre || 'expediente-repechaje.pdf';
+      pdfBufRepechaje = expedientesS3.bufferDesdeBase64(pdfBase64);
+      const verrRep = expedientesS3.validarPdfBuffer(pdfBufRepechaje);
+      if (verrRep) return res.json({ ok: false, error: verrRep });
+      if (!expedientesS3.configurado()) {
+        return res.json({ ok: false, error: 'Almacenamiento de expedientes no configurado. Avise a UNITIC.' });
+      }
+      pdfSave = '';
     } else if (esConvenio) {
       estado = 'preinscrito';
       modo = 'sorteo';
@@ -8900,6 +8956,21 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       newId = ins.rows[0].id;
     }
     await conveniosFlujo.asegurarNroRegistro(pool, newId);
+    if (esConvenio && modoRepechaje && pdfBufRepechaje) {
+      const keyRep = expedientesS3.claveObjeto(req.params.id, newId, expedientesS3.mesLimaAhora());
+      try {
+        await expedientesS3.putBuffer(keyRep, pdfBufRepechaje, pdfNom);
+      } catch (ePutRep) {
+        if (!reutilizarId) {
+          await pool.query('DELETE FROM inscripciones WHERE id=$1', [newId]);
+        }
+        return res.json({ ok: false, error: ePutRep.message || 'No se pudo guardar el PDF en el bucket' });
+      }
+      await pool.query(
+        'UPDATE inscripciones SET pdf_requisitos=$1 WHERE id=$2',
+        [expedientesS3.refDesdeKey(keyRep), newId]
+      );
+    }
     let avisoFb = '';
     if (esConvenio) {
       const itAviso = await pool.query('SELECT aviso_sorteo_fb FROM items_portal WHERE id=$1', [req.params.id]);
@@ -9110,6 +9181,117 @@ app.get('/portal/convenios/catalogos', function(req, res) {
   });
 });
 
+async function inscripcionExpedientePorCip(id, cip) {
+  const r = await pool.query(
+    `SELECT n.id, n.estado, n.plazo_expediente, n.observacion, n.item_id, i.tipo, i.titulo
+     FROM inscripciones n
+     JOIN items_portal i ON i.id=n.item_id
+     WHERE n.id=$1 AND ${sqlCipIgual('n.cip')}=$2`,
+    [id, cip]
+  );
+  return r.rows[0] || null;
+}
+
+function errorSiNoPuedeSubirExpediente(row) {
+  if (!row || row.tipo !== 'convenio') return 'Solo aplica a convenios';
+  const plazoVencido = !!(row.plazo_expediente && new Date(row.plazo_expediente) < new Date());
+  if (row.estado === 'ganador' && conveniosFlujo.presentacionAunNoAbre()) {
+    return 'La entrega de expediente abre el 18/09/2026 a las 00:00 hrs (Lima). Cierra el 21/09/2026 a las 17:00 hrs.';
+  }
+  if (row.estado === 'ganador' && !conveniosFlujo.presentacionVentanaAbierta() && !plazoVencido) {
+    return 'La ventana de entrega de expediente está cerrada (21/09/2026 17:00 hrs Lima).';
+  }
+  const puedeGanador = row.estado === 'ganador' && !plazoVencido && conveniosFlujo.presentacionVentanaAbierta();
+  const puedeObservado = row.estado === 'observado' && !plazoVencido;
+  const puedeRechazado = row.estado === 'rechazado' && !!row.plazo_expediente && !plazoVencido;
+  if (puedeGanador || puedeObservado || puedeRechazado) return '';
+  if (row.estado === 'ganador' && plazoVencido) {
+    return 'CADUCAR';
+  }
+  if (row.estado === 'observado' && plazoVencido) {
+    return 'El plazo de 24 horas para subsanar ya venció. No puede volver a subir expediente.';
+  }
+  if (row.estado === 'rechazado' && plazoVencido) {
+    return 'El plazo de subsanación ya venció. No puede volver a subir expediente.';
+  }
+  return 'No puede subir expediente en el estado actual (' + row.estado + ')';
+}
+
+app.post('/portal/inscripciones/:id/expediente-url', express.json(), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const cip = normalizarCipDigits((req.body && req.body.cip) || req.query.cip || req.headers['x-cip'] || '');
+    const pdfNombre = String((req.body && req.body.nombre) || req.query.nombre || 'expediente.pdf').trim() || 'expediente.pdf';
+    if (!id || !cip) return res.json({ ok: false, error: 'CIP e inscripción requeridos' });
+    if (!expedientesS3.configurado()) {
+      return res.json({ ok: false, error: 'Almacenamiento de expedientes no configurado. Avise a UNITIC.' });
+    }
+    const row = await inscripcionExpedientePorCip(id, cip);
+    if (!row) return res.json({ ok: false, error: 'Inscripción no encontrada' });
+    const err = errorSiNoPuedeSubirExpediente(row);
+    if (err === 'CADUCAR') {
+      await pool.query(`UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente' WHERE id=$1`, [id]);
+      return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 17:00 hrs). La vacante pasó a repechaje.' });
+    }
+    if (err) return res.json({ ok: false, error: err });
+    const key = expedientesS3.claveObjeto(row.item_id, id, expedientesS3.mesLimaAhora());
+    const putUrl = await expedientesS3.presignPut(key);
+    res.json({
+      ok: true,
+      put_url: putUrl,
+      key: key,
+      nombre: pdfNombre.slice(0, 255),
+      expira_seg: expedientesS3.PRESIGN_SEC
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.post('/portal/inscripciones/:id/expediente-confirmar', express.json(), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const cip = normalizarCipDigits((req.body && req.body.cip) || req.query.cip || req.headers['x-cip'] || '');
+    const key = String((req.body && req.body.key) || '');
+    const pdfNombre = String((req.body && req.body.nombre) || 'expediente.pdf').trim() || 'expediente.pdf';
+    if (!id || !cip || !key) return res.json({ ok: false, error: 'CIP, inscripción y archivo requeridos' });
+    if (key.indexOf('expedientes/') !== 0) return res.json({ ok: false, error: 'Clave de archivo inválida' });
+    const row = await inscripcionExpedientePorCip(id, cip);
+    if (!row) return res.json({ ok: false, error: 'Inscripción no encontrada' });
+    const esperada = expedientesS3.claveObjeto(row.item_id, id, expedientesS3.mesLimaAhora());
+    if (key !== esperada) return res.json({ ok: false, error: 'Clave de archivo no coincide' });
+    const err = errorSiNoPuedeSubirExpediente(row);
+    if (err === 'CADUCAR') {
+      await pool.query(`UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente' WHERE id=$1`, [id]);
+      return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 17:00 hrs). La vacante pasó a repechaje.' });
+    }
+    if (err) return res.json({ ok: false, error: err });
+    const meta = await expedientesS3.head(key);
+    if (!meta) return res.json({ ok: false, error: 'No se encontró el PDF subido. Intente de nuevo.' });
+    const size = parseInt(meta.ContentLength, 10) || 0;
+    if (size > expedientesS3.MAX_BYTES) return res.json({ ok: false, error: 'El PDF no debe superar 5 MB' });
+    const ref = expedientesS3.refDesdeKey(key);
+    await pool.query(
+      `UPDATE inscripciones SET
+         pdf_requisitos=$1, pdf_nombre=$2, estado='en_revision',
+         motivo_observacion='',
+         observacion=CASE
+           WHEN estado IN ('observado','rechazado') THEN 'Expediente reenviado tras observación/rechazo — en verificación'
+           ELSE observacion
+         END
+       WHERE id=$3`,
+      [ref, pdfNombre.slice(0, 255), id]
+    );
+    res.json({
+      ok: true,
+      mensaje: 'Expediente recibido. Quedó en verificación por Convenios.',
+      estado: 'en_revision',
+      mostrar_modal_verificacion: true
+    });
+    setImmediate(function() {
+      conveniosFlujo.caducarExpedientesVencidos(pool).catch(function() {});
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 app.post('/portal/inscripciones/:id/expediente',
   express.raw({
     limit: '6mb',
@@ -9147,7 +9329,7 @@ app.post('/portal/inscripciones/:id/expediente',
     }
 
     const r = await pool.query(
-      `SELECT n.id, n.estado, n.plazo_expediente, n.observacion, i.tipo, i.titulo
+      `SELECT n.id, n.estado, n.plazo_expediente, n.observacion, n.item_id, i.tipo, i.titulo
        FROM inscripciones n
        JOIN items_portal i ON i.id=n.item_id
        WHERE n.id=$1 AND ${sqlCipIgual('n.cip')}=$2`,
@@ -9156,13 +9338,19 @@ app.post('/portal/inscripciones/:id/expediente',
     const row = r.rows[0];
     if (row.tipo !== 'convenio') return res.json({ ok: false, error: 'Solo aplica a convenios' });
     const plazoVencido = !!(row.plazo_expediente && new Date(row.plazo_expediente) < new Date());
-    const puedeGanador = row.estado === 'ganador' && !plazoVencido;
+    if (row.estado === 'ganador' && conveniosFlujo.presentacionAunNoAbre()) {
+      return res.json({ ok: false, error: 'La entrega de expediente abre el 18/09/2026 a las 00:00 hrs (Lima). Cierra el 21/09/2026 a las 17:00 hrs.' });
+    }
+    if (row.estado === 'ganador' && !conveniosFlujo.presentacionVentanaAbierta() && !plazoVencido) {
+      return res.json({ ok: false, error: 'La ventana de entrega de expediente está cerrada (21/09/2026 17:00 hrs Lima).' });
+    }
+    const puedeGanador = row.estado === 'ganador' && !plazoVencido && conveniosFlujo.presentacionVentanaAbierta();
     const puedeObservado = row.estado === 'observado' && !plazoVencido;
     const puedeRechazado = row.estado === 'rechazado' && !!row.plazo_expediente && !plazoVencido;
     if (!puedeGanador && !puedeObservado && !puedeRechazado) {
       if (row.estado === 'ganador' && plazoVencido) {
         await pool.query(`UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente' WHERE id=$1`, [id]);
-        return res.json({ ok: false, error: 'El plazo de 4 días ya venció. La vacante pasó a repechaje.' });
+        return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 17:00 hrs). La vacante pasó a repechaje.' });
       }
       if (row.estado === 'observado' && plazoVencido) {
         return res.json({ ok: false, error: 'El plazo de 24 horas para subsanar ya venció. No puede volver a subir expediente.' });
@@ -9173,18 +9361,17 @@ app.post('/portal/inscripciones/:id/expediente',
       return res.json({ ok: false, error: 'No puede subir expediente en el estado actual (' + row.estado + ')' });
     }
 
-    const clave = ('inscripcion-pdf-' + id).slice(0, 64);
-    const ref = 'ref:' + clave;
-    await pool.query(
-      `INSERT INTO portal_archivos (clave, mime, nombre, data, updated_at)
-       VALUES ($1, 'application/pdf', $2, $3, NOW())
-       ON CONFLICT (clave) DO UPDATE SET
-         mime = EXCLUDED.mime,
-         nombre = EXCLUDED.nombre,
-         data = EXCLUDED.data,
-         updated_at = NOW()`,
-      [clave, pdfNombre.slice(0, 255), pdfBuf]
-    );
+    const itemId = row.item_id;
+    if (!expedientesS3.configurado()) {
+      return res.json({ ok: false, error: 'Almacenamiento de expedientes no configurado. Avise a UNITIC (Railway Bucket).' });
+    }
+    const key = expedientesS3.claveObjeto(itemId, id, expedientesS3.mesLimaAhora());
+    try {
+      await expedientesS3.putBuffer(key, pdfBuf, pdfNombre);
+    } catch (ePut) {
+      return res.json({ ok: false, error: ePut.message || 'No se pudo guardar el PDF' });
+    }
+    const ref = expedientesS3.refDesdeKey(key);
 
     await pool.query(
       `UPDATE inscripciones SET
@@ -9216,8 +9403,18 @@ async function resolverPdfInscripcion(pdfRef, pdfNombre) {
   if (ref === 'purged' || ref.indexOf('purged') === 0) {
     return {
       ok: false,
-      error: 'El PDF ya se descargó y se retiró de la base. Queda el registro (CIP, estado y constancia).'
+      error: 'El PDF ya no está en la base de datos. Si se archivó en el bucket, use la clave S3.'
     };
+  }
+  if (expedientesS3.esRefS3(ref)) {
+    if (!expedientesS3.configurado()) {
+      return { ok: false, error: 'Almacenamiento de expedientes no configurado' };
+    }
+    const key = expedientesS3.keyDesdeRef(ref);
+    const meta = await expedientesS3.head(key);
+    if (!meta) return { ok: false, error: 'Archivo no encontrado en el bucket' };
+    const url = await expedientesS3.presignGet(key, nombre);
+    return { ok: true, url: url, pdf: '', nombre: nombre };
   }
   if (ref.indexOf('ref:') === 0) {
     const clave = ref.slice(4).slice(0, 64);
@@ -9231,10 +9428,6 @@ async function resolverPdfInscripcion(pdfRef, pdfNombre) {
     };
   }
   return { ok: true, pdf: ref, nombre: nombre };
-}
-
-function clavePdfExpedienteInscripcion(id) {
-  return ('inscripcion-pdf-' + id).slice(0, 64);
 }
 
 async function purgarPdfExpedienteAprobado(db, id) {
@@ -9254,6 +9447,14 @@ async function purgarPdfExpedienteAprobado(db, id) {
   if (!ref) return { ok: true, ya_purgado: true };
   if (ref === 'purged' || ref.indexOf('purged') === 0) {
     return { ok: true, ya_purgado: true };
+  }
+  if (expedientesS3.esRefS3(ref)) {
+    return {
+      ok: true,
+      conservado: true,
+      ya_purgado: false,
+      mensaje: 'El PDF permanece en el bucket privado. No se retira al aprobar.'
+    };
   }
   const clave = clavePdfExpedienteInscripcion(id);
   await db.query('DELETE FROM portal_archivos WHERE clave=$1', [clave]);
@@ -10438,6 +10639,11 @@ function iniciarDB() {
     .then(function() {
       dbListo = true;
       console.log('PostgreSQL listo.');
+      return conveniosFlujo.alinearPlazosPresentacionMes(pool).then(function() {
+        console.log('Plazos de expediente alineados a 21/09/2026 17:00 (Lima).');
+      }).catch(function(eAli) {
+        console.warn('No se alinearon plazos de expediente:', eAli && eAli.message);
+      });
     })
     .catch(function(e) {
       console.error('Error init DB (reintento en 15s):', e.message);
@@ -10459,6 +10665,19 @@ app.listen(PORT, '0.0.0.0', function() {
   console.log('\n=== REGPOL Callao — Puerto ' + PORT + ' ===');
   setImmediate(precalentarEstaticos);
   iniciarDB();
+  setImmediate(function() {
+    if (!expedientesS3.configurado()) {
+      console.warn('Railway Bucket de expedientes no configurado (AWS_S3_BUCKET / ENDPOINT).');
+      return;
+    }
+    console.log('Bucket expedientes:', expedientesS3.cfg().bucket);
+    expedientesS3.asegurarCors().then(function(r) {
+      if (r && r.ok) console.log('CORS bucket expedientes listo.');
+      else if (r && r.error) console.warn('CORS bucket:', r.error);
+    }).catch(function(eCors) {
+      console.warn('CORS bucket:', eCors && eCors.message);
+    });
+  });
   // Nómina RRHH en background (no bloquea psicología ni healthcheck)
   setTimeout(function() {
     if (typeof recursosHumanos.programarSincronizacionNomina === 'function') {

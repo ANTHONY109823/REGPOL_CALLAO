@@ -3,7 +3,7 @@
   1. Preinscripción (sin PDF)
   2. Sorteo (todos los preinscritos) → ganador / reserva
   3. Aviso ganadores (WA + correo)
-  4. Presentación expediente (plazo 4 días)
+  4. Presentación expediente (18/09 00:00 → 21/09 17:00 hrs Lima)
   5. Revisión admin → constancia u observación (+ aviso)
   6. Repechaje: registro completo con expediente (sin sorteo), según vacantes libres
 
@@ -12,9 +12,10 @@
 const PLAZO_EXPEDIENTE_DIAS = 4;
 /** Horas para subsanar desde el momento en que el admin observa el expediente. */
 const PLAZO_SUBSANACION_HORAS = 24;
-/** Cierre de la primera entrega de expediente (Lima). Tras esta hora, ganador sin PDF queda caducado. */
-const CIERRE_PRESENTACION_LIMA = '2026-08-25 17:00:00';
-const CIERRE_PRESENTACION_MES = '2026-08';
+/** Ventana de entrega de expediente (hora Lima). Día 18 00:00 → día 21 17:00 del mes operativo. */
+const INICIO_PRESENTACION_LIMA = '2026-09-18 00:00:00';
+const CIERRE_PRESENTACION_LIMA = '2026-09-21 17:00:00';
+const CIERRE_PRESENTACION_MES = '2026-09';
 
 const ESTADOS_CONVENIO = {
   PREINSCRITO: 'preinscrito',
@@ -105,9 +106,8 @@ function mensajeNotificacion(tipo, ins, itemTitulo, item) {
       + cabeceraPersona + ':\n\n'
       + 'Ha resultado GANADOR(A) en «' + conv + '».\n'
       + datos
-      + '\nDebe subir su expediente completo en un plazo de '
-      + PLAZO_EXPEDIENTE_DIAS + ' días hábiles/calendario desde la notificación,\n'
-      + 'ingresando a Consulta por CIP en el portal REGPOL Callao.\n'
+      + '\nDebe subir su expediente completo desde Consulta por CIP.\n'
+      + 'Ventana de entrega (hora Lima): del 18/09/2026 00:00 hrs al 21/09/2026 17:00 hrs.\n'
       + 'Pasado el plazo, la vacante se libera para REPECHAJE.';
   }
   if (tipo === 'observado') {
@@ -489,12 +489,11 @@ async function migrarEstadosConvenios(pool) {
 }
 
 async function caducarExpedientesVencidos(pool) {
-  // Agosto 2026: entrega cerró el 25/08 a las 17:00. No reabrir plazo a quien no subió PDF.
   await pool.query(
     `UPDATE inscripciones n
      SET estado = 'caducado',
          plazo_expediente = $2::timestamp AT TIME ZONE 'America/Lima',
-         observacion = 'Presentación de expediente cerrada el 25/08/2026 a las 17:00. No presentó PDF.'
+         observacion = 'Presentación de expediente cerrada el 21/09/2026 a las 17:00. No presentó PDF.'
      FROM items_portal i
      WHERE n.item_id = i.id
        AND i.tipo = 'convenio'
@@ -549,10 +548,42 @@ async function vacantesDisponibles(pool, itemId) {
   return { ok: true, vacantes: total, ocupadas: ocupadas, disponibles: disponibles };
 }
 
+function instanteLima(textoLocal) {
+  return new Date(String(textoLocal || '').trim().replace(' ', 'T') + '-05:00');
+}
+
+function plazoCierrePresentacion() {
+  return instanteLima(CIERRE_PRESENTACION_LIMA);
+}
+
+function presentacionInicio() {
+  return instanteLima(INICIO_PRESENTACION_LIMA);
+}
+
+function presentacionAunNoAbre() {
+  return Date.now() < presentacionInicio().getTime();
+}
+
+function presentacionVentanaAbierta() {
+  const n = Date.now();
+  return n >= presentacionInicio().getTime() && n < plazoCierrePresentacion().getTime();
+}
+
 function plazoDesdeAhora() {
-  const d = new Date();
-  d.setDate(d.getDate() + PLAZO_EXPEDIENTE_DIAS);
-  return d;
+  return plazoCierrePresentacion();
+}
+
+async function alinearPlazosPresentacionMes(pool) {
+  await pool.query(
+    `UPDATE inscripciones n
+     SET plazo_expediente = $2::timestamp AT TIME ZONE 'America/Lima'
+     FROM items_portal i
+     WHERE n.item_id = i.id
+       AND i.tipo = 'convenio'
+       AND n.estado = 'ganador'
+       AND to_char(timezone('America/Lima', COALESCE(n.fecha, NOW())), 'YYYY-MM') = $1`,
+    [CIERRE_PRESENTACION_MES, CIERRE_PRESENTACION_LIMA]
+  );
 }
 
 function plazoSubsanacionDesdeAhora() {
@@ -1178,6 +1209,9 @@ async function archivarMesOperativo(pool, mes, opts) {
 
 module.exports = {
   PLAZO_EXPEDIENTE_DIAS,
+  INICIO_PRESENTACION_LIMA,
+  CIERRE_PRESENTACION_LIMA,
+  CIERRE_PRESENTACION_MES,
   ESTADOS_OCUPAN_VACANTE,
   CATALOGO_OBSERVACIONES,
   MODALIDADES_TRABAJO,
@@ -1191,6 +1225,11 @@ module.exports = {
   vacantesDisponibles,
   plazoDesdeAhora,
   plazoSubsanacionDesdeAhora,
+  presentacionInicio,
+  presentacionAunNoAbre,
+  presentacionVentanaAbierta,
+  plazoCierrePresentacion,
+  alinearPlazosPresentacionMes,
   asegurarNroRegistro,
   limpio,
   parsePostulacionSlot,
