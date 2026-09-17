@@ -643,6 +643,15 @@
     html.panel-iniciando .layout { visibility: hidden; }
     html.panel-listo .top-bar,
     html.panel-listo .layout { visibility: visible; }
+
+    .conv-cuadro{position:relative;overflow:hidden;background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(0,77,61,.06);}
+    .conv-cuadro-sorteado{opacity:.9;}
+    .conv-sello-sorteado{
+      position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      pointer-events:none;z-index:2;font-size:28px;font-weight:900;letter-spacing:4px;
+      color:#c0392b;transform:rotate(-22deg);text-shadow:0 1px 0 #fff,0 0 8px #fff;opacity:.82;
+    }
+    .conv-cuadro-acciones{position:relative;z-index:3;}
   </style>
   <script>
   window.regpolAplicarPermisosPanel = function(s) {
@@ -9177,6 +9186,13 @@ function cargarConvFlujoResumen(vista){
     });
 }
 
+function convenioEstaSorteado(c){
+  if(!c || c.inscripciones_abiertas) return false;
+  var ganT=(c.ganadores||0)+(c.en_revision||0)+(c.observados||0)+(c.expediente_ok||0);
+  var noSal=c.reservas||0;
+  return (c.preinscritos||0)<1 && (ganT>0 || noSal>0);
+}
+
 function renderConvPreinscritosCuadros(list){
   var el=document.getElementById('conv-preinscritos-cuadros');
   if(!el) return;
@@ -9189,18 +9205,22 @@ function renderConvPreinscritosCuadros(list){
       var ganT = (c.ganadores||0)+(c.en_revision||0)+(c.observados||0)+(c.expediente_ok||0);
       var noSal = c.reservas||0;
       var inscT = (c.preinscritos||0)+ganT+noSal+(c.caducados||0)+(c.repechaje||0);
-      return '<div style="background:#fff;border:1.5px solid #c8e6c9;border-radius:12px;padding:16px;box-shadow:0 2px 10px rgba(0,77,61,.06);">'
-        +'<div style="font-weight:800;color:#004d3d;font-size:14px;margin-bottom:10px;line-height:1.3;">'+escHtml(c.titulo)+'</div>'
-        +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;">'
+      var sorteado = convenioEstaSorteado(c);
+      return '<div class="conv-cuadro'+(sorteado?' conv-cuadro-sorteado':'')+'">'
+        +(sorteado?'<div class="conv-sello-sorteado">SORTEADO</div>':'')
+        +'<div style="font-weight:800;color:#004d3d;font-size:14px;margin-bottom:10px;line-height:1.3;position:relative;z-index:3;">'+escHtml(c.titulo)+'</div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px;position:relative;z-index:3;">'
         +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#004d3d;">'+inscT+'</div><div class="l">Inscritos</div></div>'
         +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#856404;">'+ganT+'</div><div class="l">Ganadores</div></div>'
         +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#6c757d;">'+noSal+'</div><div class="l">No salieron</div></div>'
         +'<div class="stat" style="padding:10px;"><div class="n" style="font-size:20px;color:#856404;">'+(c.preinscritos||0)+'</div><div class="l">Preinscritos</div></div>'
         +'</div>'
-        +'<div style="display:flex;flex-direction:column;gap:8px;">'
+        +'<div class="conv-cuadro-acciones" style="display:flex;flex-direction:column;gap:8px;">'
         +'<button type="button" class="btn btn-v" style="width:100%;justify-content:center;" onclick="abrirConvenioPreinscritos('+c.id+',\''+escJs(c.titulo)+'\')">'
         +'<i class="fas fa-users"></i> Ver inscritos</button>'
-        +(c.inscripciones_abiertas
+        +(sorteado
+          ? ''
+          : (c.inscripciones_abiertas
           ? '<p style="margin:0;padding:8px 10px;background:#fff8e1;border:1px solid #f0d78c;border-radius:8px;color:#856404;font-size:12px;line-height:1.35;"><i class="fas fa-hourglass-half"></i> Inscripciones abiertas. Los postulantes quedan como preinscritos. El sorteo lo hace Convenios al cerrar la ventana.</p>'
           : ('<button type="button" class="btn btn-o" style="width:100%;justify-content:center;" onclick="abrirSorteoDesdeItem('+c.id+')" '
         +(c.preinscritos<1||(!convenioRequiereSorteo(c) && puedePasarPreinscritosVacantesNoCubiertas(c.preinscritos, c.disponibles))?'disabled title="No hace falta sorteo: hay igual o menos preinscritos que vacantes en cada turno"':'title="Hay turnos con más preinscritos que vacantes"')+'>'
@@ -9208,7 +9228,7 @@ function renderConvPreinscritosCuadros(list){
         +((!convenioRequiereSorteo(c) && puedePasarPreinscritosVacantesNoCubiertas(c.preinscritos, c.disponibles))
           ? ('<button type="button" class="btn" style="width:100%;justify-content:center;background:#1a7a3a;color:#fff;" onclick="pasarPreinscritosAGanador('+c.id+')">'
             +'<i class="fas fa-user-check"></i> Pasar todos a ganador (sin sorteo)</button>')
-          : '')))
+          : ''))))
         +'</div></div>';
     }).join('')
     +'</div>';

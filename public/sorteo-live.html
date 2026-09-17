@@ -250,6 +250,19 @@
       animation:zoomIn .7s ease;
     }
     .resumen-box{text-align:left;max-height:90vh;overflow:auto;}
+    .bv-box{max-width:880px;}
+    .bv-hint{font-size:13px;color:#555;line-height:1.45;margin:0 0 12px;}
+    .bv-lista{max-height:42vh;overflow:auto;border:1px solid #e0e8e0;border-radius:8px;background:#fafcfb;}
+    .bv-item{padding:8px 12px;border-bottom:1px solid #eef2ee;font-size:13px;text-align:left;}
+    .bv-item:last-child{border-bottom:none;}
+    .bv-item strong{display:block;color:#004d3d;font-size:13px;}
+    .bv-item span{font-size:11.5px;color:#666;}
+    .bv-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .bv-col{border:1.5px solid #c8e6c9;border-radius:10px;overflow:hidden;min-height:120px;}
+    .bv-col h4{margin:0;padding:8px 10px;background:#004d3d;color:#fff;font-size:12.5px;}
+    .bv-col.b2 h4{background:#1a7a3a;}
+    .bv-col .bv-lista{max-height:36vh;border:none;border-radius:0;}
+    @media(max-width:720px){.bv-cols{grid-template-columns:1fr;}}
     @keyframes zoomIn{from{transform:scale(.96);opacity:0;}to{transform:scale(1);opacity:1;}}
     .gf-titulo{font-size:12px;color:#004d3d;letter-spacing:1.5px;font-weight:800;margin-bottom:6px;}
     .gf-nro{font-size:48px;font-weight:900;color:#c8a94a;margin-bottom:8px;}
@@ -368,8 +381,8 @@
           <button class="btn btn-admin" id="btn-detener-auto" onclick="detenerAutoSorteo()" style="display:none;width:100%;justify-content:center;padding:10px;margin-top:6px;background:#856404;color:#fff;border:none;">
             <i class="fas fa-stop"></i> DETENER
           </button>
-          <button class="btn btn-ok" id="btn-bloques-vac" onclick="sortearBloquesVacacionesUI()" style="width:100%;justify-content:center;padding:10px;margin-top:8px;display:none;">
-            <i class="fas fa-calendar-alt"></i> SORTEAR BLOQUES DE VACACIONES (1–15 / 16–fin)
+          <button class="btn btn-ok" id="btn-bloques-vac" onclick="abrirPanelVacacionesBloques()" style="width:100%;justify-content:center;padding:10px;margin-top:8px;display:none;">
+            <i class="fas fa-calendar-alt"></i> SORTEAR VACACIONES
           </button>
         </div>
       </div>
@@ -395,6 +408,38 @@
     <div class="gf-sub" id="gf-sub">—</div>
     <p id="gf-auto-hint" style="display:none;font-size:12px;color:#666;margin:0 0 12px;">Siguiente sorteo enseguida…</p>
     <button class="btn btn-primary" id="btn-flash-continuar" onclick="cerrarFlash()"><i class="fas fa-check"></i> CONTINUAR</button>
+  </div>
+</div>
+
+<div class="resumen-modal" id="modal-bloques-vac">
+  <div class="resumen-box bv-box">
+    <h3><i class="fas fa-calendar-alt" style="color:#c8a94a;"></i> Vacaciones — bloques 1–15 / 16–fin</h3>
+    <p class="bv-hint" id="bv-hint">Estos efectivos ya ocupan vacante (ganadores). El sorteo solo asigna el bloque del mes.</p>
+    <div id="bv-paso-lista">
+      <div class="bv-lista" id="bv-lista-todos"></div>
+      <div class="resumen-actions" style="margin-top:12px;">
+        <button type="button" class="btn btn-danger" id="btn-bv-sortear" onclick="ejecutarSorteoBloquesVacaciones()" style="background:#004d3d;border:none;">
+          <i class="fas fa-random"></i> SORTEAR EN DOS BLOQUES
+        </button>
+        <button type="button" class="btn btn-admin" onclick="cerrarPanelVacacionesBloques()">Cerrar</button>
+      </div>
+    </div>
+    <div id="bv-paso-resultado" style="display:none;">
+      <div class="bv-cols">
+        <div class="bv-col">
+          <h4 id="bv-tit-b1">Bloque 1 (días 1–15)</h4>
+          <div class="bv-lista" id="bv-lista-b1"></div>
+        </div>
+        <div class="bv-col b2">
+          <h4 id="bv-tit-b2">Bloque 2 (días 16–fin)</h4>
+          <div class="bv-lista" id="bv-lista-b2"></div>
+        </div>
+      </div>
+      <div class="resumen-actions" style="margin-top:12px;">
+        <button type="button" class="btn btn-ok" onclick="cerrarPanelVacacionesBloques()"><i class="fas fa-check"></i> LISTO — ver ganadores</button>
+        <button type="button" class="btn btn-admin" onclick="ejecutarSorteoBloquesVacaciones(true)">Volver a sortear</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -787,7 +832,8 @@ function cargarCandidatos() {
       renderSlotsPreview();
       renderListaTotalPreview();
 
-      var puedeIniciar = LISTA_APROBADOS.length >= 1 && FALTAN_INICIAL > 0;
+      var nVacIni = LISTA_APROBADOS.filter(function(c) { return c.disponibilidad === 'VACACIONES'; }).length;
+      var puedeIniciar = LISTA_APROBADOS.length >= 1 && (FALTAN_INICIAL > 0 || nVacIni > 0);
       var ventanaAbierta = !ENSAYO && !!(ITEM_DATA && ITEM_DATA.inscripciones_abiertas);
       if (ventanaAbierta) puedeIniciar = false;
       document.getElementById('btn-iniciar').disabled = !puedeIniciar;
@@ -795,7 +841,7 @@ function cargarCandidatos() {
       if (ventanaAbierta) {
         lock.style.display = 'block';
         lock.textContent = 'Las inscripciones siguen abiertas. Los postulantes quedan como preinscritos. El Admin de Convenios hace el sorteo al cerrar la ventana.';
-      } else if (FALTAN_INICIAL <= 0) {
+      } else if (FALTAN_INICIAL <= 0 && nVacIni < 1) {
         lock.style.display = 'block';
         lock.textContent = SLOTS_SORTEO.length
           ? 'No hay vacantes disponibles en los turnos pendientes.'
@@ -984,7 +1030,9 @@ function iniciarSorteo() {
     alert('Las inscripciones siguen abiertas. Los postulantes quedan como preinscritos. El Admin de Convenios hace el sorteo al cerrar la ventana.');
     return;
   }
-  if (!LISTA_APROBADOS.length || FALTAN_INICIAL <= 0) return;
+  var nVacIni = LISTA_APROBADOS.filter(function(c) { return c.disponibilidad === 'VACACIONES'; }).length;
+  if (!LISTA_APROBADOS.length) return;
+  if (FALTAN_INICIAL <= 0 && nVacIni < 1) return;
 
   VACACIONES_CAND = LISTA_APROBADOS.filter(function(c) { return c.disponibilidad === 'VACACIONES'; });
   RUEDA_CAND = LISTA_APROBADOS.filter(function(c) { return c.disponibilidad !== 'VACACIONES'; });
@@ -1002,7 +1050,9 @@ function iniciarSorteo() {
     yaGanadores.forEach(function(c) {
       var g = {
         id: c.id, grado: c.grado, nombres: c.nombres, unidad: c.unidad,
-        area: c.area, cip: c.cip, tipo: 'previo', nro: GANADORES.length + 1,
+        area: c.area, cip: c.cip,
+        tipo: (String(c.disponibilidad || '').toUpperCase() === 'VACACIONES') ? 'vacaciones' : 'previo',
+        nro: GANADORES.length + 1,
         bloque_vacaciones: c.bloque_vacaciones || '',
         slot_key: '',
         slot_label: labelSlotCand(c)
@@ -1011,14 +1061,11 @@ function iniciarSorteo() {
       IDS_GANADOS[c.id] = g;
       IDS_PERSISTIDOS[c.id] = true;
     });
+  } else {
+    incorporarVacacionesYaGanadoras();
   }
 
-  OBJETIVO = GANADORES.length + FALTAN_INICIAL;
-  if (OBJETIVO > CUPO_TOTAL && !SOLO_TURNOS_PENDIENTES) OBJETIVO = CUPO_TOTAL;
-
-  // Vacaciones: ocupan vacante automática por slot (si hay cupo)
   VACACIONES_CAND.forEach(function(c) {
-    if (GANADORES.length >= OBJETIVO) return;
     if (IDS_GANADOS[c.id]) return;
     var slot = slotPreferidoVacaciones(c);
     if (SLOTS_SORTEO.length && (!slot || cupoRestanteSlot(slot) <= 0)) return;
@@ -1039,7 +1086,8 @@ function iniciarSorteo() {
     });
   });
 
-  // Ir al primer slot con cupo y candidatos franco
+  recomputarObjetivoTrasVacaciones();
+
   for (var i = 0; i < SLOTS_SORTEO.length; i++) {
     SLOT_IDX = i;
     if (cupoRestanteSlot(SLOTS_SORTEO[i]) > 0 && candidatosRuedaActivos().length) break;
@@ -1049,18 +1097,49 @@ function iniciarSorteo() {
   document.getElementById('sorteo-panel').style.display = '';
   document.body.classList.add('modo-sorteo');
   document.getElementById('btn-culminar').disabled = false;
-  var btnBloq = document.getElementById('btn-bloques-vac');
-  if (btnBloq) {
-    var hayVacSinBloque = GANADORES.some(function(g) {
-      return g.tipo === 'vacaciones' && !g.bloque_vacaciones;
-    });
-    btnBloq.style.display = hayVacSinBloque ? 'inline-flex' : 'none';
-  }
 
   buildDrum();
   renderListaTotalLive();
   renderGanadores();
   actualizarUI();
+}
+
+function incorporarVacacionesYaGanadoras() {
+  TODOS_CAND.forEach(function(c) {
+    if (String(c.disponibilidad || '').toUpperCase() !== 'VACACIONES') return;
+    var est = String(c.estado || '');
+    if (est !== 'ganador' && est !== 'en_revision' && est !== 'observado' && est !== 'expediente_ok') return;
+    if (IDS_GANADOS[c.id]) {
+      if (c.bloque_vacaciones) IDS_GANADOS[c.id].bloque_vacaciones = c.bloque_vacaciones;
+      IDS_GANADOS[c.id].tipo = 'vacaciones';
+      return;
+    }
+    var g = {
+      id: c.id, grado: c.grado, nombres: c.nombres, unidad: c.unidad,
+      area: c.area, cip: c.cip, tipo: 'vacaciones', nro: GANADORES.length + 1,
+      bloque_vacaciones: c.bloque_vacaciones || '',
+      slot_key: '',
+      slot_label: labelSlotCand(c)
+    };
+    GANADORES.push(g);
+    IDS_GANADOS[c.id] = g;
+    IDS_PERSISTIDOS[c.id] = true;
+  });
+}
+
+function recomputarObjetivoTrasVacaciones() {
+  if (SLOTS_SORTEO.length) {
+    var extra = 0;
+    SLOTS_SORTEO.forEach(function(s) {
+      var nF = RUEDA_CAND.filter(function(c) {
+        return !IDS_GANADOS[c.id] && candidatoEnSlot(c, s);
+      }).length;
+      extra += Math.min(cupoRestanteSlot(s), nF);
+    });
+    OBJETIVO = GANADORES.length + extra;
+    return;
+  }
+  OBJETIVO = GANADORES.length + Math.max(0, FALTAN_INICIAL);
 }
 
 function slotAnterior() {
@@ -1104,34 +1183,139 @@ function shuffleIds(ids) {
   return list;
 }
 
-function sortearBloquesVacacionesUI() {
+function htmlItemVacacion(g) {
+  return '<div class="bv-item"><strong>' + escH(nombreCompleto(g)) + '</strong>'
+    + '<span>CIP: ' + escH(g.cip || '—') + (g.unidad ? ' · ' + escH(g.unidad) : '')
+    + (g.slot_label ? ' · ' + escH(g.slot_label) : '') + '</span></div>';
+}
+
+function listaVacacionesParaBloques() {
+  var byId = {};
+  GANADORES.forEach(function(g) {
+    if (g.tipo === 'vacaciones') byId[g.id] = g;
+  });
+  TODOS_CAND.forEach(function(c) {
+    if (String(c.disponibilidad || '').toUpperCase() !== 'VACACIONES') return;
+    var est = String(c.estado || '');
+    var ocupa = est === 'ganador' || est === 'en_revision' || est === 'observado' || est === 'expediente_ok';
+    var pre = est === 'preinscrito' || est === 'pendiente' || est === 'aprobado' || est === 'verificado';
+    if (!ocupa && !pre) return;
+    if (byId[c.id]) {
+      if (c.bloque_vacaciones && !byId[c.id].bloque_vacaciones) byId[c.id].bloque_vacaciones = c.bloque_vacaciones;
+      return;
+    }
+    byId[c.id] = {
+      id: c.id, grado: c.grado, nombres: c.nombres, unidad: c.unidad,
+      area: c.area, cip: c.cip, tipo: 'vacaciones',
+      bloque_vacaciones: c.bloque_vacaciones || '',
+      slot_label: labelSlotCand(c)
+    };
+  });
+  return Object.keys(byId).map(function(k) { return byId[k]; });
+}
+
+function pintarResultadoBloquesVac(vacs) {
+  var b1 = vacs.filter(function(g) { return String(g.bloque_vacaciones) === '1'; });
+  var b2 = vacs.filter(function(g) { return String(g.bloque_vacaciones) === '2'; });
+  var tit1 = document.getElementById('bv-tit-b1');
+  var tit2 = document.getElementById('bv-tit-b2');
+  if (tit1) tit1.textContent = 'Bloque 1 (días 1–15) — ' + b1.length;
+  if (tit2) tit2.textContent = 'Bloque 2 (días 16–fin) — ' + b2.length;
+  document.getElementById('bv-lista-b1').innerHTML = b1.map(htmlItemVacacion).join('')
+    || '<div class="bv-item"><span>Ninguno</span></div>';
+  document.getElementById('bv-lista-b2').innerHTML = b2.map(htmlItemVacacion).join('')
+    || '<div class="bv-item"><span>Ninguno</span></div>';
+  document.getElementById('bv-paso-lista').style.display = 'none';
+  document.getElementById('bv-paso-resultado').style.display = '';
+}
+
+function abrirPanelVacacionesBloques() {
   if (!SORTEO_INICIADO || SORTEANDO) return;
-  var vacs = GANADORES.filter(function(g) { return g.tipo === 'vacaciones'; });
-  if (!vacs.length) { alert('No hay ganadores por vacaciones para sortear bloques.'); return; }
-  if (BLOQUES_VAC_HECHO && !confirm('Los bloques ya se sortearon. ¿Volver a sortear?')) return;
+  var vacs = listaVacacionesParaBloques();
+  if (!vacs.length) {
+    alert('No hay efectivos de vacaciones en este convenio.');
+    return;
+  }
+  var modal = document.getElementById('modal-bloques-vac');
+  var hint = document.getElementById('bv-hint');
+  if (hint) {
+    hint.textContent = 'Lista de vacaciones (' + vacs.length + '). Ya son ganadores: ocupan vacante. Pulse SORTEAR para partirlos en bloque 1–15 y bloque 16–fin.';
+  }
+  document.getElementById('bv-lista-todos').innerHTML = vacs.map(htmlItemVacacion).join('');
+  var todosConBloque = vacs.every(function(g) { return g.bloque_vacaciones === '1' || g.bloque_vacaciones === '2'; });
+  if (todosConBloque) {
+    BLOQUES_VAC_HECHO = true;
+    pintarResultadoBloquesVac(vacs);
+  } else {
+    document.getElementById('bv-paso-lista').style.display = '';
+    document.getElementById('bv-paso-resultado').style.display = 'none';
+  }
+  modal.classList.add('show');
+}
+
+function cerrarPanelVacacionesBloques() {
+  var modal = document.getElementById('modal-bloques-vac');
+  if (modal) modal.classList.remove('show');
+}
+
+function asegurarGanadorVacaciones(g) {
+  if (IDS_GANADOS[g.id]) return IDS_GANADOS[g.id];
+  g.tipo = 'vacaciones';
+  g.nro = GANADORES.length + 1;
+  GANADORES.push(g);
+  IDS_GANADOS[g.id] = g;
+  return g;
+}
+
+function ejecutarSorteoBloquesVacaciones(forzar) {
+  var vacs = listaVacacionesParaBloques();
+  if (!vacs.length) {
+    alert('No hay efectivos de vacaciones para sortear.');
+    return;
+  }
+  if (!forzar && BLOQUES_VAC_HECHO) {
+    pintarResultadoBloquesVac(vacs);
+    return;
+  }
+  var btn = document.getElementById('btn-bv-sortear');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sorteando…';
+  }
   var ids = shuffleIds(vacs.map(function(g) { return g.id; }));
   var mitad = Math.ceil(ids.length / 2);
   var cadena = Promise.resolve();
   ids.forEach(function(id, idx) {
     var bloque = idx < mitad ? '1' : '2';
-    var g = IDS_GANADOS[id];
-    if (!g) return;
+    var base = vacs.filter(function(x) { return x.id === id; })[0];
+    if (!base) return;
+    var g = asegurarGanadorVacaciones(base);
     g.bloque_vacaciones = bloque;
     g.forceBloque = true;
     cadena = cadena.then(function() { return persistirGanadorUno(g); });
   });
   cadena.then(function() {
     BLOQUES_VAC_HECHO = true;
-    vacs.forEach(function(g) { g.forceBloque = false; });
+    vacs.forEach(function(g) {
+      if (IDS_GANADOS[g.id]) IDS_GANADOS[g.id].forceBloque = false;
+    });
+    var actual = listaVacacionesParaBloques();
+    pintarResultadoBloquesVac(actual);
     renderListaTotalLive();
     renderGanadores();
     actualizarUI();
-    alert('Bloques de vacaciones asignados por sorteo:\n'
-      + 'Bloque 1 (días 1–15): ' + mitad + '\n'
-      + 'Bloque 2 (días 16–fin): ' + (ids.length - mitad));
   }).catch(function(e) {
     alert('Error al guardar bloques: ' + (e.message || ''));
+  }).then(function() {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-random"></i> SORTEAR EN DOS BLOQUES';
+    }
   });
+}
+
+function sortearBloquesVacacionesUI() {
+  abrirPanelVacacionesBloques();
 }
 
 function detenerAutoSorteo() {
@@ -1367,7 +1551,7 @@ function actualizarUI() {
   document.getElementById('btn-culminar').disabled = SORTEO_CULMINADO || !SORTEO_INICIADO || AUTO_SORTEO;
   var btnBloq = document.getElementById('btn-bloques-vac');
   if (btnBloq) {
-    var hayVac = GANADORES.some(function(g) { return g.tipo === 'vacaciones'; });
+    var hayVac = listaVacacionesParaBloques().length > 0;
     btnBloq.style.display = (SORTEO_INICIADO && hayVac && !AUTO_SORTEO) ? 'inline-flex' : 'none';
   }
   var btnStop = document.getElementById('btn-detener-auto');
@@ -1430,7 +1614,7 @@ function culminarSorteo() {
     return g.tipo === 'vacaciones' && !g.bloque_vacaciones;
   });
   if (vacSinBloque.length) {
-    if (!confirm('Hay ' + vacSinBloque.length + ' vacaciones sin bloque (1–15 / 16–fin). ¿Culminar igual?\n(Recomendado: pulse antes «Sortear bloques de vacaciones».)')) return;
+    if (!confirm('Hay ' + vacSinBloque.length + ' vacaciones sin bloque (1–15 / 16–fin). ¿Culminar igual?\n(Recomendado: pulse antes «Sortear vacaciones».)')) return;
   }
   if (!GANADORES.length) {
     if (!confirm('No hay ganadores registrados. ¿Culminar de todas formas?')) return;
