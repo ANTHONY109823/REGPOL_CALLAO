@@ -1209,7 +1209,8 @@ const STATIC_WARM_FILES = [
   'index.html', 'style.css', 'portal.js', 'portal-data.js', 'site-data.json', 'api-config.js',
   'cursos.html', 'convenios.html', 'consulta.html', 'unidades.html', 'unidades-data.json',
   'evaluacion.html', 'detalle.html', 'img/regpol-callao.jpg',
-  'login.html', 'panel-admin.html', 'panel-admin.css', 'panel-usuario.html', 'constancia-plantilla.js'
+  'login.html', 'panel-admin.html', 'panel-admin.css', 'panel-usuario.html', 'constancia-plantilla.js',
+  'robots.txt', 'sitemap.xml'
 ];
 
 function cacheStaticEntry(rel, data) {
@@ -1303,6 +1304,18 @@ app.get('/health', function(req, res) {
   var sha = process.env.RAILWAY_GIT_COMMIT_SHA || process.env.RAILWAY_GIT_COMMIT || '';
   if (sha) res.setHeader('X-Regpol-Sha', sha);
   res.status(200).type('text/plain').send('ok');
+});
+
+app.get('/robots.txt', function(req, res) {
+  res.setHeader('Content-Type', 'text/plain; charset=UTF-8');
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.sendFile(path.join(PUBLIC_DIR, 'robots.txt'));
+});
+
+app.get('/sitemap.xml', function(req, res) {
+  res.setHeader('Content-Type', 'application/xml; charset=UTF-8');
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.sendFile(path.join(PUBLIC_DIR, 'sitemap.xml'));
 });
 
 app.use(cors());
