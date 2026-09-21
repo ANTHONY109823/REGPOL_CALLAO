@@ -703,7 +703,7 @@ function renderResultados(lista) {
         + '<div><span>Situación</span><strong>' + escC(labelSituacionConsulta(ins.disponibilidad, ins.dia_franco)) + '</strong></div>'
         + (ins.plazo_expediente
           ? '<div><span>Plazo para presentarlo</span><strong>' + escC(new Date(ins.plazo_expediente).toLocaleString('es-PE')) + '</strong></div>'
-          : '<div><span>Ventana de entrega</span><strong>18/09/2026 00:00 — 21/09/2026 17:00 hrs (Lima)</strong></div>')
+          : '<div><span>Ventana de entrega</span><strong>18/09/2026 00:00 — 21/09/2026 18:00 hrs (Lima)</strong></div>')
         + '</div>'
         + '<div class="obs-box alerta-repechaje">'
         + '<strong>Importante:</strong> Si no presenta su documentación dentro del plazo, su vacante pasará a <strong>repechaje</strong>.'
@@ -728,14 +728,14 @@ function renderResultados(lista) {
         + '<div><span>Nombres</span><strong>' + escC(nombreParts.nombres) + '</strong></div>'
         + '<div><span>Postulación (lugar / turno / día)</span><strong>' + escC(ins.comisaria_postula || '—') + '</strong></div>'
         + '<div><span>Situación</span><strong>' + escC(labelSituacionConsulta(ins.disponibilidad, ins.dia_franco)) + '</strong></div>'
-        + '<div><span>Ventana de entrega</span><strong>18/09/2026 00:00 — 21/09/2026 17:00 hrs (Lima)</strong></div>'
+        + '<div><span>Ventana de entrega</span><strong>18/09/2026 00:00 — 21/09/2026 18:00 hrs (Lima)</strong></div>'
         + '</div>'
         + '<div class="expediente-box">'
         + '<div class="expediente-box-top">'
         + '<p><i class="fas fa-clock" style="color:#004d3d;"></i> '
         + (ins.presentacion_aun_no_abre
           ? 'Aún no abre la entrega. Podrá subir su PDF desde el <strong>18/09/2026 a las 00:00 hrs</strong> hasta el <strong>21/09/2026 a las 17:00 hrs</strong> (hora Lima).'
-          : 'La ventana de entrega de expediente está cerrada (21/09/2026 17:00 hrs). Si no presentó el PDF, su vacante pasa a repechaje.')
+          : 'La ventana de entrega de expediente está cerrada (21/09/2026 18:00 hrs). Si no presentó el PDF, su vacante pasa a repechaje.')
         + '</p>'
         + htmlBotonesModeloExp()
         + '</div></div>';

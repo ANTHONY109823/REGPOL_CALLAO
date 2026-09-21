@@ -6472,7 +6472,7 @@ function etiquetaEstadoPublico(estado, tipo) {
       anulado_solicitud: 'Preinscripción ANULADA a solicitud — puede inscribirse en otro convenio',
       verificado: 'Preinscrito — a la espera del sorteo',
       aprobado: 'Preinscrito — a la espera del sorteo',
-      ganador: 'GANADOR — subir expediente del 18/09 00:00 al 21/09 17:00 hrs (Lima)',
+      ganador: 'GANADOR — subir expediente del 18/09 00:00 al 21/09 18:00 hrs (Lima)',
       en_revision: 'Documentación en verificación por Convenios',
       observado: 'Expediente OBSERVADO — subsanar a la brevedad',
       expediente_ok: 'Documentación APROBADA — vacante ocupada',
@@ -7393,8 +7393,8 @@ app.get('/portal/inscripciones/:id/constancia-vacante', async (req, res) => {
               i.uniforme, i.contactos_responsables
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
-       WHERE n.id = $1 AND ${sqlCipIgual('n.cip')} = $2 AND i.visible = TRUE`,
-      [id, cip]);
+       WHERE n.id = $1 AND ${sqlCipKeyInscripcion('n.cip')} = $2 AND i.visible = TRUE`,
+      [id, cipKeyInscripcion(cip)]);
     if (!r.rows.length) {
       return res.json({ ok: false, error: 'No se encontró inscripción para este CIP.' });
     }
@@ -9182,12 +9182,14 @@ app.get('/portal/convenios/catalogos', function(req, res) {
 });
 
 async function inscripcionExpedientePorCip(id, cip) {
+  const cipKey = cipKeyInscripcion(cip);
+  if (!id || !cipKey) return null;
   const r = await pool.query(
     `SELECT n.id, n.estado, n.plazo_expediente, n.observacion, n.item_id, i.tipo, i.titulo
      FROM inscripciones n
      JOIN items_portal i ON i.id=n.item_id
-     WHERE n.id=$1 AND ${sqlCipIgual('n.cip')}=$2`,
-    [id, cip]
+     WHERE n.id=$1 AND ${sqlCipKeyInscripcion('n.cip')}=$2`,
+    [id, cipKey]
   );
   return r.rows[0] || null;
 }
@@ -9199,7 +9201,7 @@ function errorSiNoPuedeSubirExpediente(row) {
     return 'La entrega de expediente abre el 18/09/2026 a las 00:00 hrs (Lima). Cierra el 21/09/2026 a las 17:00 hrs.';
   }
   if (row.estado === 'ganador' && !conveniosFlujo.presentacionVentanaAbierta() && !plazoVencido) {
-    return 'La ventana de entrega de expediente está cerrada (21/09/2026 17:00 hrs Lima).';
+    return 'La ventana de entrega de expediente está cerrada (21/09/2026 18:00 hrs Lima).';
   }
   const puedeGanador = row.estado === 'ganador' && !plazoVencido && conveniosFlujo.presentacionVentanaAbierta();
   const puedeObservado = row.estado === 'observado' && !plazoVencido;
@@ -9231,7 +9233,7 @@ app.post('/portal/inscripciones/:id/expediente-url', express.json(), async (req,
     const err = errorSiNoPuedeSubirExpediente(row);
     if (err === 'CADUCAR') {
       await pool.query(`UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente' WHERE id=$1`, [id]);
-      return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 17:00 hrs). La vacante pasó a repechaje.' });
+      return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 18:00 hrs). La vacante pasó a repechaje.' });
     }
     if (err) return res.json({ ok: false, error: err });
     const key = expedientesS3.claveObjeto(row.item_id, id, expedientesS3.mesLimaAhora());
@@ -9261,7 +9263,7 @@ app.post('/portal/inscripciones/:id/expediente-confirmar', express.json(), async
     const err = errorSiNoPuedeSubirExpediente(row);
     if (err === 'CADUCAR') {
       await pool.query(`UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente' WHERE id=$1`, [id]);
-      return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 17:00 hrs). La vacante pasó a repechaje.' });
+      return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 18:00 hrs). La vacante pasó a repechaje.' });
     }
     if (err) return res.json({ ok: false, error: err });
     const meta = await expedientesS3.head(key);
@@ -9328,12 +9330,14 @@ app.post('/portal/inscripciones/:id/expediente',
       return res.json({ ok: false, error: 'El archivo no es un PDF válido' });
     }
 
+    const cipKey = cipKeyInscripcion(cip);
+    if (!cipKey) return res.json({ ok: false, error: 'CIP e inscripción requeridos' });
     const r = await pool.query(
       `SELECT n.id, n.estado, n.plazo_expediente, n.observacion, n.item_id, i.tipo, i.titulo
        FROM inscripciones n
        JOIN items_portal i ON i.id=n.item_id
-       WHERE n.id=$1 AND ${sqlCipIgual('n.cip')}=$2`,
-      [id, cip]);
+       WHERE n.id=$1 AND ${sqlCipKeyInscripcion('n.cip')}=$2`,
+      [id, cipKey]);
     if (!r.rows.length) return res.json({ ok: false, error: 'Inscripción no encontrada' });
     const row = r.rows[0];
     if (row.tipo !== 'convenio') return res.json({ ok: false, error: 'Solo aplica a convenios' });
@@ -9342,7 +9346,7 @@ app.post('/portal/inscripciones/:id/expediente',
       return res.json({ ok: false, error: 'La entrega de expediente abre el 18/09/2026 a las 00:00 hrs (Lima). Cierra el 21/09/2026 a las 17:00 hrs.' });
     }
     if (row.estado === 'ganador' && !conveniosFlujo.presentacionVentanaAbierta() && !plazoVencido) {
-      return res.json({ ok: false, error: 'La ventana de entrega de expediente está cerrada (21/09/2026 17:00 hrs Lima).' });
+      return res.json({ ok: false, error: 'La ventana de entrega de expediente está cerrada (21/09/2026 18:00 hrs Lima).' });
     }
     const puedeGanador = row.estado === 'ganador' && !plazoVencido && conveniosFlujo.presentacionVentanaAbierta();
     const puedeObservado = row.estado === 'observado' && !plazoVencido;
@@ -9350,7 +9354,7 @@ app.post('/portal/inscripciones/:id/expediente',
     if (!puedeGanador && !puedeObservado && !puedeRechazado) {
       if (row.estado === 'ganador' && plazoVencido) {
         await pool.query(`UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente' WHERE id=$1`, [id]);
-        return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 17:00 hrs). La vacante pasó a repechaje.' });
+        return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 18:00 hrs). La vacante pasó a repechaje.' });
       }
       if (row.estado === 'observado' && plazoVencido) {
         return res.json({ ok: false, error: 'El plazo de 24 horas para subsanar ya venció. No puede volver a subir expediente.' });
@@ -10460,9 +10464,9 @@ app.post('/portal/inscripciones/:id/corregir-turno', async (req, res) => {
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
        WHERE n.id=$1
-         AND ${sqlCipIgual('n.cip')} = $2
+         AND ${sqlCipKeyInscripcion('n.cip')} = $2
          AND i.visible = TRUE`,
-      [id, cip]);
+      [id, cipKeyInscripcion(cip)]);
     if (!cur.rows.length) {
       return res.json({ ok: false, error: 'No se encontró la preinscripción con ese CIP.' });
     }
@@ -10640,7 +10644,14 @@ function iniciarDB() {
       dbListo = true;
       console.log('PostgreSQL listo.');
       return conveniosFlujo.alinearPlazosPresentacionMes(pool).then(function() {
-        console.log('Plazos de expediente alineados a 21/09/2026 17:00 (Lima).');
+        console.log('Plazos de expediente alineados a 21/09/2026 18:00 (Lima).');
+        if (typeof conveniosFlujo.reabrirGanadoresCaducadosPorCierreAnterior === 'function') {
+          return conveniosFlujo.reabrirGanadoresCaducadosPorCierreAnterior(pool).then(function(ids) {
+            if (ids && ids.length) {
+              console.log('Reabiertos ' + ids.length + ' ganadores caducados por la ampliación a las 18:00.');
+            }
+          });
+        }
       }).catch(function(eAli) {
         console.warn('No se alinearon plazos de expediente:', eAli && eAli.message);
       });
