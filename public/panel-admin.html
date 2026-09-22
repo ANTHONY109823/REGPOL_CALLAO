@@ -1667,7 +1667,7 @@
           Al <strong>aprobar</strong> se <strong>descarga</strong> en este equipo y se <strong>borra</strong> de la base.
           En la web queda el registro (CIP, estado, constancia), no el archivo. No se dejan meses en Postgres.
           <strong>Sin edición de datos</strong> del efectivo. Caducados = no presentaron a tiempo.
-          <span id="nota-habilitar-exp-sa" style="display:none;"> <strong>Solo Super Admin:</strong> en la lista puede habilitar 24 horas extra a quien no subió a tiempo. Convenios no ve ese botón.</span>
+          <span id="nota-habilitar-exp-sa" style="display:none;"> <strong>Solo Super Admin:</strong> puede habilitar 24 horas extra a quien no subió a tiempo y devolver un expediente ya aprobado (anula la constancia y vuelve a revisión). Convenios no ve esos botones.</span>
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
           <button class="btn btn-v" type="button" onclick="cargarConvFlujoResumen('ganadores')"><i class="fas fa-sync"></i> Actualizar</button>
@@ -9878,7 +9878,7 @@ function renderInscritos(list, tipo){
     btnAccion='<div style="display:flex;flex-direction:column;gap:8px;margin-left:8px;min-width:280px;">'
       +'<p style="margin:0;padding:8px 10px;background:#f0f7f0;border:1px solid #c8e6c9;border-radius:8px;color:#1a4d3d;font-size:12px;line-height:1.4;"><i class="fas fa-info-circle"></i> Flujo: el ganador <strong>sube</strong> → Convenios <strong>revisa</strong> → al aprobar se <strong>descarga y borra</strong> el PDF. En la web queda el registro, no el archivo.</p>'
       +(esUnitic()
-        ? '<p style="margin:0;padding:8px 10px;background:#fff8e1;border:1px solid #c8a94a;border-radius:8px;color:#6b5420;font-size:12px;line-height:1.4;"><i class="fas fa-user-shield"></i> <strong>Solo Super Admin:</strong> en caducados o ganadores sin PDF puede habilitar 24 horas extra. Convenios no ve ese botón.</p>'
+        ? '<p style="margin:0;padding:8px 10px;background:#fff8e1;border:1px solid #c8a94a;border-radius:8px;color:#6b5420;font-size:12px;line-height:1.4;"><i class="fas fa-user-shield"></i> <strong>Solo Super Admin:</strong> puede habilitar 24 h extra sin PDF y <strong>devolver</strong> un expediente ya aprobado (anula constancia, vuelve a revisión). Convenios no ve esos botones.</p>'
         : '')
       +'<button type="button" class="btn btn-v" id="btn-pdf-ganadores" style="margin:0;justify-content:center;background:#004d3d;color:#fff;" onclick="abrirModalPdfListaConvenio(\'ganadores\')" '+(total<1?'disabled':'')+'>'
       +'<i class="fas fa-file-pdf"></i> DESCARGAR PDF</button>'
@@ -10006,6 +10006,9 @@ function renderInscritos(list, tipo){
             +'<button type="button" class="btn-mini btn-mini-solid" title="Ver constancia igual que en Consulta CIP" onclick="abrirConstanciaGanador('+ins.id+')"><i class="fas fa-file-alt"></i> Ver</button>'
             +(ins.tiene_pdf
               ? '<button type="button" class="btn-mini btn-mini-pdf" title="Descargar el expediente" onclick="descargarPdfExpedienteSolo('+ins.id+')"><i class="fas fa-download"></i> Descargar</button>'
+              : '')
+            +(esUnitic()
+              ? '<button type="button" class="btn-mini btn-mini-unitic" title="Solo Super Admin: anular aprobación y devolver a revisión" onclick="devolverExpedienteAprobado('+ins.id+')"><i class="fas fa-undo"></i> Devolver</button>'
               : '')
             +'</span> ';
         }
@@ -10480,6 +10483,29 @@ function extraExpedienteVigenteUi(ins){
   if(!ins || !ins.habilitar_expediente_hasta) return false;
   var t=new Date(ins.habilitar_expediente_hasta);
   return !isNaN(t.getTime()) && t.getTime()>Date.now();
+}
+
+function devolverExpedienteAprobado(id){
+  if(!esUnitic()){
+    alert('Solo el Super Admin puede devolver un expediente ya aprobado. Convenios no tiene este permiso.');
+    return;
+  }
+  var ins=(INSCRITOS_CACHE||[]).filter(function(x){ return Number(x.id)===Number(id); })[0];
+  var nom=ins
+    ? ((ins.grado||'')+' '+(ins.nombres||'')+' · CIP '+(ins.cip||'')).trim()
+    : ('inscripción '+id);
+  var motivo=prompt('Motivo para devolver el expediente aprobado de '+nom+'.\nSe anula la constancia y Convenios lo vuelve a ver en revisión.','Aprobado por error');
+  if(motivo==null) return;
+  motivo=String(motivo||'').trim();
+  if(!confirm('¿Devolver el expediente de '+nom+'?\n\nLa constancia queda anulada. El PDF vuelve a revisión para que Convenios lo observe o lo apruebe de nuevo.\nSolo Super Admin.')) return;
+  fetch(API+'/admin/inscripciones/'+id+'/devolver-expediente-aprobado',{
+    method:'POST', headers:hdr(),
+    body:JSON.stringify({motivo:motivo})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){ alert(d.error||'No se pudo devolver'); return; }
+    alert(d.mensaje||'Expediente devuelto a revisión.');
+    refrescarInscritosActivos();
+  }).catch(function(){ alert('Error de conexión'); });
 }
 
 function habilitarExpedienteFueraPlazo(id){

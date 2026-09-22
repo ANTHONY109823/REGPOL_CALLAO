@@ -9931,6 +9931,108 @@ app.post('/admin/inscripciones/:id/habilitar-expediente', requireAuth, async (re
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
+async function recuperarRefPdfExpediente(row) {
+  const ref = String((row && row.pdf_requisitos) || '');
+  if (expedientesS3.esRefS3(ref)) return ref;
+  if (!expedientesS3.configurado() || !row || !row.id || !row.item_id) return ref;
+  const meses = [];
+  if (row.fecha) {
+    try {
+      meses.push(new Date(row.fecha).toLocaleString('sv-SE', { timeZone: 'America/Lima' }).slice(0, 7));
+    } catch (eMes) {}
+  }
+  meses.push(expedientesS3.mesLimaAhora());
+  const vistos = {};
+  for (let i = 0; i < meses.length; i++) {
+    const mes = meses[i];
+    if (!mes || vistos[mes]) continue;
+    vistos[mes] = true;
+    const key = expedientesS3.claveObjeto(row.item_id, row.id, mes);
+    try {
+      const meta = await expedientesS3.head(key);
+      if (meta) return expedientesS3.refDesdeKey(key);
+    } catch (eHead) {}
+  }
+  return ref;
+}
+
+app.post('/admin/inscripciones/:id/devolver-expediente-aprobado', requireAuth, async (req, res) => {
+  try {
+    if (req.admin.rol !== 'unitic') {
+      return res.status(403).json({
+        ok: false,
+        error: 'Solo el Super Admin puede devolver un expediente ya aprobado. Convenios no tiene este permiso.'
+      });
+    }
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.json({ ok: false, error: 'Inscripción inválida' });
+    const motivo = String((req.body && req.body.motivo) || '').trim().slice(0, 500);
+    const cur = await pool.query(
+      `SELECT n.id, n.cip, n.nombres, n.estado, n.pdf_requisitos, n.pdf_nombre, n.fecha, n.item_id,
+              n.aprobado_por_nombre, n.aprobado_por_usuario, n.fecha_aprobacion,
+              i.tipo, i.titulo
+       FROM inscripciones n
+       JOIN items_portal i ON i.id=n.item_id
+       WHERE n.id=$1::int`,
+      [id]
+    );
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    const row = cur.rows[0];
+    if (row.tipo !== 'convenio') return res.json({ ok: false, error: 'Solo aplica a convenios' });
+    if (row.estado !== 'expediente_ok') {
+      return res.json({ ok: false, error: 'Solo se puede devolver un expediente ya aprobado.' });
+    }
+    const pdfRef = await recuperarRefPdfExpediente(row);
+    const nota = ('Super Admin devolvió el expediente aprobado. Constancia anulada. Vuelve a revisión.'
+      + (motivo ? ' Motivo: ' + motivo : '')).slice(0, 2000);
+    const porNombre = String(req.admin.nombre || req.admin.usuario || '').trim().slice(0, 150);
+    const r = await pool.query(
+      `UPDATE inscripciones SET
+         estado = 'en_revision',
+         token_constancia = '',
+         aprobado_por_nombre = '',
+         aprobado_por_usuario = '',
+         fecha_aprobacion = NULL,
+         motivo_observacion = '',
+         observacion = $1::text,
+         pdf_requisitos = CASE
+           WHEN $2::text <> '' THEN $2::text
+           ELSE pdf_requisitos
+         END
+       WHERE id = $3::int AND estado = 'expediente_ok'
+       RETURNING id, estado, pdf_requisitos`,
+      [nota, pdfRef, id]
+    );
+    if (!r.rows.length) {
+      return res.json({ ok: false, error: 'No se pudo devolver. Recargue la lista e intente de nuevo.' });
+    }
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario),
+      usuario: req.admin.usuario,
+      accion: 'devolver_expediente_aprobado',
+      modulo: 'convenios',
+      entidad: 'inscripcion',
+      entidadId: String(id),
+      detalle: (row.cip || '') + ' ' + (row.nombres || '') + ' — ' + (row.titulo || '')
+        + ' — anulado ' + (row.aprobado_por_nombre || row.aprobado_por_usuario || 'sin firmante')
+        + (motivo ? ' — ' + motivo : '')
+        + ' por ' + porNombre,
+      ip: req.ip || '',
+      ok: true
+    });
+    const tienePdf = !!(r.rows[0].pdf_requisitos
+      && String(r.rows[0].pdf_requisitos).indexOf('purged') !== 0
+      && String(r.rows[0].pdf_requisitos).trim() !== '');
+    res.json({
+      ok: true,
+      estado: 'en_revision',
+      tiene_pdf: tienePdf,
+      mensaje: 'Expediente devuelto a revisión. La constancia quedó anulada. Convenios puede volver a revisar el PDF.'
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 // ── POST /admin/sync-convenios — asegurar los 11 convenios + flujo tipo Celador ─
 // ── PUT /admin/convenios/aviso-frontend — solo Super Admin ─────────────────────
 app.put('/admin/convenios/aviso-frontend', requireAuth, async (req, res) => {
