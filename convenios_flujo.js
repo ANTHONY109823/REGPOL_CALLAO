@@ -537,8 +537,8 @@ async function habilitarExpedienteCipHoras(pool, cip, horas, opts) {
   const r = await pool.query(
     `UPDATE inscripciones n
      SET estado = CASE WHEN n.estado = 'caducado' THEN 'ganador' ELSE n.estado END,
-         plazo_expediente = $2,
-         habilitar_expediente_hasta = $2,
+         plazo_expediente = $2::timestamptz,
+         habilitar_expediente_hasta = $2::timestamptz,
          habilitar_expediente_por = $3,
          habilitar_expediente_usuario = $4,
          habilitar_expediente_fecha = NOW(),
@@ -550,17 +550,17 @@ async function habilitarExpedienteCipHoras(pool, cip, horas, opts) {
      FROM items_portal i
      WHERE n.item_id = i.id
        AND i.tipo = 'convenio'
-       AND ${sqlCipKeyCampo('n.cip')} = $1
+       AND ${sqlCipKeyCampo('n.cip')} = $1::text
        AND n.estado = ANY($6::varchar[])
        AND COALESCE(n.pdf_requisitos,'') = ''
        AND to_char(timezone('America/Lima', COALESCE(n.fecha, NOW())), 'YYYY-MM')
          = to_char(timezone('America/Lima', NOW()), 'YYYY-MM')
        AND (
          NOT $7::boolean
-         OR COALESCE(n.habilitar_expediente_usuario,'') <> $4
+         OR COALESCE(n.habilitar_expediente_usuario,'') <> $4::varchar
        )
      RETURNING n.id, n.cip, n.nombres, n.estado, i.titulo, n.habilitar_expediente_hasta`,
-    [key, hasta, por, marca, nota, ['ganador', 'caducado', 'observado', 'rechazado'], soloUnaVez]
+    [key, hasta.toISOString(), por, marca, nota, ['ganador', 'caducado', 'observado', 'rechazado'], soloUnaVez]
   );
   return r.rows || [];
 }

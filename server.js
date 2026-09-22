@@ -9895,19 +9895,19 @@ app.post('/admin/inscripciones/:id/habilitar-expediente', requireAuth, async (re
     const nuevoEstado = (est === 'caducado') ? 'ganador' : est;
     await pool.query(
       `UPDATE inscripciones SET
-         estado = $1,
-         plazo_expediente = $2,
-         habilitar_expediente_hasta = $2,
-         habilitar_expediente_por = $3,
-         habilitar_expediente_usuario = $4,
+         estado = $1::varchar,
+         plazo_expediente = $2::timestamptz,
+         habilitar_expediente_hasta = $2::timestamptz,
+         habilitar_expediente_por = $3::varchar,
+         habilitar_expediente_usuario = $4::varchar,
          habilitar_expediente_fecha = NOW(),
          observacion = CASE
-           WHEN $1 IN ('observado','rechazado') AND COALESCE(observacion,'') <> ''
-             THEN LEFT(observacion || E'\n' || $5, 2000)
-           ELSE $5
+           WHEN $1::varchar IN ('observado','rechazado') AND COALESCE(observacion,'') <> ''
+             THEN LEFT(observacion || E'\n' || $5::text, 2000)
+           ELSE $5::text
          END
-       WHERE id = $6`,
-      [nuevoEstado, hasta, porNombre, porUsuario, nota, id]
+       WHERE id = $6::int`,
+      [nuevoEstado, hasta.toISOString(), porNombre, porUsuario, nota, id]
     );
     await adminAuth.registrarAuditoria(pool, {
       adminId: req.admin.id,
@@ -10740,20 +10740,20 @@ function iniciarDB() {
           });
         }
       }).then(function() {
-        return conveniosFlujo.habilitarExpedienteCipHoras(pool, '31426618', 1, {
+        return conveniosFlujo.habilitarExpedienteCipHoras(pool, '31426618', 24, {
           soloUnaVez: true,
-          marca: 'deploy-cip-31426618',
+          marca: 'deploy-cip-31426618-2',
           por: 'Super Admin (deploy)',
-          nota: 'Super Admin habilitó CIP 31426618 por 1 hora para subir expediente fuera de plazo.'
+          nota: 'Super Admin volvió a habilitar CIP 31426618 por 24 horas para subir expediente fuera de plazo.'
         });
       }).then(function(rows) {
         if (rows && rows.length) {
           console.log(
-            'Habilitado 1h expediente CIP 31426618: ' +
+            'Habilitado 24h expediente CIP 31426618: ' +
             rows.map(function(x) { return (x.titulo || '') + ' #' + x.id; }).join(', ')
           );
         } else {
-          console.log('CIP 31426618: no había inscripción de convenio sin PDF (ganador/caducado) para habilitar 1h.');
+          console.log('CIP 31426618: no había inscripción de convenio sin PDF (ganador/caducado) para habilitar 24h.');
         }
       }).catch(function(eAli) {
         console.warn('No se alinearon plazos de expediente:', eAli && eAli.message);
