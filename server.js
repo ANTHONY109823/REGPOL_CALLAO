@@ -6640,7 +6640,7 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
               n.codifin, n.region_policial, n.comisaria_postula, n.dni, n.token_constancia,
               n.aprobado_por_nombre, n.aprobado_por_usuario, n.fecha_aprobacion,
               n.preins_correccion_motivo, n.preins_correccion_admin, n.preins_correccion_usuario,
-              n.preins_correccion_fecha,
+              n.preins_correccion_fecha, n.habilitar_expediente_hasta,
               CASE WHEN COALESCE(n.pdf_requisitos,'')<>'' AND n.pdf_requisitos NOT LIKE 'purged%' THEN true ELSE false END AS tiene_pdf,
               i.id AS item_id, i.tipo, i.titulo, i.horario, i.lugar, i.fecha_inicio, i.duracion,
               i.descripcion, i.observaciones AS item_observaciones, i.vacantes,
@@ -6661,7 +6661,8 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
     const inscripciones = [];
     for (const row of r.rows) {
       let estado = row.estado;
-      if (row.tipo === 'convenio' && estado === 'ganador' && row.plazo_expediente && new Date(row.plazo_expediente) < new Date() && !row.tiene_pdf) {
+      const extraVigente = conveniosFlujo.extraExpedienteVigente(row);
+      if (row.tipo === 'convenio' && estado === 'ganador' && !extraVigente && row.plazo_expediente && new Date(row.plazo_expediente) < new Date() && !row.tiene_pdf) {
         estado = 'caducado';
       }
       if (row.tipo !== 'convenio' && estado !== 'ganador') {
@@ -6671,13 +6672,17 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
           estado = 'ganador';
         }
       }
-      const plazoVencido = !!(row.plazo_expediente && new Date(row.plazo_expediente) < new Date());
+      const plazoVencido = !extraVigente && !!(row.plazo_expediente && new Date(row.plazo_expediente) < new Date());
       const ventanaEntrega = conveniosFlujo.presentacionVentanaAbierta();
-      const puedeSubirGanador = estado === 'ganador' && !plazoVencido && ventanaEntrega;
-      const puedeSubir = row.tipo === 'convenio' && !plazoVencido && (
-        puedeSubirGanador
-        || estado === 'observado'
-        || (estado === 'rechazado' && !!row.plazo_expediente)
+      const puedeSubirGanador = estado === 'ganador' && !plazoVencido && (ventanaEntrega || extraVigente);
+      const puedeSubirExtra = extraVigente && ['ganador', 'caducado', 'observado', 'rechazado'].indexOf(estado) >= 0;
+      const puedeSubir = row.tipo === 'convenio' && (
+        puedeSubirExtra
+        || (!plazoVencido && (
+          puedeSubirGanador
+          || estado === 'observado'
+          || (estado === 'rechazado' && !!row.plazo_expediente)
+        ))
       );
       const puedeConstancia = puedeDescargarConstanciaEstado(estado, row.tipo);
       const enVerificacion = row.tipo === 'convenio' && (estado === 'en_revision' || estado === 'repechaje');
@@ -9185,7 +9190,7 @@ async function inscripcionExpedientePorCip(id, cip) {
   const cipKey = cipKeyInscripcion(cip);
   if (!id || !cipKey) return null;
   const r = await pool.query(
-    `SELECT n.id, n.estado, n.plazo_expediente, n.observacion, n.item_id, i.tipo, i.titulo
+    `SELECT n.id, n.estado, n.plazo_expediente, n.observacion, n.item_id, n.habilitar_expediente_hasta, i.tipo, i.titulo
      FROM inscripciones n
      JOIN items_portal i ON i.id=n.item_id
      WHERE n.id=$1 AND ${sqlCipKeyInscripcion('n.cip')}=$2`,
@@ -9196,9 +9201,13 @@ async function inscripcionExpedientePorCip(id, cip) {
 
 function errorSiNoPuedeSubirExpediente(row) {
   if (!row || row.tipo !== 'convenio') return 'Solo aplica a convenios';
+  if (conveniosFlujo.extraExpedienteVigente(row)
+      && ['ganador', 'caducado', 'observado', 'rechazado'].indexOf(row.estado) >= 0) {
+    return '';
+  }
   const plazoVencido = !!(row.plazo_expediente && new Date(row.plazo_expediente) < new Date());
   if (row.estado === 'ganador' && conveniosFlujo.presentacionAunNoAbre()) {
-    return 'La entrega de expediente abre el 18/09/2026 a las 00:00 hrs (Lima). Cierra el 21/09/2026 a las 17:00 hrs.';
+    return 'La entrega de expediente abre el 18/09/2026 a las 00:00 hrs (Lima). Cierra el 21/09/2026 a las 18:00 hrs.';
   }
   if (row.estado === 'ganador' && !conveniosFlujo.presentacionVentanaAbierta() && !plazoVencido) {
     return 'La ventana de entrega de expediente está cerrada (21/09/2026 18:00 hrs Lima).';
@@ -9232,7 +9241,11 @@ app.post('/portal/inscripciones/:id/expediente-url', express.json(), async (req,
     if (!row) return res.json({ ok: false, error: 'Inscripción no encontrada' });
     const err = errorSiNoPuedeSubirExpediente(row);
     if (err === 'CADUCAR') {
-      await pool.query(`UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente' WHERE id=$1`, [id]);
+      await pool.query(
+        `UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente'
+         WHERE id=$1 AND (habilitar_expediente_hasta IS NULL OR habilitar_expediente_hasta < NOW())`,
+        [id]
+      );
       return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 18:00 hrs). La vacante pasó a repechaje.' });
     }
     if (err) return res.json({ ok: false, error: err });
@@ -9262,7 +9275,11 @@ app.post('/portal/inscripciones/:id/expediente-confirmar', express.json(), async
     if (key !== esperada) return res.json({ ok: false, error: 'Clave de archivo no coincide' });
     const err = errorSiNoPuedeSubirExpediente(row);
     if (err === 'CADUCAR') {
-      await pool.query(`UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente' WHERE id=$1`, [id]);
+      await pool.query(
+        `UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente'
+         WHERE id=$1 AND (habilitar_expediente_hasta IS NULL OR habilitar_expediente_hasta < NOW())`,
+        [id]
+      );
       return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 18:00 hrs). La vacante pasó a repechaje.' });
     }
     if (err) return res.json({ ok: false, error: err });
@@ -9333,37 +9350,23 @@ app.post('/portal/inscripciones/:id/expediente',
     const cipKey = cipKeyInscripcion(cip);
     if (!cipKey) return res.json({ ok: false, error: 'CIP e inscripción requeridos' });
     const r = await pool.query(
-      `SELECT n.id, n.estado, n.plazo_expediente, n.observacion, n.item_id, i.tipo, i.titulo
+      `SELECT n.id, n.estado, n.plazo_expediente, n.observacion, n.item_id, n.habilitar_expediente_hasta, i.tipo, i.titulo
        FROM inscripciones n
        JOIN items_portal i ON i.id=n.item_id
        WHERE n.id=$1 AND ${sqlCipKeyInscripcion('n.cip')}=$2`,
       [id, cipKey]);
     if (!r.rows.length) return res.json({ ok: false, error: 'Inscripción no encontrada' });
     const row = r.rows[0];
-    if (row.tipo !== 'convenio') return res.json({ ok: false, error: 'Solo aplica a convenios' });
-    const plazoVencido = !!(row.plazo_expediente && new Date(row.plazo_expediente) < new Date());
-    if (row.estado === 'ganador' && conveniosFlujo.presentacionAunNoAbre()) {
-      return res.json({ ok: false, error: 'La entrega de expediente abre el 18/09/2026 a las 00:00 hrs (Lima). Cierra el 21/09/2026 a las 17:00 hrs.' });
+    const errSub = errorSiNoPuedeSubirExpediente(row);
+    if (errSub === 'CADUCAR') {
+      await pool.query(
+        `UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente'
+         WHERE id=$1 AND (habilitar_expediente_hasta IS NULL OR habilitar_expediente_hasta < NOW())`,
+        [id]
+      );
+      return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 18:00 hrs). La vacante pasó a repechaje.' });
     }
-    if (row.estado === 'ganador' && !conveniosFlujo.presentacionVentanaAbierta() && !plazoVencido) {
-      return res.json({ ok: false, error: 'La ventana de entrega de expediente está cerrada (21/09/2026 18:00 hrs Lima).' });
-    }
-    const puedeGanador = row.estado === 'ganador' && !plazoVencido && conveniosFlujo.presentacionVentanaAbierta();
-    const puedeObservado = row.estado === 'observado' && !plazoVencido;
-    const puedeRechazado = row.estado === 'rechazado' && !!row.plazo_expediente && !plazoVencido;
-    if (!puedeGanador && !puedeObservado && !puedeRechazado) {
-      if (row.estado === 'ganador' && plazoVencido) {
-        await pool.query(`UPDATE inscripciones SET estado='caducado', observacion='Plazo vencido sin presentar expediente' WHERE id=$1`, [id]);
-        return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 18:00 hrs). La vacante pasó a repechaje.' });
-      }
-      if (row.estado === 'observado' && plazoVencido) {
-        return res.json({ ok: false, error: 'El plazo de 24 horas para subsanar ya venció. No puede volver a subir expediente.' });
-      }
-      if (row.estado === 'rechazado' && plazoVencido) {
-        return res.json({ ok: false, error: 'El plazo de subsanación ya venció. No puede volver a subir expediente.' });
-      }
-      return res.json({ ok: false, error: 'No puede subir expediente en el estado actual (' + row.estado + ')' });
-    }
+    if (errSub) return res.json({ ok: false, error: errSub });
 
     const itemId = row.item_id;
     if (!expedientesS3.configurado()) {
@@ -9846,6 +9849,88 @@ app.post('/admin/inscripciones/:id/notificar', requireAuth, async (req, res) => 
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
+app.post('/admin/inscripciones/:id/habilitar-expediente', requireAuth, async (req, res) => {
+  try {
+    if (req.admin.rol !== 'unitic') {
+      return res.status(403).json({
+        ok: false,
+        error: 'Solo el Super Admin puede habilitar la subida de expediente fuera de plazo. Convenios no tiene este permiso.'
+      });
+    }
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.json({ ok: false, error: 'Inscripción inválida' });
+    const cur = await pool.query(
+      `SELECT n.id, n.cip, n.nombres, n.estado, n.plazo_expediente, n.habilitar_expediente_hasta, n.observacion,
+              CASE WHEN COALESCE(n.pdf_requisitos,'')<>'' AND n.pdf_requisitos NOT LIKE 'purged%' THEN true ELSE false END AS tiene_pdf,
+              i.tipo, i.titulo
+       FROM inscripciones n
+       JOIN items_portal i ON i.id=n.item_id
+       WHERE n.id=$1`,
+      [id]
+    );
+    if (!cur.rows.length) return res.json({ ok: false, error: 'No encontrado' });
+    const row = cur.rows[0];
+    if (row.tipo !== 'convenio') return res.json({ ok: false, error: 'Solo aplica a convenios' });
+    if (row.tiene_pdf) return res.json({ ok: false, error: 'Ya tiene expediente subido.' });
+    const est = String(row.estado || '');
+    if (['ganador', 'caducado', 'observado', 'rechazado'].indexOf(est) < 0) {
+      return res.json({ ok: false, error: 'Solo se habilita a ganador, caducado, observado o rechazado sin PDF.' });
+    }
+    const horas = conveniosFlujo.horasHabilitacionExtra(
+      req.body && req.body.horas != null ? req.body.horas : conveniosFlujo.PLAZO_HABILITACION_EXTRA_HORAS
+    );
+    const hasta = conveniosFlujo.plazoHabilitacionExtraDesdeAhora(horas);
+    const porNombre = String(req.admin.nombre || req.admin.usuario || '').trim().slice(0, 150);
+    const porUsuario = String(req.admin.usuario || req.admin.cip || '').trim().slice(0, 60);
+    const hastaLima = hasta.toLocaleString('es-PE', {
+      timeZone: 'America/Lima',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    const nota = 'Super Admin habilitó subida de expediente fuera de plazo por ' + horas
+      + ' horas (hasta ' + hastaLima + ' hrs Lima).';
+    const nuevoEstado = (est === 'caducado') ? 'ganador' : est;
+    await pool.query(
+      `UPDATE inscripciones SET
+         estado = $1,
+         plazo_expediente = $2,
+         habilitar_expediente_hasta = $2,
+         habilitar_expediente_por = $3,
+         habilitar_expediente_usuario = $4,
+         habilitar_expediente_fecha = NOW(),
+         observacion = CASE
+           WHEN $1 IN ('observado','rechazado') AND COALESCE(observacion,'') <> ''
+             THEN LEFT(observacion || E'\n' || $5, 2000)
+           ELSE $5
+         END
+       WHERE id = $6`,
+      [nuevoEstado, hasta, porNombre, porUsuario, nota, id]
+    );
+    await adminAuth.registrarAuditoria(pool, {
+      adminId: req.admin.id,
+      cip: adminAuth.normalizarCipLogin(req.admin.cip || req.admin.usuario),
+      usuario: req.admin.usuario,
+      accion: 'habilitar_expediente_fuera_plazo',
+      modulo: 'convenios',
+      entidad: 'inscripcion',
+      entidadId: String(id),
+      detalle: (row.cip || '') + ' ' + (row.nombres || '') + ' — ' + nota + ' Estado: ' + est + ' → ' + nuevoEstado,
+      ip: req.ip || '',
+      ok: true
+    });
+    res.json({
+      ok: true,
+      estado: nuevoEstado,
+      habilitar_expediente_hasta: hasta.toISOString(),
+      horas: horas,
+      mensaje: 'Habilitado ' + horas + ' horas para subir expediente (hasta ' + hastaLima + ' hrs Lima). El efectivo puede subir desde Consulta CIP.'
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 // ── POST /admin/sync-convenios — asegurar los 11 convenios + flujo tipo Celador ─
 // ── PUT /admin/convenios/aviso-frontend — solo Super Admin ─────────────────────
 app.put('/admin/convenios/aviso-frontend', requireAuth, async (req, res) => {
@@ -10108,6 +10193,8 @@ app.get('/admin/items/:id/inscritos', requireAuth, async (req, res) => {
               codifin,region_policial,comisaria_postula,bloque_vacaciones,
               preins_correccion_motivo, preins_correccion_admin, preins_correccion_usuario,
               preins_correccion_fecha,
+              habilitar_expediente_hasta, habilitar_expediente_por, habilitar_expediente_usuario,
+              habilitar_expediente_fecha,
               CASE WHEN COALESCE(pdf_requisitos,'')<>'' AND pdf_requisitos NOT LIKE 'purged%' THEN true ELSE false END AS tiene_pdf,
               CASE WHEN COALESCE(pdf_requisitos,'') LIKE 'purged%' THEN true ELSE false END AS pdf_purgado,
               pdf_nombre
@@ -10651,6 +10738,22 @@ function iniciarDB() {
               console.log('Reabiertos ' + ids.length + ' ganadores caducados por la ampliación a las 18:00.');
             }
           });
+        }
+      }).then(function() {
+        return conveniosFlujo.habilitarExpedienteCipHoras(pool, '31426618', 1, {
+          soloUnaVez: true,
+          marca: 'deploy-cip-31426618',
+          por: 'Super Admin (deploy)',
+          nota: 'Super Admin habilitó CIP 31426618 por 1 hora para subir expediente fuera de plazo.'
+        });
+      }).then(function(rows) {
+        if (rows && rows.length) {
+          console.log(
+            'Habilitado 1h expediente CIP 31426618: ' +
+            rows.map(function(x) { return (x.titulo || '') + ' #' + x.id; }).join(', ')
+          );
+        } else {
+          console.log('CIP 31426618: no había inscripción de convenio sin PDF (ganador/caducado) para habilitar 1h.');
         }
       }).catch(function(eAli) {
         console.warn('No se alinearon plazos de expediente:', eAli && eAli.message);

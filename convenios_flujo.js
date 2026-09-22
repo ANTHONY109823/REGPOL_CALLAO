@@ -12,6 +12,8 @@
 const PLAZO_EXPEDIENTE_DIAS = 4;
 /** Horas para subsanar desde el momento en que el admin observa el expediente. */
 const PLAZO_SUBSANACION_HORAS = 24;
+/** Super Admin puede reabrir la subida de expediente este número de horas, ya cerrado el plazo general. */
+const PLAZO_HABILITACION_EXTRA_HORAS = 24;
 /** Ventana de entrega de expediente (hora Lima). Día 18 00:00 → día 21 18:00 del mes operativo. */
 const INICIO_PRESENTACION_LIMA = '2026-09-18 00:00:00';
 const CIERRE_PRESENTACION_LIMA = '2026-09-21 18:00:00';
@@ -387,6 +389,10 @@ async function initColumnasFlujoConvenios(pool) {
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS preins_correccion_admin VARCHAR(150) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS preins_correccion_usuario VARCHAR(60) DEFAULT '';
     ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS preins_correccion_fecha TIMESTAMPTZ;
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS habilitar_expediente_hasta TIMESTAMPTZ;
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS habilitar_expediente_por VARCHAR(150) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS habilitar_expediente_usuario VARCHAR(60) DEFAULT '';
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS habilitar_expediente_fecha TIMESTAMPTZ;
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS aviso_sorteo_fb TEXT DEFAULT '';
     CREATE INDEX IF NOT EXISTS idx_inscripciones_estado ON inscripciones(estado);
     CREATE INDEX IF NOT EXISTS idx_inscripciones_plazo ON inscripciones(plazo_expediente);
@@ -489,6 +495,76 @@ async function migrarEstadosConvenios(pool) {
   await caducarExpedientesVencidos(pool);
 }
 
+function extraExpedienteVigente(row) {
+  if (!row || !row.habilitar_expediente_hasta) return false;
+  const t = new Date(row.habilitar_expediente_hasta);
+  return !isNaN(t.getTime()) && t.getTime() > Date.now();
+}
+
+function sqlExtraExpedienteVigente(alias) {
+  const a = alias || 'n';
+  return '(' + a + '.habilitar_expediente_hasta IS NOT NULL AND ' + a + '.habilitar_expediente_hasta > NOW())';
+}
+
+function horasHabilitacionExtra(valor) {
+  const n = parseInt(valor, 10);
+  if (!Number.isFinite(n) || n < 1) return PLAZO_HABILITACION_EXTRA_HORAS;
+  return Math.min(72, n);
+}
+
+function plazoHabilitacionExtraDesdeAhora(horas) {
+  return new Date(Date.now() + horasHabilitacionExtra(horas) * 60 * 60 * 1000);
+}
+
+function sqlCipKeyCampo(campo) {
+  return `LPAD(regexp_replace(TRIM(COALESCE(${campo},'')), '[^0-9]', '', 'g'), 8, '0')`;
+}
+
+/** Habilita subida de expediente fuera de plazo a un CIP (mes Lima actual, sin PDF). */
+async function habilitarExpedienteCipHoras(pool, cip, horas, opts) {
+  const digits = String(cip || '').replace(/\D/g, '');
+  if (!digits) return [];
+  const key = digits.length > 8 ? digits.slice(-8) : digits.padStart(8, '0');
+  const h = horasHabilitacionExtra(horas);
+  const hasta = plazoHabilitacionExtraDesdeAhora(h);
+  const marca = String((opts && opts.marca) || 'super-admin').slice(0, 60);
+  const por = String((opts && opts.por) || 'Super Admin').slice(0, 150);
+  const soloUnaVez = !!(opts && opts.soloUnaVez);
+  const nota = String(
+    (opts && opts.nota) ||
+    ('Super Admin habilitó subida de expediente fuera de plazo por ' + h + ' horas.')
+  ).slice(0, 2000);
+  const r = await pool.query(
+    `UPDATE inscripciones n
+     SET estado = CASE WHEN n.estado = 'caducado' THEN 'ganador' ELSE n.estado END,
+         plazo_expediente = $2,
+         habilitar_expediente_hasta = $2,
+         habilitar_expediente_por = $3,
+         habilitar_expediente_usuario = $4,
+         habilitar_expediente_fecha = NOW(),
+         observacion = CASE
+           WHEN n.estado IN ('observado','rechazado') AND COALESCE(n.observacion,'') <> ''
+             THEN LEFT(n.observacion || E'\n' || $5, 2000)
+           ELSE $5
+         END
+     FROM items_portal i
+     WHERE n.item_id = i.id
+       AND i.tipo = 'convenio'
+       AND ${sqlCipKeyCampo('n.cip')} = $1
+       AND n.estado = ANY($6::varchar[])
+       AND COALESCE(n.pdf_requisitos,'') = ''
+       AND to_char(timezone('America/Lima', COALESCE(n.fecha, NOW())), 'YYYY-MM')
+         = to_char(timezone('America/Lima', NOW()), 'YYYY-MM')
+       AND (
+         NOT $7::boolean
+         OR COALESCE(n.habilitar_expediente_usuario,'') <> $4
+       )
+     RETURNING n.id, n.cip, n.nombres, n.estado, i.titulo, n.habilitar_expediente_hasta`,
+    [key, hasta, por, marca, nota, ['ganador', 'caducado', 'observado', 'rechazado'], soloUnaVez]
+  );
+  return r.rows || [];
+}
+
 async function caducarExpedientesVencidos(pool) {
   await pool.query(
     `UPDATE inscripciones n
@@ -501,7 +577,8 @@ async function caducarExpedientesVencidos(pool) {
        AND n.estado = 'ganador'
        AND COALESCE(n.pdf_requisitos,'') = ''
        AND to_char(timezone('America/Lima', COALESCE(n.fecha, NOW())), 'YYYY-MM') = $1
-       AND (CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima') >= $2::timestamp`,
+       AND (CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima') >= $2::timestamp
+       AND NOT ${sqlExtraExpedienteVigente('n')}`,
     [CIERRE_PRESENTACION_MES, CIERRE_PRESENTACION_LIMA]
   );
 
@@ -520,6 +597,7 @@ async function caducarExpedientesVencidos(pool) {
       AND n.plazo_expediente < NOW()
       AND COALESCE(n.pdf_requisitos,'') = ''
       AND NOT ${sqlVentanaInscripcionAbierta('i')}
+      AND NOT ${sqlExtraExpedienteVigente('n')}
     RETURNING n.id
   `);
   return (r.rows || []).map(function(x) { return x.id; });
@@ -582,7 +660,12 @@ async function alinearPlazosPresentacionMes(pool) {
      WHERE n.item_id = i.id
        AND i.tipo = 'convenio'
        AND n.estado = 'ganador'
-       AND to_char(timezone('America/Lima', COALESCE(n.fecha, NOW())), 'YYYY-MM') = $1`,
+       AND to_char(timezone('America/Lima', COALESCE(n.fecha, NOW())), 'YYYY-MM') = $1
+       AND NOT ${sqlExtraExpedienteVigente('n')}
+       AND (
+         n.plazo_expediente IS NULL
+         OR n.plazo_expediente <= ($2::timestamp AT TIME ZONE 'America/Lima')
+       )`,
     [CIERRE_PRESENTACION_MES, CIERRE_PRESENTACION_LIMA]
   );
 }
@@ -600,6 +683,7 @@ async function reabrirGanadoresCaducadosPorCierreAnterior(pool) {
        AND n.estado = 'caducado'
        AND COALESCE(n.pdf_requisitos,'') = ''
        AND to_char(timezone('America/Lima', COALESCE(n.fecha, NOW())), 'YYYY-MM') = $1
+       AND NOT ${sqlExtraExpedienteVigente('n')}
        AND (
          COALESCE(n.observacion,'') ILIKE '%21/09/2026 a las 17:00%'
          OR (
@@ -1237,6 +1321,7 @@ async function archivarMesOperativo(pool, mes, opts) {
 
 module.exports = {
   PLAZO_EXPEDIENTE_DIAS,
+  PLAZO_HABILITACION_EXTRA_HORAS,
   INICIO_PRESENTACION_LIMA,
   CIERRE_PRESENTACION_LIMA,
   CIERRE_PRESENTACION_MES,
@@ -1257,6 +1342,11 @@ module.exports = {
   presentacionAunNoAbre,
   presentacionVentanaAbierta,
   plazoCierrePresentacion,
+  extraExpedienteVigente,
+  sqlExtraExpedienteVigente,
+  horasHabilitacionExtra,
+  plazoHabilitacionExtraDesdeAhora,
+  habilitarExpedienteCipHoras,
   alinearPlazosPresentacionMes,
   reabrirGanadoresCaducadosPorCierreAnterior,
   asegurarNroRegistro,

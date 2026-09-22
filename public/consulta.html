@@ -689,7 +689,7 @@ function renderResultados(lista) {
             + '</div>')
           : '')
         + '</div>';
-    } else if (ins.estado === 'ganador' && ins.puede_subir_expediente) {
+    } else if ((ins.estado === 'ganador' || ins.estado === 'caducado') && ins.puede_subir_expediente) {
       var plazoIso = ins.plazo_expediente || '';
       if (!plazoIso && ins.fecha_ganador) {
         var dg = new Date(ins.fecha_ganador);
@@ -734,7 +734,7 @@ function renderResultados(lista) {
         + '<div class="expediente-box-top">'
         + '<p><i class="fas fa-clock" style="color:#004d3d;"></i> '
         + (ins.presentacion_aun_no_abre
-          ? 'Aún no abre la entrega. Podrá subir su PDF desde el <strong>18/09/2026 a las 00:00 hrs</strong> hasta el <strong>21/09/2026 a las 17:00 hrs</strong> (hora Lima).'
+          ? 'Aún no abre la entrega. Podrá subir su PDF desde el <strong>18/09/2026 a las 00:00 hrs</strong> hasta el <strong>21/09/2026 a las 18:00 hrs</strong> (hora Lima).'
           : 'La ventana de entrega de expediente está cerrada (21/09/2026 18:00 hrs). Si no presentó el PDF, su vacante pasa a repechaje.')
         + '</p>'
         + htmlBotonesModeloExp()
