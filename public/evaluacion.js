@@ -227,7 +227,7 @@ function esInicioDesdePortal() {
 }
 
 function debeMostrarAvisoUnidades() {
-  return esInicioDesdePortal();
+  return false;
 }
 
 function mostrarModalAvisoUnidades(unidades) {
