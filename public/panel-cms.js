@@ -710,21 +710,30 @@ function abrirModalSlide(idx) {
   var esNuevo = idx === null;
   var item = esNuevo ? { titulo: '', subtitulo: '', imagen: '' } : cmsDataActual.carrusel[idx];
 
-  var imgPreview = item.imagen
-    ? '<img id="cms-slide-preview" src="' + item.imagen + '" style="max-width:100%;max-height:160px;border-radius:6px;margin-top:6px;display:block;" alt=""/>'
-    : '<img id="cms-slide-preview" src="" style="max-width:100%;max-height:160px;border-radius:6px;margin-top:6px;display:none;" alt=""/>';
+  var esUrl = item.imagen && /^https?:\/\//i.test(item.imagen);
+  var esLocal = item.imagen && (item.imagen.indexOf('data:image/') === 0 || item.imagen.indexOf('/portal/') === 0);
+  var imgActualSrc = item.imagen || '';
 
-  var body = '<div class="cms-modal-campo">'
-    + '<label class="cms-label">Imagen (JPG/PNG — se convierte a base64)</label>'
-    + '<input type="file" id="cms-slide-file" accept="image/jpeg,image/png,image/webp" style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;" onchange="previewSlideImg(this)"/>'
-    + imgPreview
-    + '<input type="hidden" id="cms-slide-img-data" value="' + escHtml(item.imagen || '') + '"/>'
+  var body = '<div class="cms-modal-campo" style="background:#f0f4ff;border-radius:8px;padding:12px 14px;margin-bottom:8px;">'
+    + '<label class="cms-label" style="font-weight:700;margin-bottom:8px;display:block;">&#128444; Imagen del slide</label>'
+    + '<div style="margin-bottom:10px;">'
+    + '<label class="cms-label" style="font-size:12px;color:#555;">Opción 1 — Subir desde tu computadora</label>'
+    + '<input type="file" id="cms-slide-file" accept="image/jpeg,image/png,image/webp,image/gif" style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;" onchange="previewSlideImg(this)"/>'
     + '</div>'
-    + cmsCampo('URL de imagen externa (alternativa)', 'cms-slide-url', item.imagen && item.imagen.startsWith('http') ? item.imagen : '')
+    + '<div style="text-align:center;color:#999;font-size:12px;margin:4px 0;">— o —</div>'
+    + '<div style="margin-top:8px;">'
+    + '<label class="cms-label" style="font-size:12px;color:#555;">Opción 2 — Pegar URL (Facebook, Instagram, web, etc.)</label>'
+    + '<input type="text" id="cms-slide-url" class="cms-input" placeholder="https://..." value="' + escHtml(esUrl ? item.imagen : '') + '" oninput="previewSlideUrl(this)" style="font-size:12px;"/>'
+    + '<p style="font-size:11px;color:#888;margin:3px 0 0;">El servidor descargará y guardará la imagen. Links de Facebook e Instagram funcionan.</p>'
+    + '</div>'
+    + '<img id="cms-slide-preview" src="' + escHtml(imgActualSrc) + '" style="max-width:100%;max-height:180px;border-radius:6px;margin-top:10px;display:' + (imgActualSrc ? 'block' : 'none') + ';border:1px solid #ddd;" alt="" onerror="this.style.display=\'none\'"/>'
+    + '<input type="hidden" id="cms-slide-img-data" value="' + escHtml(esLocal ? item.imagen : '') + '"/>'
+    + '</div>'
     + cmsCampo('Título de la diapositiva', 'cms-slide-titulo', item.titulo)
     + cmsCampo('Subtítulo', 'cms-slide-subtitulo', item.subtitulo);
 
   abrirCmsModal(esNuevo ? 'Nueva imagen del carrusel' : 'Editar diapositiva', body, function() {
+    // Prioridad: archivo local (base64/ruta) > URL externa > imagen anterior
     var imgData = getVal('cms-slide-img-data') || getVal('cms-slide-url') || item.imagen || '';
     var nuevo = {
       titulo:    getVal('cms-slide-titulo'),
@@ -743,10 +752,13 @@ function abrirModalSlide(idx) {
 function previewSlideImg(input) {
   var file = input.files && input.files[0];
   if (!file) return;
-  if (file.size > 2 * 1024 * 1024) {
-    alert('La imagen no debe superar 2 MB. Comprime la imagen antes de subirla.');
+  if (file.size > 5 * 1024 * 1024) {
+    alert('La imagen no debe superar 5 MB. Comprime la imagen antes de subirla.');
     input.value = ''; return;
   }
+  // Limpiar URL externa si se selecciona archivo
+  var urlField = document.getElementById('cms-slide-url');
+  if (urlField) urlField.value = '';
   var reader = new FileReader();
   reader.onload = function(e) {
     var data = e.target.result;
@@ -756,6 +768,25 @@ function previewSlideImg(input) {
     if (preview) { preview.src = data; preview.style.display = 'block'; }
   };
   reader.readAsDataURL(file);
+}
+
+function previewSlideUrl(input) {
+  var url = (input.value || '').trim();
+  var preview = document.getElementById('cms-slide-preview');
+  var hidden  = document.getElementById('cms-slide-img-data');
+  // Limpiar archivo local si se escribe URL
+  var fileInput = document.getElementById('cms-slide-file');
+  if (fileInput) fileInput.value = '';
+  if (hidden) hidden.value = '';
+  if (!preview) return;
+  if (url && /^https?:\/\//i.test(url)) {
+    preview.src = url;
+    preview.style.display = 'block';
+    preview.onerror = function() { preview.style.display = 'none'; };
+  } else {
+    preview.src = '';
+    preview.style.display = 'none';
+  }
 }
 
 function guardarHeroTexto() {

@@ -1095,6 +1095,32 @@ async function guardarPortalArchivoDesdeDataUrl(clave, dataUrl) {
   return true;
 }
 
+async function guardarPortalArchivoDesdeUrl(clave, url) {
+  try {
+    const resp = await fetch(url, {
+      signal: AbortSignal.timeout(15000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RegpolBot/1.0)' }
+    });
+    if (!resp.ok) return false;
+    const contentType = (resp.headers.get('content-type') || 'image/jpeg').split(';')[0].trim();
+    if (!contentType.startsWith('image/')) return false;
+    const arrayBuffer = await resp.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    if (!buffer.length || buffer.length > 10 * 1024 * 1024) return false;
+    await pool.query(
+      `INSERT INTO portal_archivos (clave, mime, nombre, data, updated_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (clave) DO UPDATE SET
+         mime = EXCLUDED.mime, data = EXCLUDED.data, updated_at = NOW()`,
+      [clave, contentType, clave + '.img', buffer]
+    );
+    return true;
+  } catch (e) {
+    console.error('guardarPortalArchivoDesdeUrl:', e.message);
+    return false;
+  }
+}
+
 async function normalizarImagenesPortalEnConfig(data) {
   if (!data || typeof data !== 'object') return { data: data, changed: false };
   let changed = false;
@@ -1106,12 +1132,20 @@ async function normalizarImagenesPortalEnConfig(data) {
       if (!sl) continue;
       const img = String(sl.imagen || '').trim();
       if (img.indexOf('data:image/') === 0) {
-        // Nueva imagen subida: guardar en BD con clave posicional
+        // Nueva imagen subida localmente: guardar en BD con clave posicional
         const clave = 'carrusel_' + i;
         if (await guardarPortalArchivoDesdeDataUrl(clave, img)) {
           sl.imagen = '/portal/carrusel-imagen/' + i + '?v=' + ts;
           changed = true;
         }
+      } else if (/^https?:\/\//i.test(img)) {
+        // URL externa (Facebook, web, etc.): descargar y guardar en BD
+        const clave = 'carrusel_' + i;
+        if (await guardarPortalArchivoDesdeUrl(clave, img)) {
+          sl.imagen = '/portal/carrusel-imagen/' + i + '?v=' + ts;
+          changed = true;
+        }
+        // Si falla la descarga, se mantiene la URL externa tal cual
       } else if (img.indexOf('/portal/carrusel-imagen/') === 0) {
         // Imagen ya guardada: verificar si el índice de BD coincide con posición actual
         const urlBase = img.split('?')[0];
