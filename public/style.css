@@ -232,9 +232,9 @@ img {
 }
 
 .main-header {
-    background: rgba(255,255,255,0.78);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     border-bottom: 3px solid var(--verde-pnp);
     box-shadow: 0 2px 8px rgba(0,0,0,.08);
     flex-shrink: 0;
@@ -363,7 +363,6 @@ img {
     max-height: none;
     background-color: #0a2818;
     margin-top: -110px;
-    padding-top: 110px;
 }
 
 .portal-home .slide-img {
