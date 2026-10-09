@@ -52,8 +52,9 @@ img {
     padding: 7px 0;
     width: 100%;
     min-height: 44px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     flex-shrink: 0;
+    position: relative;
+    z-index: 6;
 }
 
 .portal-flex {
@@ -229,6 +230,7 @@ img {
     display: block;
     object-fit: contain;
     flex-shrink: 0;
+    mix-blend-mode: multiply;
 }
 
 .main-header {
@@ -271,10 +273,11 @@ img {
     font-style: normal;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.55), 0 0 8px rgba(0,0,0,0.3);
 }
 
 .title-text .portal-subtitulo {
-    color: #3d4f4a;
+    color: #e8f0e8;
     font-size: clamp(11.5px, 1.7vw, 13.5px);
     margin-top: 5px;
     line-height: 1.4;
@@ -282,6 +285,7 @@ img {
     font-weight: 600;
     letter-spacing: 0.02em;
     opacity: 0.95;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.65), 0 0 6px rgba(0,0,0,0.4);
 }
 
 .header-fotos-panel {
