@@ -1059,7 +1059,7 @@ function esImagenEncabezadoValida(url) {
   const f = String(url || '').trim();
   if (!f) return false;
   if (/^data:image\/(jpeg|png|webp);base64,/i.test(f)) return true;
-  if (f.indexOf('/portal/header-foto/') === 0 || f.indexOf('/portal/carrusel-imagen/') === 0) return true;
+  if (/^\/portal\/(header-foto|carrusel-imagen)\//.test(f)) return true;
   return !esUrlImagenHotlinkRota(f);
 }
 
@@ -1098,6 +1098,7 @@ async function guardarPortalArchivoDesdeDataUrl(clave, dataUrl) {
 async function normalizarImagenesPortalEnConfig(data) {
   if (!data || typeof data !== 'object') return { data: data, changed: false };
   let changed = false;
+  const ts = Date.now();
 
   if (Array.isArray(data.carrusel)) {
     for (let i = 0; i < data.carrusel.length; i++) {
@@ -1105,10 +1106,39 @@ async function normalizarImagenesPortalEnConfig(data) {
       if (!sl) continue;
       const img = String(sl.imagen || '').trim();
       if (img.indexOf('data:image/') === 0) {
+        // Nueva imagen subida: guardar en BD con clave posicional
         const clave = 'carrusel_' + i;
         if (await guardarPortalArchivoDesdeDataUrl(clave, img)) {
-          sl.imagen = '/portal/carrusel-imagen/' + i;
+          sl.imagen = '/portal/carrusel-imagen/' + i + '?v=' + ts;
           changed = true;
+        }
+      } else if (img.indexOf('/portal/carrusel-imagen/') === 0) {
+        // Imagen ya guardada: verificar si el índice de BD coincide con posición actual
+        const urlBase = img.split('?')[0];
+        const m = urlBase.match(/\/portal\/carrusel-imagen\/(\d+)$/);
+        if (m) {
+          const j = parseInt(m[1], 10);
+          if (j !== i) {
+            // El slide fue reordenado: copiar bytes de carrusel_j → carrusel_i
+            try {
+              const r = await pool.query(
+                'SELECT mime, data FROM portal_archivos WHERE clave=$1',
+                ['carrusel_' + j]
+              );
+              if (r.rows.length && r.rows[0].data) {
+                await pool.query(
+                  `INSERT INTO portal_archivos (clave, mime, nombre, data, updated_at)
+                   VALUES ($1, $2, $3, $4, NOW())
+                   ON CONFLICT (clave) DO UPDATE
+                   SET mime=EXCLUDED.mime, data=EXCLUDED.data, updated_at=NOW()`,
+                  ['carrusel_' + i, r.rows[0].mime || 'image/jpeg',
+                   'carrusel_' + i + '.img', r.rows[0].data]
+                );
+                sl.imagen = '/portal/carrusel-imagen/' + i + '?v=' + ts;
+                changed = true;
+              }
+            } catch (_e) { /* mantener URL original si falla la copia */ }
+          }
         }
       }
     }
@@ -1116,19 +1146,23 @@ async function normalizarImagenesPortalEnConfig(data) {
 
   if (Array.isArray(data.fotosEncabezado)) {
     const nuevas = [];
+    let fotoChanged = false;
     for (let i = 0; i < data.fotosEncabezado.length; i++) {
       const img = String(data.fotosEncabezado[i] || '').trim();
       if (img.indexOf('data:image/') === 0) {
         const clave = 'header_foto_' + i;
         if (await guardarPortalArchivoDesdeDataUrl(clave, img)) {
-          nuevas.push('/portal/header-foto/' + i);
+          nuevas.push('/portal/header-foto/' + i + '?v=' + ts);
+          fotoChanged = true;
           changed = true;
+        } else {
+          nuevas.push(img);
         }
       } else if (img) {
         nuevas.push(img);
       }
     }
-    if (changed) data.fotosEncabezado = nuevas;
+    if (fotoChanged) data.fotosEncabezado = nuevas;
   }
 
   return { data: data, changed: changed };
@@ -4491,12 +4525,15 @@ app.get('/portal/carrusel-imagen/:idx', async (req, res) => {
     if (isNaN(idx) || idx < 0) return res.status(404).end();
     const clave = 'carrusel_' + idx;
     const r = await pool.query(
-      'SELECT mime, data FROM portal_archivos WHERE clave=$1',
+      'SELECT mime, data, updated_at FROM portal_archivos WHERE clave=$1',
       [clave]
     );
     if (!r.rows.length || !r.rows[0].data) return res.status(404).end();
+    const etag = '"' + clave + '-' + (r.rows[0].updated_at ? new Date(r.rows[0].updated_at).getTime() : '0') + '"';
+    if (req.headers['if-none-match'] === etag) return res.status(304).end();
     res.set('Content-Type', r.rows[0].mime || 'image/jpeg');
-    res.set('Cache-Control', 'public, max-age=86400');
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.set('ETag', etag);
     res.send(r.rows[0].data);
   } catch (e) {
     res.status(500).end();
@@ -4510,12 +4547,15 @@ app.get('/portal/header-foto/:idx', async (req, res) => {
     if (isNaN(idx) || idx < 0) return res.status(404).end();
     const clave = 'header_foto_' + idx;
     const r = await pool.query(
-      'SELECT mime, data FROM portal_archivos WHERE clave=$1',
+      'SELECT mime, data, updated_at FROM portal_archivos WHERE clave=$1',
       [clave]
     );
     if (!r.rows.length || !r.rows[0].data) return res.status(404).end();
+    const etag = '"' + clave + '-' + (r.rows[0].updated_at ? new Date(r.rows[0].updated_at).getTime() : '0') + '"';
+    if (req.headers['if-none-match'] === etag) return res.status(304).end();
     res.set('Content-Type', r.rows[0].mime || 'image/jpeg');
-    res.set('Cache-Control', 'public, max-age=86400');
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.set('ETag', etag);
     res.send(r.rows[0].data);
   } catch (e) {
     res.status(500).end();
