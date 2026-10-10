@@ -587,6 +587,20 @@ function scrollASeccion(id) {
   marcarNavActivo(id);
 }
 
+function initHeroOffset() {
+  if (!esPaginaInicio()) return;
+  var header = document.querySelector('.portal-home .main-header');
+  var nav    = document.querySelector('.portal-home .nav-main');
+  if (!header || !nav) return;
+  function actualizarOffset() {
+    var h = header.offsetHeight + nav.offsetHeight;
+    document.documentElement.style.setProperty('--hero-offset', '-' + h + 'px');
+  }
+  actualizarOffset();
+  window.addEventListener('resize', actualizarOffset);
+  window.addEventListener('load',   actualizarOffset);
+}
+
 function initPortalStickyNav() {
   if (!esPaginaInicio()) return;
   var nav = document.querySelector('.portal-home .nav-main');
@@ -721,6 +735,7 @@ function initPortalScrollNav() {
   }
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
+  initHeroOffset();
   initPortalStickyNav();
 }
 
