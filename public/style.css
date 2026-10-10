@@ -230,7 +230,6 @@ img {
     display: block;
     object-fit: contain;
     flex-shrink: 0;
-    mix-blend-mode: multiply;
 }
 
 .main-header {
@@ -1446,6 +1445,7 @@ footer.portal-footer {
         height: auto;
         max-height: none;
         min-height: 200px;
+        margin-top: -140px;
     }
     .nav-main ul { height: auto; min-height: 46px; }
     .hero-overlay { padding: 16px 12px 44px; }
@@ -1599,6 +1599,7 @@ table.t { min-width: 600px; }
   .logo-pnp, .img-escudo { height: 64px !important; }
   .content-area { padding: 20px 0; }
   .page-intro h2 { font-size: 18px; }
+  .portal-home .presentation-slider { margin-top: -190px; }
 }
 
 @media (max-width: 768px) {
