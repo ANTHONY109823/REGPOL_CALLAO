@@ -229,12 +229,36 @@ function planificarPromocion(slots, rows) {
   const detalle = [];
   const ocupadasMap = ocupadasInicialesPorSlot(slots, rows);
 
+  /* Contadores para respetar max_vacaciones por slot al promover */
+  const vacPorSlot = {};
   (rows || []).forEach(function(c) {
     if (pendientesEst.indexOf(c.estado) < 0) return;
     if (!esVacaciones(c)) return;
+    const slot = slotPreferidoVacaciones(c, slots, ocupadasMap);
+    const slotKey = slot ? slot.key : '__sin_slot__';
+    /* Verificar cupo de vacaciones para este slot */
+    if (slot) {
+      var maxVac = (slot.max_vacaciones !== undefined && slot.max_vacaciones !== null)
+        ? parseInt(slot.max_vacaciones, 10) : null;
+      if (maxVac !== null && !isNaN(maxVac)) {
+        var yaEnSlot = vacPorSlot[slotKey] || 0;
+        if (yaEnSlot >= maxVac) {
+          /* Cupo de vacaciones lleno para este slot — no promover automáticamente */
+          detalle.push({
+            tipo: 'vacaciones_sin_cupo',
+            slot: slot.label || slotKey,
+            lugar: slot.lugar || '',
+            turno: slot.turno || '',
+            dia: slot.dia || '',
+            n: 1
+          });
+          return;
+        }
+      }
+    }
     vacaciones.push(c);
     ya[c.id] = true;
-    const slot = slotPreferidoVacaciones(c, slots, ocupadasMap);
+    vacPorSlot[slotKey] = (vacPorSlot[slotKey] || 0) + 1;
     if (slot) ocupadasMap[slot.key] = (ocupadasMap[slot.key] || 0) + 1;
     detalle.push({
       tipo: 'vacaciones',

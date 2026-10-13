@@ -6906,6 +6906,35 @@ var CONVENIO_TURNOS_SLOTS = [
   { turno: 'NOCHE', dia: 'IMPAR', label: 'Noche', grupo: 'IMPAR' }
 ];
 
+function maxVacTurnoSlot(cupo, turno, dia){
+  var list = (cupo && Array.isArray(cupo.turnos)) ? cupo.turnos : [];
+  var tU = String(turno || '').toUpperCase();
+  var dU = String(dia || '').toUpperCase();
+  for (var i = 0; i < list.length; i++) {
+    if (String(list[i].turno || '').toUpperCase() === tU
+        && String(list[i].dia || '').toUpperCase() === dU) {
+      var mv = parseInt(list[i].max_vacaciones, 10);
+      return (!isNaN(mv) && mv >= 0) ? mv : null;
+    }
+  }
+  return null;
+}
+
+function actualizarMaxVacSlotLugarUI(ciaIdx, sIdx, valor){
+  var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
+  if (!cupos[ciaIdx]) return;
+  var slots = CONVENIO_TURNOS_SLOTS;
+  if (!cupos[ciaIdx].turnos || !cupos[ciaIdx].turnos[sIdx]) return;
+  var n = String(valor).trim() === '' ? null : parseInt(valor, 10);
+  if (n === null || isNaN(n) || n < 0) {
+    delete cupos[ciaIdx].turnos[sIdx].max_vacaciones;
+  } else {
+    cupos[ciaIdx].turnos[sIdx].max_vacaciones = n;
+  }
+  var ta = document.getElementById('mi-cupos-unidades');
+  if (ta) ta.value = serializarCuposUnidades(cupos);
+}
+
 function vacTurnoCelador(cupo, turno, dia){
   var list = (cupo && Array.isArray(cupo.turnos)) ? cupo.turnos : [];
   var tU = String(turno || '').toUpperCase();
@@ -6947,7 +6976,10 @@ function copiarTurnosSeisCeldasUI(prevTurnos, slots){
       var ambos = prevMap[s.turno+'|PAR/IMPAR'];
       if (ambos) vac = parseInt(ambos.vacantes, 10) || 0;
     }
-    return { turno: s.turno, dia: s.dia, vacantes: vac };
+    var mv = exact && exact.max_vacaciones != null ? parseInt(exact.max_vacaciones, 10) : null;
+    var out = { turno: s.turno, dia: s.dia, vacantes: vac };
+    if (mv !== null && !isNaN(mv) && mv >= 0) out.max_vacaciones = mv;
+    return out;
   });
 }
 
@@ -7663,8 +7695,16 @@ function renderListaCuposUnidadesUI(){
         } else {
           celdas = slots.map(function(s, sIdx){
             var vac = vacTurnoCelador(c, s.turno, s.dia);
-            return '<td style="text-align:center;"><input type="number" min="0" value="'+vac+'" '
-              + 'onchange="actualizarTurnoSlotLugarUI('+idx+','+sIdx+',this.value)"/></td>';
+            var mv = maxVacTurnoSlot(c, s.turno, s.dia);
+            var mvVal = mv !== null ? mv : '';
+            return '<td style="text-align:center;padding:4px 2px;">'
+              + '<input type="number" min="0" value="'+vac+'" title="Vacantes" '
+              + 'style="width:52px;display:block;margin:0 auto 2px;" '
+              + 'onchange="actualizarTurnoSlotLugarUI('+idx+','+sIdx+',this.value)"/>'
+              + '<input type="number" min="0" value="'+mvVal+'" placeholder="—" title="Máx. vacaciones (dejar vacío = sin límite)" '
+              + 'style="width:52px;display:block;margin:0 auto;font-size:10.5px;color:#b45309;border-color:#d97706;background:#fffbeb;" '
+              + 'onchange="actualizarMaxVacSlotLugarUI('+idx+','+sIdx+',this.value)"/>'
+              + '</td>';
           }).join('');
         }
         var celdaNombre = esAtencion
@@ -7680,7 +7720,12 @@ function renderListaCuposUnidadesUI(){
           + '<td class="td-del"><button type="button" class="btn-mini btn-mini-danger" style="padding:3px 7px;" title="Quitar lugar" onclick="quitarCupoUnidadUI('+idx+')"><i class="fas fa-times"></i></button></td>'
           + '</tr>';
       }).join('')
-      + '</tbody></table></div>';
+      + '</tbody></table>'
+      + '<p style="font-size:11px;color:#666;margin:6px 0 0;line-height:1.4;">'
+      + '<strong style="color:#004d3d;">Número superior</strong> = vacantes totales del turno. &nbsp;'
+      + '<strong style="color:#b45309;">Número inferior</strong> = máx. personas en vacaciones que pueden inscribirse en ese turno (dejar vacío = sin límite).'
+      + '</p>'
+      + '</div>';
   }
 }
 
@@ -7824,7 +7869,12 @@ function parseCuposUnidadesTexto(txt){
       var arr = JSON.parse(raw.slice(5));
       return Array.isArray(arr) ? arr.map(function(c){
         if(!c || !c.nombre) return null;
-        var turnos = Array.isArray(c.turnos) ? c.turnos : [];
+        var turnos = (Array.isArray(c.turnos) ? c.turnos : []).map(function(t){
+          var out = { turno: t.turno, dia: t.dia, vacantes: parseInt(t.vacantes,10)||0 };
+          var mv = parseInt(t.max_vacaciones, 10);
+          if (!isNaN(mv) && mv >= 0) out.max_vacaciones = mv;
+          return out;
+        });
         var vac = parseInt(c.vacantes,10)||0;
         if(turnos.length){
           vac = turnos.reduce(function(a,t){ return a + (parseInt(t.vacantes,10)||0); }, 0);

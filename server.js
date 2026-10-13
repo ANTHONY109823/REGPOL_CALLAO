@@ -5870,6 +5870,62 @@ function validarSlotsVacacionesPublicados(cuposItem, turnosItem, slots, opts) {
   return '';
 }
 
+/* Devuelve el max_vacaciones configurado para un slot (lugar|turno|dia) en cupos_unidades.
+   null = sin límite. */
+function maxVacacionesParaSlot(cuposItem, lugar, turno, dia) {
+  var cupos = Array.isArray(cuposItem) ? cuposItem : [];
+  var lugU = String(lugar || '').trim().toUpperCase();
+  var turU = String(turno || '').trim().toUpperCase();
+  var diaU = String(dia || '').trim().toUpperCase();
+  for (var i = 0; i < cupos.length; i++) {
+    var c = cupos[i];
+    if (lugU && String(c.nombre || '').trim().toUpperCase() !== lugU) continue;
+    var tlist = Array.isArray(c.turnos) ? c.turnos : [];
+    for (var j = 0; j < tlist.length; j++) {
+      var t = tlist[j];
+      if (String(t.turno || '').toUpperCase() !== turU) continue;
+      var tDia = String(t.dia || '').toUpperCase();
+      if (tDia !== diaU && tDia !== 'PAR/IMPAR' && diaU !== 'PAR/IMPAR' && diaU !== 'TODOS') continue;
+      var mv = parseInt(t.max_vacaciones, 10);
+      return isNaN(mv) || mv < 0 ? null : mv;
+    }
+  }
+  return null;
+}
+
+/* Cuenta inscritos activos en VACACIONES para un slot este mes. */
+async function contarVacacionesEnSlot(pool, itemId, lugar, turno, dia) {
+  var lugU = String(lugar || '').trim().toUpperCase();
+  var turU = String(turno || '').trim().toUpperCase();
+  var diaU = String(dia || '').trim().toUpperCase();
+  const activos = ['preinscrito', 'pendiente', 'aprobado', 'verificado', 'ganador', 'en_revision', 'observado', 'expediente_ok', 'corregir_preinscripcion'];
+  const r = await pool.query(
+    `SELECT comisaria_postula, postula_slots FROM inscripciones
+     WHERE item_id=$1
+       AND UPPER(COALESCE(disponibilidad,''))='VACACIONES'
+       AND estado = ANY($2::varchar[])
+       AND ${sqlMesActualLima('fecha')}`,
+    [itemId, activos]
+  );
+  var count = 0;
+  for (var k = 0; k < r.rows.length; k++) {
+    var row = r.rows[k];
+    var slots = conveniosFlujo.parsePostulacionSlots(row.comisaria_postula, row.postula_slots);
+    if (!slots.length) slots = [conveniosFlujo.parsePostulacionSlot(row.comisaria_postula)];
+    for (var m = 0; m < slots.length; m++) {
+      var s = slots[m];
+      var sLug = String(s.lugar || '').trim().toUpperCase();
+      var sTur = String(s.turno || '').trim().toUpperCase();
+      var sDia = String(s.dia || '').trim().toUpperCase();
+      var lugMatch = !lugU || !sLug || sLug === lugU;
+      var turMatch = !turU || !sTur || sTur === turU;
+      var diaMatch = !diaU || !sDia || sDia === diaU || sDia === 'TODOS' || sDia === 'PAR/IMPAR' || diaU === 'TODOS' || diaU === 'PAR/IMPAR';
+      if (lugMatch && turMatch && diaMatch) { count++; break; }
+    }
+  }
+  return count;
+}
+
 function construirSlotsSorteoItem(item) {
   var cupos = normalizarCuposUnidades(item && item.cupos_unidades);
   var slots = [];
@@ -5878,14 +5934,17 @@ function construirSlotsSorteoItem(item) {
       normalizarTurnos(c.turnos).forEach(function(t) {
         var vac = parseInt(t.vacantes, 10) || 0;
         if (vac <= 0) return;
-        slots.push({
+        var mv = parseInt(t.max_vacaciones, 10);
+        var slotEntry = {
           key: String(c.nombre).toUpperCase() + '|' + t.turno + '|' + t.dia,
           lugar: c.nombre,
           turno: t.turno,
           dia: t.dia,
           vacantes: vac,
           label: c.nombre + ' — ' + etiquetaTurnoHorario(t.turno) + ' / ' + t.dia
-        });
+        };
+        if (!isNaN(mv) && mv >= 0) slotEntry.max_vacaciones = mv;
+        slots.push(slotEntry);
       });
     });
     if (slots.length) return slots;
@@ -8781,6 +8840,26 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       const comboVacPre = !modoRepechaje && String(disponibilidad || '').toUpperCase() === 'VACACIONES';
       const slotsBody = Array.isArray(postula_slots) ? postula_slots : [];
       const usaMatriz = (esCeladorItem && cuposCeladorTienenMatrizTurnos(cuposItem)) || cuposTienenTurnosPorLugar(cuposItem);
+
+      /* Validar cupo de vacaciones por slot si el admin definió max_vacaciones */
+      if (!modoRepechaje && String(disponibilidad || '').toUpperCase() === 'VACACIONES') {
+        const partes = String(comisariaPostulaRaw || '').split('|').map(function(p){ return p.trim(); });
+        const slotLugar = partes[0] || '';
+        const slotTurno = partes[1] || (turnoPostulaRaw || '');
+        const slotDia = partes[2] || (dia_franco || '');
+        const maxVac = maxVacacionesParaSlot(cuposItem, slotLugar, slotTurno, slotDia);
+        if (maxVac !== null) {
+          const yaInscritos = await contarVacacionesEnSlot(pool, req.params.id, slotLugar, slotTurno, slotDia);
+          if (yaInscritos >= maxVac) {
+            const slotLabel = [slotLugar, slotTurno, slotDia].filter(Boolean).join(' / ');
+            return res.json({
+              ok: false,
+              error: 'El cupo de vacaciones para ' + (slotLabel || 'este turno') + ' está completo (' + yaInscritos + '/' + maxVac + '). Elija otro turno o día.',
+              codigo: 'cupo_vacaciones_lleno'
+            });
+          }
+        }
+      }
 
       if (comboVacPre && slotsBody.length) {
         const chkCombo = conveniosFlujo.validarCombinacionVacaciones(slotsBody);
