@@ -697,12 +697,11 @@ function initCamposInscripcion(){
   });
   var selTurno = document.getElementById('fi-turno-postula');
   var disp = document.getElementById('fi-disponibilidad');
-  var dia = document.getElementById('fi-dia-franco');
-  if (disp && disp.value === 'VACACIONES') {
-    if (esModoRepechajeForm()) actualizarSelectorTurnos('TODOS', true);
-    else aplicarModoComboVacaciones('VACACIONES');
+  var dia = document.getElementById('fi-dia');
+  if (disp && disp.value === 'VACACIONES' && esModoRepechajeForm()) {
+    actualizarSelectorTurnos('TODOS', true);
   }
-  else if (disp && disp.value === 'FRANCO' && dia && dia.value) onCambioDiaFranco(dia.value);
+  else if (disp && (disp.value === 'VACACIONES' || disp.value === 'FRANCO' || disp.value === 'TURNO_ADMINISTRATIVO') && dia && dia.value) onCambiaDia(dia.value);
   else if (selTurno || document.getElementById('fi-comisaria-postula')) actualizarSelectorTurnos('', false);
 }
 
@@ -902,11 +901,7 @@ function htmlSelectorComisariaPostula(item){
       +'<select id="fi-comisaria-postula" disabled><option value="">Sin vacantes disponibles</option></select>'
       +'</div>';
   }
-  var hint = combinado
-    ? '<small class="fi-hint">'+(esModoRepechajeForm()
-      ? 'En repechaje, si está de vacaciones elija cualquier comisaría, turno y día (PAR o IMPAR); puede trabajar todos los días.'
-      : 'Misma lógica que Celador: elija el lugar junto con el turno y el día (PAR / IMPAR) según las vacantes publicadas.')+'</small>'
-    : '';
+  var hint = '';
   if(disponibles.length === 1){
     return '<div class="'+wrapCls+'">'
       +'<label>'+label+'</label>'
@@ -981,12 +976,12 @@ function htmlOpcionesDiaCombo(info){
   var hayPar = (dias.PAR || 0) > 0;
   var hayImpar = (dias.IMPAR || 0) > 0;
   var hayTodosPub = (dias['PAR/IMPAR'] || 0) > 0;
-  var html = '<option value="">No cubre este turno</option>';
+  var html = '<option value="">— No cubro este turno —</option>';
   if (hayTodosPub || (hayPar && hayImpar)) {
-    html += '<option value="TODOS">Todos los días (PAR e IMPAR)</option>';
+    html += '<option value="TODOS">Sí, cubro este turno (todos los días)</option>';
   }
-  if (hayPar || hayTodosPub) html += '<option value="PAR">Solo días PAR</option>';
-  if (hayImpar || hayTodosPub) html += '<option value="IMPAR">Solo días IMPAR</option>';
+  if (hayPar || hayTodosPub) html += '<option value="PAR">Sí, cubro este turno (días PAR)</option>';
+  if (hayImpar || hayTodosPub) html += '<option value="IMPAR">Sí, cubro este turno (días IMPAR)</option>';
   return html;
 }
 
@@ -1071,18 +1066,9 @@ function leerSlotsComboVacaciones(){
 function aplicarModoComboVacaciones(val){
   var box = document.getElementById('fi-combo-vac-box');
   var turnoBox = document.getElementById('fi-turno-postula-box');
-  var combo = (val === 'VACACIONES' && !esModoRepechajeForm());
-  if (combo) {
-    if (box) box.style.display = '';
-    if (turnoBox) {
-      turnoBox.style.display = 'none';
-      var ts = document.getElementById('fi-turno-postula');
-      if (ts) { ts.required = false; ts.value = ''; }
-    }
-    poblarSelectorLugarVacaciones();
-    renderComboVacacionesRows();
-  } else {
-    if (box) box.style.display = 'none';
+  /* El combo multi-turno ya no se usa; vacaciones sigue el mismo flujo que FRANCO */
+  if (box) box.style.display = 'none';
+  {
     restaurarSelectorComisariaNormal();
   }
 }
@@ -1097,9 +1083,7 @@ function htmlSelectorTurnoPostula(item){
     +'<select id="fi-turno-postula">'
     +'<option value="">'+(esModoRepechajeForm() ? 'Seleccione turno y día' : 'Seleccione día de franco primero')+'</option>'
     +'</select>'
-    +'<small class="fi-hint" id="fi-turno-hint">'+(esModoRepechajeForm()
-      ? 'Si está de vacaciones puede elegir PAR o IMPAR (trabaja todos los días).'
-      : 'Al elegir PAR o IMPAR aparecerán los turnos y lugares con vacantes publicadas.')+'</small>'
+    +''
     +'</div>';
 }
 
@@ -1220,17 +1204,19 @@ function actualizarSelectorTurnos(diaFranco, forzarMostrar){
   }
 }
 
-function onCambioDiaFranco(val){
+function onCambiaDia(val){
   var disp = document.getElementById('fi-disponibilidad');
   var situacion = disp ? disp.value : '';
-  if (situacion === 'FRANCO' && (val === 'PAR' || val === 'IMPAR')) {
-    actualizarSelectorTurnos(val, true);
-  } else if (situacion === 'VACACIONES') {
-    actualizarSelectorTurnos(esModoRepechajeForm() ? 'TODOS' : 'PAR/IMPAR', true);
+  if (situacion === 'VACACIONES' || situacion === 'FRANCO' || situacion === 'TURNO_ADMINISTRATIVO') {
+    var diaEfectivo = (val === 'TODOS') ? '' : val;
+    filtrarSelectorPostulaPorDia(diaEfectivo, true);
+    actualizarSelectorTurnos(diaEfectivo || '', !!diaEfectivo);
   } else {
     actualizarSelectorTurnos('', false);
   }
 }
+/* Alias para compatibilidad con código existente */
+function onCambioDiaFranco(val){ onCambiaDia(val); }
 
 function renderFormInscripcion(item){
   var esConvenio = item.tipo === 'convenio';
@@ -1240,7 +1226,7 @@ function renderFormInscripcion(item){
   var introRep = esRepechaje
     ? (EMBED_FORM
       ? ''
-      : '<p class="fi-intro" style="color:#856404;background:#fff8e1;padding:8px 10px;border-radius:8px;font-size:12px;">Repechaje: complete y suba su PDF. Si está de vacaciones puede elegir cualquier turno PAR o IMPAR (trabaja todos los días).</p>')
+      : '<p class="fi-intro" style="color:#856404;background:#fff8e1;padding:8px 10px;border-radius:8px;font-size:12px;">Repechaje: complete y suba su PDF. Si está de <strong>vacaciones</strong> elija turno MAÑANA o TARDE. Si es <strong>franco</strong> indique si su día libre es PAR o IMPAR.</p>')
     : '';
   return '<form class="form-inscripcion" id="form-inscripcion" onsubmit="enviarInscripcion(event)">'
     + (EMBED_FORM ? '' : ('<h3>' + tituloForm + '</h3>'))
@@ -1275,7 +1261,7 @@ function renderFormInscripcion(item){
         +'<div class="fi-group"><label>Unidad / Dependencia *</label>'
         +'<input type="text" id="fi-unidad" list="fi-unidad-datalist" maxlength="150" placeholder="Su comisaría / dependencia" required/>'
         +'<datalist id="fi-unidad-datalist"></datalist></div>'
-        +htmlSelectorComisariaPostula(item)
+        /* ——— Datos de la unidad (subidos desde abajo) ——— */
         +'<div class="fi-group"><label>Modalidad de trabajo *</label>'
         +'<select id="fi-modalidad" required onchange="onCambioModalidadTrabajo()">'
         +'<option value="">Seleccionar modalidad</option>'
@@ -1290,7 +1276,6 @@ function renderFormInscripcion(item){
       : ('<div class="fi-group"><label>Unidad / Dependencia *</label>'
         +'<select id="fi-unidad" required><option value="">Seleccionar unidad</option></select></div>'))
 
-    
     +'<div class="fi-group"><label>Cargo *</label>'
     +'<select id="fi-cargo" required>'+optsCargo()+'</select></div>'
     +'<div class="fi-group"><label>Área *</label>'
@@ -1307,30 +1292,28 @@ function renderFormInscripcion(item){
         +'<option value="DEL ESTADO">DEL ESTADO</option>'
         +'<option value="PARTICULAR">PARTICULAR</option>'
         +'</select></div>'
+        /* ——— Situación + Día + Comisaría (en orden lógico) ——— */
         +'<div class="fi-group"><label>Situación para el servicio *</label>'
         +'<select id="fi-disponibilidad" required onchange="onCambioDisponibilidad(this.value)">'
         +'<option value="">Seleccionar situación</option>'
-        +'<option value="VACACIONES">'+(esRepechaje
-          ? 'Vacaciones — puede trabajar todos los días (PAR e IMPAR)'
-          : 'Vacaciones — varios turnos: todos los días, PAR o IMPAR')+'</option>'
-        +'<option value="FRANCO">'+(esRepechaje
-          ? 'Día de franco — elija PAR o IMPAR según su franco'
-          : 'Día de franco — participa en sorteo por turno/día')+'</option>'
+        +'<option value="VACACIONES">VACACIONES</option>'
+        +'<option value="FRANCO">PAR O IMPAR</option>'
+        +'<option value="TURNO_ADMINISTRATIVO">TURNO ADMINISTRATIVO</option>'
         +'</select>'
-        +'<small class="fi-hint" id="disp-aviso" style="display:none;"></small></div>'
-        +'<div class="fi-group" id="fi-dia-franco-box" style="display:none;">'
-        +'<label>Día de franco *</label>'
-        +'<select id="fi-dia-franco" onchange="onCambioDiaFranco(this.value)">'
-        +'<option value="">Seleccionar día</option>'
-        +'<option value="PAR">DÍA PAR</option>'
-        +'<option value="IMPAR">DÍA IMPAR</option>'
-        +'</select></div>'
-        +htmlSelectorTurnoPostula(item)
-        +'<div class="fi-group fi-full" id="fi-combo-vac-box" style="display:none;">'
-        +'<label>Turnos que cubrirá (puede elegir más de uno)</label>'
-        +'<small class="fi-hint">Puede trabajar mañana, tarde y noche si no se cruzan horarios. En cada turno elija todos los días, solo PAR o solo IMPAR. No es obligatorio elegir solo PAR o solo IMPAR.</small>'
-        +'<div id="fi-combo-vac-rows"></div>'
         +'</div>'
+        /* Día: siempre visible */
+        +'<div class="fi-group" id="fi-dia-box">'
+        +'<label>Día *</label>'
+        +'<select id="fi-dia" onchange="onCambiaDia(this.value)">'
+        +'<option value="">Seleccionar día</option>'
+        +'<option value="PAR">PAR</option>'
+        +'<option value="IMPAR">IMPAR</option>'
+        +'<option value="TODOS">TODOS LOS DÍAS</option>'
+        +'</select></div>'
+        /* Comisaría/lugar: filtrada por Día */
+        +htmlSelectorComisariaPostula(item)
+        +htmlSelectorTurnoPostula(item)
+        +'<div id="fi-combo-vac-box" style="display:none;"><div id="fi-combo-vac-rows"></div></div>'
       : '')
 
     
@@ -1370,42 +1353,22 @@ function renderFormInscripcion(item){
 }
 
 function onCambioDisponibilidad(val){
-  var aviso = document.getElementById('disp-aviso');
-  if(aviso){
-    if(val === 'VACACIONES'){
-      aviso.style.display = 'block';
-      aviso.textContent = esModoRepechajeForm()
-        ? 'En repechaje, si está de vacaciones puede trabajar todos los días. Elija cualquier turno PAR o IMPAR.'
-        : 'Puede cubrir mañana, tarde y noche sin cruzar horarios. En cada turno elija todos los días, solo PAR o solo IMPAR. Ocupa vacante; el sorteo asigna Bloque 1 o Bloque 2 (15 días).';
-    } else if(val === 'FRANCO'){
-      aviso.style.display = 'block';
-      aviso.textContent = 'Elija PAR o IMPAR. Luego seleccione el lugar con su turno según las vacantes publicadas.';
-    } else {
-      aviso.style.display = 'none';
-      aviso.textContent = '';
-    }
-  }
   toggleDiaFranco(val);
   aplicarModoComboVacaciones(val);
+  /* Resetear selector de día al cambiar situación */
+  var diaSel = document.getElementById('fi-dia');
+  if (diaSel) diaSel.value = '';
   if (val === 'VACACIONES' && esModoRepechajeForm()) {
     actualizarSelectorTurnos('TODOS', true);
-  } else if (val === 'FRANCO') {
-    var diaSel = document.getElementById('fi-dia-franco');
-    onCambioDiaFranco(diaSel ? diaSel.value : '');
-  } else if (val !== 'VACACIONES') {
+  } else {
     actualizarSelectorTurnos('', false);
   }
 }
 
 function toggleDiaFranco(val){
-  var box = document.getElementById('fi-dia-franco-box');
-  if(!box) return;
-  box.style.display = (val==='FRANCO') ? '' : 'none';
-  var sel = document.getElementById('fi-dia-franco');
-  if(sel){
-    sel.required = (val==='FRANCO');
-    if(val!=='FRANCO') sel.value = '';
-  }
+  /* Día siempre visible; solo manejar required */
+  var sel = document.getElementById('fi-dia');
+  if(sel) sel.required = !!(val === 'FRANCO' || val === 'VACACIONES' || val === 'TURNO_ADMINISTRATIVO');
 }
 
 function calcularTiempoServicio(val){
