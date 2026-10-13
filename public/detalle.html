@@ -51,7 +51,7 @@
     .ventana-inscripcion-nota{display:block;margin:0;padding:4px 14px;border-radius:12px;font-size:12.5px;font-weight:700;line-height:1.35;background:#fde8e8;color:#a94442;border:1px solid #f5c2c2;}
     .ventana-inscripcion-nota.is-abierta,
     .ventana-inscripcion-nota.is-cerrada{background:#fde8e8;color:#a94442;border:1px solid #f5c2c2;}
-    .grid-detalles-duo{display:grid;grid-template-columns:minmax(240px,1fr) minmax(280px,1.15fr);gap:12px;width:100%;align-items:stretch;margin:0;}
+    .grid-detalles-duo{display:flex;flex-direction:column;gap:12px;width:100%;margin:0;}
     @media(max-width:800px){
       .detalle-topbar{grid-template-columns:1fr 1fr;gap:8px;}
       .detalle-topbar h2{grid-column:1/-1;order:-1;}
@@ -78,12 +78,14 @@
     .tabla-cupos.tabla-celador{min-width:760px;font-size:12px;}
     .tabla-cupos.tabla-celador th{font-size:10.5px;padding:7px 6px;white-space:nowrap;}
     .tabla-cupos.tabla-celador td{padding:7px 6px;white-space:nowrap;}
-    .tabla-cupos.tabla-convenio-turnos{min-width:880px;font-size:12px;}
+    .tabla-cupos.tabla-convenio-turnos{width:100%;font-size:12px;}
     .tabla-cupos.tabla-convenio-turnos th{font-size:10.5px;padding:6px 5px;white-space:nowrap;}
     .tabla-cupos.tabla-convenio-turnos th.grp-par{background:#0b5c4a;}
     .tabla-cupos.tabla-convenio-turnos th.grp-impar{background:#1a6b4a;}
     .tabla-cupos.tabla-convenio-turnos th.sub{font-size:10px;}
     .tabla-cupos.tabla-convenio-turnos td{padding:6px 5px;white-space:nowrap;}
+    .req-lista{columns:2;column-gap:24px;margin:0;padding-left:18px;}
+    @media(max-width:600px){.req-lista{columns:1;}}
     .tabla-cupos th,.tabla-cupos td{border:1px solid #b7d4c0;padding:6px 8px;}
     .tabla-cupos th{background:#004d3d;color:#fff;font-weight:700;text-align:center;font-size:11.5px;letter-spacing:.3px;}
     .tabla-cupos th:first-child,.tabla-cupos td:first-child{text-align:left;}
@@ -653,12 +655,12 @@ function renderDetalle(item){
     +(ventanaTxt ? '<p class="ventana-inscripcion-nota '+(item.inscripciones_abiertas?'is-abierta':'is-cerrada')+'">'+escHtmlD(ventanaTxt)+'</p>' : '')
     +'</div>'
     +'<div class="grid-detalles-duo">'
+    +(ciasCard || '')
     +'<div class="card-detalle highlight-card">'
     +'<h3>REQUISITOS</h3>'
-    +'<ul>'+reqHtml+'</ul>'
+    +'<ul class="req-lista">'+reqHtml+'</ul>'
     +(infoHtml ? ('<div class="bloque-info-conv">'+infoHtml+'</div>') : '')
     +'</div>'
-    +(ciasCard || '')
     +'</div>'
     +'</div>'
     +formHtml;
