@@ -604,6 +604,8 @@ async function initDB() {
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS ventana_inscripcion VARCHAR(300) DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS inscripcion_inicio DATE;
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS inscripcion_cierre DATE;
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS recepcion_doc_inicio DATE;
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS recepcion_doc_cierre DATE;
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS aviso_sorteo_fb TEXT DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS cupos_unidades JSONB DEFAULT '[]';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS turnos JSONB DEFAULT '[]';
@@ -7933,6 +7935,8 @@ function enriquecerItemInscripciones(item) {
   const out = Object.assign({}, item);
   out.inscripcion_inicio = fechaISOSolo(out.inscripcion_inicio);
   out.inscripcion_cierre = fechaISOSolo(out.inscripcion_cierre);
+  out.recepcion_doc_inicio = fechaISOSolo(out.recepcion_doc_inicio);
+  out.recepcion_doc_cierre = fechaISOSolo(out.recepcion_doc_cierre);
   if (out.tipo === 'convenio') {
     if (itemTieneVentanaFechas(out)) {
       out.inscripciones_abiertas = inscripcionesAbiertasPorFechas(out.inscripcion_inicio, out.inscripcion_cierre);
@@ -10249,6 +10253,7 @@ app.get('/admin/items', requireAuth, async (req, res) => {
       `SELECT i.id, i.tipo, i.titulo, i.descripcion, i.estado, i.icono, i.color, i.requisitos, i.horario,
               i.vacantes, i.fecha_inicio, i.duracion, i.lugar, i.observaciones, i.ventana_inscripcion,
               i.inscripcion_inicio, i.inscripcion_cierre,
+              i.recepcion_doc_inicio, i.recepcion_doc_cierre,
               i.formulario_url, i.inscripciones_abiertas, i.visible, i.orden, i.uniforme,
               i.contactos_responsables, i.aviso_sorteo_fb, i.cupos_unidades, i.turnos,
               (SELECT COUNT(*) FROM inscripciones n
@@ -10298,7 +10303,8 @@ app.post('/admin/items', requireAuth, async (req, res) => {
     const { tipo, titulo, descripcion, estado, icono, color, requisitos, horario,
             vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
             formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables,
-            aviso_sorteo_fb, cupos_unidades, turnos, inscripcion_inicio, inscripcion_cierre } = req.body;
+            aviso_sorteo_fb, cupos_unidades, turnos, inscripcion_inicio, inscripcion_cierre,
+            recepcion_doc_inicio, recepcion_doc_cierre } = req.body;
     if (!puedeGestionarItem(req.admin, tipo))
       return res.status(403).json({ ok: false, error: 'Sin permiso' });
     if (!titulo) return res.json({ ok: false, error: 'El título es obligatorio.' });
@@ -10329,17 +10335,19 @@ app.post('/admin/items', requireAuth, async (req, res) => {
         inscAbiertas = false;
       }
     }
+    const rdIni = fechaISOSolo(recepcion_doc_inicio);
+    const rdCie = fechaISOSolo(recepcion_doc_cierre);
     const r = await pool.query(
       `INSERT INTO items_portal(tipo,titulo,descripcion,estado,icono,color,requisitos,horario,
-        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden,uniforme,contactos_responsables,aviso_sorteo_fb,cupos_unidades,turnos,inscripcion_inicio,inscripcion_cierre)
-       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22::jsonb,$23::jsonb,$24,$25) RETURNING id`,
+        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden,uniforme,contactos_responsables,aviso_sorteo_fb,cupos_unidades,turnos,inscripcion_inicio,inscripcion_cierre,recepcion_doc_inicio,recepcion_doc_cierre)
+       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22::jsonb,$23::jsonb,$24,$25,$26,$27) RETURNING id`,
       [tipo, titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
        horarioSave, vacSave, fecha_inicio||'', duracion||'',
        lugar||'', observaciones||'', ventanaTxt, formulario_url||'',
        inscAbiertas, visible!==false, parseInt(orden)||0,
        uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'', JSON.stringify(cupos),
-       JSON.stringify(turnosNorm), iniIso, cieIso]);
+       JSON.stringify(turnosNorm), iniIso, cieIso, rdIni, rdCie]);
     invalidarPortalItemsCache();
     res.json({ ok: true, id: r.rows[0].id });
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -10356,7 +10364,8 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
     const { titulo, descripcion, estado, icono, color, requisitos, horario,
             vacantes, fecha_inicio, duracion, lugar, observaciones, ventana_inscripcion,
             formulario_url, inscripciones_abiertas, visible, orden, uniforme, contactos_responsables,
-            aviso_sorteo_fb, cupos_unidades, turnos, inscripcion_inicio, inscripcion_cierre } = req.body;
+            aviso_sorteo_fb, cupos_unidades, turnos, inscripcion_inicio, inscripcion_cierre,
+            recepcion_doc_inicio, recepcion_doc_cierre } = req.body;
     const cupos = cuposParaGuardarItem(titulo, cupos_unidades, vacantes);
     let turnosNorm = normalizarTurnos(turnos);
     let vacSave = parseInt(vacantes, 10) || 0;
@@ -10392,12 +10401,22 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
         inscAbiertas = false;
       }
     }
+    const curRd = await pool.query(
+      'SELECT recepcion_doc_inicio, recepcion_doc_cierre FROM items_portal WHERE id=$1',
+      [req.params.id]);
+    const prevRdIni = fechaISOSolo(curRd.rows[0] && curRd.rows[0].recepcion_doc_inicio);
+    const prevRdCie = fechaISOSolo(curRd.rows[0] && curRd.rows[0].recepcion_doc_cierre);
+    const rdIni = Object.prototype.hasOwnProperty.call(req.body, 'recepcion_doc_inicio')
+      ? fechaISOSolo(recepcion_doc_inicio) : prevRdIni;
+    const rdCie = Object.prototype.hasOwnProperty.call(req.body, 'recepcion_doc_cierre')
+      ? fechaISOSolo(recepcion_doc_cierre) : prevRdCie;
     await pool.query(
       `UPDATE items_portal SET titulo=$1,descripcion=$2,estado=$3,icono=$4,color=$5,
         requisitos=$6::jsonb,horario=$7,vacantes=$8,fecha_inicio=$9,duracion=$10,
         lugar=$11,observaciones=$12,ventana_inscripcion=$13,formulario_url=$14,inscripciones_abiertas=$15,
         visible=$16,orden=$17,uniforme=$18,contactos_responsables=$19,aviso_sorteo_fb=$20,
         cupos_unidades=$21::jsonb,turnos=$22::jsonb,inscripcion_inicio=$23,inscripcion_cierre=$24,
+        recepcion_doc_inicio=$26,recepcion_doc_cierre=$27,
         actualizado=NOW() WHERE id=$25`,
       [titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
@@ -10405,7 +10424,7 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
        lugar||'', observaciones||'', ventanaTxt, formulario_url||'',
        inscAbiertas, visible!==false, parseInt(orden)||0,
        uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'', JSON.stringify(cupos),
-       JSON.stringify(turnosNorm), iniIso, cieIso, req.params.id]);
+       JSON.stringify(turnosNorm), iniIso, cieIso, req.params.id, rdIni, rdCie]);
     invalidarPortalItemsCache();
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }

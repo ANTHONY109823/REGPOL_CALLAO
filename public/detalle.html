@@ -653,6 +653,13 @@ function renderDetalle(item){
     +'<div class="detalle-meta">'
     +estadoBadge(item.estado)
     +(ventanaTxt ? '<p class="ventana-inscripcion-nota '+(item.inscripciones_abiertas?'is-abierta':'is-cerrada')+'">'+escHtmlD(ventanaTxt)+'</p>' : '')
+    +(function(){
+        var rdI = item.recepcion_doc_inicio, rdC = item.recepcion_doc_cierre;
+        if (!rdI && !rdC) return '';
+        function fmtFecha(iso){ if(!iso) return ''; var p=String(iso).split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+        var txt = rdI && rdC ? ('Del '+fmtFecha(rdI)+' al '+fmtFecha(rdC)) : rdI ? ('Desde el '+fmtFecha(rdI)) : ('Hasta el '+fmtFecha(rdC));
+        return '<p class="ventana-inscripcion-nota is-cerrada" style="background:#eff6ff;border-color:#bfdbfe;color:#1e40af;"><i class="fas fa-folder-open" style="margin-right:4px;"></i><strong>Recepción de documentos:</strong> '+escHtmlD(txt)+'</p>';
+      })()
     +'</div>'
     +'<div class="grid-detalles-duo">'
     +(ciasCard || '')

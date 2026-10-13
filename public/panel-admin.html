@@ -2120,6 +2120,20 @@
           <p id="mi-insc-aviso-preview" style="margin:8px 0 0;font-size:11.5px;color:#444;line-height:1.4;background:#fff;border:1px solid #e5efe9;border-radius:6px;padding:8px 10px;">El aviso público se arma solo al guardar las fechas.</p>
           <p style="font-size:10.5px;color:#777;margin:8px 0 0;line-height:1.35;">El sistema abre y cierra solo. El último día cierra a las 23:59 (hora Lima).</p>
         </div>
+        <div style="padding:10px 12px;border:1.5px solid #dce8f5;border-radius:8px;background:#f5f9ff;margin-top:8px;">
+          <label style="margin:0 0 8px;display:block;"><i class="fas fa-folder-open"></i> Recepción de documentos</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div>
+              <label style="font-size:10px;margin:0;color:#666;">Desde</label>
+              <input type="date" id="mi-recepcion-doc-inicio" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;background:#fff;"/>
+            </div>
+            <div>
+              <label style="font-size:10px;margin:0;color:#666;">Hasta</label>
+              <input type="date" id="mi-recepcion-doc-cierre" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;background:#fff;"/>
+            </div>
+          </div>
+          <p style="font-size:10.5px;color:#777;margin:6px 0 0;line-height:1.35;">Fecha en que se recepciona la documentación física. No tiene que coincidir con el cierre de inscripciones.</p>
+        </div>
       </div>
       <div style="grid-column:1/-1;display:none;" id="mi-wrap-descripcion">
         <label>Subtítulo / descripción</label>
@@ -6589,6 +6603,10 @@ function abrirModalItem(id){
   var cieEl=document.getElementById('mi-inscripcion-cierre');
   if(iniEl) iniEl.value='';
   if(cieEl) cieEl.value='';
+  var rdIniEl2=document.getElementById('mi-recepcion-doc-inicio');
+  var rdCieEl2=document.getElementById('mi-recepcion-doc-cierre');
+  if(rdIniEl2) rdIniEl2.value='';
+  if(rdCieEl2) rdCieEl2.value='';
   var avisoFb=document.getElementById('mi-aviso-sorteo-fb');
   if(avisoFb) avisoFb.value='';
   document.getElementById('mi-formulario-url').value='';
@@ -6660,6 +6678,10 @@ function poblarModalItem(item){
   if(iniEl) iniEl.value=fechaISOInput(item.inscripcion_inicio);
   if(cieEl) cieEl.value=fechaISOInput(item.inscripcion_cierre);
   if(item.tipo==='convenio') actualizarAvisoInscripcionModal();
+  var rdIniEl=document.getElementById('mi-recepcion-doc-inicio');
+  var rdCieEl=document.getElementById('mi-recepcion-doc-cierre');
+  if(rdIniEl) rdIniEl.value=fechaISOInput(item.recepcion_doc_inicio)||'';
+  if(rdCieEl) rdCieEl.value=fechaISOInput(item.recepcion_doc_cierre)||'';
   var avisoFb=document.getElementById('mi-aviso-sorteo-fb');
   if(avisoFb) avisoFb.value=item.aviso_sorteo_fb||'';
   document.getElementById('mi-formulario-url').value=item.formulario_url||'';
@@ -8094,6 +8116,8 @@ function guardarItem(){
     ventana_inscripcion:ventanaTxt,
     inscripcion_inicio: tipo==='convenio' ? (inscIni || null) : null,
     inscripcion_cierre: tipo==='convenio' ? (inscCie || null) : null,
+    recepcion_doc_inicio: tipo==='convenio' ? (val('mi-recepcion-doc-inicio') || null) : null,
+    recepcion_doc_cierre: tipo==='convenio' ? (val('mi-recepcion-doc-cierre') || null) : null,
     aviso_sorteo_fb:(function(){
       if(id){
         var prev=(ITEMS_CACHE||[]).find(function(i){ return parseInt(i.id,10)===parseInt(id,10); });
