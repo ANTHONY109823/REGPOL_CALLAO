@@ -14,74 +14,83 @@
     body{background:#f0f4f0;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100vh;max-height:100vh;overflow:hidden;}
 
     
-    .top-bar{background:linear-gradient(135deg,#002d24,#004d3d);color:#fff;
-      padding:0 20px;height:54px;display:flex;align-items:center;justify-content:space-between;
-      box-shadow:0 2px 8px rgba(0,0,0,.3);position:sticky;top:0;z-index:100;flex-shrink:0;}
-    .top-bar-left{display:flex;align-items:center;gap:12px;}
-    .top-bar-left h1{font-size:14px;font-weight:700;letter-spacing:.2px;}
-    .super-badge{background:#c8a94a;color:#002d24;font-size:10px;font-weight:800;
-      padding:2px 9px;border-radius:10px;letter-spacing:.5px;}
-    .top-bar-right{display:flex;align-items:center;gap:12px;}
-    .top-user{font-size:12px;opacity:.8;}
-    .btn-logout{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);
-      color:#fff;padding:5px 13px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;}
-    .btn-logout:hover{background:rgba(255,255,255,.25);}
+    .top-bar{background:linear-gradient(135deg,#001f19,#003d31);color:#fff;
+      padding:0 22px;height:52px;display:flex;align-items:center;justify-content:space-between;
+      box-shadow:0 2px 10px rgba(0,0,0,.35);position:sticky;top:0;z-index:100;flex-shrink:0;}
+    .top-bar-left{display:flex;align-items:center;gap:14px;}
+    .top-bar-left h1{font-size:13.5px;font-weight:700;letter-spacing:.3px;}
+    .top-bar-divider{width:1px;height:20px;background:rgba(255,255,255,.2);}
+    .super-badge{background:#c8a94a;color:#001f19;font-size:9.5px;font-weight:800;
+      padding:2px 9px;border-radius:20px;letter-spacing:.6px;text-transform:uppercase;}
+    .top-bar-right{display:flex;align-items:center;gap:10px;}
+    .top-user{font-size:12px;opacity:.75;display:flex;align-items:center;gap:6px;}
+    .top-user i{font-size:11px;opacity:.7;}
+    .btn-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+      color:#fff;padding:5px 13px;border-radius:20px;cursor:pointer;font-size:11.5px;font-weight:600;
+      display:flex;align-items:center;gap:5px;transition:background .15s;}
+    .btn-logout:hover{background:rgba(255,255,255,.22);}
 
     
     .layout{display:flex;flex:1;overflow:hidden;min-height:0;}
 
     
-    .sidebar{width:220px;background:#fff;border-right:1px solid #e0e8e0;
+    .sidebar{width:242px;background:#fff;border-right:1px solid #e0e8e0;
       display:flex;flex-direction:column;flex-shrink:0;
-      box-shadow:2px 0 8px rgba(0,77,61,.06);overflow-y:auto;min-height:0;}
+      box-shadow:2px 0 12px rgba(0,77,61,.07);overflow-y:auto;min-height:0;}
 
-    .sb-section{padding:10px 0 4px;}
-    .sb-section-label{font-size:10px;font-weight:800;color:#bbb;letter-spacing:1px;
-      text-transform:uppercase;padding:0 16px 4px;}
+    .sb-section{padding:12px 0 6px;}
+    .sb-section+.sb-section{border-top:1px solid #edf2ef;padding-top:10px;}
+    .sb-section-label{font-size:9.5px;font-weight:800;color:#a8b9b3;letter-spacing:1.2px;
+      text-transform:uppercase;padding:0 16px 6px;}
 
-    .sb-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;
-      font-size:12px;font-weight:700;color:#444;transition:all .18s;border-left:3px solid transparent;
-      user-select:none;text-transform:uppercase;letter-spacing:.35px;}
-    .sb-item:hover{background:#f0f7f0;color:#004d3d;}
-    .sb-item.on{background:#e8f5e9;color:#004d3d;border-left-color:#004d3d;}
-    .sb-item i{width:18px;text-align:center;color:#888;font-size:13px;}
-    .sb-item.on i{color:#004d3d;}
-    .sb-item.sb-item-img{text-transform:none;letter-spacing:0;align-items:flex-start;padding:8px 14px;gap:10px;}
+    .sb-item{display:flex;align-items:center;gap:10px;padding:8px 16px 8px 14px;cursor:pointer;
+      font-size:12px;font-weight:600;color:#3d4f4a;transition:all .15s;border-left:3px solid transparent;
+      user-select:none;text-transform:uppercase;letter-spacing:.3px;border-radius:0 6px 6px 0;margin-right:6px;}
+    .sb-item:hover{background:#f0f7f0;color:#004d3d;border-left-color:#c8ddd6;}
+    .sb-item.on{background:#e6f3ec;color:#004d3d;border-left-color:#004d3d;font-weight:700;}
+    .sb-item i{width:18px;text-align:center;color:#9ab0a8;font-size:13px;flex-shrink:0;}
+    .sb-item:hover i,.sb-item.on i{color:#004d3d;}
+    .sb-item.sb-item-img{text-transform:none;letter-spacing:0;align-items:flex-start;padding:8px 14px 8px 14px;gap:10px;}
     .sb-item.sb-item-img i{margin-top:3px;flex-shrink:0;}
     .sb-img-txt{display:flex;flex-direction:column;gap:1px;min-width:0;}
-    .sb-img-txt b{font-size:11.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;}
-    .sb-img-txt small{font-size:10px;font-weight:600;color:#7a8a84;text-transform:none;letter-spacing:0;line-height:1.25;}
+    .sb-img-txt b{font-size:11.5px;font-weight:700;letter-spacing:.2px;text-transform:uppercase;}
+    .sb-img-txt small{font-size:10px;font-weight:500;color:#7a8a84;text-transform:none;letter-spacing:0;line-height:1.25;}
     .sb-item.sb-item-img.on small{color:#3d6b5c;}
 
-    
-    .sb-group{}
+    .sb-group{margin:2px 0;}
     .sb-group-header{display:flex;align-items:center;justify-content:space-between;
-      padding:9px 16px;cursor:pointer;font-size:12px;font-weight:800;color:#004d3d;
-      background:#f0f7f0;border-left:3px solid #c8a94a;user-select:none;text-transform:uppercase;letter-spacing:.4px;}
-    .sb-group-header:hover{background:#e8f5e9;}
-    .sb-group-header .gi{display:flex;align-items:center;gap:10px;}
-    .sb-group-header i.fa-chevron-down{font-size:10px;color:#888;transition:transform .2s;}
+      padding:8px 14px;cursor:pointer;font-size:11.5px;font-weight:700;color:#004d3d;
+      background:#f4f9f6;border-radius:6px;margin-right:6px;user-select:none;text-transform:uppercase;letter-spacing:.35px;}
+    .sb-group-header:hover{background:#eaf4ee;}
+    .sb-group-header .gi{display:flex;align-items:center;gap:8px;}
+    .sb-group-header i.fa-chevron-down{font-size:9px;color:#9ab0a8;transition:transform .2s;}
     .sb-group-header.collapsed i.fa-chevron-down{transform:rotate(-90deg);}
-    .sb-group-body{border-left:3px solid #e0e8e0;}
-    .sb-group-body .sb-item{padding-left:28px;font-weight:500;border-left:none;}
+    .sb-group-body{margin-left:4px;border-left:2px solid #e0ebe4;margin-top:2px;margin-bottom:4px;}
+    .sb-group-body .sb-item{padding-left:22px;font-weight:500;font-size:11.5px;border-left:none;border-radius:0 6px 6px 0;}
+    .sb-group-body .sb-item.on{font-weight:700;}
     .sb-group-body.hidden{display:none;}
 
     
-    .content{flex:1;overflow-y:auto;padding:20px;min-height:0;}
+    .content{flex:1;overflow-y:auto;padding:22px 24px;min-height:0;background:#f2f5f3;}
     .page{display:none;} .page.on{display:block;}
 
-    
-    .card{background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,77,61,.07);
-      padding:22px;margin-bottom:18px;}
-    .card h3{color:#004d3d;margin:0 0 16px;font-size:14px;
-      border-bottom:2px solid #c8a94a;padding-bottom:8px;
-      display:flex;align-items:center;gap:8px;}
+
+    .card{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,77,61,.07),0 2px 16px rgba(0,77,61,.04);
+      padding:22px 24px;margin-bottom:18px;border:1px solid #e8efe9;}
+    .card h3{color:#004d3d;margin:0 0 16px;font-size:13.5px;font-weight:800;
+      border-bottom:2px solid #e8ede9;padding-bottom:10px;
+      display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.3px;}
+    .card h3 i{color:#c8a94a;}
 
     
-    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;}
-    .stat{background:#f0f7f0;border-radius:8px;padding:14px;text-align:center;border:1.5px solid #c8e6c9;}
-    .stat .n{font-size:26px;font-weight:800;color:#004d3d;}
-    .stat .l{font-size:11px;color:#666;margin-top:3px;}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,180px));gap:10px;margin-bottom:16px;justify-content:start;}
+    .stat{background:#fff;border-radius:10px;padding:14px 16px;border:1.5px solid #dce8e2;
+      display:flex;align-items:center;gap:12px;box-shadow:0 1px 4px rgba(0,77,61,.06);}
+    .stat-icon{width:38px;height:38px;border-radius:8px;background:#e8f5e9;display:flex;
+      align-items:center;justify-content:center;color:#004d3d;font-size:16px;flex-shrink:0;}
+    .stat-body{}
+    .stat .n{font-size:22px;font-weight:800;color:#004d3d;line-height:1;}
+    .stat .l{font-size:10.5px;color:#6b7f78;margin-top:3px;font-weight:600;letter-spacing:.2px;}
     .sys-mod-body{font-size:12px;color:#333;line-height:1.7;padding:10px 12px 14px;}
     .sys-mod-body ul{margin:0;padding:0 0 0 16px;}
     .sys-mod-body li{margin:4px 0;}
@@ -105,19 +114,23 @@
     .ult-meta{font-size:11px;color:#888;}
 
     
-    .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
-    .filtros input,.filtros select{padding:7px 10px;border:1.5px solid #ccc;
-      border-radius:6px;font-size:12.5px;min-width:140px;}
-    table.t{width:100%;border-collapse:collapse;font-size:12px;}
-    table.t th{background:#004d3d;color:#fff;padding:8px 10px;text-align:left;
-      font-size:11px;text-transform:uppercase;letter-spacing:.35px;}
+    .filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+    .filtros input,.filtros select{padding:8px 11px;border:1.5px solid #d0ddd9;
+      border-radius:7px;font-size:12.5px;min-width:140px;background:#fff;color:#1a1a1a;}
+    .filtros input:focus,.filtros select:focus{border-color:#004d3d;outline:none;box-shadow:0 0 0 2px rgba(0,77,61,.1);}
+    table.t{width:100%;border-collapse:collapse;font-size:12.5px;}
+    table.t th{background:#004d3d;color:#fff;padding:10px 12px;text-align:left;
+      font-size:11px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
+    table.t thead tr th:first-child{border-radius:8px 0 0 0;}
+    table.t thead tr th:last-child{border-radius:0 8px 0 0;}
     table.t td select,table.t td input[type="text"]{width:100%;min-width:120px;
-      padding:6px 8px;border:1.5px solid #ccc;border-radius:5px;font-size:12px;box-sizing:border-box;}
+      padding:6px 8px;border:1.5px solid #d0ddd9;border-radius:6px;font-size:12px;box-sizing:border-box;}
     table.t td .btn-acciones-celda{display:flex;flex-direction:row;flex-wrap:wrap;gap:4px;align-items:center;max-width:none;}
-    table.t td .btn-acciones-celda .btn-mini{justify-content:center;width:auto;box-sizing:border-box;font-size:11px;padding:4px 8px;}
+    table.t td .btn-acciones-celda .btn-mini{justify-content:center;width:auto;box-sizing:border-box;font-size:11px;padding:4px 9px;}
     table.t th.col-acciones,table.t td.col-acciones{min-width:160px;vertical-align:middle;}
-    table.t td{padding:7px 10px;border-bottom:1px solid #eee;}
-    table.t tr:nth-child(even){background:#f7faf7;}
+    table.t td{padding:9px 12px;border-bottom:1px solid #edf2ef;vertical-align:middle;}
+    table.t tr:nth-child(even){background:#f3f8f5;}
+    table.t tbody tr:hover{background:#eaf5ef;}
     .tabla-rep-excel-wrap{overflow-x:auto;border:1px solid #c5d4cc;border-radius:8px;}
     table.tabla-rep-excel{width:100%;border-collapse:collapse;font-size:13px;min-width:960px;}
     table.tabla-rep-excel th{background:#004d3d;color:#fff;padding:10px 12px;text-align:center;
@@ -341,13 +354,31 @@
     table.tabla-convenio-cupos .td-del{width:36px;text-align:center;}
     .modal-box h3{margin:0 0 18px;color:#004d3d;font-size:15px;
       border-bottom:2px solid #c8a94a;padding-bottom:8px;}
-    .modal-box label{font-size:12px;color:#555;font-weight:600;display:block;margin-bottom:4px;}
+    .modal-box label{font-size:12px;color:#004d3d;font-weight:700;display:block;margin-bottom:5px;letter-spacing:.1px;}
     .modal-box input,.modal-box select,.modal-box textarea{
-      width:100%;padding:9px 10px;border:1.5px solid #ccc;border-radius:6px;
-      margin-bottom:12px;font-size:13px;font-family:inherit;}
+      width:100%;padding:9px 11px;border:1.5px solid #d0ddd9;border-radius:7px;
+      margin-bottom:12px;font-size:13px;font-family:inherit;background:#fff;color:#1a1a1a;}
     .modal-box input:focus,.modal-box select:focus,.modal-box textarea:focus{
-      border-color:#004d3d;outline:none;box-shadow:0 0 0 2px rgba(0,77,61,.1);}
-    .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:6px;}
+      border-color:#004d3d;outline:none;box-shadow:0 0 0 3px rgba(0,77,61,.12);}
+    .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;padding-top:10px;border-top:1px solid #e8eee9;}
+    /* Sección-header dentro del modal */
+    .mi-sec-label{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;
+      text-transform:uppercase;letter-spacing:.6px;color:#004d3d;margin:14px 0 8px;
+      padding-bottom:6px;border-bottom:1.5px solid #e0ebe4;}
+    .mi-sec-label i{color:#c8a94a;font-size:12px;}
+    /* Bloque de fechas unificado */
+    .mi-fechas-bloque{border:1.5px solid #dae6e0;border-radius:10px;overflow:hidden;margin-bottom:12px;}
+    .mi-fechas-row{padding:10px 14px;background:#f7fbf9;}
+    .mi-fechas-row+.mi-fechas-row{border-top:1px solid #dae6e0;background:#f5f9ff;}
+    .mi-fechas-row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+    .mi-fechas-row-head span{font-size:11.5px;font-weight:700;color:#004d3d;display:flex;align-items:center;gap:6px;}
+    .mi-fechas-row-head span i{color:#c8a94a;font-size:11px;}
+    .mi-fechas-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .mi-fechas-grid label{font-size:10.5px;margin:0 0 4px;color:#666;font-weight:600;letter-spacing:0;}
+    .mi-fechas-grid input[type=date]{margin-bottom:0;padding:8px 10px;font-size:13px;border-color:#ccd8d4;}
+    /* Estado badge inline */
+    .mi-insc-estado-pill{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;
+      padding:3px 10px;border-radius:999px;background:#f3f4f6;color:#6b7280;letter-spacing:.3px;}
     .perm-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
     .perm-box{background:#f8faf8;border:1.5px solid #e0e8e0;border-radius:7px;padding:10px 12px;}
     .perm-box .pb-title{font-size:11px;font-weight:800;color:#004d3d;text-transform:uppercase;
@@ -714,6 +745,7 @@
 
     var badge = document.querySelector('.super-badge');
     if (badge) {
+      badge.style.display = '';
       if (esU) badge.textContent = 'SUPER ADMIN';
       else if (tieneRRHH && !tieneCursos && !tieneConvenios && !tienePsico && !tieneDescansos && !tieneFaltos && !tieneImagen) badge.textContent = 'RECURSOS HUMANOS';
       else if (tieneImagen && !tieneCursos && !tieneConvenios && !tienePsico && !tieneDescansos && !tieneFaltos && !tieneRRHH) badge.textContent = 'IMAGEN';
@@ -728,7 +760,7 @@
       else if (tieneRRHH) badge.textContent = 'RECURSOS HUMANOS';
       else badge.textContent = 'USUARIO';
     }
-    var nombreEl = document.getElementById('ph-nombre');
+    var nombreEl = document.getElementById('ph-nombre-txt');
     if (nombreEl) {
       var nom = (s.nombre || '').trim();
       var cip = (s.cip || s.usuario || '').trim();
@@ -751,12 +783,13 @@
 
 <div class="top-bar">
   <div class="top-bar-left">
-    <i class="fas fa-shield-alt" style="font-size:20px;color:#c8a94a;"></i>
+    <i class="fas fa-shield-alt" style="font-size:18px;color:#c8a94a;"></i>
     <h1>REGPOL Callao — Panel de Control</h1>
-    <span class="super-badge">SUPER ADMIN</span>
+    <div class="top-bar-divider"></div>
+    <span class="super-badge" id="ph-badge" style="display:none;">SUPER ADMIN</span>
   </div>
   <div class="top-bar-right">
-    <span class="top-user" id="ph-nombre"></span>
+    <span class="top-user" id="ph-nombre"><i class="fas fa-user-circle"></i> <span id="ph-nombre-txt"></span></span>
     <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Salir</button>
   </div>
 </div>
@@ -2091,8 +2124,15 @@
 </div>
 
 <div id="modal-item" class="modal">
-  <div class="modal-box" style="width:560px;max-width:96vw;max-height:90vh;overflow-y:auto;overflow-x:hidden;">
-    <h3 style="font-size:15px;"><i class="fas fa-edit"></i> <span id="mi-titulo">Nuevo convenio</span></h3>
+  <div class="modal-box" style="width:580px;max-width:96vw;max-height:90vh;overflow-y:auto;overflow-x:hidden;padding:0;border-radius:12px;display:flex;flex-direction:column;">
+    <div style="background:linear-gradient(135deg,#002d24,#004d3d);color:#fff;padding:16px 20px;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <i class="fas fa-edit" style="font-size:16px;color:#c8a94a;"></i>
+        <span id="mi-titulo" style="font-size:15px;font-weight:800;letter-spacing:.2px;">Nuevo convenio</span>
+      </div>
+      <button type="button" onclick="cerrarModal('modal-item')" style="background:rgba(255,255,255,.12);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:20px 22px;flex:1;overflow-y:auto;overflow-x:hidden;">
     <input type="hidden" id="mi-id"/>
     <input type="hidden" id="mi-tipo"/>
     <div id="mi-item-body" class="mi-item-body">
@@ -2103,36 +2143,42 @@
         <input type="text" id="mi-titulo-val" placeholder="Ej: PLAN CELADOR" maxlength="200" oninput="adaptarCuposUIPorTitulo()"/>
       </div>
       <div style="grid-column:1/-1;display:none;" id="mi-wrap-inscripcion-fechas">
-        <div style="padding:10px 12px;border:1.5px solid #d7e5df;border-radius:8px;background:#f7fbf9;">
-          <label style="margin:0 0 8px;display:block;"><i class="fas fa-calendar-alt"></i> Fechas de inscripción</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <div>
-              <label style="font-size:10px;margin:0;color:#666;">Desde</label>
-              <input type="date" id="mi-inscripcion-inicio" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;background:#fff;" onchange="actualizarAvisoInscripcionModal()" oninput="actualizarAvisoInscripcionModal()"/>
+        <div class="mi-fechas-bloque">
+          <!-- Inscripción -->
+          <div class="mi-fechas-row">
+            <div class="mi-fechas-row-head">
+              <span><i class="fas fa-calendar-alt"></i> Inscripción</span>
+              <div id="mi-insc-estado" class="mi-insc-estado-pill">CERRADO</div>
             </div>
-            <div>
-              <label style="font-size:10px;margin:0;color:#666;">Hasta (cierra 23:59)</label>
-              <input type="date" id="mi-inscripcion-cierre" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;background:#fff;" onchange="actualizarAvisoInscripcionModal()" oninput="actualizarAvisoInscripcionModal()"/>
+            <div class="mi-fechas-grid">
+              <div>
+                <label>Desde</label>
+                <input type="date" id="mi-inscripcion-inicio" onchange="actualizarAvisoInscripcionModal()" oninput="actualizarAvisoInscripcionModal()"/>
+              </div>
+              <div>
+                <label>Hasta (cierra 23:59)</label>
+                <input type="date" id="mi-inscripcion-cierre" onchange="actualizarAvisoInscripcionModal()" oninput="actualizarAvisoInscripcionModal()"/>
+              </div>
+            </div>
+            <p id="mi-insc-detalle" style="font-size:11.5px;color:#666;margin:6px 0 0;"></p>
+            <p id="mi-insc-aviso-preview" style="margin:8px 0 0;font-size:11.5px;color:#444;line-height:1.4;background:#fff;border:1px solid #dae6e0;border-radius:6px;padding:8px 10px;"></p>
+          </div>
+          <!-- Recepción de documentos -->
+          <div class="mi-fechas-row">
+            <div class="mi-fechas-row-head">
+              <span><i class="fas fa-folder-open"></i> Recepción de documentos</span>
+            </div>
+            <div class="mi-fechas-grid">
+              <div>
+                <label>Desde</label>
+                <input type="date" id="mi-recepcion-doc-inicio"/>
+              </div>
+              <div>
+                <label>Hasta</label>
+                <input type="date" id="mi-recepcion-doc-cierre"/>
+              </div>
             </div>
           </div>
-          <div id="mi-insc-estado" style="margin-top:10px;display:inline-block;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:#f3f4f6;color:#6b7280;">CERRADO</div>
-          <p id="mi-insc-detalle" style="margin:6px 0 0;font-size:12px;color:#555;">Sin fechas — las inscripciones quedan cerradas.</p>
-          <p id="mi-insc-aviso-preview" style="margin:8px 0 0;font-size:11.5px;color:#444;line-height:1.4;background:#fff;border:1px solid #e5efe9;border-radius:6px;padding:8px 10px;">El aviso público se arma solo al guardar las fechas.</p>
-          <p style="font-size:10.5px;color:#777;margin:8px 0 0;line-height:1.35;">El sistema abre y cierra solo. El último día cierra a las 23:59 (hora Lima).</p>
-        </div>
-        <div style="padding:10px 12px;border:1.5px solid #dce8f5;border-radius:8px;background:#f5f9ff;margin-top:8px;">
-          <label style="margin:0 0 8px;display:block;"><i class="fas fa-folder-open"></i> Recepción de documentos</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <div>
-              <label style="font-size:10px;margin:0;color:#666;">Desde</label>
-              <input type="date" id="mi-recepcion-doc-inicio" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;background:#fff;"/>
-            </div>
-            <div>
-              <label style="font-size:10px;margin:0;color:#666;">Hasta</label>
-              <input type="date" id="mi-recepcion-doc-cierre" style="width:100%;padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:13px;background:#fff;"/>
-            </div>
-          </div>
-          <p style="font-size:10.5px;color:#777;margin:6px 0 0;line-height:1.35;">Fecha en que se recepciona la documentación física. No tiene que coincidir con el cierre de inscripciones.</p>
         </div>
       </div>
       <div style="grid-column:1/-1;display:none;" id="mi-wrap-descripcion">
@@ -2303,15 +2349,11 @@
       </div>
     </div>
 
-    <p id="mi-plantillas-expediente-hint" style="margin-top:8px;font-size:11px;color:#666;line-height:1.35;">
-      La <strong>plantilla Word</strong> y el <strong>modelo PDF</strong> son únicos para todos los convenios.
-      Súbalos en <strong>Convenios → 5. Plantillas</strong>.
-    </p>
-    </div>
+    </div><!-- /padding wrap -->
 
-    <div class="modal-footer" style="margin-top:12px;gap:6px;">
-      <button class="btn-mini" style="background:#999;color:#fff;border-color:#999;" onclick="cerrarModal('modal-item')">Cancelar</button>
-      <button class="btn-mini btn-mini-ok" onclick="guardarItem()"><i class="fas fa-save"></i> Guardar</button>
+    <div class="modal-footer" style="padding:12px 20px;flex-shrink:0;">
+      <button class="btn-mini" style="background:#f0f4f2;color:#555;border-color:#d0ddd9;" onclick="cerrarModal('modal-item')"><i class="fas fa-times"></i> Cancelar</button>
+      <button class="btn-mini btn-mini-solid" onclick="guardarItem()"><i class="fas fa-save"></i> Guardar cambios</button>
     </div>
   </div>
 </div>
