@@ -1585,6 +1585,14 @@ function enviarInscripcion(e){
   var slotsComboVac = [];
   if (esComboVacPre) {
     slotsComboVac = leerSlotsComboVacaciones();
+    // Para ítems de matriz (Celador): el selector ya codifica LUGAR|TURNO|DIA
+    if (!slotsComboVac.length && esOpcionCombinada(comisariaPostula)) {
+      var pcVac = comisariaPostula.split('|');
+      var diaVac = String(pcVac[2] || '').trim().toUpperCase() || (dia_franco ? String(dia_franco).toUpperCase() : '');
+      if (pcVac[0] && pcVac[1] && diaVac) {
+        slotsComboVac = [{ lugar: pcVac[0].trim(), turno: pcVac[1].trim().toUpperCase(), dia: diaVac }];
+      }
+    }
     if (!comisariaPostula) {
       alerta.textContent='Seleccione la comisaría / lugar a la que postula.';
       alerta.className='fi-alerta error'; alerta.style.display='block'; return;
