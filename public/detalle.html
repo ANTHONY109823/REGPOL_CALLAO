@@ -1585,7 +1585,7 @@ function enviarInscripcion(e){
   var slotsComboVac = [];
   if (esComboVacPre) {
     slotsComboVac = leerSlotsComboVacaciones();
-    // Para ítems de matriz (Celador): el selector ya codifica LUGAR|TURNO|DIA
+    // Caso 1: ítems de matriz (Celador) — selector codifica LUGAR|TURNO|DIA
     if (!slotsComboVac.length && esOpcionCombinada(comisariaPostula)) {
       var pcVac = comisariaPostula.split('|');
       var diaVac = String(pcVac[2] || '').trim().toUpperCase() || (dia_franco ? String(dia_franco).toUpperCase() : '');
@@ -1593,7 +1593,17 @@ function enviarInscripcion(e){
         slotsComboVac = [{ lugar: pcVac[0].trim(), turno: pcVac[1].trim().toUpperCase(), dia: diaVac }];
       }
     }
-    if (!comisariaPostula) {
+    // Caso 2: ítems no-matriz con selector de turno (fi-turno-postula = "TURNO|DIA")
+    if (!slotsComboVac.length && turnoPostula) {
+      var tpVac = String(turnoPostula).split('|');
+      var tNomVac = String(tpVac[0] || '').trim().toUpperCase();
+      var tDiaVac = String(tpVac[1] || dia_franco || '').trim().toUpperCase();
+      var tLugarVac = comisariaPostula || String((ITEM_DATA && ITEM_DATA.lugar) || '').trim() || 'Convenio';
+      if (tNomVac) {
+        slotsComboVac = [{ lugar: tLugarVac, turno: tNomVac, dia: tDiaVac || 'PAR/IMPAR' }];
+      }
+    }
+    if (!comisariaPostula && !slotsComboVac.length) {
       alerta.textContent='Seleccione la comisaría / lugar a la que postula.';
       alerta.className='fi-alerta error'; alerta.style.display='block'; return;
     }
