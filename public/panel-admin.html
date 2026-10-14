@@ -10750,6 +10750,7 @@ function onCambioAccionPreins(){
 }
 
 function abrirGestionPreinscripcion(id){
+  alert('DEVOLVER OK id='+id);
   try{
   var idNum=Number(id);
   var ins=INSCRITOS_CACHE.find(function(i){return Number(i.id)===idNum;});
@@ -10960,6 +10961,7 @@ function mensajeWhatsAppConstanciaAdmin(d, item){
 }
 
 function abrirConstanciaAdmin(id){
+  alert('VER OK id='+id);
   try{
   var idNum=Number(id);
   var ins=INSCRITOS_CACHE.find(function(i){return Number(i.id)===idNum;});
