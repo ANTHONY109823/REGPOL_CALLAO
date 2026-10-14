@@ -2348,6 +2348,7 @@
         <input type="number" id="mi-orden" value="0" min="0"/>
       </div>
     </div>
+    </div>
 
     </div><!-- /padding wrap -->
 
@@ -5255,11 +5256,11 @@ var DIVISIONES_DATA = [];
 
 function cerrarModal(id){
   var el=document.getElementById(id);
-  if(el){ el.classList.remove('open'); el.style.cssText=''; }
+  if(el) el.classList.remove('open');
 }
 document.addEventListener('click',function(e){
   if(e.target.classList.contains('modal') && e.target.classList.contains('open')){
-    e.target.classList.remove('open'); e.target.style.cssText='';
+    e.target.classList.remove('open');
   }
 });
 
@@ -10763,11 +10764,7 @@ function abrirGestionPreinscripcion(id){
     radios[i].checked = defaultAnular ? (radios[i].value==='anular') : (radios[i].value==='devolver');
   }
   onCambioAccionPreins();
-  var mdevP=document.getElementById('modal-devolver-preins');
-  if(mdevP){
-    mdevP.classList.add('open');
-    mdevP.style.cssText='display:flex!important;position:fixed!important;inset:0!important;z-index:99999!important;background:rgba(0,0,0,.6)!important;align-items:center!important;justify-content:center!important;';
-  }
+  document.getElementById('modal-devolver-preins').classList.add('open');
 }
 
 
@@ -11039,12 +11036,11 @@ function abrirConstanciaAdmin(id){
     btnWa.title=tel?('Enviar al '+tel):'Sin teléfono registrado válido';
   }
   modal.classList.add('open');
-  modal.style.cssText='display:flex!important;position:fixed!important;inset:0!important;z-index:99999!important;background:rgba(0,30,24,.7)!important;align-items:center!important;justify-content:center!important;padding:16px!important;box-sizing:border-box!important;';
 }
 
 function cerrarModalAdminConstancia(){
   var modal=document.getElementById('modal-admin-constancia');
-  if(modal){ modal.classList.remove('open'); modal.style.cssText=''; }
+  if(modal) modal.classList.remove('open');
 }
 
 function enviarConstanciaAdminWhatsApp(){
