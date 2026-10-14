@@ -10750,8 +10750,9 @@ function onCambioAccionPreins(){
 }
 
 function abrirGestionPreinscripcion(id){
-  var ins=INSCRITOS_CACHE.find(function(i){return i.id===id;});
-  if(!ins){ alert('No se encontró el registro.'); return; }
+  var idNum=Number(id);
+  var ins=INSCRITOS_CACHE.find(function(i){return Number(i.id)===idNum;});
+  if(!ins){ alert('No se encontró el registro (id='+id+', cache='+INSCRITOS_CACHE.length+').'); return; }
   document.getElementById('mdev-id').value=String(id);
   var per=document.getElementById('mdev-persona');
   if(per) per.textContent=(ins.grado?ins.grado+' ':'')+(ins.nombres||'')+' — CIP '+(ins.cip||'');
@@ -10957,8 +10958,9 @@ function mensajeWhatsAppConstanciaAdmin(d, item){
 }
 
 function abrirConstanciaAdmin(id){
-  var ins=INSCRITOS_CACHE.find(function(i){return i.id===id;});
-  if(!ins) return;
+  var idNum=Number(id);
+  var ins=INSCRITOS_CACHE.find(function(i){return Number(i.id)===idNum;});
+  if(!ins){ alert('No se encontró el registro (id='+id+', cache='+INSCRITOS_CACHE.length+').'); return; }
   var item=window.INSCRITOS_ITEM_INFO||{};
   var fechaReg=ins.fecha?new Date(ins.fecha).toLocaleDateString('es-PE'):'—';
   ADMIN_CONSTANCIA_DATOS={
