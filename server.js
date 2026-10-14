@@ -8821,6 +8821,10 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       if (!/^\d{9}$/.test(codifinNorm)) {
         return res.json({ ok: false, error: 'CODIFIN debe tener exactamente 9 dígitos numéricos.' });
       }
+      const dispNorm = String(disponibilidad || '').toUpperCase();
+      if (!dispNorm) {
+        return res.json({ ok: false, error: 'Indique su disponibilidad (Vacaciones o Franco).' });
+      }
 
       // Callao: CIP y datos deben coincidir con nómina RRHH (anti CIP falso / datos inventados)
       if (esRegionPolicialCallao(regionNorm)) {
@@ -8848,9 +8852,10 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       /* Validar cupo de vacaciones por slot si el admin definió max_vacaciones */
       if (!modoRepechaje && String(disponibilidad || '').toUpperCase() === 'VACACIONES') {
         const partes = String(comisariaPostulaRaw || '').split('|').map(function(p){ return p.trim(); });
-        const slotLugar = partes[0] || '';
-        const slotTurno = partes[1] || (turnoPostulaRaw || '');
-        const slotDia = partes[2] || (dia_franco || '');
+        const firstSlot = slotsBody[0] || {};
+        const slotLugar = partes[0] || firstSlot.lugar || '';
+        const slotTurno = partes[1] || firstSlot.turno || (turnoPostulaRaw || '');
+        const slotDia = partes[2] || firstSlot.dia || (dia_franco || '');
         const maxVac = maxVacacionesParaSlot(cuposItem, slotLugar, slotTurno, slotDia);
         if (maxVac !== null) {
           const yaInscritos = await contarVacacionesEnSlot(pool, req.params.id, slotLugar, slotTurno, slotDia);
@@ -8981,7 +8986,7 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       const pdfBase64 = pdf_requisitos || '';
       if (!pdfBase64) return res.json({ ok: false, error: 'En repechaje debe subir el expediente PDF completo.' });
       if (pdfBase64.length > 7 * 1024 * 1024) {
-        return res.json({ ok: false, error: 'El PDF no debe superar 5 MB.' });
+        return res.json({ ok: false, error: 'El PDF no debe superar 7 MB.' });
       }
     }
 
@@ -9048,7 +9053,7 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
         // cursos: keep requiring PDF as before (frontend still sends it)
       }
       if (pdfBase64 && pdfBase64.length > 7 * 1024 * 1024) {
-        return res.json({ ok: false, error: 'El PDF no debe superar 5 MB.' });
+        return res.json({ ok: false, error: 'El PDF no debe superar 7 MB.' });
       }
     } else if (pdfBase64) {
       // preinscripción convenio: ignorar PDF si lo envían
