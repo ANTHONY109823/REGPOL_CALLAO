@@ -1616,6 +1616,12 @@ function enviarInscripcion(e){
     alerta.textContent='Indique su disponibilidad (Vacaciones o Franco).';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
   }
+  // Para ítems de matriz: si el selector ya codifica el día, derivar dia_franco de él
+  if(ITEM_TIPO==='convenio' && disponibilidad==='FRANCO' && !dia_franco && esComboPostula){
+    var pcDia = comisariaPostula.split('|');
+    var diaDesdeCombo = String(pcDia[2] || '').trim().toUpperCase();
+    if(diaDesdeCombo === 'PAR' || diaDesdeCombo === 'IMPAR') dia_franco = diaDesdeCombo;
+  }
   if(ITEM_TIPO==='convenio' && disponibilidad==='FRANCO' && !dia_franco){
     alerta.textContent='Seleccione su día de franco (Par o Impar).';
     alerta.className='fi-alerta error'; alerta.style.display='block'; return;
