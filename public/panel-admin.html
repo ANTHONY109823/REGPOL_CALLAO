@@ -10750,10 +10750,9 @@ function onCambioAccionPreins(){
 }
 
 function abrirGestionPreinscripcion(id){
-  try{
   var idNum=Number(id);
   var ins=INSCRITOS_CACHE.find(function(i){return Number(i.id)===idNum;});
-  if(!ins){ alert('DEV: cache='+INSCRITOS_CACHE.length+' no encontró id='+id); return; }
+  if(!ins) return;
   document.getElementById('mdev-id').value=String(id);
   var per=document.getElementById('mdev-persona');
   if(per) per.textContent=(ins.grado?ins.grado+' ':'')+(ins.nombres||'')+' — CIP '+(ins.cip||'');
@@ -10764,11 +10763,7 @@ function abrirGestionPreinscripcion(id){
     radios[i].checked = defaultAnular ? (radios[i].value==='anular') : (radios[i].value==='devolver');
   }
   onCambioAccionPreins();
-  var mdev=document.getElementById('modal-devolver-preins');
-  if(!mdev){ alert('DEV: modal no existe'); return; }
-  mdev.classList.add('open');
-  alert('DEV: modal abierto, display='+window.getComputedStyle(mdev).display);
-  }catch(err){ alert('DEV ERROR: '+err.message); }
+  document.getElementById('modal-devolver-preins').classList.add('open');
 }
 
 
@@ -10963,14 +10958,12 @@ function mensajeWhatsAppConstanciaAdmin(d, item){
 }
 
 function abrirConstanciaAdmin(id){
-  try{
   var idNum=Number(id);
   var ins=INSCRITOS_CACHE.find(function(i){return Number(i.id)===idNum;});
-  if(!ins){ alert('VER: cache='+INSCRITOS_CACHE.length+' no encontró id='+id); return; }
-  var el=document.getElementById('admin-pre-constancia');
-  if(!el){ alert('VER: elemento admin-pre-constancia no existe'); return; }
+  if(!ins) return;
   var modal=document.getElementById('modal-admin-constancia');
-  if(!modal){ alert('VER: modal-admin-constancia no existe'); return; }
+  var el=document.getElementById('admin-pre-constancia');
+  if(!modal||!el) return;
   var item=window.INSCRITOS_ITEM_INFO||{};
   var fechaReg=ins.fecha?new Date(ins.fecha).toLocaleDateString('es-PE'):'—';
   ADMIN_CONSTANCIA_DATOS={
@@ -10994,8 +10987,6 @@ function abrirConstanciaAdmin(id){
     fecha:fechaReg,
     aviso_sorteo:item.aviso_sorteo_fb||''
   };
-  var el=document.getElementById('admin-pre-constancia');
-  if(!el) return;
   el.innerHTML=
     '<div class="pre-head">'
     +'<h3>CONSTANCIA DE PREINSCRIPCIÓN</h3>'
@@ -11044,8 +11035,6 @@ function abrirConstanciaAdmin(id){
     btnWa.title=tel?('Enviar al '+tel):'Sin teléfono registrado válido';
   }
   modal.classList.add('open');
-  alert('VER: modal abierto, display='+window.getComputedStyle(modal).display);
-  }catch(err){ alert('VER ERROR: '+err.message); }
 }
 
 function cerrarModalAdminConstancia(){
