@@ -1877,6 +1877,8 @@ function generarPDFListaPreinscritos(lista, meta) {
       const range = doc.bufferedPageRange();
       for (let i = range.start; i < range.start + range.count; i++) {
         doc.switchToPage(i);
+        // Sin margen inferior: el pie queda bajo el margen y PDFKit agregaría páginas en blanco
+        doc.page.margins.bottom = 0;
         const yPie = pageH - 22;
         doc.rect(0, yPie - 4, pageW, 26).fill('#eeeeee');
         doc.rect(0, yPie - 4, pageW, 2).fill(COLOR_ORO);
