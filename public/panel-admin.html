@@ -8771,7 +8771,7 @@ function filtrarModalPdfPreinscritos(){
     return;
   }
   cuerpo.innerHTML='<table class="mpp-tabla"><thead><tr>'
-    +'<th>#</th><th>GRADO</th><th>CIP</th><th>DNI</th><th>CODIFIN</th><th>APELLIDOS Y NOMBRES</th>'
+    +'<th>#</th><th>GRADO</th><th>CIP</th><th>DNI</th><th>CODIFIN</th><th>TELÉFONO</th><th>APELLIDOS Y NOMBRES</th>'
     +'<th>POSTULA A</th><th>DISP.</th><th>TURNO</th><th>DÍA</th><th>ESTADO</th>'
     +'</tr></thead><tbody>'
     +list.map(function(ins,idx){
@@ -8784,6 +8784,7 @@ function filtrarModalPdfPreinscritos(){
         +'<td>'+escHtml(ins.cip||'—')+'</td>'
         +'<td>'+escHtml(ins.dni||'—')+'</td>'
         +'<td>'+escHtml(ins.codifin||'—')+'</td>'
+        +'<td>'+escHtml(ins.telefono||'—')+'</td>'
         +'<td>'+escHtml(String(ins.nombres||'—').toUpperCase())+'</td>'
         +'<td>'+escHtml(ins.comisaria_postula||'—')+'</td>'
         +'<td><span class="mpp-badge '+(disp.cls||'')+'">'+escHtml(disp.txt)+'</span></td>'
