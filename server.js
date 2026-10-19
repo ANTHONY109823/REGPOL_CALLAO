@@ -8568,7 +8568,7 @@ async function cargarListaConvenioPdf(itemId, estados) {
   const r = await pool.query(
     `SELECT cip, dni, grado, nombres, unidad, region_policial, comisaria_postula,
             estado, fecha, modalidad, modalidad_otro, disponibilidad, dia_franco,
-            modo_ingreso, bloque_vacaciones,
+            modo_ingreso, bloque_vacaciones, codifin,
             CASE WHEN COALESCE(pdf_requisitos,'')<>'' AND pdf_requisitos NOT LIKE 'purged%' THEN true ELSE false END AS tiene_pdf
      FROM inscripciones
      WHERE item_id=$1 AND estado = ANY($2::varchar[])

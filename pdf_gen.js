@@ -1762,15 +1762,17 @@ function generarPDFListaPreinscritos(lista, meta) {
     const headH = 16;
 
     const cols = [
-      { k: 'n', l: '#', w: 24 },
-      { k: 'grado', l: 'GRADO', w: 52 },
-      { k: 'cip', l: 'CIP', w: 62 },
-      { k: 'nombres', l: 'APELLIDOS Y NOMBRES', w: 188 },
-      { k: 'postula', l: 'POSTULA A', w: 168 },
-      { k: 'disp', l: 'DISP.', w: 72 },
-      { k: 'turno', l: 'TURNO', w: 62 },
-      { k: 'dia', l: 'DÍA', w: 48 },
-      { k: 'estado', l: 'ESTADO', w: 68 }
+      { k: 'n', l: '#', w: 22 },
+      { k: 'grado', l: 'GRADO', w: 46 },
+      { k: 'cip', l: 'CIP', w: 52 },
+      { k: 'dni', l: 'DNI', w: 52 },
+      { k: 'codifin', l: 'CODIFIN', w: 56 },
+      { k: 'nombres', l: 'APELLIDOS Y NOMBRES', w: 180 },
+      { k: 'postula', l: 'POSTULA A', w: 156 },
+      { k: 'disp', l: 'DISP.', w: 68 },
+      { k: 'turno', l: 'TURNO', w: 50 },
+      { k: 'dia', l: 'DÍA', w: 46 },
+      { k: 'estado', l: 'ESTADO', w: 66 }
     ];
 
     function dibujarCabeceraLista() {
@@ -1846,6 +1848,8 @@ function generarPDFListaPreinscritos(lista, meta) {
         n: String(idx + 1),
         grado: siglaGradoListaPdf(ins.grado),
         cip: String(ins.cip || '—'),
+        dni: String(ins.dni || '—'),
+        codifin: String(ins.codifin || '—'),
         nombres: String(ins.nombres || '—').toUpperCase(),
         postula: String(ins.comisaria_postula || '—'),
         disp: etiquetaDispListaPdf(ins),
