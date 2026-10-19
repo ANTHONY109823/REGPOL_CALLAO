@@ -394,33 +394,35 @@ function registrarRutas(app, pool, requireAuth) {
     }
   });
 
-  /* Nombres de convenios, sedes, turnos y días para precargar (sin números). */
+  /* Sedes reales de cada convenio y, por sede, solo los turnos/días que existen
+     (vacantes > 0 en la convocatoria). Solo nombres: el N° lo digita el admin. */
   app.get('/admin/vacantes-libres/ayuda-carga', requireAuth, requireVacantesLibres, async function(req, res) {
     try {
       const r = await pool.query(
         `SELECT id, titulo, cupos_unidades FROM items_portal
-         WHERE tipo='convenio' ORDER BY titulo ASC`
+         WHERE tipo='convenio' AND COALESCE(visible, TRUE)=TRUE ORDER BY titulo ASC`
       );
       const convenios = r.rows.map(function(it) {
         const cupos = Array.isArray(it.cupos_unidades) ? it.cupos_unidades : [];
-        const filas = [];
+        const sedes = [];
         cupos.forEach(function(c) {
           const sede = limpio(c && (c.nombre || c.unidad || c.comisaria), 200);
-          const turnos = Array.isArray(c && c.turnos) ? c.turnos : [];
-          if (!turnos.length) {
-            if (sede) filas.push({ sede: sede, turno: '', dia: '' });
-            return;
-          }
-          turnos.forEach(function(t) {
-            filas.push({
-              sede: sede,
-              turno: limpio(t && t.turno, 60).toUpperCase(),
-              dia: limpio(t && t.dia, 20).toUpperCase()
-            });
+          if (!sede) return;
+          const turnos = [];
+          (Array.isArray(c.turnos) ? c.turnos : []).forEach(function(t) {
+            const turno = limpio(t && (t.turno || t.nombre), 60).toUpperCase();
+            const dia = limpio(t && (t.dia || t.dias), 20).toUpperCase() || 'PAR/IMPAR';
+            if (!turno || !((parseInt(t.vacantes, 10) || 0) > 0)) return;
+            if (!turnos.some(function(x) { return x.turno === turno && x.dia === dia; })) {
+              turnos.push({ turno: turno, dia: dia });
+            }
           });
+          /* Sede con turnos definidos pero todos en 0: no tiene turnos reales */
+          if (!turnos.length && Array.isArray(c.turnos) && c.turnos.length) return;
+          sedes.push({ sede: sede, turnos: turnos });
         });
-        return { id: it.id, titulo: limpio(it.titulo, 200), filas: filas };
-      }).filter(function(c) { return c.titulo; });
+        return { id: it.id, titulo: limpio(it.titulo, 200), sedes: sedes };
+      }).filter(function(c) { return c.titulo && c.sedes.length; });
       res.json({ ok: true, convenios: convenios });
     } catch (e) {
       res.json({ ok: false, error: e.message });

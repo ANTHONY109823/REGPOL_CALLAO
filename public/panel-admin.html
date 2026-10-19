@@ -1774,14 +1774,12 @@
 
         <div id="vl-carga-box" style="border:1.5px solid #c8e6c9;border-radius:10px;padding:14px 16px;margin-bottom:18px;">
           <strong style="display:block;color:#004d3d;font-size:13.5px;margin-bottom:8px;"><i class="fas fa-plus-circle"></i> Cargar vacantes</strong>
-          <p style="font-size:12px;color:#666;margin:0 0 10px;">Ayuda: elija un convenio y presione <strong>Precargar sedes y turnos</strong>. Solo se copian los nombres; usted digita el N° de vacantes. Las filas sin número no se guardan.</p>
+          <p style="font-size:12px;color:#666;margin:0 0 10px;">Ayuda: elija un convenio y presione <strong>Precargar sedes y turnos</strong>, o agregue una fila y elija convenio → sede → turno → día. Solo aparecen las sedes y turnos <strong>reales</strong> de esa convocatoria; usted digita el N° de vacantes. Las filas sin número no se guardan.</p>
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;">
             <select id="vl-ayuda-convenio" style="padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:260px;"><option value="">Cargando convenios...</option></select>
             <button type="button" class="btn btn-o" onclick="precargarFilasVL()"><i class="fas fa-magic"></i> Precargar sedes y turnos</button>
             <button type="button" class="btn" style="background:#e8eee9;color:#333;" onclick="agregarFilaNuevaVL()"><i class="fas fa-plus"></i> Fila manual</button>
           </div>
-          <datalist id="vl-dl-convenios"></datalist>
-          <datalist id="vl-dl-sedes"></datalist>
           <div style="overflow-x:auto;">
             <table class="t" id="vl-tabla-nuevas" style="display:none;">
               <thead><tr><th>Convenio</th><th>Sede / Unidad</th><th style="width:120px;">Turno</th><th style="width:100px;">Día</th><th style="width:100px;">N° vacantes</th><th style="width:44px;"></th></tr></thead>
@@ -2487,11 +2485,11 @@
     <h3><i class="fas fa-edit"></i> Editar vacante libre</h3>
     <input type="hidden" id="vle-id"/>
     <div style="display:grid;gap:10px;">
-      <div><label>Convenio *</label><input type="text" id="vle-convenio" list="vl-dl-convenios" maxlength="200"/></div>
-      <div><label>Sede / Unidad</label><input type="text" id="vle-sede" list="vl-dl-sedes" maxlength="200"/></div>
+      <div><label>Convenio *</label><select id="vle-convenio" class="vl-n-conv" onchange="refrescarCascadaVL(document.getElementById('modal-vl-editar'),'conv')"></select></div>
+      <div><label>Sede / Unidad</label><select id="vle-sede" class="vl-n-sede" onchange="refrescarCascadaVL(document.getElementById('modal-vl-editar'),'sede')"></select></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-        <div><label>Turno</label><select id="vle-turno"></select></div>
-        <div><label>Día</label><select id="vle-dia"></select></div>
+        <div><label>Turno</label><select id="vle-turno" class="vl-n-turno" onchange="refrescarCascadaVL(document.getElementById('modal-vl-editar'),'turno')"></select></div>
+        <div><label>Día</label><select id="vle-dia" class="vl-n-dia"></select></div>
         <div><label>N° vacantes *</label><input type="number" id="vle-vacantes" min="1" max="999"/></div>
       </div>
     </div>
@@ -8967,19 +8965,8 @@ function imprimirPdfPreinscritosFiltrado(){
 
 /* ── Vacantes libres del mes (módulo independiente: no se cruza con inscritos de convenios) ── */
 var VL_ADMIN = { mes:'', mesActual:'', activo:false, vacantes:[], ayuda:null, solicitudes:[] };
-var VL_TURNOS = ['', 'MAÑANA', 'TARDE', 'NOCHE', 'ATENCION AL CLIENTE', '24 HORAS'];
-var VL_DIAS = ['', 'PAR', 'IMPAR', 'PAR/IMPAR'];
 
 function escVLA(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-function optsVL(lista, sel){
-  var v = String(sel||'').toUpperCase();
-  var l = lista.slice();
-  if(v && l.indexOf(v)<0) l.push(v);
-  return l.map(function(x){
-    return '<option value="'+escVLA(x)+'"'+(x===v?' selected':'')+'>'+escVLA(x||'—')+'</option>';
-  }).join('');
-}
 
 function nombreMesVL(mes){
   var M=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SETIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
@@ -9072,24 +9059,81 @@ function cargarAyudaCargaVL(){
       VL_ADMIN.ayuda=d.convenios||[];
       var sel=document.getElementById('vl-ayuda-convenio');
       sel.innerHTML='<option value="">Elegir convenio...</option>'
-        +VL_ADMIN.ayuda.map(function(c,i){ return '<option value="'+i+'">'+escVLA(c.titulo)+' ('+c.filas.length+' sede/turno)</option>'; }).join('');
-      document.getElementById('vl-dl-convenios').innerHTML=VL_ADMIN.ayuda.map(function(c){ return '<option value="'+escVLA(c.titulo)+'">'; }).join('');
-      var sedes={};
-      VL_ADMIN.ayuda.forEach(function(c){ c.filas.forEach(function(f){ if(f.sede) sedes[f.sede]=true; }); });
-      document.getElementById('vl-dl-sedes').innerHTML=Object.keys(sedes).sort().map(function(s){ return '<option value="'+escVLA(s)+'">'; }).join('');
+        +VL_ADMIN.ayuda.map(function(c,i){ return '<option value="'+i+'">'+escVLA(c.titulo)+' ('+c.sedes.length+' sede'+(c.sedes.length===1?'':'s')+')</option>'; }).join('');
+      document.querySelectorAll('#vl-tbody-nuevas tr').forEach(function(tr){ refrescarCascadaVL(tr,'conv'); });
     })
     .catch(function(){});
 }
 
+/* Cascada con datos reales de la convocatoria: convenio → sede → turno → día */
+function ayudaConvenioVL(titulo){
+  return (VL_ADMIN.ayuda||[]).find(function(c){ return c.titulo===titulo; }) || null;
+}
+
+function ayudaSedeVL(conv, sede){
+  return conv ? (conv.sedes.find(function(s){ return s.sede===sede; }) || null) : null;
+}
+
+function opcionesCascadaVL(valores, sel, vacio){
+  var v=String(sel||'');
+  var l=[];
+  valores.forEach(function(x){ if(l.indexOf(x)<0) l.push(x); });
+  /* Un valor guardado que ya no está en la convocatoria se conserva, marcado */
+  var extra = v && l.indexOf(v)<0;
+  return (vacio ? '<option value="">'+vacio+'</option>' : '')
+    +l.map(function(x){ return '<option value="'+escVLA(x)+'"'+(x===v?' selected':'')+'>'+escVLA(x)+'</option>'; }).join('')
+    +(extra ? '<option value="'+escVLA(v)+'" selected>'+escVLA(v)+' (no figura en la convocatoria)</option>' : '');
+}
+
+/* root = fila de la tabla o caja del modal; desde = nivel que cambió */
+function refrescarCascadaVL(root, desde){
+  var sConv=root.querySelector('.vl-n-conv'), sSede=root.querySelector('.vl-n-sede');
+  var sTurno=root.querySelector('.vl-n-turno'), sDia=root.querySelector('.vl-n-dia');
+  if(desde==='conv'){
+    sConv.innerHTML=opcionesCascadaVL((VL_ADMIN.ayuda||[]).map(function(c){ return c.titulo; }), sConv.value || sConv.dataset.ini, 'Elegir convenio...');
+  }
+  var conv=ayudaConvenioVL(sConv.value);
+  if(desde==='conv'){
+    var sedes=conv ? conv.sedes.map(function(s){ return s.sede; }) : [];
+    var selSede = sSede.dataset.ini!=null ? sSede.dataset.ini : '';
+    if(conv && !selSede && sedes.length===1) selSede=sedes[0];
+    sSede.innerHTML=opcionesCascadaVL(sedes, selSede, sedes.length>1?'Elegir sede...':'');
+  }
+  var sede=ayudaSedeVL(conv, sSede.value);
+  if(desde==='conv'||desde==='sede'){
+    var turnos=[];
+    (sede ? sede.turnos : []).forEach(function(t){ if(turnos.indexOf(t.turno)<0) turnos.push(t.turno); });
+    var selTurno = sTurno.dataset.ini!=null ? sTurno.dataset.ini : '';
+    if(!selTurno && turnos.length===1) selTurno=turnos[0];
+    sTurno.innerHTML=opcionesCascadaVL(turnos, selTurno, turnos.length>1?'Elegir turno...':(turnos.length?'':'—'));
+  }
+  var dias=sede ? sede.turnos.filter(function(t){ return t.turno===sTurno.value; }).map(function(t){ return t.dia; }) : [];
+  var selDia = sDia.dataset.ini!=null ? sDia.dataset.ini : '';
+  if(!selDia && dias.length===1) selDia=dias[0];
+  sDia.innerHTML=opcionesCascadaVL(dias, selDia, dias.length>1?'Elegir día...':(dias.length?'':'—'));
+  [sConv,sSede,sTurno,sDia].forEach(function(s){ delete s.dataset.ini; });
+}
+
+function attrIniVL(v){ return ' data-ini="'+escVLA(v||'')+'"'; }
+
 function filaNuevaVLHtml(f){
+  var st='width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;';
   return '<tr>'
-    +'<td><input type="text" class="vl-n-conv" list="vl-dl-convenios" maxlength="200" value="'+escVLA(f.convenio||'')+'" style="width:100%;min-width:130px;padding:6px 8px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;"></td>'
-    +'<td><input type="text" class="vl-n-sede" list="vl-dl-sedes" maxlength="200" value="'+escVLA(f.sede||'')+'" style="width:100%;min-width:110px;padding:6px 8px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;"></td>'
-    +'<td><select class="vl-n-turno" style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;">'+optsVL(VL_TURNOS,f.turno)+'</select></td>'
-    +'<td><select class="vl-n-dia" style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;">'+optsVL(VL_DIAS,f.dia)+'</select></td>'
+    +'<td><select class="vl-n-conv" onchange="refrescarCascadaVL(this.closest(\'tr\'),\'conv\')"'+attrIniVL(f.convenio)+' style="'+st+'min-width:150px;"></select></td>'
+    +'<td><select class="vl-n-sede" onchange="refrescarCascadaVL(this.closest(\'tr\'),\'sede\')"'+attrIniVL(f.sede)+' style="'+st+'min-width:130px;"></select></td>'
+    +'<td><select class="vl-n-turno" onchange="refrescarCascadaVL(this.closest(\'tr\'),\'turno\')"'+attrIniVL(f.turno)+' style="'+st+'"></select></td>'
+    +'<td><select class="vl-n-dia"'+attrIniVL(f.dia)+' style="'+st+'"></select></td>'
     +'<td><input type="number" class="vl-n-vac" min="1" max="999" placeholder="N°" style="width:80px;padding:6px 8px;border:1.5px solid #c8a94a;border-radius:6px;font-size:13px;font-weight:700;"></td>'
     +'<td><button type="button" class="btn btn-r" style="padding:4px 8px;" onclick="this.closest(\'tr\').remove();actualizarAccionesNuevasVL();" title="Quitar fila"><i class="fas fa-times"></i></button></td>'
     +'</tr>';
+}
+
+function insertarFilasNuevasVL(filas){
+  var tb=document.getElementById('vl-tbody-nuevas');
+  var antes=tb.children.length;
+  tb.insertAdjacentHTML('beforeend', filas.map(filaNuevaVLHtml).join(''));
+  for(var i=antes;i<tb.children.length;i++) refrescarCascadaVL(tb.children[i],'conv');
+  actualizarAccionesNuevasVL();
 }
 
 function actualizarAccionesNuevasVL(){
@@ -9102,17 +9146,18 @@ function precargarFilasVL(){
   var idx=document.getElementById('vl-ayuda-convenio').value;
   if(idx===''||!VL_ADMIN.ayuda){ alert('Elija un convenio.'); return; }
   var c=VL_ADMIN.ayuda[parseInt(idx,10)];
-  var filas=c.filas.length ? c.filas : [{sede:'',turno:'',dia:''}];
-  var tb=document.getElementById('vl-tbody-nuevas');
-  tb.insertAdjacentHTML('beforeend', filas.map(function(f){
-    return filaNuevaVLHtml({convenio:c.titulo, sede:f.sede, turno:f.turno, dia:f.dia});
-  }).join(''));
-  actualizarAccionesNuevasVL();
+  var filas=[];
+  c.sedes.forEach(function(s){
+    if(!s.turnos.length){ filas.push({convenio:c.titulo, sede:s.sede, turno:'', dia:''}); return; }
+    s.turnos.forEach(function(t){ filas.push({convenio:c.titulo, sede:s.sede, turno:t.turno, dia:t.dia}); });
+  });
+  insertarFilasNuevasVL(filas);
 }
 
 function agregarFilaNuevaVL(){
-  document.getElementById('vl-tbody-nuevas').insertAdjacentHTML('beforeend', filaNuevaVLHtml({}));
-  actualizarAccionesNuevasVL();
+  var idx=document.getElementById('vl-ayuda-convenio').value;
+  var c=(idx!==''&&VL_ADMIN.ayuda) ? VL_ADMIN.ayuda[parseInt(idx,10)] : null;
+  insertarFilasNuevasVL([{convenio:c?c.titulo:''}]);
 }
 
 function limpiarFilasNuevasVL(){
@@ -9157,10 +9202,12 @@ function abrirEdicionVL(id){
   var v=VL_ADMIN.vacantes.find(function(x){ return x.id===id; });
   if(!v) return;
   document.getElementById('vle-id').value=v.id;
-  document.getElementById('vle-convenio').value=v.convenio||'';
-  document.getElementById('vle-sede').value=v.sede||'';
-  document.getElementById('vle-turno').innerHTML=optsVL(VL_TURNOS,v.turno);
-  document.getElementById('vle-dia').innerHTML=optsVL(VL_DIAS,v.dia);
+  document.getElementById('vle-convenio').dataset.ini=v.convenio||'';
+  document.getElementById('vle-convenio').value='';
+  document.getElementById('vle-sede').dataset.ini=v.sede||'';
+  document.getElementById('vle-turno').dataset.ini=v.turno||'';
+  document.getElementById('vle-dia').dataset.ini=v.dia||'';
+  refrescarCascadaVL(document.getElementById('modal-vl-editar'),'conv');
   document.getElementById('vle-vacantes').value=v.vacantes;
   document.getElementById('modal-vl-editar').classList.add('open');
 }
