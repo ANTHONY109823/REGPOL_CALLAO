@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vacantes libres — REGPOL Callao</title>
+  <link rel="icon" href="favicon.ico?v=3" type="image/x-icon">
+  <link rel="icon" href="favicon.png?v=3" type="image/png">
+  <link rel="stylesheet" href="style.css?v=76">
+  <link rel="stylesheet" href="responsive.css?v=3">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="api-config.js?v=2"></script>
+  <style>
+    /* Mismo estilo que la inscripción de convenios (detalle.html) */
+    .detalle-bloque{max-width:980px;margin:0 auto;}
+    .detalle-icono-wrap{display:flex;justify-content:center;margin:0 0 6px;}
+    .detalle-icono{width:64px;height:64px;border-radius:50%;background:#004d3d;color:#c8a94a;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,77,61,.22);border:2px solid #c8a94a;}
+    .detalle-icono i{font-size:26px;line-height:1;}
+    .detalle-topbar{display:grid;grid-template-columns:220px minmax(0,1fr) 220px;align-items:center;gap:10px 12px;margin:0 0 10px;}
+    .detalle-topbar h2{margin:0;font-size:clamp(1.15rem,2.3vw,1.4rem);line-height:1.15;color:#004d3d;font-weight:800;text-align:center;}
+    .btn-volver,.btn-registrarse{padding:0 10px;height:38px;border-radius:7px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;border:none;text-decoration:none;margin:0;white-space:nowrap;box-sizing:border-box;font-family:inherit;}
+    .btn-volver{background:#004d3d;color:#fff;justify-self:start;width:220px;height:40px;}
+    .btn-volver:hover{background:#006b55;color:#fff;}
+    .btn-registrarse{background:#c8a94a;color:#002d24;}
+    .btn-registrarse:hover{background:#dfc060;color:#002d24;}
+    @media(max-width:800px){
+      .detalle-topbar{grid-template-columns:1fr;}
+      .detalle-topbar h2{order:-1;}
+      .btn-volver{width:100%;}
+    }
+    .card-detalle{background:#fff;border-radius:12px;border:1.5px solid #c8e6c9;padding:16px 16px 14px;text-align:left;width:100%;box-sizing:border-box;margin-bottom:12px;}
+    .card-detalle.highlight-card{border-color:#c8a94a;}
+    .card-detalle h3{color:#004d3d;font-size:13px;font-weight:800;letter-spacing:.5px;margin:0 0 10px;text-transform:uppercase;text-align:center;}
+    .vl-nota{font-size:13px;color:#555;line-height:1.55;margin:0;}
+    .vl-nota li{margin-bottom:4px;}
+    .tabla-cupos-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .tabla-cupos{width:100%;border-collapse:collapse;font-size:12.5px;}
+    .tabla-cupos th,.tabla-cupos td{border:1px solid #b7d4c0;padding:7px 8px;}
+    .tabla-cupos th{background:#004d3d;color:#fff;font-weight:700;text-align:center;font-size:11.5px;letter-spacing:.3px;white-space:nowrap;}
+    .tabla-cupos td.num{text-align:center;font-variant-numeric:tabular-nums;font-weight:800;color:#004d3d;font-size:14px;}
+    .tabla-cupos td.c{text-align:center;white-space:nowrap;}
+    .tabla-cupos tbody tr:nth-child(even){background:#f3f8f4;}
+    .tabla-cupos tbody tr:hover{background:#e8f5e9;}
+    .tabla-cupos tbody tr.sel{background:#fff8e1;outline:2px solid #c8a94a;outline-offset:-2px;}
+    .tabla-cupos .btn-registrarse{height:32px;padding:0 12px;font-size:11.5px;}
+    .vl-completo{display:inline-block;padding:3px 12px;border-radius:12px;font-size:11.5px;font-weight:800;background:#f8d7da;color:#842029;}
+    .cupos-vacio{font-size:13px;color:#888;padding:14px 0;text-align:center;}
+    .vl-consulta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center;}
+    .vl-consulta input{padding:9px 12px;border:1.5px solid #c5d9ce;border-radius:8px;font-size:13px;font-family:inherit;width:200px;}
+    .vl-consulta-res{margin-top:10px;font-size:13px;}
+    .vl-est{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11.5px;font-weight:800;}
+    .vl-est.pendiente{background:#fff3cd;color:#856404;}
+    .vl-est.aprobado{background:#d4edda;color:#1a7a3a;}
+    .vl-est.rechazado{background:#f8d7da;color:#842029;}
+    .form-inscripcion{background:#fff;border-radius:12px;border:1.5px solid #c8e6c9;padding:24px 22px;margin:10px auto 12px;text-align:left;max-width:980px;box-shadow:0 2px 10px rgba(0,77,61,.06);}
+    .form-inscripcion h3{color:#004d3d;font-size:16px;font-weight:800;margin:0 0 8px;border-bottom:2px solid #c8a94a;padding-bottom:10px;letter-spacing:.2px;}
+    .form-inscripcion .fi-intro{font-size:12.5px;color:#555;margin:0 0 16px;line-height:1.5;}
+    .vl-postula-a{background:#e8f5f1;border:1px solid #c8e6c9;border-radius:8px;padding:10px 12px;font-size:13px;color:#004d3d;margin:0 0 14px;line-height:1.45;}
+    .fi-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;}
+    @media(max-width:600px){.fi-grid{grid-template-columns:1fr;}}
+    .fi-group label{font-size:12px;font-weight:700;color:#004d3d;display:block;margin-bottom:5px;}
+    .fi-group input,.fi-group select{width:100%;padding:10px 12px;border:1.5px solid #c5d9ce;border-radius:8px;font-size:13px;font-family:inherit;background:#fafcfb;color:#333;transition:border-color .15s,box-shadow .15s;box-sizing:border-box;}
+    .fi-group input:focus,.fi-group select:focus{border-color:#004d3d;outline:none;background:#fff;box-shadow:0 0 0 3px rgba(0,77,61,.1);}
+    .fi-full{grid-column:1/-1;}
+    .fi-alerta{padding:10px 14px;border-radius:7px;font-size:13px;font-weight:600;margin-bottom:12px;display:none;}
+    .fi-alerta.ok{background:#d4edda;color:#1a7a3a;display:block;}
+    .fi-alerta.error{background:#f8d7da;color:#842029;display:block;}
+    .btn-enviar-solicitud{display:inline-block;margin-top:8px;background:#004d3d;color:#fff;padding:13px 36px;border-radius:8px;border:none;font-size:14px;font-weight:800;letter-spacing:.4px;cursor:pointer;font-family:inherit;transition:background .2s;}
+    .btn-enviar-solicitud:hover{background:#006b55;}
+    .btn-enviar-solicitud:disabled{opacity:.65;cursor:wait;}
+    .pdf-upload-box{border:1.5px dashed #c8a94a;border-radius:8px;padding:10px;background:#fffdf5;grid-column:1/-1;text-align:center;}
+    .pdf-upload-box p{margin:0 0 8px;font-size:12px;color:#6b5420;}
+    .btn-exp-accion{display:inline-flex;align-items:center;justify-content:center;gap:5px;border:none;border-radius:6px;padding:9px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;}
+    .btn-exp-subir{background:#004d3d;color:#fff;}
+    .btn-exp-subir:hover{background:#006b55;}
+    .pdf-preview-bar{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:#555;justify-content:center;}
+    .pdf-preview-bar i{color:#e74c3c;font-size:16px;}
+    .loading-msg{text-align:center;padding:48px;color:#bbb;font-size:14px;}
+    .content-area.detalle-compact{padding-top:14px;padding-bottom:20px;min-height:0;display:block;}
+    /* Modal de confirmación (igual que la preinscripción) */
+    .modal-pre{position:fixed;inset:0;z-index:9999;background:rgba(0,30,24,.55);display:none;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;}
+    .modal-pre.open{display:flex!important;}
+    .modal-pre-box{background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.28);border:2px solid #c8a94a;}
+    .modal-pre-acciones{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:12px 16px 16px;border-top:1px solid #e8eee9;background:#f7faf7;position:sticky;bottom:0;}
+    .modal-pre-acciones button{border:none;border-radius:8px;padding:10px 14px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;}
+    .btn-pre-cerrar{background:#e8eee9;color:#333;}
+    .btn-pre-copiar{background:#004d3d;color:#fff;}
+    #vl-constancia{padding:20px 22px;background:#fff;color:#222;}
+    .pre-head{text-align:center;border-bottom:2px solid #c8a94a;padding-bottom:12px;margin-bottom:14px;}
+    .pre-head h3{margin:0 0 4px;color:#004d3d;font-size:16px;font-weight:800;letter-spacing:.3px;}
+    .pre-head p{margin:0;font-size:11.5px;color:#666;}
+    .pre-nro{display:inline-block;margin-top:8px;background:#e8f5f1;border:1.5px solid #004d3d;border-radius:8px;padding:10px 18px;font-size:22px;font-weight:900;color:#004d3d;letter-spacing:1px;user-select:all;-webkit-user-select:all;font-family:ui-monospace,Consolas,monospace;}
+    .pre-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:12.5px;}
+    .pre-grid .full{grid-column:1/-1;}
+    .pre-item span{display:block;font-size:10px;font-weight:800;color:#004d3d;text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px;}
+    .pre-item strong{font-weight:700;color:#222;word-break:break-word;}
+    .pre-aviso{margin-top:12px;font-size:11.5px;color:#856404;background:#fff8e1;border-radius:7px;padding:8px 10px;line-height:1.45;}
+    @media(max-width:600px){.pre-grid{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body class="body-cursos">
+<div class="header-social-portal"><div class="container portal-flex"><div class="social-buttons-group">
+  <a href="https://www.facebook.com/region.policial.callao.2025" target="_blank" rel="noopener noreferrer" class="btn-pnp-social fb" title="Facebook" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+  <a href="https://www.tiktok.com/@regionpolicialcallao" target="_blank" rel="noopener noreferrer" class="btn-pnp-social tk" title="TikTok" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
+  <a href="https://wa.me/51980122452" target="_blank" rel="noopener noreferrer" class="btn-pnp-social wa" title="WhatsApp" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+</div></div></div>
+<header class="main-header"><div class="container header-flex">
+  <div class="logo-container"><img src="img/regpol-callao.jpg" alt="Escudo REGPOL Callao" class="logo-pnp" width="90" height="90"></div>
+  <div class="title-text"><h1 class="portal-eslogan">REGIÓN POLICIAL CALLAO</h1>
+  <p class="portal-subtitulo">UNIDAD DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES</p></div>
+</div></header>
+<nav class="nav-main"><div class="container"><ul></ul></div></nav>
+
+<main class="container content-area detalle-compact">
+  <div class="detalle-bloque">
+    <div class="detalle-icono-wrap"><div class="detalle-icono"><i class="fas fa-door-open"></i></div></div>
+    <div class="detalle-topbar">
+      <a href="index.html#convenios" class="btn-volver"><i class="fas fa-arrow-left"></i> VOLVER</a>
+      <h2 id="vl-titulo">VACANTES LIBRES</h2>
+      <span></span>
+    </div>
+
+    <div class="card-detalle highlight-card">
+      <h3><i class="fas fa-info-circle"></i> ¿Qué son las vacantes libres?</h3>
+      <ul class="vl-nota">
+        <li>Son vacantes de convenios que <strong>se liberaron durante este mes</strong> (el efectivo dejó de asistir u otro motivo).</li>
+        <li>Elija la vacante, llene sus datos y <strong>adjunte su documento en PDF</strong>. Si Convenios lo aprueba, <strong>ocupa la vacante de inmediato</strong>.</li>
+        <li>Solo se permite <strong>una solicitud por CIP al mes</strong>.</li>
+        <li>No pueden postular quienes <strong>ya resultaron ganadores de un cupo y presentaron sus documentos</strong> este mes.</li>
+      </ul>
+    </div>
+
+    <div class="card-detalle">
+      <h3><i class="fas fa-list"></i> Vacantes disponibles</h3>
+      <div id="vl-tabla"><p class="loading-msg">Cargando vacantes...</p></div>
+    </div>
+
+    <div id="vl-form-wrap" style="display:none;"></div>
+
+    <div class="card-detalle">
+      <h3><i class="fas fa-search"></i> Consultar mi solicitud</h3>
+      <div class="vl-consulta">
+        <input type="text" id="vl-cip-consulta" inputmode="numeric" maxlength="12" placeholder="Ingrese su CIP">
+        <button type="button" class="btn-registrarse" onclick="consultarSolicitudVL()"><i class="fas fa-search"></i> CONSULTAR</button>
+      </div>
+      <div id="vl-consulta-res" class="vl-consulta-res"></div>
+    </div>
+  </div>
+</main>
+
+<div id="modal-vl-ok" class="modal-pre" role="dialog" aria-modal="true">
+  <div class="modal-pre-box">
+    <div id="vl-constancia"></div>
+    <div class="modal-pre-acciones">
+      <button type="button" class="btn-pre-copiar" onclick="copiarDatosVL()">Copiar datos</button>
+      <button type="button" class="btn-pre-cerrar" onclick="cerrarModalVL()">Entendido</button>
+    </div>
+  </div>
+</div>
+
+<script src="portal-data.js?v=10"></script>
+<script src="portal.js?v=88"></script>
+<script>
+var API_VL = (typeof regpolApiBase === 'function') ? regpolApiBase() : (window.REGPOL_API_BASE || '');
+var VL_DATA = null;
+var VL_SEL = null;
+var VL_ULTIMA = null;
+
+var GRADOS_PNP_VL = [
+  'CORONEL PNP','COMANDANTE PNP','MAYOR PNP','CAPITAN PNP','TENIENTE PNP','ALFEREZ PNP',
+  'SUPERIOR PNP','BRIGADIER PNP','TECNICO DE 1RA PNP','TECNICO DE 2DA PNP','TECNICO DE 3RA PNP',
+  'SUBOFICIAL DE 1RA PNP','SUBOFICIAL DE 2DA PNP','SUBOFICIAL DE 3RA PNP'
+];
+
+function escVL(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function labelTurnoVL(t){
+  var n = String(t||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  if (n === 'MANANA') return 'Mañana';
+  if (n === 'TARDE') return 'Tarde';
+  if (n === 'NOCHE') return 'Noche';
+  return t || '—';
+}
+
+function cargarVacantesLibres(){
+  fetch(API_VL + '/portal/vacantes-libres?t=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      VL_DATA = d;
+      var box = document.getElementById('vl-tabla');
+      if (!d || !d.ok) { box.innerHTML = '<p class="cupos-vacio">No se pudo cargar la información. Intente más tarde.</p>'; return; }
+      document.getElementById('vl-titulo').textContent = 'VACANTES LIBRES ' + (d.mes_nombre || '');
+      document.title = 'Vacantes libres ' + (d.mes_nombre || '') + ' — REGPOL Callao';
+      if (!d.activo || !d.vacantes.length) {
+        box.innerHTML = '<p class="cupos-vacio">En este momento no hay vacantes libres publicadas para ' + escVL((d.mes_nombre||'').toLowerCase()) + '.</p>';
+        return;
+      }
+      box.innerHTML = '<div class="tabla-cupos-wrap"><table class="tabla-cupos"><thead><tr>'
+        + '<th>#</th><th>CONVENIO</th><th>SEDE / UNIDAD</th><th>TURNO</th><th>DÍA</th><th>VACANTES LIBRES</th><th></th>'
+        + '</tr></thead><tbody>'
+        + d.vacantes.map(function(v, i){
+          var accion = v.libres > 0
+            ? '<button type="button" class="btn-registrarse" onclick="elegirVacanteVL(' + v.id + ')"><i class="fas fa-edit"></i> POSTULAR</button>'
+            : '<span class="vl-completo">COMPLETO</span>';
+          return '<tr id="vl-fila-' + v.id + '"' + (VL_SEL && VL_SEL.id === v.id ? ' class="sel"' : '') + '>'
+            + '<td class="c">' + (i + 1) + '</td>'
+            + '<td><strong>' + escVL(v.convenio) + '</strong></td>'
+            + '<td>' + escVL(v.sede || '—') + '</td>'
+            + '<td class="c">' + escVL(labelTurnoVL(v.turno)) + '</td>'
+            + '<td class="c">' + escVL(v.dia || '—') + '</td>'
+            + '<td class="num">' + v.libres + '</td>'
+            + '<td class="c">' + accion + '</td>'
+            + '</tr>';
+        }).join('')
+        + '</tbody></table></div>';
+    })
+    .catch(function(){
+      document.getElementById('vl-tabla').innerHTML = '<p class="cupos-vacio">Error de conexión. Intente más tarde.</p>';
+    });
+}
+
+function textoVacanteVL(v){
+  return escVL(v.convenio) + (v.sede ? ' — ' + escVL(v.sede) : '')
+    + (v.turno ? ' — ' + escVL(labelTurnoVL(v.turno)) : '') + (v.dia ? ' / ' + escVL(v.dia) : '');
+}
+
+function elegirVacanteVL(id){
+  var v = (VL_DATA && VL_DATA.vacantes || []).find(function(x){ return x.id === id; });
+  if (!v) return;
+  VL_SEL = v;
+  document.querySelectorAll('.tabla-cupos tbody tr').forEach(function(tr){ tr.classList.remove('sel'); });
+  var fila = document.getElementById('vl-fila-' + id);
+  if (fila) fila.classList.add('sel');
+  var wrap = document.getElementById('vl-form-wrap');
+  wrap.innerHTML = '<form class="form-inscripcion" onsubmit="enviarSolicitudVL(event)">'
+    + '<h3><i class="fas fa-user-edit"></i> SOLICITUD DE VACANTE LIBRE</h3>'
+    + '<p class="fi-intro">Complete sus datos tal como figuran en su documento. Todos los campos son obligatorios.</p>'
+    + '<div class="vl-postula-a"><i class="fas fa-map-marker-alt"></i> <strong>Postula a:</strong> ' + textoVacanteVL(v) + '</div>'
+    + '<div id="fi-alerta" class="fi-alerta"></div>'
+    + '<div class="fi-grid">'
+    + '<div class="fi-group"><label>Grado / Rango *</label><select id="fi-grado" required><option value="">Seleccionar grado</option>'
+    + GRADOS_PNP_VL.map(function(g){ return '<option value="' + g + '">' + g + '</option>'; }).join('') + '</select></div>'
+    + '<div class="fi-group"><label>CIP *</label><input type="text" id="fi-cip" inputmode="numeric" maxlength="12" placeholder="Número de CIP" required/></div>'
+    + '<div class="fi-group"><label>Apellidos *</label><input type="text" id="fi-apellidos" maxlength="120" placeholder="Ej: GARCIA LOPEZ" required/></div>'
+    + '<div class="fi-group"><label>Nombres *</label><input type="text" id="fi-nombres" maxlength="120" placeholder="Ej: JUAN CARLOS" required/></div>'
+    + '<div class="fi-group"><label>DNI *</label><input type="text" id="fi-dni" inputmode="numeric" maxlength="12" placeholder="Número de DNI" required/></div>'
+    + '<div class="fi-group"><label>CODIFIN *</label><input type="text" id="fi-codifin" inputmode="numeric" maxlength="9" placeholder="9 dígitos" required/></div>'
+    + '<div class="fi-group"><label>Teléfono / WhatsApp *</label><input type="tel" id="fi-telefono" inputmode="numeric" maxlength="15" placeholder="Ej: 987654321" required/></div>'
+    + '<div class="fi-group"><label>Unidad / Dependencia actual *</label><input type="text" id="fi-unidad" maxlength="150" placeholder="Su comisaría / dependencia" required/></div>'
+    + '<div class="pdf-upload-box">'
+    + '<p><i class="fas fa-file-pdf"></i> Adjunte su documento en <strong>PDF</strong> (máximo 5 MB).</p>'
+    + '<button type="button" class="btn-exp-accion btn-exp-subir" onclick="document.getElementById(\'fi-pdf-file\').click()"><i class="fas fa-upload"></i> Subir PDF</button>'
+    + '<input type="file" id="fi-pdf-file" accept="application/pdf" onchange="cargarPdfVL(this)" style="display:none;"/>'
+    + '<div id="fi-pdf-preview" class="pdf-preview-bar" style="display:none;"><i class="fas fa-file-pdf"></i><span id="fi-pdf-nombre"></span>'
+    + '<button type="button" onclick="quitarPdfVL()" style="background:#c0392b;color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;margin-left:8px;">Quitar</button></div>'
+    + '<input type="hidden" id="fi-pdf-data"/>'
+    + '</div>'
+    + '</div>'
+    + '<div style="margin-top:20px;text-align:center;"><button type="submit" class="btn-enviar-solicitud" id="vl-btn-enviar"><i class="fas fa-paper-plane"></i> ENVIAR SOLICITUD</button></div>'
+    + '</form>';
+  wrap.style.display = 'block';
+  ['fi-cip','fi-dni','fi-codifin','fi-telefono'].forEach(function(fid){
+    document.getElementById(fid).addEventListener('input', function(e){ e.target.value = e.target.value.replace(/\D/g,''); });
+  });
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cargarPdfVL(input){
+  var file = input.files && input.files[0];
+  if (!file) return;
+  if (file.type && file.type !== 'application/pdf') { alert('Solo se aceptan archivos PDF.'); input.value=''; return; }
+  if (file.size > 5*1024*1024) { alert('El PDF no debe superar 5 MB. Reduzca el tamaño del archivo antes de adjuntarlo.'); input.value=''; return; }
+  var reader = new FileReader();
+  reader.onload = function(e){
+    document.getElementById('fi-pdf-data').value = e.target.result;
+    document.getElementById('fi-pdf-nombre').textContent = file.name + ' (' + Math.round(file.size/1024) + ' KB)';
+    document.getElementById('fi-pdf-preview').style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+}
+
+function quitarPdfVL(){
+  document.getElementById('fi-pdf-data').value = '';
+  document.getElementById('fi-pdf-file').value = '';
+  document.getElementById('fi-pdf-preview').style.display = 'none';
+}
+
+function alertaVL(msg, tipo){
+  var el = document.getElementById('fi-alerta');
+  if (!el) return;
+  el.className = 'fi-alerta ' + (tipo || '');
+  el.textContent = msg || '';
+  if (msg) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function valVL(id){ var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
+
+function enviarSolicitudVL(ev){
+  ev.preventDefault();
+  if (!VL_SEL) return;
+  var body = {
+    grado: valVL('fi-grado'), cip: valVL('fi-cip'), apellidos: valVL('fi-apellidos'), nombres: valVL('fi-nombres'),
+    dni: valVL('fi-dni'), codifin: valVL('fi-codifin'), telefono: valVL('fi-telefono'), unidad: valVL('fi-unidad'),
+    pdf_data: valVL('fi-pdf-data'),
+    pdf_nombre: (document.getElementById('fi-pdf-file').files[0] || {}).name || 'documento.pdf'
+  };
+  if (!/^\d{9}$/.test(body.codifin)) { alertaVL('CODIFIN debe tener exactamente 9 dígitos numéricos.', 'error'); return; }
+  if (body.telefono.length < 9) { alertaVL('Teléfono/WhatsApp obligatorio (9 dígitos).', 'error'); return; }
+  if (!body.pdf_data) { alertaVL('Adjunte su documento en PDF.', 'error'); return; }
+  var btn = document.getElementById('vl-btn-enviar');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+  alertaVL('', '');
+  fetch(API_VL + '/portal/vacantes-libres/' + VL_SEL.id + '/postular', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d || !d.ok) { alertaVL((d && d.error) || 'No se pudo enviar la solicitud.', 'error'); return; }
+      VL_ULTIMA = d.solicitud;
+      mostrarConstanciaVL(d.solicitud);
+      document.getElementById('vl-form-wrap').style.display = 'none';
+      document.getElementById('vl-form-wrap').innerHTML = '';
+      VL_SEL = null;
+      cargarVacantesLibres();
+    })
+    .catch(function(){ alertaVL('Error de conexión. Intente nuevamente.', 'error'); })
+    .then(function(){
+      if (btn && document.body.contains(btn)) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> ENVIAR SOLICITUD'; }
+    });
+}
+
+function mostrarConstanciaVL(s){
+  var fecha = s.creado_en ? new Date(s.creado_en).toLocaleString('es-PE', { timeZone: 'America/Lima' }) : '';
+  document.getElementById('vl-constancia').innerHTML = '<div class="pre-head">'
+    + '<h3>SOLICITUD DE VACANTE LIBRE REGISTRADA</h3>'
+    + '<p>REGPOL Callao — Vacantes libres ' + escVL(s.mes_nombre || '') + '</p>'
+    + '<div class="pre-nro">' + escVL(s.nro) + '</div>'
+    + '</div>'
+    + '<div class="pre-grid">'
+    + '<div class="pre-item"><span>CIP</span><strong>' + escVL(s.cip) + '</strong></div>'
+    + '<div class="pre-item"><span>Grado</span><strong>' + escVL(s.grado) + '</strong></div>'
+    + '<div class="pre-item full"><span>Apellidos y nombres</span><strong>' + escVL(s.apellidos + ', ' + s.nombres) + '</strong></div>'
+    + '<div class="pre-item full"><span>Postula a</span><strong>' + textoVacanteVL(s) + '</strong></div>'
+    + '<div class="pre-item full"><span>Fecha de registro</span><strong>' + escVL(fecha) + '</strong></div>'
+    + '</div>'
+    + '<div class="pre-aviso"><i class="fas fa-hourglass-half"></i> Su solicitud quedó <strong>pendiente de revisión</strong>. '
+    + 'Si Convenios la aprueba, ocupa la vacante. Consulte el estado en esta misma página con su <strong>CIP</strong>.</div>';
+  document.getElementById('modal-vl-ok').classList.add('open');
+}
+
+function cerrarModalVL(){ document.getElementById('modal-vl-ok').classList.remove('open'); }
+
+function copiarDatosVL(){
+  if (!VL_ULTIMA) return;
+  var s = VL_ULTIMA;
+  var txt = 'Vacante libre ' + (s.mes_nombre || '') + '\nN°: ' + s.nro + '\nCIP: ' + s.cip
+    + '\nPostula a: ' + s.convenio + (s.sede ? ' — ' + s.sede : '') + (s.turno ? ' — ' + s.turno : '') + (s.dia ? ' / ' + s.dia : '');
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function(){ alert('Datos copiados.'); }, function(){ alert(txt); });
+  else alert(txt);
+}
+
+function consultarSolicitudVL(){
+  var cip = valVL('vl-cip-consulta').replace(/\D/g,'');
+  var res = document.getElementById('vl-consulta-res');
+  if (cip.length < 6) { res.innerHTML = '<p style="color:#842029;text-align:center;">Ingrese un CIP válido.</p>'; return; }
+  res.innerHTML = '<p style="color:#888;text-align:center;"><i class="fas fa-spinner fa-spin"></i> Consultando...</p>';
+  fetch(API_VL + '/portal/vacantes-libres/consulta/' + encodeURIComponent(cip) + '?t=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d || !d.ok) { res.innerHTML = '<p style="color:#842029;text-align:center;">' + escVL((d && d.error) || 'No se pudo consultar.') + '</p>'; return; }
+      if (!d.solicitudes.length) { res.innerHTML = '<p style="color:#666;text-align:center;">No hay solicitudes de vacantes libres este mes para ese CIP.</p>'; return; }
+      var etq = { pendiente: 'Pendiente de revisión', aprobado: 'Aprobado — ocupa la vacante', rechazado: 'Rechazado' };
+      res.innerHTML = '<div class="tabla-cupos-wrap"><table class="tabla-cupos"><thead><tr><th>N°</th><th>POSTULA A</th><th>ESTADO</th></tr></thead><tbody>'
+        + d.solicitudes.map(function(s){
+          return '<tr><td class="c">' + escVL(s.nro) + '</td><td>' + textoVacanteVL(s) + '</td>'
+            + '<td class="c"><span class="vl-est ' + escVL(s.estado) + '">' + escVL(etq[s.estado] || s.estado) + '</span>'
+            + (s.estado === 'rechazado' && s.motivo_rechazo ? '<div style="font-size:11.5px;color:#842029;margin-top:4px;white-space:normal;">' + escVL(s.motivo_rechazo) + '</div>' : '')
+            + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
+    })
+    .catch(function(){ res.innerHTML = '<p style="color:#842029;text-align:center;">Error de conexión.</p>'; });
+}
+
+document.getElementById('vl-cip-consulta').addEventListener('keydown', function(e){ if (e.key === 'Enter') consultarSolicitudVL(); });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') cerrarModalVL(); });
+cargarVacantesLibres();
+</script>
+</body>
+</html>

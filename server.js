@@ -15,6 +15,7 @@ const { Worker } = require('worker_threads');
 const { calcularMMPI2, normalizarResultadoMMPI, interpretarT, contarRespuestas, formatearArmamentoLegible, maxItemRespondido, significadoEscalaMMPI, diagnosticoFinalMMPI, calcularDiagnosticoFila } = require('./pdf_gen');
 const descansosMedicos = require('./descansos_medicos');
 const faltosMod = require('./faltos');
+const vacantesLibres = require('./vacantes_libres');
 const conveniosFlujo = require('./convenios_flujo');
 const expedientesS3 = require('./expedientes_s3');
 const promoVacantesDirecto = require('./promover_vacantes_directo');
@@ -670,6 +671,7 @@ async function initDB() {
 
   await descansosMedicos.initTablasDescansos(pool);
   await faltosMod.initTablasFaltos(pool);
+  await vacantesLibres.initTablasVacantesLibres(pool);
   await conveniosFlujo.initColumnasFlujoConvenios(pool);
   await conveniosFlujo.initTablasAuditoriaConvenios(pool);
   await conveniosFlujo.migrarEstadosConvenios(pool);
@@ -11050,6 +11052,9 @@ descansosMedicos.registrarRutas(app, pool, requireAuth);
 
 // ── Módulo Faltos (inasistencias / métricas 2026) ────────────────────────────
 faltosMod.registrarRutas(app, pool, requireAuth);
+
+// ── Módulo Vacantes libres del mes (independiente de convenios) ─────────────
+vacantesLibres.registrarRutas(app, pool, requireAuth);
 
 // ── Módulo Recursos Humanos (nómina interna) ─────────────────────────────────
 recursosHumanos.registrarRutas(app, pool, requireAuth);

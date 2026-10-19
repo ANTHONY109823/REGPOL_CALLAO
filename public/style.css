@@ -2879,6 +2879,55 @@ table.t { min-width: 600px; }
     filter: brightness(1.25);
   }
 }
+/* Vacantes libres del mes: mismo formato que repechaje, a la izquierda */
+.btn-vacantes-libres {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  background: linear-gradient(180deg, #0b6b55 0%, #004d3d 55%, #00342a 100%);
+  color: #f0d978;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-decoration: none;
+  letter-spacing: 0.2px;
+  line-height: 1.15;
+  text-align: center;
+  border: 1.5px solid #c8a94a;
+  box-shadow: 0 3px 10px rgba(0, 77, 61, 0.35);
+  white-space: nowrap;
+  animation: alerta-repechaje 1s steps(2, end) infinite;
+}
+.section-header .btn-vacantes-libres span {
+  display: block;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+}
+.btn-vacantes-libres:hover {
+  background: linear-gradient(180deg, #11806a 0%, #006b55 55%, #004d3d 100%);
+  color: #fff8e1;
+}
+@media (max-width: 700px) {
+  .section-header--con-accion.con-vacantes-libres {
+    padding-bottom: 104px;
+  }
+  .btn-vacantes-libres {
+    top: auto;
+    bottom: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
 @media (max-width: 700px) {
   .section-header--con-accion {
     padding-bottom: 52px;

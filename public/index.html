@@ -10,7 +10,7 @@
     <meta name="google-site-verification" content="pF1hiQoLH9HUzjdTZzqyxFNdW7xspQgoyaKhjOMUx5E">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://www.regionpolicialcallao.pe/">
-    <link rel="stylesheet" href="style.css?v=75">
+    <link rel="stylesheet" href="style.css?v=76">
     <link rel="stylesheet" href="responsive.css?v=3">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -128,6 +128,10 @@
 
     <section id="convenios" class="portal-seccion">
         <div class="section-header section-header--compact section-header--con-accion">
+            <a href="vacantes-libres.html" class="btn-vacantes-libres" id="btn-vacantes-libres" style="display:none;">
+                <span id="btn-vacantes-libres-mes">VACANTES LIBRES</span>
+                <span>POSTULE AQUÍ</span>
+            </a>
             <h3>CONVENIOS DE TRABAJO</h3>
             <a href="consulta.html?v=85#repechaje" class="btn-repechaje-destaque">
                 <span>TENEMOS REPECHAJE</span>
@@ -269,6 +273,21 @@
             if (ev.key !== 'regpol_repechaje_preview') return;
             aplicarEstadoRepechaje(ev.newValue !== '0');
         });
+    })();
+    (function() {
+        var btn = document.getElementById('btn-vacantes-libres');
+        if (!btn) return;
+        var base = (typeof apiBasePortal === 'function') ? apiBasePortal() : '';
+        base = base ? base.replace(/\/$/, '') : '';
+        fetch(base + '/portal/vacantes-libres?t=' + Date.now())
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d || !d.ok || !d.activo) return;
+                document.getElementById('btn-vacantes-libres-mes').textContent = 'VACANTES LIBRES ' + (d.mes_nombre || '');
+                btn.style.display = '';
+                if (btn.parentNode) btn.parentNode.classList.add('con-vacantes-libres');
+            })
+            .catch(function() {});
     })();
 </script>
 </body>

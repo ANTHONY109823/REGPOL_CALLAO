@@ -718,7 +718,7 @@
       '[data-perm-evaluaciones],[data-perm-descargas],[data-perm-preguntas]{display:none!important}',
       '[data-perm-cms-convenios],[data-perm-cms-cursos]{display:none!important}',
       '[data-perm-cms-inicio],[data-perm-cms-novedades],[data-perm-cms-resena],[data-perm-cms-labor]{display:none!important}',
-      '#sb-grp-psico,#sb-grp-convenios,#sb-grp-cursos,#sb-grp-descansos,#sb-grp-faltos,#sb-sec-gestion,#sb-sec-rrhh,#sb-sec-portal{display:none!important}',
+      '#sb-grp-psico,#sb-grp-convenios,#sb-grp-vacantes-libres,#sb-grp-cursos,#sb-grp-descansos,#sb-grp-faltos,#sb-sec-gestion,#sb-sec-rrhh,#sb-sec-portal{display:none!important}',
       esU ? '[data-rol-unitic]{display:block!important}' : '',
       tienePortalCms ? '#sb-sec-portal{display:block!important}' : '',
       !esU ? '[data-cms-only-unitic]{display:none!important}' : '',
@@ -733,6 +733,7 @@
       tieneDesc ? '[data-perm-descargas]{display:flex!important}' : '',
       tienePsico ? '#sb-grp-psico{display:block!important}' : '',
       tieneConvenios ? '#sb-grp-convenios{display:block!important}' : '',
+      tieneConvenios ? '#sb-grp-vacantes-libres{display:block!important}' : '',
       tieneConvenios ? '[data-perm-cms-convenios]{display:flex!important}' : '',
       tieneCursos ? '#sb-grp-cursos{display:block!important}' : '',
       tieneCursos ? '[data-perm-cms-cursos]{display:flex!important}' : '',
@@ -845,6 +846,21 @@
           </div>
           <div class="sb-item" data-page="conv-constancia" onclick="irConvConstancia(this)">
             <i class="fas fa-certificate"></i> 6. CONSTANCIA
+          </div>
+        </div>
+      </div>
+
+      <div class="sb-group" id="sb-grp-vacantes-libres" style="margin-top:4px;">
+        <div class="sb-group-header" onclick="toggleGrupo(this)">
+          <div class="gi"><i class="fas fa-door-open" style="color:#c8a94a;font-size:13px;"></i> VACANTES LIBRES</div>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="sb-group-body">
+          <div class="sb-item" data-page="vl-vacantes" onclick="ir('vl-vacantes',this)">
+            <i class="fas fa-list-ol"></i> 1. VACANTES DEL MES
+          </div>
+          <div class="sb-item" data-page="vl-solicitudes" onclick="ir('vl-solicitudes',this)">
+            <i class="fas fa-inbox"></i> 2. SOLICITUDES
           </div>
         </div>
       </div>
@@ -1740,6 +1756,85 @@
       </div>
     </div>
 
+    <div id="page-vl-vacantes" class="page">
+      <div class="card">
+        <h3><i class="fas fa-door-open" style="color:#c8a94a;"></i> Vacantes libres — <span id="vl-mes-titulo">mes actual</span></h3>
+        <p style="font-size:13px;color:#666;margin:-4px 0 14px;line-height:1.5;">
+          Módulo <strong>independiente</strong>: estas vacantes y solicitudes <strong>no se cuentan</strong> con preinscritos, ganadores, sorteo ni repechaje.
+          Usted digita el N° de vacantes de cada convenio / sede / turno. Al <strong>aprobar</strong> una solicitud, ocupa una vacante de inmediato.
+        </p>
+        <div id="vl-estado-box" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:#fff8e1;border:1.5px solid #c8a94a;border-radius:10px;padding:12px 16px;margin-bottom:16px;">
+          <div style="flex:1;min-width:220px;">
+            <strong style="display:block;color:#6b5420;font-size:13.5px;">Botón en la web: <span id="vl-estado-txt">—</span></strong>
+            <span style="font-size:12px;color:#8a6d1f;">Interruptor general del mes. Si está apagado, el botón "VACANTES LIBRES" no aparece en el portal.</span>
+          </div>
+          <button type="button" id="vl-btn-estado" class="btn btn-v" onclick="toggleEstadoVL()">—</button>
+          <a href="vacantes-libres.html" target="_blank" rel="noopener" class="btn" style="background:#e8eee9;color:#333;text-decoration:none;"><i class="fas fa-external-link-alt"></i> Ver en la web</a>
+        </div>
+
+        <div id="vl-carga-box" style="border:1.5px solid #c8e6c9;border-radius:10px;padding:14px 16px;margin-bottom:18px;">
+          <strong style="display:block;color:#004d3d;font-size:13.5px;margin-bottom:8px;"><i class="fas fa-plus-circle"></i> Cargar vacantes</strong>
+          <p style="font-size:12px;color:#666;margin:0 0 10px;">Ayuda: elija un convenio y presione <strong>Precargar sedes y turnos</strong>. Solo se copian los nombres; usted digita el N° de vacantes. Las filas sin número no se guardan.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;">
+            <select id="vl-ayuda-convenio" style="padding:8px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:260px;"><option value="">Cargando convenios...</option></select>
+            <button type="button" class="btn btn-o" onclick="precargarFilasVL()"><i class="fas fa-magic"></i> Precargar sedes y turnos</button>
+            <button type="button" class="btn" style="background:#e8eee9;color:#333;" onclick="agregarFilaNuevaVL()"><i class="fas fa-plus"></i> Fila manual</button>
+          </div>
+          <datalist id="vl-dl-convenios"></datalist>
+          <datalist id="vl-dl-sedes"></datalist>
+          <div style="overflow-x:auto;">
+            <table class="t" id="vl-tabla-nuevas" style="display:none;">
+              <thead><tr><th>Convenio</th><th>Sede / Unidad</th><th style="width:120px;">Turno</th><th style="width:100px;">Día</th><th style="width:100px;">N° vacantes</th><th style="width:44px;"></th></tr></thead>
+              <tbody id="vl-tbody-nuevas"></tbody>
+            </table>
+          </div>
+          <div id="vl-nuevas-acciones" style="display:none;margin-top:10px;gap:8px;">
+            <button type="button" class="btn btn-v" id="vl-btn-guardar-nuevas" onclick="guardarFilasNuevasVL()"><i class="fas fa-save"></i> Guardar vacantes</button>
+            <button type="button" class="btn" style="background:#e8eee9;color:#333;" onclick="limpiarFilasNuevasVL()">Limpiar</button>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+          <strong style="color:#004d3d;font-size:13.5px;"><i class="fas fa-list"></i> Vacantes cargadas</strong>
+          <select id="vl-mes-sel" onchange="cargarVacantesLibresAdmin(this.value)" style="padding:6px 8px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;"></select>
+          <button type="button" class="btn btn-v" onclick="cargarVacantesLibresAdmin()"><i class="fas fa-sync"></i> Actualizar</button>
+          <span id="vl-resumen" style="font-size:12px;color:#666;"></span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="t">
+            <thead><tr><th>#</th><th>Convenio</th><th>Sede / Unidad</th><th>Turno</th><th>Día</th><th>Vacantes</th><th>Aprobadas</th><th>Pendientes</th><th>Libres</th><th class="col-acciones">Acciones</th></tr></thead>
+            <tbody id="vl-tbody"><tr><td colspan="10" style="text-align:center;color:#bbb;padding:20px;">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-vl-solicitudes" class="page">
+      <div class="card">
+        <h3><i class="fas fa-inbox" style="color:#c8a94a;"></i> Solicitudes de vacantes libres — <span id="vl-sol-mes-titulo">mes actual</span></h3>
+        <p style="font-size:13px;color:#666;margin:-4px 0 14px;line-height:1.5;">
+          Revise el PDF y <strong>apruebe</strong> (ocupa la vacante de inmediato) o <strong>rechace</strong> con motivo. Solo una solicitud activa por CIP al mes.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+          <select id="vl-sol-estado" onchange="cargarSolicitudesVL()" style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;">
+            <option value="">Todas</option>
+            <option value="pendiente" selected>Pendientes</option>
+            <option value="aprobado">Aprobadas</option>
+            <option value="rechazado">Rechazadas</option>
+          </select>
+          <input type="text" id="vl-sol-busq" oninput="pintarSolicitudesVL()" placeholder="Buscar CIP, DNI o nombre..." style="padding:7px 10px;border:1.5px solid #ccc;border-radius:6px;font-size:12.5px;min-width:220px;">
+          <button type="button" class="btn btn-v" onclick="cargarSolicitudesVL()"><i class="fas fa-sync"></i> Actualizar</button>
+          <span id="vl-sol-cnt" style="font-size:12px;color:#666;"></span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="t">
+            <thead><tr><th>N°</th><th>Fecha</th><th>Grado</th><th>CIP</th><th>DNI</th><th>CODIFIN</th><th>Apellidos y nombres</th><th>Teléfono</th><th>Unidad actual</th><th>Postula a</th><th>Estado</th><th class="col-acciones">Acciones</th></tr></thead>
+            <tbody id="vl-sol-tbody"><tr><td colspan="12" style="text-align:center;color:#bbb;padding:20px;">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div id="page-conv-auditoria-cip" class="page">
       <div class="card">
         <h3><i class="fas fa-history"></i> Auditoría por CIP</h3>
@@ -2383,6 +2478,26 @@
     <div class="modal-footer" style="margin-top:14px;gap:6px;">
       <button class="btn-mini" style="background:#999;color:#fff;border-color:#999;" onclick="cerrarModal('modal-aviso-convenios-front')">Cancelar</button>
       <button class="btn-mini btn-mini-ok" onclick="guardarAvisoConveniosFront()"><i class="fas fa-save"></i> Guardar y publicar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-vl-editar" class="modal">
+  <div class="modal-box" style="width:520px;">
+    <h3><i class="fas fa-edit"></i> Editar vacante libre</h3>
+    <input type="hidden" id="vle-id"/>
+    <div style="display:grid;gap:10px;">
+      <div><label>Convenio *</label><input type="text" id="vle-convenio" list="vl-dl-convenios" maxlength="200"/></div>
+      <div><label>Sede / Unidad</label><input type="text" id="vle-sede" list="vl-dl-sedes" maxlength="200"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div><label>Turno</label><select id="vle-turno"></select></div>
+        <div><label>Día</label><select id="vle-dia"></select></div>
+        <div><label>N° vacantes *</label><input type="number" id="vle-vacantes" min="1" max="999"/></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button type="button" class="btn" style="background:#e8eee9;color:#333;" onclick="cerrarModal('modal-vl-editar')">Cancelar</button>
+      <button type="button" class="btn btn-v" onclick="guardarEdicionVL()"><i class="fas fa-save"></i> Guardar</button>
     </div>
   </div>
 </div>
@@ -4493,6 +4608,7 @@ function ir(page, el){
   if(page==='resultados-pdf'&&!puedePublicarResultadosPdf(RESULTADOS_PDF_TIPO)){alert('Sin acceso a publicación de resultados.');return;}
   if(page==='inscritos'&&!puedeOperarInscritosConvenio()&&!esUnitic()){alert('Sin acceso a inscritos de convenios.');return;}
   if((page==='conv-ganadores'||page==='conv-repechaje'||page==='conv-preinscritos'||page==='conv-auditoria-cip'||page==='conv-plantillas'||page==='conv-constancia')&&!puedeOperarInscritosConvenio()){alert('Sin acceso al flujo de convenios.');return;}
+  if((page==='vl-vacantes'||page==='vl-solicitudes')&&!puedeOperarInscritosConvenio()){alert('Sin acceso a Vacantes libres.');return;}
   if(page==='consulta-cip'&&!puedeConsultarCip()){alert('Sin acceso a consulta por CIP.');return;}
   if((page==='descansos'||page==='descansos-dash'||page==='descansos-import')&&!puedeGestionDescansos()){alert('Sin acceso a Descansos médicos.');return;}
   if((page==='faltos'||page==='faltos-dash'||page==='faltos-import')&&!puedeGestionFaltos()){alert('Sin acceso a Faltos.');return;}
@@ -4526,6 +4642,8 @@ function ir(page, el){
   if(page==='sorteos')             { aplicarModoSorteosUI(); cargarItemsSorteo(SORTEOS_TIPO_FILTRO||'convenio'); cargarSorteos(); }
   if(page==='conv-preinscritos')   { cargarConvFlujoResumen('preinscritos'); }
   if(page==='conv-ganadores')      { cargarConvFlujoResumen('ganadores'); }
+  if(page==='vl-vacantes')         { cargarVacantesLibresAdmin(); }
+  if(page==='vl-solicitudes')      { cargarSolicitudesVL(); }
   if(page==='conv-repechaje')      { cargarConvFlujoResumen('repechaje'); if(typeof cargarEstadoRepechaje==='function') cargarEstadoRepechaje(); }
   if(page==='conv-auditoria-cip')  { cargarPaquetesAuditoriaConvenio(); cargarExpedientesPdfConvenios(); }
   if(page==='conv-plantillas')     { if(typeof cargarExpModelosGlobales==='function') cargarExpModelosGlobales(); }
@@ -8845,6 +8963,332 @@ function imprimirPdfPreinscritosFiltrado(){
         btn.innerHTML='<i class="fas fa-print"></i> IMPRIMIR PDF';
       }
     });
+}
+
+/* ── Vacantes libres del mes (módulo independiente: no se cruza con inscritos de convenios) ── */
+var VL_ADMIN = { mes:'', mesActual:'', activo:false, vacantes:[], ayuda:null, solicitudes:[] };
+var VL_TURNOS = ['', 'MAÑANA', 'TARDE', 'NOCHE', 'ATENCION AL CLIENTE', '24 HORAS'];
+var VL_DIAS = ['', 'PAR', 'IMPAR', 'PAR/IMPAR'];
+
+function escVLA(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function optsVL(lista, sel){
+  var v = String(sel||'').toUpperCase();
+  var l = lista.slice();
+  if(v && l.indexOf(v)<0) l.push(v);
+  return l.map(function(x){
+    return '<option value="'+escVLA(x)+'"'+(x===v?' selected':'')+'>'+escVLA(x||'—')+'</option>';
+  }).join('');
+}
+
+function nombreMesVL(mes){
+  var M=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SETIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  var n=parseInt(String(mes||'').slice(5,7),10);
+  return (M[n-1]||'')+' '+String(mes||'').slice(0,4);
+}
+
+function cargarVacantesLibresAdmin(mes){
+  var q = mes ? ('?mes='+encodeURIComponent(mes)) : (VL_ADMIN.mes ? '?mes='+encodeURIComponent(VL_ADMIN.mes) : '');
+  var tb=document.getElementById('vl-tbody');
+  if(tb) tb.innerHTML='<tr><td colspan="10" style="text-align:center;color:#bbb;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
+  fetch(API+'/admin/vacantes-libres'+q,{headers:hdr()})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ if(tb) tb.innerHTML='<tr><td colspan="10" style="color:#c0392b;padding:16px;">'+escVLA(d.error||'Error')+'</td></tr>'; return; }
+      VL_ADMIN.mes=d.mes; VL_ADMIN.mesActual=d.mes_actual; VL_ADMIN.activo=!!d.activo; VL_ADMIN.vacantes=d.vacantes||[];
+      pintarEstadoVL(d);
+      pintarVacantesVL();
+      if(!VL_ADMIN.ayuda) cargarAyudaCargaVL();
+    })
+    .catch(function(){ if(tb) tb.innerHTML='<tr><td colspan="10" style="color:#c0392b;padding:16px;">Error de conexión.</td></tr>'; });
+}
+
+function pintarEstadoVL(d){
+  var esActual = d.mes===d.mes_actual;
+  document.getElementById('vl-mes-titulo').textContent = nombreMesVL(d.mes) + (esActual?'':' (histórico)');
+  var txt=document.getElementById('vl-estado-txt');
+  var btn=document.getElementById('vl-btn-estado');
+  if(esActual){
+    txt.innerHTML = VL_ADMIN.activo ? '<span style="color:#1a7a3a;">ENCENDIDO</span>' : '<span style="color:#c0392b;">APAGADO</span>';
+    btn.style.display='';
+    btn.className = VL_ADMIN.activo ? 'btn btn-r' : 'btn btn-v';
+    btn.innerHTML = VL_ADMIN.activo ? '<i class="fas fa-power-off"></i> Apagar en la web' : '<i class="fas fa-power-off"></i> Mostrar en la web';
+  } else {
+    txt.textContent='solo lectura (mes anterior)';
+    btn.style.display='none';
+  }
+  var sel=document.getElementById('vl-mes-sel');
+  var meses=(d.meses||[]).slice();
+  if(meses.indexOf(d.mes_actual)<0) meses.unshift(d.mes_actual);
+  sel.innerHTML=meses.map(function(m){ return '<option value="'+m+'"'+(m===d.mes?' selected':'')+'>'+nombreMesVL(m)+'</option>'; }).join('');
+  document.getElementById('vl-carga-box').style.display = esActual ? '' : 'none';
+}
+
+function pintarVacantesVL(){
+  var tb=document.getElementById('vl-tbody');
+  var list=VL_ADMIN.vacantes;
+  var esActual=VL_ADMIN.mes===VL_ADMIN.mesActual;
+  var tot=0, apr=0, pen=0, lib=0;
+  list.forEach(function(v){ tot+=v.vacantes; apr+=v.aprobadas; pen+=v.pendientes; lib+=v.libres; });
+  document.getElementById('vl-resumen').textContent = list.length ? (tot+' vacantes · '+apr+' aprobadas · '+pen+' pendientes · '+lib+' libres') : '';
+  if(!list.length){ tb.innerHTML='<tr><td colspan="10" style="text-align:center;color:#999;padding:20px;">No hay vacantes libres cargadas en este mes.</td></tr>'; return; }
+  tb.innerHTML=list.map(function(v,i){
+    return '<tr>'
+      +'<td>'+(i+1)+'</td>'
+      +'<td><strong>'+escVLA(v.convenio)+'</strong></td>'
+      +'<td>'+escVLA(v.sede||'—')+'</td>'
+      +'<td>'+escVLA(v.turno||'—')+'</td>'
+      +'<td>'+escVLA(v.dia||'—')+'</td>'
+      +'<td style="text-align:center;font-weight:800;">'+v.vacantes+'</td>'
+      +'<td style="text-align:center;color:#1a7a3a;font-weight:700;">'+v.aprobadas+'</td>'
+      +'<td style="text-align:center;color:#856404;font-weight:700;">'+v.pendientes+'</td>'
+      +'<td style="text-align:center;font-weight:800;color:'+(v.libres>0?'#004d3d':'#c0392b')+';">'+(v.libres>0?v.libres:'COMPLETO')+'</td>'
+      +'<td class="col-acciones">'+(esActual
+        ? '<button class="btn btn-o" style="padding:5px 9px;" onclick="abrirEdicionVL('+v.id+')" title="Editar"><i class="fas fa-edit"></i></button> '
+          +'<button class="btn btn-r" style="padding:5px 9px;" onclick="eliminarVacanteVL('+v.id+')" title="Eliminar"><i class="fas fa-trash"></i></button>'
+        : '—')+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function toggleEstadoVL(){
+  var nuevo=!VL_ADMIN.activo;
+  if(nuevo && !VL_ADMIN.vacantes.length && !confirm('No hay vacantes cargadas: el botón no aparecerá en la web hasta que agregue al menos una. ¿Encender de todos modos?')) return;
+  if(!nuevo && !confirm('¿Apagar el botón "Vacantes libres" en la web?')) return;
+  fetch(API+'/admin/vacantes-libres/estado',{method:'POST',headers:hdr(),body:JSON.stringify({activo:nuevo})})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ alert(d.error||'No se pudo cambiar el estado.'); return; }
+      cargarVacantesLibresAdmin(VL_ADMIN.mesActual);
+    })
+    .catch(function(){ alert('Error de conexión.'); });
+}
+
+function cargarAyudaCargaVL(){
+  fetch(API+'/admin/vacantes-libres/ayuda-carga',{headers:hdr()})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok) return;
+      VL_ADMIN.ayuda=d.convenios||[];
+      var sel=document.getElementById('vl-ayuda-convenio');
+      sel.innerHTML='<option value="">Elegir convenio...</option>'
+        +VL_ADMIN.ayuda.map(function(c,i){ return '<option value="'+i+'">'+escVLA(c.titulo)+' ('+c.filas.length+' sede/turno)</option>'; }).join('');
+      document.getElementById('vl-dl-convenios').innerHTML=VL_ADMIN.ayuda.map(function(c){ return '<option value="'+escVLA(c.titulo)+'">'; }).join('');
+      var sedes={};
+      VL_ADMIN.ayuda.forEach(function(c){ c.filas.forEach(function(f){ if(f.sede) sedes[f.sede]=true; }); });
+      document.getElementById('vl-dl-sedes').innerHTML=Object.keys(sedes).sort().map(function(s){ return '<option value="'+escVLA(s)+'">'; }).join('');
+    })
+    .catch(function(){});
+}
+
+function filaNuevaVLHtml(f){
+  return '<tr>'
+    +'<td><input type="text" class="vl-n-conv" list="vl-dl-convenios" maxlength="200" value="'+escVLA(f.convenio||'')+'" style="width:100%;min-width:130px;padding:6px 8px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;"></td>'
+    +'<td><input type="text" class="vl-n-sede" list="vl-dl-sedes" maxlength="200" value="'+escVLA(f.sede||'')+'" style="width:100%;min-width:110px;padding:6px 8px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;"></td>'
+    +'<td><select class="vl-n-turno" style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;">'+optsVL(VL_TURNOS,f.turno)+'</select></td>'
+    +'<td><select class="vl-n-dia" style="width:100%;padding:6px;border:1.5px solid #ccc;border-radius:6px;font-size:12px;">'+optsVL(VL_DIAS,f.dia)+'</select></td>'
+    +'<td><input type="number" class="vl-n-vac" min="1" max="999" placeholder="N°" style="width:80px;padding:6px 8px;border:1.5px solid #c8a94a;border-radius:6px;font-size:13px;font-weight:700;"></td>'
+    +'<td><button type="button" class="btn btn-r" style="padding:4px 8px;" onclick="this.closest(\'tr\').remove();actualizarAccionesNuevasVL();" title="Quitar fila"><i class="fas fa-times"></i></button></td>'
+    +'</tr>';
+}
+
+function actualizarAccionesNuevasVL(){
+  var n=document.querySelectorAll('#vl-tbody-nuevas tr').length;
+  document.getElementById('vl-tabla-nuevas').style.display = n ? '' : 'none';
+  document.getElementById('vl-nuevas-acciones').style.display = n ? 'flex' : 'none';
+}
+
+function precargarFilasVL(){
+  var idx=document.getElementById('vl-ayuda-convenio').value;
+  if(idx===''||!VL_ADMIN.ayuda){ alert('Elija un convenio.'); return; }
+  var c=VL_ADMIN.ayuda[parseInt(idx,10)];
+  var filas=c.filas.length ? c.filas : [{sede:'',turno:'',dia:''}];
+  var tb=document.getElementById('vl-tbody-nuevas');
+  tb.insertAdjacentHTML('beforeend', filas.map(function(f){
+    return filaNuevaVLHtml({convenio:c.titulo, sede:f.sede, turno:f.turno, dia:f.dia});
+  }).join(''));
+  actualizarAccionesNuevasVL();
+}
+
+function agregarFilaNuevaVL(){
+  document.getElementById('vl-tbody-nuevas').insertAdjacentHTML('beforeend', filaNuevaVLHtml({}));
+  actualizarAccionesNuevasVL();
+}
+
+function limpiarFilasNuevasVL(){
+  document.getElementById('vl-tbody-nuevas').innerHTML='';
+  actualizarAccionesNuevasVL();
+}
+
+function guardarFilasNuevasVL(){
+  var filas=[];
+  var error='';
+  document.querySelectorAll('#vl-tbody-nuevas tr').forEach(function(tr,i){
+    var vac=String(tr.querySelector('.vl-n-vac').value||'').trim();
+    if(!vac) return;
+    var f={
+      convenio:tr.querySelector('.vl-n-conv').value.trim(),
+      sede:tr.querySelector('.vl-n-sede').value.trim(),
+      turno:tr.querySelector('.vl-n-turno').value,
+      dia:tr.querySelector('.vl-n-dia').value,
+      vacantes:parseInt(vac,10)
+    };
+    if(!error && !f.convenio) error='Fila '+(i+1)+': falta el convenio.';
+    if(!error && !(f.vacantes>=1 && f.vacantes<=999)) error='Fila '+(i+1)+': el N° de vacantes debe ser entre 1 y 999.';
+    filas.push(f);
+  });
+  if(error){ alert(error); return; }
+  if(!filas.length){ alert('Digite el N° de vacantes en al menos una fila.'); return; }
+  var btn=document.getElementById('vl-btn-guardar-nuevas');
+  btn.disabled=true;
+  fetch(API+'/admin/vacantes-libres',{method:'POST',headers:hdr(),body:JSON.stringify({filas:filas})})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ alert(d.error||'No se pudo guardar.'); return; }
+      limpiarFilasNuevasVL();
+      cargarVacantesLibresAdmin(VL_ADMIN.mesActual);
+      alert('Se guardaron '+d.creadas+' fila(s) de vacantes libres.');
+    })
+    .catch(function(){ alert('Error de conexión.'); })
+    .then(function(){ btn.disabled=false; });
+}
+
+function abrirEdicionVL(id){
+  var v=VL_ADMIN.vacantes.find(function(x){ return x.id===id; });
+  if(!v) return;
+  document.getElementById('vle-id').value=v.id;
+  document.getElementById('vle-convenio').value=v.convenio||'';
+  document.getElementById('vle-sede').value=v.sede||'';
+  document.getElementById('vle-turno').innerHTML=optsVL(VL_TURNOS,v.turno);
+  document.getElementById('vle-dia').innerHTML=optsVL(VL_DIAS,v.dia);
+  document.getElementById('vle-vacantes').value=v.vacantes;
+  document.getElementById('modal-vl-editar').classList.add('open');
+}
+
+function guardarEdicionVL(){
+  var id=document.getElementById('vle-id').value;
+  var body={
+    convenio:document.getElementById('vle-convenio').value.trim(),
+    sede:document.getElementById('vle-sede').value.trim(),
+    turno:document.getElementById('vle-turno').value,
+    dia:document.getElementById('vle-dia').value,
+    vacantes:parseInt(document.getElementById('vle-vacantes').value,10)
+  };
+  fetch(API+'/admin/vacantes-libres/'+id,{method:'PUT',headers:hdr(),body:JSON.stringify(body)})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ alert(d.error||'No se pudo guardar.'); return; }
+      cerrarModal('modal-vl-editar');
+      cargarVacantesLibresAdmin(VL_ADMIN.mesActual);
+    })
+    .catch(function(){ alert('Error de conexión.'); });
+}
+
+function eliminarVacanteVL(id){
+  var v=VL_ADMIN.vacantes.find(function(x){ return x.id===id; });
+  if(!v || !confirm('¿Eliminar la vacante libre de '+v.convenio+(v.sede?' — '+v.sede:'')+'?')) return;
+  fetch(API+'/admin/vacantes-libres/'+id,{method:'DELETE',headers:hdr()})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ alert(d.error||'No se pudo eliminar.'); return; }
+      cargarVacantesLibresAdmin(VL_ADMIN.mesActual);
+    })
+    .catch(function(){ alert('Error de conexión.'); });
+}
+
+function cargarSolicitudesVL(){
+  var est=document.getElementById('vl-sol-estado').value;
+  var tb=document.getElementById('vl-sol-tbody');
+  tb.innerHTML='<tr><td colspan="12" style="text-align:center;color:#bbb;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
+  fetch(API+'/admin/vacantes-libres/solicitudes'+(est?'?estado='+est:''),{headers:hdr()})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ tb.innerHTML='<tr><td colspan="12" style="color:#c0392b;padding:16px;">'+escVLA(d.error||'Error')+'</td></tr>'; return; }
+      document.getElementById('vl-sol-mes-titulo').textContent=nombreMesVL(d.mes);
+      VL_ADMIN.solicitudes=d.solicitudes||[];
+      pintarSolicitudesVL();
+    })
+    .catch(function(){ tb.innerHTML='<tr><td colspan="12" style="color:#c0392b;padding:16px;">Error de conexión.</td></tr>'; });
+}
+
+function pintarSolicitudesVL(){
+  var tb=document.getElementById('vl-sol-tbody');
+  var q=String(document.getElementById('vl-sol-busq').value||'').trim().toUpperCase();
+  var list=VL_ADMIN.solicitudes.filter(function(s){
+    if(!q) return true;
+    return (s.cip+' '+s.dni+' '+s.apellidos+' '+s.nombres).toUpperCase().indexOf(q)>=0;
+  });
+  document.getElementById('vl-sol-cnt').textContent=list.length+' solicitud(es)';
+  if(!list.length){ tb.innerHTML='<tr><td colspan="12" style="text-align:center;color:#999;padding:20px;">No hay solicitudes.</td></tr>'; return; }
+  var col={pendiente:['#fff3cd','#856404','Pendiente'],aprobado:['#d4edda','#1a7a3a','Aprobado'],rechazado:['#f8d7da','#842029','Rechazado']};
+  tb.innerHTML=list.map(function(s){
+    var c=col[s.estado]||['#eee','#333',s.estado];
+    var fecha=s.creado_en?new Date(s.creado_en).toLocaleString('es-PE',{timeZone:'America/Lima',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    var postula=escVLA(s.convenio)+(s.sede?' — '+escVLA(s.sede):'')+(s.turno?'<br><small>'+escVLA(s.turno)+(s.dia?' / '+escVLA(s.dia):'')+'</small>':'');
+    var acc='';
+    if(s.tiene_pdf) acc+='<button class="btn btn-v" style="padding:5px 9px;" onclick="verPdfSolicitudVL('+s.id+')" title="Ver PDF"><i class="fas fa-file-pdf"></i></button> ';
+    if(s.estado!=='aprobado') acc+='<button class="btn" style="padding:5px 9px;background:#1a7a3a;color:#fff;" onclick="aprobarSolicitudVL('+s.id+')" title="Aprobar"><i class="fas fa-check"></i></button> ';
+    if(s.estado!=='rechazado') acc+='<button class="btn btn-r" style="padding:5px 9px;" onclick="rechazarSolicitudVL('+s.id+')" title="Rechazar"><i class="fas fa-times"></i></button>';
+    return '<tr>'
+      +'<td style="white-space:nowrap;font-weight:700;">'+escVLA(s.nro)+'</td>'
+      +'<td style="white-space:nowrap;">'+escVLA(fecha)+'</td>'
+      +'<td>'+escVLA(s.grado)+'</td>'
+      +'<td>'+escVLA(s.cip)+'</td>'
+      +'<td>'+escVLA(s.dni)+'</td>'
+      +'<td>'+escVLA(s.codifin)+'</td>'
+      +'<td><strong>'+escVLA(s.apellidos+', '+s.nombres)+'</strong></td>'
+      +'<td>'+escVLA(s.telefono)+'</td>'
+      +'<td>'+escVLA(s.unidad)+'</td>'
+      +'<td>'+postula+'</td>'
+      +'<td><span class="badge" style="background:'+c[0]+';color:'+c[1]+';">'+c[2]+'</span>'
+        +(s.estado==='rechazado'&&s.motivo_rechazo?'<div style="font-size:11px;color:#842029;margin-top:3px;">'+escVLA(s.motivo_rechazo)+'</div>':'')
+        +(s.revisado_por?'<div style="font-size:10.5px;color:#888;margin-top:2px;">por '+escVLA(s.revisado_por)+'</div>':'')+'</td>'
+      +'<td class="col-acciones" style="white-space:nowrap;">'+acc+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function verPdfSolicitudVL(id){
+  var w=window.open('','_blank');
+  fetch(API+'/admin/vacantes-libres/solicitudes/'+id+'/pdf',{headers:hdr()})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ if(w) w.close(); alert(d.error||'No hay PDF.'); return; }
+      if(!w){ alert('El navegador bloqueó la ventana. Permita ventanas emergentes.'); return; }
+      var bin=atob(d.pdf_data.split(',')[1]||'');
+      var arr=new Uint8Array(bin.length);
+      for(var i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+      w.location.href=URL.createObjectURL(new Blob([arr],{type:'application/pdf'}));
+    })
+    .catch(function(){ if(w) w.close(); alert('Error de conexión.'); });
+}
+
+function aprobarSolicitudVL(id){
+  var s=VL_ADMIN.solicitudes.find(function(x){ return x.id===id; });
+  if(!s || !confirm('¿Aprobar a '+s.apellidos+', '+s.nombres+' (CIP '+s.cip+')?\nOcupará una vacante libre de '+s.convenio+(s.sede?' — '+s.sede:'')+'.')) return;
+  fetch(API+'/admin/vacantes-libres/solicitudes/'+id+'/aprobar',{method:'POST',headers:hdr(),body:'{}'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ alert(d.error||'No se pudo aprobar.'); return; }
+      cargarSolicitudesVL();
+    })
+    .catch(function(){ alert('Error de conexión.'); });
+}
+
+function rechazarSolicitudVL(id){
+  var s=VL_ADMIN.solicitudes.find(function(x){ return x.id===id; });
+  if(!s) return;
+  var motivo=prompt('Motivo del rechazo para '+s.apellidos+', '+s.nombres+':'+(s.estado==='aprobado'?'\n(Al rechazar, se libera la vacante que ocupaba.)':''));
+  if(motivo===null) return;
+  motivo=motivo.trim();
+  if(!motivo){ alert('Debe indicar el motivo.'); return; }
+  fetch(API+'/admin/vacantes-libres/solicitudes/'+id+'/rechazar',{method:'POST',headers:hdr(),body:JSON.stringify({motivo:motivo})})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok){ alert(d.error||'No se pudo rechazar.'); return; }
+      cargarSolicitudesVL();
+    })
+    .catch(function(){ alert('Error de conexión.'); });
 }
 
 function irConvPreinscritos(el){
