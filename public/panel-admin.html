@@ -376,6 +376,9 @@
     .mi-fechas-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
     .mi-fechas-grid label{font-size:10.5px;margin:0 0 4px;color:#666;font-weight:600;letter-spacing:0;}
     .mi-fechas-grid input[type=date]{margin-bottom:0;padding:8px 10px;font-size:13px;border-color:#ccd8d4;}
+    .mi-fecha-hora{display:grid;grid-template-columns:1fr 110px;gap:6px;}
+    .mi-fecha-hora input[type=time]{margin-bottom:0;padding:8px 10px;font-size:13px;border-color:#ccd8d4;}
+    .mi-rd-aviso{grid-column:1/-1;font-size:11.5px;color:#555;margin:6px 0 0;padding:6px 10px;background:#f7fbf9;border:1px solid #e0ebe4;border-radius:6px;}
     /* Estado badge inline */
     .mi-insc-estado-pill{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;
       padding:3px 10px;border-radius:999px;background:#f3f4f6;color:#6b7280;letter-spacing:.3px;}
@@ -1712,7 +1715,7 @@
       <div class="card">
         <h3><i class="fas fa-trophy" style="color:#c8a94a;"></i> Ganadores y expedientes</h3>
         <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
-          El efectivo ganador <strong>sube</strong> el expediente del 21/10 00:00 al 23/10 18:00 hrs (Lima). Convenios <strong>revisa</strong> el PDF.
+          El efectivo ganador <strong>sube</strong> el expediente en la ventana de recepción configurada en cada convenio (hora Lima). Convenios <strong>revisa</strong> el PDF.
           Al <strong>aprobar</strong> se <strong>descarga</strong> en este equipo y se <strong>borra</strong> de la base.
           En la web queda el registro (CIP, estado, constancia), no el archivo. No se dejan meses en Postgres.
           <strong>Sin edición de datos</strong> del efectivo. Caducados = no presentaron a tiempo.
@@ -1978,7 +1981,7 @@
 
         <div id="sorteo-convenio-panel" style="background:#f0f7f0;border:1.5px solid #c8e6c9;border-radius:10px;padding:16px;margin-bottom:18px;">
           <strong style="color:#004d3d;display:block;margin-bottom:10px;font-size:13px;"><i class="fas fa-handshake"></i> Sorteo de convenio</strong>
-  <p style="font-size:12px;color:#666;margin-bottom:12px;">Convenios: preinscripción (sin PDF) → sorteo → aviso WA/correo → el ganador sube expediente del 21/10 00:00 al 23/10 18:00 hrs (Lima) → Convenios revisa. El PDF queda en el bucket privado. Repechaje sube PDF (sin sorteo). Cursos mantienen verificación/aprobación.</p>
+  <p style="font-size:12px;color:#666;margin-bottom:12px;">Convenios: preinscripción (sin PDF) → sorteo → aviso WA/correo → el ganador sube expediente en la ventana de recepción del convenio (hora Lima) → Convenios revisa. El PDF queda en el bucket privado. Repechaje sube PDF (sin sorteo). Cursos mantienen verificación/aprobación.</p>
           <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
             <div style="flex:1;min-width:280px;">
               <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Convocatoria de convenio</label>
@@ -2263,13 +2266,20 @@
             </div>
             <div class="mi-fechas-grid">
               <div>
-                <label>Desde</label>
-                <input type="date" id="mi-recepcion-doc-inicio"/>
+                <label>Desde (fecha y hora, Lima)</label>
+                <div class="mi-fecha-hora">
+                  <input type="date" id="mi-recepcion-doc-inicio" onchange="actualizarAvisoRecepcionModal()"/>
+                  <input type="time" id="mi-recepcion-doc-hora-inicio" value="00:00" onchange="actualizarAvisoRecepcionModal()"/>
+                </div>
               </div>
               <div>
-                <label>Hasta</label>
-                <input type="date" id="mi-recepcion-doc-cierre"/>
+                <label>Hasta (fecha y hora, Lima)</label>
+                <div class="mi-fecha-hora">
+                  <input type="date" id="mi-recepcion-doc-cierre" onchange="actualizarAvisoRecepcionModal()"/>
+                  <input type="time" id="mi-recepcion-doc-hora-cierre" value="18:00" onchange="actualizarAvisoRecepcionModal()"/>
+                </div>
               </div>
+              <p class="mi-rd-aviso" id="mi-rd-aviso">Los ganadores suben su expediente en esta ventana. Al guardar, los ganadores del mes de este convenio toman el nuevo plazo.</p>
             </div>
           </div>
         </div>
@@ -6589,6 +6599,29 @@ function mostrarAlertaItems(texto,tipo){
   setTimeout(function(){el.style.display='none';},5000);
 }
 
+function horaRecepcionValidaUI(v, def){
+  var t=String(v||'').trim().slice(0,5);
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(t) ? t : def;
+}
+
+function actualizarAvisoRecepcionModal(){
+  var el=document.getElementById('mi-rd-aviso');
+  if(!el) return;
+  var fi=val('mi-recepcion-doc-inicio'), fc=val('mi-recepcion-doc-cierre');
+  var hi=horaRecepcionValidaUI(val('mi-recepcion-doc-hora-inicio'),'00:00');
+  var hc=horaRecepcionValidaUI(val('mi-recepcion-doc-hora-cierre'),'18:00');
+  function dmy(f){ var p=String(f||'').split('-'); return p.length===3 ? (p[2]+'/'+p[1]+'/'+p[0]) : ''; }
+  if(fi && fc && (fc+' '+hc) <= (fi+' '+hi)){
+    el.style.color='#a94442';
+    el.textContent='El cierre debe ser después del inicio.';
+    return;
+  }
+  el.style.color='';
+  el.textContent = (fi && fc)
+    ? ('Expediente: del '+dmy(fi)+' '+hi+' al '+dmy(fc)+' '+hc+' hrs (Lima). Al guardar, los ganadores del mes de este convenio toman este plazo.')
+    : 'Los ganadores suben su expediente en esta ventana. Al guardar, los ganadores del mes de este convenio toman el nuevo plazo.';
+}
+
 function fechaISOInput(v){
   if(v==null||v==='') return '';
   if(Object.prototype.toString.call(v)==='[object Date]' && !isNaN(v.getTime())){
@@ -6766,6 +6799,11 @@ function abrirModalItem(id){
   var rdCieEl2=document.getElementById('mi-recepcion-doc-cierre');
   if(rdIniEl2) rdIniEl2.value='';
   if(rdCieEl2) rdCieEl2.value='';
+  var rdHIni2=document.getElementById('mi-recepcion-doc-hora-inicio');
+  var rdHCie2=document.getElementById('mi-recepcion-doc-hora-cierre');
+  if(rdHIni2) rdHIni2.value='00:00';
+  if(rdHCie2) rdHCie2.value='18:00';
+  actualizarAvisoRecepcionModal();
   var avisoFb=document.getElementById('mi-aviso-sorteo-fb');
   if(avisoFb) avisoFb.value='';
   document.getElementById('mi-formulario-url').value='';
@@ -6841,6 +6879,11 @@ function poblarModalItem(item){
   var rdCieEl=document.getElementById('mi-recepcion-doc-cierre');
   if(rdIniEl) rdIniEl.value=fechaISOInput(item.recepcion_doc_inicio)||'';
   if(rdCieEl) rdCieEl.value=fechaISOInput(item.recepcion_doc_cierre)||'';
+  var rdHIni=document.getElementById('mi-recepcion-doc-hora-inicio');
+  var rdHCie=document.getElementById('mi-recepcion-doc-hora-cierre');
+  if(rdHIni) rdHIni.value=horaRecepcionValidaUI(item.recepcion_doc_hora_inicio,'00:00');
+  if(rdHCie) rdHCie.value=horaRecepcionValidaUI(item.recepcion_doc_hora_cierre,'18:00');
+  actualizarAvisoRecepcionModal();
   var avisoFb=document.getElementById('mi-aviso-sorteo-fb');
   if(avisoFb) avisoFb.value=item.aviso_sorteo_fb||'';
   document.getElementById('mi-formulario-url').value=item.formulario_url||'';
@@ -8237,6 +8280,8 @@ function guardarItem(){
     inscripcion_cierre: tipo==='convenio' ? (inscCie || null) : null,
     recepcion_doc_inicio: tipo==='convenio' ? (val('mi-recepcion-doc-inicio') || null) : null,
     recepcion_doc_cierre: tipo==='convenio' ? (val('mi-recepcion-doc-cierre') || null) : null,
+    recepcion_doc_hora_inicio: horaRecepcionValidaUI(val('mi-recepcion-doc-hora-inicio'),'00:00'),
+    recepcion_doc_hora_cierre: horaRecepcionValidaUI(val('mi-recepcion-doc-hora-cierre'),'18:00'),
     aviso_sorteo_fb:(function(){
       if(id){
         var prev=(ITEMS_CACHE||[]).find(function(i){ return parseInt(i.id,10)===parseInt(id,10); });
@@ -8268,7 +8313,8 @@ function guardarItem(){
           try { renderGestionConvocatoriasCMS('cms-lista-cursos','curso'); } catch(e){}
         }
       }
-      finOk((id?'Ficha web actualizada':'Convocatoria creada')+' correctamente. Ya se ve en el portal.');
+      var extraPlazos = (d.plazos_actualizados>0) ? (' Plazo de expediente actualizado para '+d.plazos_actualizados+' ganador(es).') : '';
+      finOk((id?'Ficha web actualizada':'Convocatoria creada')+' correctamente. Ya se ve en el portal.'+extraPlazos);
     });
 }
 
@@ -8556,7 +8602,7 @@ function pasarPreinscritosAGanador(itemId){
       return;
     }
     var n = cand.length;
-    if(!confirm('Hay '+n+' preinscrito(s) y '+vacLibres+' vacante(s) libre(s).\nComo no se cubre el cupo, no hay sorteo.\n\n¿Pasar a TODOS a ganador?\nPlazo de expediente: 21/10 00:00 al 23/10 18:00 hrs (Lima).')) return;
+    if(!confirm('Hay '+n+' preinscrito(s) y '+vacLibres+' vacante(s) libre(s).\nComo no se cubre el cupo, no hay sorteo.\n\n¿Pasar a TODOS a ganador?\nPlazo de expediente: según la recepción de documentos del convenio.')) return;
     var ids = cand.slice(0, n).map(function(i){ return i.id; });
     var btn = document.getElementById('btn-pasar-ganador-vacantes');
     if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pasando...'; }

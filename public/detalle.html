@@ -657,7 +657,9 @@ function renderDetalle(item){
         var rdI = item.recepcion_doc_inicio, rdC = item.recepcion_doc_cierre;
         if (!rdI && !rdC) return '';
         function fmtFecha(iso){ if(!iso) return ''; var p=String(iso).split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
-        var txt = rdI && rdC ? ('Del '+fmtFecha(rdI)+' al '+fmtFecha(rdC)) : rdI ? ('Desde el '+fmtFecha(rdI)) : ('Hasta el '+fmtFecha(rdC));
+        function hora(h, def){ var t=String(h||'').slice(0,5); return /^([01]\d|2[0-3]):[0-5]\d$/.test(t) ? t : def; }
+        var hI = hora(item.recepcion_doc_hora_inicio, '00:00'), hC = hora(item.recepcion_doc_hora_cierre, '18:00');
+        var txt = rdI && rdC ? ('Del '+fmtFecha(rdI)+' '+hI+' al '+fmtFecha(rdC)+' '+hC+' hrs (Lima)') : rdI ? ('Desde el '+fmtFecha(rdI)+' '+hI+' hrs') : ('Hasta el '+fmtFecha(rdC)+' '+hC+' hrs');
         return '<p class="ventana-inscripcion-nota is-cerrada" style="background:#eff6ff;border-color:#bfdbfe;color:#1e40af;"><i class="fas fa-folder-open" style="margin-right:4px;"></i><strong>Recepción de documentos:</strong> '+escHtmlD(txt)+'</p>';
       })()
     +'</div>'

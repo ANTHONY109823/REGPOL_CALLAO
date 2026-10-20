@@ -607,6 +607,8 @@ async function initDB() {
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS inscripcion_cierre DATE;
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS recepcion_doc_inicio DATE;
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS recepcion_doc_cierre DATE;
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS recepcion_doc_hora_inicio VARCHAR(5) DEFAULT '00:00';
+    ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS recepcion_doc_hora_cierre VARCHAR(5) DEFAULT '18:00';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS aviso_sorteo_fb TEXT DEFAULT '';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS cupos_unidades JSONB DEFAULT '[]';
     ALTER TABLE items_portal ADD COLUMN IF NOT EXISTS turnos JSONB DEFAULT '[]';
@@ -6518,7 +6520,7 @@ async function marcarInscripcionGanadorPorCip(itemId, cipDigits, observacion) {
   const item = await pool.query('SELECT tipo FROM items_portal WHERE id=$1', [itemId]);
   const esConvenio = item.rows[0] && item.rows[0].tipo === 'convenio';
   if (esConvenio) {
-    const plazo = conveniosFlujo.plazoDesdeAhora();
+    const plazo = await conveniosFlujo.plazoPresentacionItem(pool, itemId);
     const r = await pool.query(
       `UPDATE inscripciones SET
          estado='ganador', observacion=$1, modo_ingreso=COALESCE(NULLIF(modo_ingreso,''),'sorteo'),
@@ -6563,7 +6565,7 @@ function etiquetaEstadoPublico(estado, tipo) {
       anulado_solicitud: 'Preinscripción ANULADA a solicitud — puede inscribirse en otro convenio',
       verificado: 'Preinscrito — a la espera del sorteo',
       aprobado: 'Preinscrito — a la espera del sorteo',
-      ganador: 'GANADOR — subir expediente del 21/10 00:00 al 23/10 18:00 hrs (Lima)',
+      ganador: 'GANADOR — subir expediente dentro de la ventana de recepción (hora Lima)',
       en_revision: 'Documentación en verificación por Convenios',
       observado: 'Expediente OBSERVADO — subsanar a la brevedad',
       expediente_ok: 'Documentación APROBADA — vacante ocupada',
@@ -6736,7 +6738,8 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
               i.id AS item_id, i.tipo, i.titulo, i.horario, i.lugar, i.fecha_inicio, i.duracion,
               i.descripcion, i.observaciones AS item_observaciones, i.vacantes,
               i.uniforme, i.contactos_responsables, i.requisitos, i.aviso_sorteo_fb,
-              i.turnos, i.cupos_unidades, i.constancia_presentacion
+              i.turnos, i.cupos_unidades, i.constancia_presentacion,
+              i.recepcion_doc_inicio, i.recepcion_doc_cierre, i.recepcion_doc_hora_inicio, i.recepcion_doc_hora_cierre
        FROM inscripciones n
        JOIN items_portal i ON i.id = n.item_id
        WHERE ${sqlCipKeyInscripcion('n.cip')} = $1
@@ -6764,7 +6767,8 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
         }
       }
       const plazoVencido = !extraVigente && !!(row.plazo_expediente && new Date(row.plazo_expediente) < new Date());
-      const ventanaEntrega = conveniosFlujo.presentacionVentanaAbierta();
+      const ventanaRow = conveniosFlujo.ventanaPresentacion(row);
+      const ventanaEntrega = conveniosFlujo.presentacionVentanaAbierta(ventanaRow);
       const puedeSubirGanador = estado === 'ganador' && !plazoVencido && (ventanaEntrega || extraVigente);
       const puedeSubirExtra = extraVigente && ['ganador', 'caducado', 'observado', 'rechazado'].indexOf(estado) >= 0;
       const puedeSubir = row.tipo === 'convenio' && (
@@ -6876,10 +6880,12 @@ app.get('/portal/consulta-inscripcion', async (req, res) => {
         plazo_expediente: row.plazo_expediente || null,
         fecha_ganador: row.fecha_ganador || null,
         plazo_vencido: plazoVencido,
-        presentacion_inicio: conveniosFlujo.INICIO_PRESENTACION_LIMA,
-        presentacion_cierre: conveniosFlujo.CIERRE_PRESENTACION_LIMA,
+        presentacion_inicio: ventanaRow.inicioLima,
+        presentacion_cierre: ventanaRow.cierreLima,
+        presentacion_inicio_txt: ventanaRow.inicioTxt,
+        presentacion_cierre_txt: ventanaRow.cierreTxt,
         presentacion_abierta: ventanaEntrega,
-        presentacion_aun_no_abre: estado === 'ganador' && conveniosFlujo.presentacionAunNoAbre(),
+        presentacion_aun_no_abre: estado === 'ganador' && conveniosFlujo.presentacionAunNoAbre(ventanaRow),
         es_ganador: estado === 'ganador' || estado === 'expediente_ok' || estado === 'en_revision' || estado === 'observado',
         puede_subir_expediente: puedeSubir,
         puede_descargar_constancia: puedeConstancia,
@@ -7547,7 +7553,7 @@ app.post('/admin/items/:id/aplicar-sorteo', requireAuth, async (req, res) => {
     let nGan = 0;
     let nRes = 0;
     const notifs = [];
-    const plazo = conveniosFlujo.plazoDesdeAhora();
+    const plazo = await conveniosFlujo.plazoPresentacionItem(pool, itemId);
     for (const g of ganadores) {
       const insId = parseInt(g.id, 10);
       if (!insId) continue;
@@ -7821,6 +7827,24 @@ function fechaISOSolo(v) {
   const d = parseInt(m[3], 10);
   if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
   return m[1] + '-' + m[2] + '-' + m[3];
+}
+
+async function plazoPresentacionDeInscripcion(insId) {
+  const r = await pool.query('SELECT item_id FROM inscripciones WHERE id=$1', [insId]);
+  return conveniosFlujo.plazoPresentacionItem(pool, r.rows[0] ? r.rows[0].item_id : 0);
+}
+
+/** Hora de recepción de documentos "HH:MM" (hora Lima). */
+function horaRecepcionBody(v, def) {
+  const s = String(v == null ? '' : v).trim().slice(0, 5);
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(s) ? s : def;
+}
+
+function errorVentanaRecepcion(fIni, hIni, fCie, hCie) {
+  if (fIni && fCie && (fCie + ' ' + hCie) <= (fIni + ' ' + hIni)) {
+    return 'La recepción de documentos debe cerrar después de su inicio (fecha y hora).';
+  }
+  return '';
 }
 
 function formatearDiaMesAnioEs(iso) {
@@ -9307,7 +9331,8 @@ async function inscripcionExpedientePorCip(id, cip) {
   const cipKey = cipKeyInscripcion(cip);
   if (!id || !cipKey) return null;
   const r = await pool.query(
-    `SELECT n.id, n.estado, n.plazo_expediente, n.observacion, n.item_id, n.habilitar_expediente_hasta, i.tipo, i.titulo
+    `SELECT n.id, n.estado, n.plazo_expediente, n.observacion, n.item_id, n.habilitar_expediente_hasta, i.tipo, i.titulo,
+            i.recepcion_doc_inicio, i.recepcion_doc_cierre, i.recepcion_doc_hora_inicio, i.recepcion_doc_hora_cierre
      FROM inscripciones n
      JOIN items_portal i ON i.id=n.item_id
      WHERE n.id=$1 AND ${sqlCipKeyInscripcion('n.cip')}=$2`,
@@ -9323,13 +9348,14 @@ function errorSiNoPuedeSubirExpediente(row) {
     return '';
   }
   const plazoVencido = !!(row.plazo_expediente && new Date(row.plazo_expediente) < new Date());
-  if (row.estado === 'ganador' && conveniosFlujo.presentacionAunNoAbre()) {
-    return 'La entrega de expediente abre el 21/10/2026 a las 00:00 hrs (Lima). Cierra el 23/10/2026 a las 18:00 hrs.';
+  const v = conveniosFlujo.ventanaPresentacion(row);
+  if (row.estado === 'ganador' && conveniosFlujo.presentacionAunNoAbre(v)) {
+    return 'La entrega de expediente abre el ' + v.inicioTxt + ' hrs (Lima). Cierra el ' + v.cierreTxt + ' hrs.';
   }
-  if (row.estado === 'ganador' && !conveniosFlujo.presentacionVentanaAbierta() && !plazoVencido) {
-    return 'La ventana de entrega de expediente está cerrada (23/10/2026 18:00 hrs Lima).';
+  if (row.estado === 'ganador' && !conveniosFlujo.presentacionVentanaAbierta(v) && !plazoVencido) {
+    return 'La ventana de entrega de expediente está cerrada (' + v.cierreTxt + ' hrs Lima).';
   }
-  const puedeGanador = row.estado === 'ganador' && !plazoVencido && conveniosFlujo.presentacionVentanaAbierta();
+  const puedeGanador = row.estado === 'ganador' && !plazoVencido && conveniosFlujo.presentacionVentanaAbierta(v);
   const puedeObservado = row.estado === 'observado' && !plazoVencido;
   const puedeRechazado = row.estado === 'rechazado' && !!row.plazo_expediente && !plazoVencido;
   if (puedeGanador || puedeObservado || puedeRechazado) return '';
@@ -9363,7 +9389,7 @@ app.post('/portal/inscripciones/:id/expediente-url', express.json(), async (req,
          WHERE id=$1 AND (habilitar_expediente_hasta IS NULL OR habilitar_expediente_hasta < NOW())`,
         [id]
       );
-      return res.json({ ok: false, error: 'El plazo de entrega ya venció (23/10/2026 18:00 hrs). La vacante pasó a repechaje.' });
+      return res.json({ ok: false, error: 'El plazo de entrega ya venció (' + conveniosFlujo.ventanaPresentacion(row).cierreTxt + ' hrs). La vacante pasó a repechaje.' });
     }
     if (err) return res.json({ ok: false, error: err });
     const key = expedientesS3.claveObjeto(row.item_id, id, expedientesS3.mesLimaAhora());
@@ -9397,7 +9423,7 @@ app.post('/portal/inscripciones/:id/expediente-confirmar', express.json(), async
          WHERE id=$1 AND (habilitar_expediente_hasta IS NULL OR habilitar_expediente_hasta < NOW())`,
         [id]
       );
-      return res.json({ ok: false, error: 'El plazo de entrega ya venció (23/10/2026 18:00 hrs). La vacante pasó a repechaje.' });
+      return res.json({ ok: false, error: 'El plazo de entrega ya venció (' + conveniosFlujo.ventanaPresentacion(row).cierreTxt + ' hrs). La vacante pasó a repechaje.' });
     }
     if (err) return res.json({ ok: false, error: err });
     const meta = await expedientesS3.head(key);
@@ -9467,7 +9493,8 @@ app.post('/portal/inscripciones/:id/expediente',
     const cipKey = cipKeyInscripcion(cip);
     if (!cipKey) return res.json({ ok: false, error: 'CIP e inscripción requeridos' });
     const r = await pool.query(
-      `SELECT n.id, n.estado, n.plazo_expediente, n.observacion, n.item_id, n.habilitar_expediente_hasta, i.tipo, i.titulo
+      `SELECT n.id, n.estado, n.plazo_expediente, n.observacion, n.item_id, n.habilitar_expediente_hasta, i.tipo, i.titulo,
+              i.recepcion_doc_inicio, i.recepcion_doc_cierre, i.recepcion_doc_hora_inicio, i.recepcion_doc_hora_cierre
        FROM inscripciones n
        JOIN items_portal i ON i.id=n.item_id
        WHERE n.id=$1 AND ${sqlCipKeyInscripcion('n.cip')}=$2`,
@@ -9481,7 +9508,7 @@ app.post('/portal/inscripciones/:id/expediente',
          WHERE id=$1 AND (habilitar_expediente_hasta IS NULL OR habilitar_expediente_hasta < NOW())`,
         [id]
       );
-      return res.json({ ok: false, error: 'El plazo de entrega ya venció (23/10/2026 18:00 hrs). La vacante pasó a repechaje.' });
+      return res.json({ ok: false, error: 'El plazo de entrega ya venció (' + conveniosFlujo.ventanaPresentacion(row).cierreTxt + ' hrs). La vacante pasó a repechaje.' });
     }
     if (errSub) return res.json({ ok: false, error: errSub });
 
@@ -9865,7 +9892,7 @@ app.post('/admin/inscripciones/:id/revisar-expediente', requireAuth, async (req,
     }
 
     if (accion === 'rechazar') {
-      const plazo = conveniosFlujo.plazoDesdeAhora();
+      const plazo = await plazoPresentacionDeInscripcion(id);
       await pool.query(
         `UPDATE inscripciones SET estado='rechazado',
            observacion=COALESCE(NULLIF($1,''), 'Expediente rechazado'),
@@ -9950,7 +9977,7 @@ app.post('/admin/inscripciones/:id/notificar', requireAuth, async (req, res) => 
 
     // Al avisar rechazo, asegurar plazo de subsanación activo
     if (tipo === 'rechazado') {
-      const plazo = conveniosFlujo.plazoDesdeAhora();
+      const plazo = await plazoPresentacionDeInscripcion(id);
       await pool.query(
         `UPDATE inscripciones
          SET plazo_expediente = CASE
@@ -10215,6 +10242,7 @@ app.get('/admin/items', requireAuth, async (req, res) => {
               i.vacantes, i.fecha_inicio, i.duracion, i.lugar, i.observaciones, i.ventana_inscripcion,
               i.inscripcion_inicio, i.inscripcion_cierre,
               i.recepcion_doc_inicio, i.recepcion_doc_cierre,
+              i.recepcion_doc_hora_inicio, i.recepcion_doc_hora_cierre,
               i.formulario_url, i.inscripciones_abiertas, i.visible, i.orden, i.uniforme,
               i.contactos_responsables, i.aviso_sorteo_fb, i.cupos_unidades, i.turnos,
               (SELECT COUNT(*) FROM inscripciones n
@@ -10298,17 +10326,21 @@ app.post('/admin/items', requireAuth, async (req, res) => {
     }
     const rdIni = fechaISOSolo(recepcion_doc_inicio);
     const rdCie = fechaISOSolo(recepcion_doc_cierre);
+    const rdHoraIni = horaRecepcionBody(req.body.recepcion_doc_hora_inicio, conveniosFlujo.HORA_INICIO_RECEPCION_DEF);
+    const rdHoraCie = horaRecepcionBody(req.body.recepcion_doc_hora_cierre, conveniosFlujo.HORA_CIERRE_RECEPCION_DEF);
+    const errRd = errorVentanaRecepcion(rdIni, rdHoraIni, rdCie, rdHoraCie);
+    if (tipo === 'convenio' && errRd) return res.json({ ok: false, error: errRd });
     const r = await pool.query(
       `INSERT INTO items_portal(tipo,titulo,descripcion,estado,icono,color,requisitos,horario,
-        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden,uniforme,contactos_responsables,aviso_sorteo_fb,cupos_unidades,turnos,inscripcion_inicio,inscripcion_cierre,recepcion_doc_inicio,recepcion_doc_cierre)
-       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22::jsonb,$23::jsonb,$24,$25,$26,$27) RETURNING id`,
+        vacantes,fecha_inicio,duracion,lugar,observaciones,ventana_inscripcion,formulario_url,inscripciones_abiertas,visible,orden,uniforme,contactos_responsables,aviso_sorteo_fb,cupos_unidades,turnos,inscripcion_inicio,inscripcion_cierre,recepcion_doc_inicio,recepcion_doc_cierre,recepcion_doc_hora_inicio,recepcion_doc_hora_cierre)
+       VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22::jsonb,$23::jsonb,$24,$25,$26,$27,$28,$29) RETURNING id`,
       [tipo, titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
        horarioSave, vacSave, fecha_inicio||'', duracion||'',
        lugar||'', observaciones||'', ventanaTxt, formulario_url||'',
        inscAbiertas, visible!==false, parseInt(orden)||0,
        uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'', JSON.stringify(cupos),
-       JSON.stringify(turnosNorm), iniIso, cieIso, rdIni, rdCie]);
+       JSON.stringify(turnosNorm), iniIso, cieIso, rdIni, rdCie, rdHoraIni, rdHoraCie]);
     invalidarPortalItemsCache();
     res.json({ ok: true, id: r.rows[0].id });
   } catch (e) { res.json({ ok: false, error: e.message }); }
@@ -10363,14 +10395,27 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
       }
     }
     const curRd = await pool.query(
-      'SELECT recepcion_doc_inicio, recepcion_doc_cierre FROM items_portal WHERE id=$1',
+      `SELECT recepcion_doc_inicio, recepcion_doc_cierre, recepcion_doc_hora_inicio, recepcion_doc_hora_cierre
+       FROM items_portal WHERE id=$1`,
       [req.params.id]);
-    const prevRdIni = fechaISOSolo(curRd.rows[0] && curRd.rows[0].recepcion_doc_inicio);
-    const prevRdCie = fechaISOSolo(curRd.rows[0] && curRd.rows[0].recepcion_doc_cierre);
+    const rowRd = curRd.rows[0] || {};
+    const prevRdIni = fechaISOSolo(rowRd.recepcion_doc_inicio);
+    const prevRdCie = fechaISOSolo(rowRd.recepcion_doc_cierre);
     const rdIni = Object.prototype.hasOwnProperty.call(req.body, 'recepcion_doc_inicio')
       ? fechaISOSolo(recepcion_doc_inicio) : prevRdIni;
     const rdCie = Object.prototype.hasOwnProperty.call(req.body, 'recepcion_doc_cierre')
       ? fechaISOSolo(recepcion_doc_cierre) : prevRdCie;
+    const rdHoraIni = Object.prototype.hasOwnProperty.call(req.body, 'recepcion_doc_hora_inicio')
+      ? horaRecepcionBody(req.body.recepcion_doc_hora_inicio, conveniosFlujo.HORA_INICIO_RECEPCION_DEF)
+      : horaRecepcionBody(rowRd.recepcion_doc_hora_inicio, conveniosFlujo.HORA_INICIO_RECEPCION_DEF);
+    const rdHoraCie = Object.prototype.hasOwnProperty.call(req.body, 'recepcion_doc_hora_cierre')
+      ? horaRecepcionBody(req.body.recepcion_doc_hora_cierre, conveniosFlujo.HORA_CIERRE_RECEPCION_DEF)
+      : horaRecepcionBody(rowRd.recepcion_doc_hora_cierre, conveniosFlujo.HORA_CIERRE_RECEPCION_DEF);
+    const errRd = errorVentanaRecepcion(rdIni, rdHoraIni, rdCie, rdHoraCie);
+    if (tipoCur === 'convenio' && errRd) return res.json({ ok: false, error: errRd });
+    const cambioVentanaRd = rdIni !== prevRdIni || rdCie !== prevRdCie
+      || rdHoraIni !== horaRecepcionBody(rowRd.recepcion_doc_hora_inicio, conveniosFlujo.HORA_INICIO_RECEPCION_DEF)
+      || rdHoraCie !== horaRecepcionBody(rowRd.recepcion_doc_hora_cierre, conveniosFlujo.HORA_CIERRE_RECEPCION_DEF);
     await pool.query(
       `UPDATE items_portal SET titulo=$1,descripcion=$2,estado=$3,icono=$4,color=$5,
         requisitos=$6::jsonb,horario=$7,vacantes=$8,fecha_inicio=$9,duracion=$10,
@@ -10378,6 +10423,7 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
         visible=$16,orden=$17,uniforme=$18,contactos_responsables=$19,aviso_sorteo_fb=$20,
         cupos_unidades=$21::jsonb,turnos=$22::jsonb,inscripcion_inicio=$23,inscripcion_cierre=$24,
         recepcion_doc_inicio=$26,recepcion_doc_cierre=$27,
+        recepcion_doc_hora_inicio=$28,recepcion_doc_hora_cierre=$29,
         actualizado=NOW() WHERE id=$25`,
       [titulo, descripcion||'', estado||'DISPONIBLE', icono||'fa-file', color||'#004d3d',
        JSON.stringify(Array.isArray(requisitos)?requisitos:[]),
@@ -10385,9 +10431,14 @@ app.put('/admin/items/:id', requireAuth, async (req, res) => {
        lugar||'', observaciones||'', ventanaTxt, formulario_url||'',
        inscAbiertas, visible!==false, parseInt(orden)||0,
        uniforme||'', contactos_responsables||'', aviso_sorteo_fb||'', JSON.stringify(cupos),
-       JSON.stringify(turnosNorm), iniIso, cieIso, req.params.id, rdIni, rdCie]);
+       JSON.stringify(turnosNorm), iniIso, cieIso, req.params.id, rdIni, rdCie, rdHoraIni, rdHoraCie]);
+    /* Nueva fecha/hora de recepción: los ganadores del mes de este convenio toman el nuevo plazo */
+    let plazosActualizados = 0;
+    if (tipoCur === 'convenio' && cambioVentanaRd) {
+      plazosActualizados = await conveniosFlujo.aplicarVentanaPresentacionItem(pool, req.params.id);
+    }
     invalidarPortalItemsCache();
-    res.json({ ok: true });
+    res.json({ ok: true, plazos_actualizados: plazosActualizados });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
@@ -10962,7 +11013,7 @@ function iniciarDB() {
       dbListo = true;
       console.log('PostgreSQL listo.');
       return conveniosFlujo.alinearPlazosPresentacionMes(pool).then(function() {
-        console.log('Plazos de expediente alineados a 23/10/2026 18:00 (Lima).');
+        console.log('Plazos de expediente alineados a la ventana de recepción de cada convenio.');
         if (typeof conveniosFlujo.reabrirGanadoresCaducadosPorCierreAnterior === 'function') {
           return conveniosFlujo.reabrirGanadoresCaducadosPorCierreAnterior(pool).then(function(ids) {
             if (ids && ids.length) {

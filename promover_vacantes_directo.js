@@ -318,7 +318,7 @@ async function promover(pool, itemId, opts) {
   }
 
   const pendientesEst = ['reserva', 'preinscrito', 'pendiente', 'aprobado', 'verificado'];
-  const plazo = conveniosFlujo.plazoDesdeAhora();
+  const plazo = await conveniosFlujo.plazoPresentacionItem(pool, itemId);
   const obsVac = 'Asignado por vacaciones (sin sorteo)';
   const obsDir = 'Asignado por vacante no cubierta (turno sin sorteo)';
   const obsRes = 'No cubrió vacante (turno completo)';

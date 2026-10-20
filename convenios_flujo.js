@@ -3,7 +3,7 @@
   1. Preinscripción (sin PDF)
   2. Sorteo (todos los preinscritos) → ganador / reserva
   3. Aviso ganadores (WA + correo)
-  4. Presentación expediente (21/10 00:00 → 23/10 18:00 hrs Lima)
+  4. Presentación expediente (ventana de recepción configurada en cada convenio, hora Lima)
   5. Revisión admin → constancia u observación (+ aviso)
   6. Repechaje: registro completo con expediente (sin sorteo), según vacantes libres
 
@@ -110,7 +110,8 @@ function mensajeNotificacion(tipo, ins, itemTitulo, item) {
       + 'Ha resultado GANADOR(A) en «' + conv + '».\n'
       + datos
       + '\nDebe subir su expediente completo desde Consulta por CIP.\n'
-      + 'Ventana de entrega (hora Lima): del 21/10/2026 00:00 hrs al 23/10/2026 18:00 hrs.\n'
+      + 'Ventana de entrega (hora Lima): del ' + ventanaPresentacion(item).inicioTxt
+      + ' hrs al ' + ventanaPresentacion(item).cierreTxt + ' hrs.\n'
       + 'Pasado el plazo, la vacante se libera para REPECHAJE.';
   }
   if (tipo === 'observado') {
@@ -207,7 +208,8 @@ async function notificarInscripcion(pool, inscripcionId, tipo) {
   const r = await pool.query(
     `SELECT n.*,
             i.titulo AS item_titulo, i.tipo AS item_tipo,
-            i.horario, i.fecha_inicio, i.duracion, i.lugar, i.vacantes, i.descripcion
+            i.horario, i.fecha_inicio, i.duracion, i.lugar, i.vacantes, i.descripcion,
+            i.recepcion_doc_inicio, i.recepcion_doc_cierre, i.recepcion_doc_hora_inicio, i.recepcion_doc_hora_cierre
      FROM inscripciones n
      JOIN items_portal i ON i.id = n.item_id
      WHERE n.id=$1`,
@@ -224,7 +226,11 @@ async function notificarInscripcion(pool, inscripcionId, tipo) {
     duracion: ins.duracion,
     lugar: ins.lugar,
     vacantes: ins.vacantes,
-    descripcion: ins.descripcion
+    descripcion: ins.descripcion,
+    recepcion_doc_inicio: ins.recepcion_doc_inicio,
+    recepcion_doc_cierre: ins.recepcion_doc_cierre,
+    recepcion_doc_hora_inicio: ins.recepcion_doc_hora_inicio,
+    recepcion_doc_hora_cierre: ins.recepcion_doc_hora_cierre
   };
   const mensaje = mensajeNotificacion(tipo, ins, ins.item_titulo, itemInfo);
   const urls = urlsNotificacion(ins, mensaje);
@@ -569,17 +575,17 @@ async function caducarExpedientesVencidos(pool) {
   await pool.query(
     `UPDATE inscripciones n
      SET estado = 'caducado',
-         plazo_expediente = $2::timestamp AT TIME ZONE 'America/Lima',
-         observacion = 'Presentación de expediente cerrada el 23/10/2026 a las 18:00. No presentó PDF.'
+         plazo_expediente = ${sqlCierrePresentacionItem('i')},
+         observacion = 'Presentación de expediente cerrada. No presentó PDF.'
      FROM items_portal i
      WHERE n.item_id = i.id
        AND i.tipo = 'convenio'
        AND n.estado = 'ganador'
        AND COALESCE(n.pdf_requisitos,'') = ''
-       AND to_char(timezone('America/Lima', COALESCE(n.fecha, NOW())), 'YYYY-MM') = $1
-       AND (CURRENT_TIMESTAMP AT TIME ZONE 'America/Lima') >= $2::timestamp
-       AND NOT ${sqlExtraExpedienteVigente('n')}`,
-    [CIERRE_PRESENTACION_MES, CIERRE_PRESENTACION_LIMA]
+       AND to_char(timezone('America/Lima', COALESCE(n.fecha, NOW())), 'YYYY-MM')
+         = to_char(timezone('America/Lima', NOW()), 'YYYY-MM')
+       AND NOW() >= ${sqlCierrePresentacionItem('i')}
+       AND NOT ${sqlExtraExpedienteVigente('n')}`
   );
 
   const r = await pool.query(`
@@ -691,47 +697,135 @@ function instanteLima(textoLocal) {
   return new Date(String(textoLocal || '').trim().replace(' ', 'T') + '-05:00');
 }
 
-function plazoCierrePresentacion() {
-  return instanteLima(CIERRE_PRESENTACION_LIMA);
+/* ── Ventana de presentación de expediente por convenio ─────────────────────
+   Sale de items_portal.recepcion_doc_inicio/cierre (fecha) + recepcion_doc_hora_inicio/cierre
+   (HH:MM, hora Lima). Sin fechas configuradas se usa la ventana por defecto de arriba. */
+const HORA_INICIO_RECEPCION_DEF = '00:00';
+const HORA_CIERRE_RECEPCION_DEF = '18:00';
+
+function horaRecepcionValida(h, def) {
+  const t = String(h || '').trim();
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(t) ? t : def;
 }
 
-function presentacionInicio() {
-  return instanteLima(INICIO_PRESENTACION_LIMA);
+function fechaYmd(v) {
+  if (!v) return '';
+  if (v instanceof Date) {
+    if (isNaN(v.getTime())) return '';
+    return v.getFullYear() + '-' + String(v.getMonth() + 1).padStart(2, '0') + '-' + String(v.getDate()).padStart(2, '0');
+  }
+  const m = String(v).match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : '';
 }
 
-function presentacionAunNoAbre() {
-  return Date.now() < presentacionInicio().getTime();
+function textoFechaHoraLima(lima) {
+  const m = String(lima || '').match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})/);
+  return m ? (m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4]) : '';
 }
 
-function presentacionVentanaAbierta() {
+/** item: fila de items_portal (o cualquier objeto con los campos recepcion_doc_*). */
+function ventanaPresentacion(item) {
+  const fi = fechaYmd(item && item.recepcion_doc_inicio);
+  const fc = fechaYmd(item && item.recepcion_doc_cierre);
+  const inicioLima = fi
+    ? fi + ' ' + horaRecepcionValida(item.recepcion_doc_hora_inicio, HORA_INICIO_RECEPCION_DEF) + ':00'
+    : INICIO_PRESENTACION_LIMA;
+  const cierreLima = fc
+    ? fc + ' ' + horaRecepcionValida(item.recepcion_doc_hora_cierre, HORA_CIERRE_RECEPCION_DEF) + ':00'
+    : CIERRE_PRESENTACION_LIMA;
+  return {
+    inicioLima: inicioLima,
+    cierreLima: cierreLima,
+    inicio: instanteLima(inicioLima),
+    cierre: instanteLima(cierreLima),
+    inicioTxt: textoFechaHoraLima(inicioLima),
+    cierreTxt: textoFechaHoraLima(cierreLima)
+  };
+}
+
+async function ventanaPresentacionItem(db, itemId) {
+  const r = await db.query(
+    `SELECT recepcion_doc_inicio, recepcion_doc_cierre, recepcion_doc_hora_inicio, recepcion_doc_hora_cierre
+     FROM items_portal WHERE id=$1`,
+    [itemId]
+  );
+  return ventanaPresentacion(r.rows[0] || null);
+}
+
+/** Fecha límite de expediente para un ganador nuevo del convenio. */
+async function plazoPresentacionItem(db, itemId) {
+  return (await ventanaPresentacionItem(db, itemId)).cierre;
+}
+
+/** SQL: cierre de presentación (timestamptz) del convenio con alias a. */
+function sqlCierrePresentacionItem(a) {
+  return "COALESCE(((" + a + ".recepcion_doc_cierre + (CASE WHEN COALESCE(" + a + ".recepcion_doc_hora_cierre,'') ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' THEN "
+    + a + ".recepcion_doc_hora_cierre ELSE '" + HORA_CIERRE_RECEPCION_DEF + "' END)::time) AT TIME ZONE 'America/Lima'), ('"
+    + CIERRE_PRESENTACION_LIMA + "'::timestamp AT TIME ZONE 'America/Lima'))";
+}
+
+function plazoCierrePresentacion(v) {
+  return (v || ventanaPresentacion(null)).cierre;
+}
+
+function presentacionInicio(v) {
+  return (v || ventanaPresentacion(null)).inicio;
+}
+
+function presentacionAunNoAbre(v) {
+  return Date.now() < presentacionInicio(v).getTime();
+}
+
+function presentacionVentanaAbierta(v) {
   const n = Date.now();
-  return n >= presentacionInicio().getTime() && n < plazoCierrePresentacion().getTime();
+  return n >= presentacionInicio(v).getTime() && n < plazoCierrePresentacion(v).getTime();
 }
 
-function plazoDesdeAhora() {
-  return plazoCierrePresentacion();
+function plazoDesdeAhora(v) {
+  return plazoCierrePresentacion(v);
+}
+
+/** Tras editar fechas/horas del convenio: los ganadores del mes toman el nuevo plazo. */
+async function aplicarVentanaPresentacionItem(db, itemId) {
+  const r = await db.query(
+    `UPDATE inscripciones n
+     SET plazo_expediente = ${sqlCierrePresentacionItem('i')}
+     FROM items_portal i
+     WHERE n.item_id = i.id
+       AND i.id = $1
+       AND i.tipo = 'convenio'
+       AND n.estado = 'ganador'
+       AND to_char(timezone('America/Lima', COALESCE(n.fecha, NOW())), 'YYYY-MM')
+         = to_char(timezone('America/Lima', NOW()), 'YYYY-MM')
+       AND NOT ${sqlExtraExpedienteVigente('n')}`,
+    [itemId]
+  );
+  return r.rowCount || 0;
 }
 
 async function alinearPlazosPresentacionMes(pool) {
   await pool.query(
     `UPDATE inscripciones n
-     SET plazo_expediente = $2::timestamp AT TIME ZONE 'America/Lima'
+     SET plazo_expediente = ${sqlCierrePresentacionItem('i')}
      FROM items_portal i
      WHERE n.item_id = i.id
        AND i.tipo = 'convenio'
        AND n.estado = 'ganador'
-       AND to_char(timezone('America/Lima', COALESCE(n.fecha, NOW())), 'YYYY-MM') = $1
+       AND to_char(timezone('America/Lima', COALESCE(n.fecha, NOW())), 'YYYY-MM')
+         = to_char(timezone('America/Lima', NOW()), 'YYYY-MM')
        AND NOT ${sqlExtraExpedienteVigente('n')}
        AND (
          n.plazo_expediente IS NULL
-         OR n.plazo_expediente <= ($2::timestamp AT TIME ZONE 'America/Lima')
-       )`,
-    [CIERRE_PRESENTACION_MES, CIERRE_PRESENTACION_LIMA]
+         OR n.plazo_expediente <= ${sqlCierrePresentacionItem('i')}
+       )`
   );
 }
 
 /** Si se amplió el cierre (17:00 → 18:00), reabre ganadores caducados hoy sin PDF. */
 async function reabrirGanadoresCaducadosPorCierreAnterior(pool) {
+  /* Ajuste puntual de septiembre (cierre 17:00 → 18:00). Con la ventana configurable por
+     convenio ya no aplica: reabriría caducados legítimos en cada arranque. */
+  if (pool) return [];
   const r = await pool.query(
     `UPDATE inscripciones n
      SET estado = 'ganador',
@@ -1397,6 +1491,13 @@ module.exports = {
   caducarExpedientesVencidos,
   vacantesDisponibles,
   plazoDesdeAhora,
+  ventanaPresentacion,
+  ventanaPresentacionItem,
+  plazoPresentacionItem,
+  sqlCierrePresentacionItem,
+  aplicarVentanaPresentacionItem,
+  HORA_INICIO_RECEPCION_DEF,
+  HORA_CIERRE_RECEPCION_DEF,
   plazoSubsanacionDesdeAhora,
   presentacionInicio,
   presentacionAunNoAbre,
