@@ -1038,7 +1038,7 @@ function prepararDatosSorteo() {
         lock.textContent = 'Las inscripciones siguen abiertas. Los postulantes quedan como preinscritos. El Admin de Convenios hace el sorteo al cerrar la ventana.';
       } else if (hayVacantesDirecto() && FALTAN_INICIAL <= 0) {
         lock.style.display = 'block';
-        lock.textContent = 'Hay vacaciones pendientes y/o turnos que no cubren el cupo. Pulse «Pasar a ganador vacantes no cubiertas» — no hace falta rueda en esos casos.';
+        lock.textContent = 'Hay turnos con menos preinscritos que vacantes. Pulse «Pasar a ganador vacantes no cubiertas» — no hace falta rueda en esos casos.';
       } else if (FALTAN_INICIAL <= 0 && nVacIni < 1) {
         lock.style.display = 'block';
         lock.textContent = SLOTS_SORTEO.length
