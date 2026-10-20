@@ -3,7 +3,7 @@
   1. Preinscripción (sin PDF)
   2. Sorteo (todos los preinscritos) → ganador / reserva
   3. Aviso ganadores (WA + correo)
-  4. Presentación expediente (18/09 00:00 → 21/09 18:00 hrs Lima)
+  4. Presentación expediente (21/10 00:00 → 23/10 18:00 hrs Lima)
   5. Revisión admin → constancia u observación (+ aviso)
   6. Repechaje: registro completo con expediente (sin sorteo), según vacantes libres
 
@@ -15,10 +15,10 @@ const PLAZO_SUBSANACION_HORAS = 24;
 /** Super Admin puede reabrir la subida de expediente este número de horas, ya cerrado el plazo general. */
 const PLAZO_HABILITACION_EXTRA_HORAS = 24;
 /** Ventana de entrega de expediente (hora Lima). Día 18 00:00 → día 21 18:00 del mes operativo. */
-const INICIO_PRESENTACION_LIMA = '2026-09-18 00:00:00';
-const CIERRE_PRESENTACION_LIMA = '2026-09-21 18:00:00';
-const CIERRE_PRESENTACION_LIMA_ANTERIOR = '2026-09-21 17:00:00';
-const CIERRE_PRESENTACION_MES = '2026-09';
+const INICIO_PRESENTACION_LIMA = '2026-10-21 00:00:00';
+const CIERRE_PRESENTACION_LIMA = '2026-10-23 18:00:00';
+const CIERRE_PRESENTACION_LIMA_ANTERIOR = '2026-10-23 17:00:00';
+const CIERRE_PRESENTACION_MES = '2026-10';
 
 const ESTADOS_CONVENIO = {
   PREINSCRITO: 'preinscrito',
@@ -110,7 +110,7 @@ function mensajeNotificacion(tipo, ins, itemTitulo, item) {
       + 'Ha resultado GANADOR(A) en «' + conv + '».\n'
       + datos
       + '\nDebe subir su expediente completo desde Consulta por CIP.\n'
-      + 'Ventana de entrega (hora Lima): del 18/09/2026 00:00 hrs al 21/09/2026 18:00 hrs.\n'
+      + 'Ventana de entrega (hora Lima): del 21/10/2026 00:00 hrs al 23/10/2026 18:00 hrs.\n'
       + 'Pasado el plazo, la vacante se libera para REPECHAJE.';
   }
   if (tipo === 'observado') {
@@ -570,7 +570,7 @@ async function caducarExpedientesVencidos(pool) {
     `UPDATE inscripciones n
      SET estado = 'caducado',
          plazo_expediente = $2::timestamp AT TIME ZONE 'America/Lima',
-         observacion = 'Presentación de expediente cerrada el 21/09/2026 a las 18:00. No presentó PDF.'
+         observacion = 'Presentación de expediente cerrada el 23/10/2026 a las 18:00. No presentó PDF.'
      FROM items_portal i
      WHERE n.item_id = i.id
        AND i.tipo = 'convenio'
@@ -736,7 +736,7 @@ async function reabrirGanadoresCaducadosPorCierreAnterior(pool) {
     `UPDATE inscripciones n
      SET estado = 'ganador',
          plazo_expediente = $2::timestamp AT TIME ZONE 'America/Lima',
-         observacion = 'Plazo de expediente ampliado hasta el 21/09/2026 a las 18:00 hrs (Lima).'
+         observacion = 'Plazo de expediente ampliado hasta el 23/10/2026 a las 18:00 hrs (Lima).'
      FROM items_portal i
      WHERE n.item_id = i.id
        AND i.tipo = 'convenio'
@@ -745,7 +745,7 @@ async function reabrirGanadoresCaducadosPorCierreAnterior(pool) {
        AND to_char(timezone('America/Lima', COALESCE(n.fecha, NOW())), 'YYYY-MM') = $1
        AND NOT ${sqlExtraExpedienteVigente('n')}
        AND (
-         COALESCE(n.observacion,'') ILIKE '%21/09/2026 a las 17:00%'
+         COALESCE(n.observacion,'') ILIKE '%23/10/2026 a las 17:00%'
          OR (
            COALESCE(n.observacion,'') ILIKE '%Plazo vencido sin presentar expediente%'
            AND n.plazo_expediente IS NOT NULL

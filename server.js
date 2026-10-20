@@ -6563,7 +6563,7 @@ function etiquetaEstadoPublico(estado, tipo) {
       anulado_solicitud: 'Preinscripción ANULADA a solicitud — puede inscribirse en otro convenio',
       verificado: 'Preinscrito — a la espera del sorteo',
       aprobado: 'Preinscrito — a la espera del sorteo',
-      ganador: 'GANADOR — subir expediente del 18/09 00:00 al 21/09 18:00 hrs (Lima)',
+      ganador: 'GANADOR — subir expediente del 21/10 00:00 al 23/10 18:00 hrs (Lima)',
       en_revision: 'Documentación en verificación por Convenios',
       observado: 'Expediente OBSERVADO — subsanar a la brevedad',
       expediente_ok: 'Documentación APROBADA — vacante ocupada',
@@ -9324,10 +9324,10 @@ function errorSiNoPuedeSubirExpediente(row) {
   }
   const plazoVencido = !!(row.plazo_expediente && new Date(row.plazo_expediente) < new Date());
   if (row.estado === 'ganador' && conveniosFlujo.presentacionAunNoAbre()) {
-    return 'La entrega de expediente abre el 18/09/2026 a las 00:00 hrs (Lima). Cierra el 21/09/2026 a las 18:00 hrs.';
+    return 'La entrega de expediente abre el 21/10/2026 a las 00:00 hrs (Lima). Cierra el 23/10/2026 a las 18:00 hrs.';
   }
   if (row.estado === 'ganador' && !conveniosFlujo.presentacionVentanaAbierta() && !plazoVencido) {
-    return 'La ventana de entrega de expediente está cerrada (21/09/2026 18:00 hrs Lima).';
+    return 'La ventana de entrega de expediente está cerrada (23/10/2026 18:00 hrs Lima).';
   }
   const puedeGanador = row.estado === 'ganador' && !plazoVencido && conveniosFlujo.presentacionVentanaAbierta();
   const puedeObservado = row.estado === 'observado' && !plazoVencido;
@@ -9363,7 +9363,7 @@ app.post('/portal/inscripciones/:id/expediente-url', express.json(), async (req,
          WHERE id=$1 AND (habilitar_expediente_hasta IS NULL OR habilitar_expediente_hasta < NOW())`,
         [id]
       );
-      return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 18:00 hrs). La vacante pasó a repechaje.' });
+      return res.json({ ok: false, error: 'El plazo de entrega ya venció (23/10/2026 18:00 hrs). La vacante pasó a repechaje.' });
     }
     if (err) return res.json({ ok: false, error: err });
     const key = expedientesS3.claveObjeto(row.item_id, id, expedientesS3.mesLimaAhora());
@@ -9397,7 +9397,7 @@ app.post('/portal/inscripciones/:id/expediente-confirmar', express.json(), async
          WHERE id=$1 AND (habilitar_expediente_hasta IS NULL OR habilitar_expediente_hasta < NOW())`,
         [id]
       );
-      return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 18:00 hrs). La vacante pasó a repechaje.' });
+      return res.json({ ok: false, error: 'El plazo de entrega ya venció (23/10/2026 18:00 hrs). La vacante pasó a repechaje.' });
     }
     if (err) return res.json({ ok: false, error: err });
     const meta = await expedientesS3.head(key);
@@ -9481,7 +9481,7 @@ app.post('/portal/inscripciones/:id/expediente',
          WHERE id=$1 AND (habilitar_expediente_hasta IS NULL OR habilitar_expediente_hasta < NOW())`,
         [id]
       );
-      return res.json({ ok: false, error: 'El plazo de entrega ya venció (21/09/2026 18:00 hrs). La vacante pasó a repechaje.' });
+      return res.json({ ok: false, error: 'El plazo de entrega ya venció (23/10/2026 18:00 hrs). La vacante pasó a repechaje.' });
     }
     if (errSub) return res.json({ ok: false, error: errSub });
 
@@ -10962,7 +10962,7 @@ function iniciarDB() {
       dbListo = true;
       console.log('PostgreSQL listo.');
       return conveniosFlujo.alinearPlazosPresentacionMes(pool).then(function() {
-        console.log('Plazos de expediente alineados a 21/09/2026 18:00 (Lima).');
+        console.log('Plazos de expediente alineados a 23/10/2026 18:00 (Lima).');
         if (typeof conveniosFlujo.reabrirGanadoresCaducadosPorCierreAnterior === 'function') {
           return conveniosFlujo.reabrirGanadoresCaducadosPorCierreAnterior(pool).then(function(ids) {
             if (ids && ids.length) {
