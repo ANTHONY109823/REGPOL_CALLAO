@@ -6565,7 +6565,7 @@ function etiquetaEstadoPublico(estado, tipo) {
       anulado_solicitud: 'Preinscripción ANULADA a solicitud — puede inscribirse en otro convenio',
       verificado: 'Preinscrito — a la espera del sorteo',
       aprobado: 'Preinscrito — a la espera del sorteo',
-      ganador: 'GANADOR — subir expediente dentro de la ventana de recepción (hora Lima)',
+      ganador: 'GANADOR — subir expediente dentro de la ventana de recepción',
       en_revision: 'Documentación en verificación por Convenios',
       observado: 'Expediente OBSERVADO — subsanar a la brevedad',
       expediente_ok: 'Documentación APROBADA — vacante ocupada',
@@ -9350,10 +9350,10 @@ function errorSiNoPuedeSubirExpediente(row) {
   const plazoVencido = !!(row.plazo_expediente && new Date(row.plazo_expediente) < new Date());
   const v = conveniosFlujo.ventanaPresentacion(row);
   if (row.estado === 'ganador' && conveniosFlujo.presentacionAunNoAbre(v)) {
-    return 'La entrega de expediente abre el ' + v.inicioTxt + ' hrs (Lima). Cierra el ' + v.cierreTxt + ' hrs.';
+    return 'La entrega de expediente abre el ' + v.inicioTxt + ' hrs. Cierra el ' + v.cierreTxt + ' hrs.';
   }
   if (row.estado === 'ganador' && !conveniosFlujo.presentacionVentanaAbierta(v) && !plazoVencido) {
-    return 'La ventana de entrega de expediente está cerrada (' + v.cierreTxt + ' hrs Lima).';
+    return 'La ventana de entrega de expediente está cerrada (' + v.cierreTxt + ' hrs).';
   }
   const puedeGanador = row.estado === 'ganador' && !plazoVencido && conveniosFlujo.presentacionVentanaAbierta(v);
   const puedeObservado = row.estado === 'observado' && !plazoVencido;
@@ -10036,7 +10036,7 @@ app.post('/admin/inscripciones/:id/habilitar-expediente', requireAuth, async (re
       minute: '2-digit'
     });
     const nota = 'Super Admin habilitó subida de expediente fuera de plazo por ' + horas
-      + ' horas (hasta ' + hastaLima + ' hrs Lima).';
+      + ' horas (hasta ' + hastaLima + ' hrs).';
     const nuevoEstado = (est === 'caducado') ? 'ganador' : est;
     await pool.query(
       `UPDATE inscripciones SET
@@ -10071,7 +10071,7 @@ app.post('/admin/inscripciones/:id/habilitar-expediente', requireAuth, async (re
       estado: nuevoEstado,
       habilitar_expediente_hasta: hasta.toISOString(),
       horas: horas,
-      mensaje: 'Habilitado ' + horas + ' horas para subir expediente (hasta ' + hastaLima + ' hrs Lima). El efectivo puede subir desde Consulta CIP.'
+      mensaje: 'Habilitado ' + horas + ' horas para subir expediente (hasta ' + hastaLima + ' hrs). El efectivo puede subir desde Consulta CIP.'
     });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });

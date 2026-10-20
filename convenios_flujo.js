@@ -110,7 +110,7 @@ function mensajeNotificacion(tipo, ins, itemTitulo, item) {
       + 'Ha resultado GANADOR(A) en «' + conv + '».\n'
       + datos
       + '\nDebe subir su expediente completo desde Consulta por CIP.\n'
-      + 'Ventana de entrega (hora Lima): del ' + ventanaPresentacion(item).inicioTxt
+      + 'Ventana de entrega: del ' + ventanaPresentacion(item).inicioTxt
       + ' hrs al ' + ventanaPresentacion(item).cierreTxt + ' hrs.\n'
       + 'Pasado el plazo, la vacante se libera para REPECHAJE.';
   }

@@ -376,9 +376,14 @@
     .mi-fechas-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
     .mi-fechas-grid label{font-size:10.5px;margin:0 0 4px;color:#666;font-weight:600;letter-spacing:0;}
     .mi-fechas-grid input[type=date]{margin-bottom:0;padding:8px 10px;font-size:13px;border-color:#ccd8d4;}
-    .mi-fecha-hora{display:grid;grid-template-columns:1fr 110px;gap:6px;}
-    .mi-fecha-hora input[type=time]{margin-bottom:0;padding:8px 10px;font-size:13px;border-color:#ccd8d4;}
-    .mi-rd-aviso{grid-column:1/-1;font-size:11.5px;color:#555;margin:6px 0 0;padding:6px 10px;background:#f7fbf9;border:1px solid #e0ebe4;border-radius:6px;}
+    .mi-fecha-hora{display:grid;grid-template-columns:minmax(0,1fr) 104px;gap:6px;}
+    .mi-fecha-hora input{margin-bottom:0;}
+    .mi-fecha-hora input[type=time]{padding:8px 10px;font-size:13px;border-color:#ccd8d4;}
+    .mi-fecha-hora input[readonly]{background:#eef3f1;color:#6b7c75;cursor:default;text-align:center;}
+    .mi-fechas-row-head .mi-fechas-head-der{display:flex;align-items:center;gap:8px;min-width:0;}
+    .mi-fechas-resumen{font-size:11px;color:#6b7c75;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .mi-fechas-info{margin:8px 0 0;font-size:11.5px;color:#4a5a54;line-height:1.4;background:#fff;border:1px solid #dae6e0;border-radius:6px;padding:7px 10px;}
+    @media(max-width:640px){.mi-fechas-grid{grid-template-columns:1fr;}.mi-fechas-resumen{display:none;}}
     /* Estado badge inline */
     .mi-insc-estado-pill{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;
       padding:3px 10px;border-radius:999px;background:#f3f4f6;color:#6b7280;letter-spacing:.3px;}
@@ -1715,7 +1720,7 @@
       <div class="card">
         <h3><i class="fas fa-trophy" style="color:#c8a94a;"></i> Ganadores y expedientes</h3>
         <p style="font-size:13px;color:#666;margin:-4px 0 16px;line-height:1.5;">
-          El efectivo ganador <strong>sube</strong> el expediente en la ventana de recepción configurada en cada convenio (hora Lima). Convenios <strong>revisa</strong> el PDF.
+          El efectivo ganador <strong>sube</strong> el expediente en la ventana de recepción configurada en cada convenio. Convenios <strong>revisa</strong> el PDF.
           Al <strong>aprobar</strong> se <strong>descarga</strong> en este equipo y se <strong>borra</strong> de la base.
           En la web queda el registro (CIP, estado, constancia), no el archivo. No se dejan meses en Postgres.
           <strong>Sin edición de datos</strong> del efectivo. Caducados = no presentaron a tiempo.
@@ -1981,7 +1986,7 @@
 
         <div id="sorteo-convenio-panel" style="background:#f0f7f0;border:1.5px solid #c8e6c9;border-radius:10px;padding:16px;margin-bottom:18px;">
           <strong style="color:#004d3d;display:block;margin-bottom:10px;font-size:13px;"><i class="fas fa-handshake"></i> Sorteo de convenio</strong>
-  <p style="font-size:12px;color:#666;margin-bottom:12px;">Convenios: preinscripción (sin PDF) → sorteo → aviso WA/correo → el ganador sube expediente en la ventana de recepción del convenio (hora Lima) → Convenios revisa. El PDF queda en el bucket privado. Repechaje sube PDF (sin sorteo). Cursos mantienen verificación/aprobación.</p>
+  <p style="font-size:12px;color:#666;margin-bottom:12px;">Convenios: preinscripción (sin PDF) → sorteo → aviso WA/correo → el ganador sube expediente en la ventana de recepción del convenio → Convenios revisa. El PDF queda en el bucket privado. Repechaje sube PDF (sin sorteo). Cursos mantienen verificación/aprobación.</p>
           <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
             <div style="flex:1;min-width:280px;">
               <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Convocatoria de convenio</label>
@@ -2244,43 +2249,55 @@
           <div class="mi-fechas-row">
             <div class="mi-fechas-row-head">
               <span><i class="fas fa-calendar-alt"></i> Inscripción</span>
-              <div id="mi-insc-estado" class="mi-insc-estado-pill">CERRADO</div>
+              <div class="mi-fechas-head-der">
+                <span id="mi-insc-detalle" class="mi-fechas-resumen"></span>
+                <div id="mi-insc-estado" class="mi-insc-estado-pill">CERRADO</div>
+              </div>
             </div>
             <div class="mi-fechas-grid">
               <div>
                 <label>Desde</label>
-                <input type="date" id="mi-inscripcion-inicio" onchange="actualizarAvisoInscripcionModal()" oninput="actualizarAvisoInscripcionModal()"/>
+                <div class="mi-fecha-hora">
+                  <input type="date" id="mi-inscripcion-inicio" onchange="actualizarAvisoInscripcionModal()" oninput="actualizarAvisoInscripcionModal()"/>
+                  <input type="text" value="00:00" readonly tabindex="-1" title="Las inscripciones abren a las 00:00"/>
+                </div>
               </div>
               <div>
-                <label>Hasta (cierra 23:59)</label>
-                <input type="date" id="mi-inscripcion-cierre" onchange="actualizarAvisoInscripcionModal()" oninput="actualizarAvisoInscripcionModal()"/>
+                <label>Hasta</label>
+                <div class="mi-fecha-hora">
+                  <input type="date" id="mi-inscripcion-cierre" onchange="actualizarAvisoInscripcionModal()" oninput="actualizarAvisoInscripcionModal()"/>
+                  <input type="text" value="23:59" readonly tabindex="-1" title="Las inscripciones cierran a las 23:59"/>
+                </div>
               </div>
             </div>
-            <p id="mi-insc-detalle" style="font-size:11.5px;color:#666;margin:6px 0 0;"></p>
-            <p id="mi-insc-aviso-preview" style="margin:8px 0 0;font-size:11.5px;color:#444;line-height:1.4;background:#fff;border:1px solid #dae6e0;border-radius:6px;padding:8px 10px;"></p>
+            <p id="mi-insc-aviso-preview" class="mi-fechas-info"></p>
           </div>
           <!-- Recepción de documentos -->
           <div class="mi-fechas-row">
             <div class="mi-fechas-row-head">
               <span><i class="fas fa-folder-open"></i> Recepción de documentos</span>
+              <div class="mi-fechas-head-der">
+                <span id="mi-rd-resumen" class="mi-fechas-resumen"></span>
+                <div id="mi-rd-estado" class="mi-insc-estado-pill">SIN FECHAS</div>
+              </div>
             </div>
             <div class="mi-fechas-grid">
               <div>
-                <label>Desde (fecha y hora, Lima)</label>
+                <label>Desde</label>
                 <div class="mi-fecha-hora">
                   <input type="date" id="mi-recepcion-doc-inicio" onchange="actualizarAvisoRecepcionModal()"/>
                   <input type="time" id="mi-recepcion-doc-hora-inicio" value="00:00" onchange="actualizarAvisoRecepcionModal()"/>
                 </div>
               </div>
               <div>
-                <label>Hasta (fecha y hora, Lima)</label>
+                <label>Hasta</label>
                 <div class="mi-fecha-hora">
                   <input type="date" id="mi-recepcion-doc-cierre" onchange="actualizarAvisoRecepcionModal()"/>
                   <input type="time" id="mi-recepcion-doc-hora-cierre" value="18:00" onchange="actualizarAvisoRecepcionModal()"/>
                 </div>
               </div>
-              <p class="mi-rd-aviso" id="mi-rd-aviso">Los ganadores suben su expediente en esta ventana. Al guardar, los ganadores del mes de este convenio toman el nuevo plazo.</p>
             </div>
+            <p class="mi-fechas-info" id="mi-rd-aviso">Los ganadores suben su expediente en esta ventana. Al guardar, los ganadores del mes de este convenio toman el nuevo plazo.</p>
           </div>
         </div>
       </div>
@@ -6437,8 +6454,8 @@ function textoEstadoRepechaje(d){
   var ini=d && d.inicio ? limaAInputDatetime(d.inicio).replace('T',' ') : '';
   var cie=d && d.cierre ? limaAInputDatetime(d.cierre).replace('T',' ') : '';
   if(!hab) return 'Desactivado: no se muestra en la web.' + (ini||cie ? (' Ventana: '+(ini||'—')+' → '+(cie||'—')+'.') : '');
-  if(vig) return 'Abierto ahora para el personal.' + (cie ? (' Cierra '+cie+' (Lima).') : '');
-  if(ini) return 'Habilitado, pero fuera de horario. Inicio '+ini+(cie?(' · cierre '+cie):'')+' (Lima).';
+  if(vig) return 'Abierto ahora para el personal.' + (cie ? (' Cierra '+cie+'.') : '');
+  if(ini) return 'Habilitado, pero fuera de horario. Inicio '+ini+(cie?(' · cierre '+cie):'')+'.';
   return 'Habilitado. Defina inicio y cierre para programar la ventana.';
 }
 function aplicarInputsRepechaje(d){
@@ -6611,14 +6628,31 @@ function actualizarAvisoRecepcionModal(){
   var hi=horaRecepcionValidaUI(val('mi-recepcion-doc-hora-inicio'),'00:00');
   var hc=horaRecepcionValidaUI(val('mi-recepcion-doc-hora-cierre'),'18:00');
   function dmy(f){ var p=String(f||'').split('-'); return p.length===3 ? (p[2]+'/'+p[1]+'/'+p[0]) : ''; }
+  var pill=document.getElementById('mi-rd-estado');
+  var res=document.getElementById('mi-rd-resumen');
+  function pintarPill(txt, color, bg){
+    if(!pill) return;
+    pill.textContent=txt; pill.style.color=color; pill.style.background=bg;
+  }
+  if(res) res.textContent=(fi && fc) ? (dmy(fi)+' '+hi+' → '+dmy(fc)+' '+hc) : '';
   if(fi && fc && (fc+' '+hc) <= (fi+' '+hi)){
     el.style.color='#a94442';
     el.textContent='El cierre debe ser después del inicio.';
+    pintarPill('REVISAR', '#a94442', '#fde8e8');
     return;
   }
   el.style.color='';
+  if(!fi || !fc){
+    pintarPill('SIN FECHAS', '#6b7280', '#f3f4f6');
+  } else {
+    var ahora=new Date();
+    var ini=new Date(fi+'T'+hi+':00-05:00'), cie=new Date(fc+'T'+hc+':00-05:00');
+    if(ahora<ini) pintarPill('PRÓXIMAMENTE', '#1e40af', '#e0ecff');
+    else if(ahora<cie) pintarPill('ABIERTA', '#1a7a3a', '#d4edda');
+    else pintarPill('CERRADA', '#a94442', '#fde8e8');
+  }
   el.textContent = (fi && fc)
-    ? ('Expediente: del '+dmy(fi)+' '+hi+' al '+dmy(fc)+' '+hc+' hrs (Lima). Al guardar, los ganadores del mes de este convenio toman este plazo.')
+    ? ('Expediente: del '+dmy(fi)+' '+hi+' al '+dmy(fc)+' '+hc+' hrs. Al guardar, los ganadores del mes de este convenio toman este plazo.')
     : 'Los ganadores suben su expediente en esta ventana. Al guardar, los ganadores del mes de este convenio toman el nuevo plazo.';
 }
 
