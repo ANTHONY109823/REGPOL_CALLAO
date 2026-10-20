@@ -5845,13 +5845,20 @@ function validarSlotsVacacionesPublicados(cuposItem, turnosItem, slots, opts) {
         return String(c.nombre || '').trim().toUpperCase() === cia;
       });
       if (!cupoCia) return 'La comisaría seleccionada no tiene vacantes.';
-      var diasOk = String(s.dia || '').toUpperCase() === 'TODOS' ? ['PAR', 'IMPAR'] : dias;
-      for (var d = 0; d < diasOk.length; d++) {
+      if (String(s.dia || '').toUpperCase() === 'TODOS') {
+        /* Vacaciones (todos los días): basta que el turno exista en la sede */
+        var hayTurno = normalizarTurnos(cupoCia.turnos).some(function(t) {
+          return t.turno === s.turno && (parseInt(t.vacantes, 10) || 0) > 0;
+        });
+        if (!hayTurno) return 'No hay vacantes para el turno ' + (s.turno || '') + ' en esa sede.';
+        continue;
+      }
+      for (var d = 0; d < dias.length; d++) {
         var ok = normalizarTurnos(cupoCia.turnos).some(function(t) {
-          return t.turno === s.turno && t.dia === diasOk[d] && (parseInt(t.vacantes, 10) || 0) > 0;
+          return t.turno === s.turno && t.dia === dias[d] && (parseInt(t.vacantes, 10) || 0) > 0;
         });
         if (!ok) {
-          return 'No hay vacantes para ' + (s.turno || 'turno') + ' / ' + diasOk[d] + ' en esa comisaría.';
+          return 'No hay vacantes para ' + (s.turno || 'turno') + ' / ' + dias[d] + ' en esa comisaría.';
         }
       }
     } else {
@@ -5874,62 +5881,6 @@ function validarSlotsVacacionesPublicados(cuposItem, turnosItem, slots, opts) {
   return '';
 }
 
-/* Devuelve el max_vacaciones configurado para un slot (lugar|turno|dia) en cupos_unidades.
-   null = sin límite. */
-function maxVacacionesParaSlot(cuposItem, lugar, turno, dia) {
-  var cupos = Array.isArray(cuposItem) ? cuposItem : [];
-  var lugU = String(lugar || '').trim().toUpperCase();
-  var turU = String(turno || '').trim().toUpperCase();
-  var diaU = String(dia || '').trim().toUpperCase();
-  for (var i = 0; i < cupos.length; i++) {
-    var c = cupos[i];
-    if (lugU && String(c.nombre || '').trim().toUpperCase() !== lugU) continue;
-    var tlist = Array.isArray(c.turnos) ? c.turnos : [];
-    for (var j = 0; j < tlist.length; j++) {
-      var t = tlist[j];
-      if (String(t.turno || '').toUpperCase() !== turU) continue;
-      var tDia = String(t.dia || '').toUpperCase();
-      if (tDia !== diaU && tDia !== 'PAR/IMPAR' && diaU !== 'PAR/IMPAR' && diaU !== 'TODOS') continue;
-      var mv = parseInt(t.max_vacaciones, 10);
-      return isNaN(mv) || mv < 0 ? null : mv;
-    }
-  }
-  return null;
-}
-
-/* Cuenta inscritos activos en VACACIONES para un slot este mes. */
-async function contarVacacionesEnSlot(pool, itemId, lugar, turno, dia) {
-  var lugU = String(lugar || '').trim().toUpperCase();
-  var turU = String(turno || '').trim().toUpperCase();
-  var diaU = String(dia || '').trim().toUpperCase();
-  const activos = ['preinscrito', 'pendiente', 'aprobado', 'verificado', 'ganador', 'en_revision', 'observado', 'expediente_ok', 'corregir_preinscripcion'];
-  const r = await pool.query(
-    `SELECT comisaria_postula, postula_slots FROM inscripciones
-     WHERE item_id=$1
-       AND UPPER(COALESCE(disponibilidad,''))='VACACIONES'
-       AND estado = ANY($2::varchar[])
-       AND ${sqlMesActualLima('fecha')}`,
-    [itemId, activos]
-  );
-  var count = 0;
-  for (var k = 0; k < r.rows.length; k++) {
-    var row = r.rows[k];
-    var slots = conveniosFlujo.parsePostulacionSlots(row.comisaria_postula, row.postula_slots);
-    if (!slots.length) slots = [conveniosFlujo.parsePostulacionSlot(row.comisaria_postula)];
-    for (var m = 0; m < slots.length; m++) {
-      var s = slots[m];
-      var sLug = String(s.lugar || '').trim().toUpperCase();
-      var sTur = String(s.turno || '').trim().toUpperCase();
-      var sDia = String(s.dia || '').trim().toUpperCase();
-      var lugMatch = !lugU || !sLug || sLug === lugU;
-      var turMatch = !turU || !sTur || sTur === turU;
-      var diaMatch = !diaU || !sDia || sDia === diaU || sDia === 'TODOS' || sDia === 'PAR/IMPAR' || diaU === 'TODOS' || diaU === 'PAR/IMPAR';
-      if (lugMatch && turMatch && diaMatch) { count++; break; }
-    }
-  }
-  return count;
-}
-
 function construirSlotsSorteoItem(item) {
   var cupos = normalizarCuposUnidades(item && item.cupos_unidades);
   var slots = [];
@@ -5938,7 +5889,6 @@ function construirSlotsSorteoItem(item) {
       normalizarTurnos(c.turnos).forEach(function(t) {
         var vac = parseInt(t.vacantes, 10) || 0;
         if (vac <= 0) return;
-        var mv = parseInt(t.max_vacaciones, 10);
         var slotEntry = {
           key: String(c.nombre).toUpperCase() + '|' + t.turno + '|' + t.dia,
           lugar: c.nombre,
@@ -5947,7 +5897,6 @@ function construirSlotsSorteoItem(item) {
           vacantes: vac,
           label: c.nombre + ' — ' + etiquetaTurnoHorario(t.turno) + ' / ' + t.dia
         };
-        if (!isNaN(mv) && mv >= 0) slotEntry.max_vacaciones = mv;
         slots.push(slotEntry);
       });
     });
@@ -6035,16 +5984,21 @@ function hayTurnosQueRequierenSorteo(item, rows) {
     const vac = parseInt(item && item.vacantes, 10) || 0;
     return pend > Math.max(0, vac - occ);
   }
+  /* Vacaciones pendientes: el Admin de Convenios las resuelve en la pantalla de sorteo */
+  const vacPend = list.some(function(c) {
+    return pendEst.indexOf(c.estado) >= 0 && String(c.disponibilidad || '').toUpperCase() === 'VACACIONES';
+  });
+  if (vacPend) return true;
+  const ocupMap = conveniosFlujo.ocupacionPorSlots(slots, list, candidatoEnCupoPostula).porSlot;
   for (let i = 0; i < slots.length; i++) {
     const slot = slots[i];
     const vac = parseInt(slot.vacantes, 10) || 0;
     if (vac < 1) continue;
-    let ocupadas = 0;
+    const ocupadas = ocupMap[slot.key] || 0;
     let pend = 0;
     for (let j = 0; j < list.length; j++) {
       if (!candidatoEnCupoPostula(list[j], slot)) continue;
-      if (ocupan.indexOf(list[j].estado) >= 0) ocupadas++;
-      else if (pendEst.indexOf(list[j].estado) >= 0) pend++;
+      if (pendEst.indexOf(list[j].estado) >= 0) pend++;
     }
     const libres = Math.max(0, vac - ocupadas);
     if (libres < 1) continue;
@@ -8851,34 +8805,31 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
       const slotsBody = Array.isArray(postula_slots) ? postula_slots : [];
       const usaMatriz = (esCeladorItem && cuposCeladorTienenMatrizTurnos(cuposItem)) || cuposTienenTurnosPorLugar(cuposItem);
 
-      /* Validar cupo de vacaciones por slot si el admin definió max_vacaciones */
-      if (!modoRepechaje && String(disponibilidad || '').toUpperCase() === 'VACACIONES') {
-        const partes = String(comisariaPostulaRaw || '').split('|').map(function(p){ return p.trim(); });
-        const firstSlot = slotsBody[0] || {};
-        const slotLugar = partes[0] || firstSlot.lugar || '';
-        const slotTurno = partes[1] || firstSlot.turno || (turnoPostulaRaw || '');
-        const slotDia = partes[2] || firstSlot.dia || (dia_franco || '');
-        const maxVac = maxVacacionesParaSlot(cuposItem, slotLugar, slotTurno, slotDia);
-        if (maxVac !== null) {
-          const yaInscritos = await contarVacacionesEnSlot(pool, req.params.id, slotLugar, slotTurno, slotDia);
-          if (yaInscritos >= maxVac) {
-            const slotLabel = [slotLugar, slotTurno, slotDia].filter(Boolean).join(' / ');
-            return res.json({
-              ok: false,
-              error: 'El cupo de vacaciones para ' + (slotLabel || 'este turno') + ' está completo (' + yaInscritos + '/' + maxVac + '). Elija otro turno o día.',
-              codigo: 'cupo_vacaciones_lleno'
-            });
-          }
-        }
+      /* Vacaciones: inscripción libre (sin tope por turno). Trabaja todos los días:
+         solo vale el turno elegido; el día se guarda como TODOS (PAR e IMPAR). */
+      let slotsVacBody = slotsBody;
+      if (comboVacPre && !slotsVacBody.length && comisariaPostulaRaw.indexOf('|') >= 0) {
+        const pv = comisariaPostulaRaw.split('|').map(function(p) { return String(p || '').trim(); });
+        if (pv[0] && pv[1]) slotsVacBody = [{ lugar: pv[0], turno: pv[1].toUpperCase(), dia: 'TODOS' }];
+      }
+      if (comboVacPre) {
+        slotsVacBody = slotsVacBody.map(function(x) {
+          return Object.assign({}, x, { dia: 'TODOS' });
+        });
       }
 
-      if (comboVacPre && slotsBody.length) {
-        const chkCombo = conveniosFlujo.validarCombinacionVacaciones(slotsBody);
+      if (comboVacPre && slotsVacBody.length) {
+        const chkCombo = conveniosFlujo.validarCombinacionVacaciones(slotsVacBody);
         if (!chkCombo.ok) return res.json({ ok: false, error: chkCombo.error });
         const errPub = validarSlotsVacacionesPublicados(cuposItem, turnosItem, chkCombo.slots, { matriz: usaMatriz });
         if (errPub) return res.json({ ok: false, error: errPub });
         postulaSlotsNorm = chkCombo.slots;
-        comisariaPostulaNorm = conveniosFlujo.formatearPostulacionSlots(chkCombo.slots);
+        /* Texto "LUGAR — TURNO / PAR/IMPAR": lo leen el panel, el PDF y el sorteo */
+        comisariaPostulaNorm = conveniosFlujo.limpio(
+          (chkCombo.slots[0].lugar || '') + ' — '
+            + chkCombo.slots.map(function(x) { return x.turno + ' / PAR/IMPAR'; }).join(' · '),
+          500
+        );
       } else if (usaMatriz) {
         const partes = comisariaPostulaRaw.split('|').map(function(p) { return String(p || '').trim(); });
         if (partes.length !== 3 || !partes[0] || !partes[1] || !partes[2]) {
@@ -9091,7 +9042,9 @@ app.post('/portal/items/:id/inscribir', async (req, res) => {
 
     const insParams = [req.params.id, cipNorm, nombresIns, unidadNorm || unidad || '', cargo||'', telefono||'', email||'',
        pdfSave, pdfNom,
-       dniNorm || dni || '', grado||'', area||'', arma||'', disponibilidad||'', dia_franco||'',
+       dniNorm || dni || '', grado||'', area||'', arma||'', disponibilidad||'',
+       /* Vacaciones (preinscripción) trabaja todos los días: sin día PAR/IMPAR */
+       (esConvenio && !modoRepechaje && String(disponibilidad || '').toUpperCase() === 'VACACIONES') ? '' : (dia_franco||''),
        feNorm, tiempo_servicio||'', estado, modo,
        modalidadNorm || '', modalidadOtroNorm || '',
        esConvenio ? codifinNorm : (codifinNorm || ''),
@@ -9743,7 +9696,8 @@ app.get('/admin/convenios/flujo-resumen', requireAuth, async (req, res) => {
       let requiereSorteo = pre > (vac.disponibles != null ? vac.disponibles : 0);
       if (pre > 0) {
         const slotRows = await pool.query(
-          `SELECT estado, comisaria_postula FROM inscripciones
+          `SELECT id, estado, comisaria_postula, postula_slots, disponibilidad, dia_franco, bloque_vacaciones
+           FROM inscripciones
            WHERE item_id=$1 AND ${sqlMesActualLima('fecha')}`,
           [it.id]
         );
@@ -10577,13 +10531,9 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
     itemRow.turnos = normalizarTurnos(itemRow.turnos);
     itemRow.cupos_unidades = normalizarCuposUnidades(itemRow.cupos_unidades);
     const slotsBase = esConvenio ? construirSlotsSorteoItem(itemRow) : [];
-    const ocupan = conveniosFlujo.ESTADOS_OCUPAN_VACANTE || [];
+    const ocupMap = conveniosFlujo.ocupacionPorSlots(slotsBase, r.rows, candidatoCoincideSlotSorteo).porSlot;
     const slots = slotsBase.map(function(s) {
-      var ocupadas = 0;
-      r.rows.forEach(function(c) {
-        if (ocupan.indexOf(c.estado) < 0) return;
-        if (candidatoCoincideSlotSorteo(c, s)) ocupadas++;
-      });
+      var ocupadas = ocupMap[s.key] || 0;
       var disponibles = Math.max(0, (parseInt(s.vacantes, 10) || 0) - ocupadas);
       return Object.assign({}, s, { ocupadas: ocupadas, disponibles: disponibles });
     });
@@ -10606,7 +10556,7 @@ app.get('/admin/items/:id/candidatos', requireAuth, async (req, res) => {
       flujo: esConvenio ? 'convenio_v2' : 'curso',
       vacantes_info: vac,
       slots_sorteo: slots,
-      vacaciones_pendientes: planDirecto ? planDirecto.nVacaciones : 0,
+      vacaciones_pendientes: planDirecto ? (planDirecto.vacacionesPendientes || 0) : 0,
       slots_directo: planDirecto ? (planDirecto.directo || []).map(function(g) {
         return Object.assign({}, g.slot, { n_directo: (g.rows || []).length });
       }) : [],

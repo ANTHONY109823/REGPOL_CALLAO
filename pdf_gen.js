@@ -1824,7 +1824,9 @@ function generarPDFListaPreinscritos(lista, meta) {
       else if (t === 'TARDE') t = 'Tarde';
       else if (t === 'NOCHE') t = 'Noche';
       else if (!t) t = '—';
-      return { turno: t, dia: String(dia || '').toUpperCase() || '—' };
+      var d = String(dia || '').toUpperCase();
+      if (d === 'PAR/IMPAR' || d === 'TODOS') d = 'TODOS';
+      return { turno: t, dia: d || '—' };
     }
 
     function etiquetaDispListaPdf(ins) {

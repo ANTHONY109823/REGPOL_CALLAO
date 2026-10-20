@@ -7087,35 +7087,6 @@ var CONVENIO_TURNOS_SLOTS = [
   { turno: 'NOCHE', dia: 'IMPAR', label: 'Noche', grupo: 'IMPAR' }
 ];
 
-function maxVacTurnoSlot(cupo, turno, dia){
-  var list = (cupo && Array.isArray(cupo.turnos)) ? cupo.turnos : [];
-  var tU = String(turno || '').toUpperCase();
-  var dU = String(dia || '').toUpperCase();
-  for (var i = 0; i < list.length; i++) {
-    if (String(list[i].turno || '').toUpperCase() === tU
-        && String(list[i].dia || '').toUpperCase() === dU) {
-      var mv = parseInt(list[i].max_vacaciones, 10);
-      return (!isNaN(mv) && mv >= 0) ? mv : null;
-    }
-  }
-  return null;
-}
-
-function actualizarMaxVacSlotLugarUI(ciaIdx, sIdx, valor){
-  var cupos = parseCuposUnidadesTexto((document.getElementById('mi-cupos-unidades') || {}).value);
-  if (!cupos[ciaIdx]) return;
-  var slots = CONVENIO_TURNOS_SLOTS;
-  if (!cupos[ciaIdx].turnos || !cupos[ciaIdx].turnos[sIdx]) return;
-  var n = String(valor).trim() === '' ? null : parseInt(valor, 10);
-  if (n === null || isNaN(n) || n < 0) {
-    delete cupos[ciaIdx].turnos[sIdx].max_vacaciones;
-  } else {
-    cupos[ciaIdx].turnos[sIdx].max_vacaciones = n;
-  }
-  var ta = document.getElementById('mi-cupos-unidades');
-  if (ta) ta.value = serializarCuposUnidades(cupos);
-}
-
 function vacTurnoCelador(cupo, turno, dia){
   var list = (cupo && Array.isArray(cupo.turnos)) ? cupo.turnos : [];
   var tU = String(turno || '').toUpperCase();
@@ -7157,10 +7128,7 @@ function copiarTurnosSeisCeldasUI(prevTurnos, slots){
       var ambos = prevMap[s.turno+'|PAR/IMPAR'];
       if (ambos) vac = parseInt(ambos.vacantes, 10) || 0;
     }
-    var mv = exact && exact.max_vacaciones != null ? parseInt(exact.max_vacaciones, 10) : null;
-    var out = { turno: s.turno, dia: s.dia, vacantes: vac };
-    if (mv !== null && !isNaN(mv) && mv >= 0) out.max_vacaciones = mv;
-    return out;
+    return { turno: s.turno, dia: s.dia, vacantes: vac };
   });
 }
 
@@ -7876,15 +7844,10 @@ function renderListaCuposUnidadesUI(){
         } else {
           celdas = slots.map(function(s, sIdx){
             var vac = vacTurnoCelador(c, s.turno, s.dia);
-            var mv = maxVacTurnoSlot(c, s.turno, s.dia);
-            var mvVal = mv !== null ? mv : '';
             return '<td style="text-align:center;padding:4px 2px;">'
               + '<input type="number" min="0" value="'+vac+'" title="Vacantes" '
-              + 'style="width:52px;display:block;margin:0 auto 2px;" '
+              + 'style="width:52px;display:block;margin:0 auto;" '
               + 'onchange="actualizarTurnoSlotLugarUI('+idx+','+sIdx+',this.value)"/>'
-              + '<input type="number" min="0" value="'+mvVal+'" placeholder="—" title="Máx. vacaciones (dejar vacío = sin límite)" '
-              + 'style="width:52px;display:block;margin:0 auto;font-size:10.5px;color:#b45309;border-color:#d97706;background:#fffbeb;" '
-              + 'onchange="actualizarMaxVacSlotLugarUI('+idx+','+sIdx+',this.value)"/>'
               + '</td>';
           }).join('');
         }
@@ -8051,10 +8014,7 @@ function parseCuposUnidadesTexto(txt){
       return Array.isArray(arr) ? arr.map(function(c){
         if(!c || !c.nombre) return null;
         var turnos = (Array.isArray(c.turnos) ? c.turnos : []).map(function(t){
-          var out = { turno: t.turno, dia: t.dia, vacantes: parseInt(t.vacantes,10)||0 };
-          var mv = parseInt(t.max_vacaciones, 10);
-          if (!isNaN(mv) && mv >= 0) out.max_vacaciones = mv;
-          return out;
+          return { turno: t.turno, dia: t.dia, vacantes: parseInt(t.vacantes,10)||0 };
         });
         var vac = parseInt(c.vacantes,10)||0;
         if(turnos.length){
@@ -8573,9 +8533,11 @@ function abrirSorteoDesdeItem(itemId){
   try { w.focus(); } catch (e) {}
 }
 
+/* Vacaciones no pasan aquí: se resuelven por turno en el Paso 1 del sorteo */
 function candidatosPreinscritosAGanador(){
   return (INSCRITOS_CACHE||[]).filter(function(i){
-    return ['preinscrito','pendiente','aprobado','verificado'].indexOf(i.estado)>=0;
+    return ['preinscrito','pendiente','aprobado','verificado'].indexOf(i.estado)>=0
+      && String(i.disponibilidad||'').toUpperCase()!=='VACACIONES';
   });
 }
 
@@ -8645,7 +8607,8 @@ function pasarPreinscritosAGanador(itemId){
       if(!d || !d.ok){ alert((d && d.error) || 'No se pudo cargar el convenio.'); return; }
       var vacLibres = (d.vacantes_info && d.vacantes_info.disponibles) || 0;
       var cand = (d.inscritos||[]).filter(function(i){
-        return ['preinscrito','pendiente','aprobado','verificado'].indexOf(i.estado)>=0;
+        return ['preinscrito','pendiente','aprobado','verificado'].indexOf(i.estado)>=0
+          && String(i.disponibilidad||'').toUpperCase()!=='VACACIONES';
       });
       confirmarYEnviar(cand, vacLibres);
     })
@@ -8804,7 +8767,7 @@ function abrirModalPdfListaConvenio(modo){
     });
     selD.innerHTML='<option value="">Todos los días ('+list.length+')</option>'
       +keysD.map(function(d){
-        var lab=canonDiaSlot(d)==='PAR'?'PAR':(canonDiaSlot(d)==='IMPAR'?'IMPAR':d);
+        var lab=canonDiaSlot(d)==='PAR'?'PAR':(canonDiaSlot(d)==='IMPAR'?'IMPAR':(canonDiaSlot(d)==='PAR/IMPAR'?'TODOS LOS DÍAS (vacaciones)':d));
         return '<option value="'+escHtml(d)+'">'+escHtml(lab)+'</option>';
       }).join('');
   }
@@ -8905,7 +8868,7 @@ function filtrarModalPdfPreinscritos(){
         +'<td>'+escHtml(ins.comisaria_postula||'—')+'</td>'
         +'<td><span class="mpp-badge '+(disp.cls||'')+'">'+escHtml(disp.txt)+'</span></td>'
         +'<td>'+escHtml(labelTurnoFiltro(sl.turno))+'</td>'
-        +'<td>'+escHtml(sl.dia||'—')+'</td>'
+        +'<td>'+escHtml(canonDiaSlot(sl.dia)==='PAR/IMPAR'?'TODOS':(sl.dia||'—'))+'</td>'
         +'<td><span class="mpp-badge '+(est.cls||'')+'">'+escHtml(est.txt)+'</span></td>'
         +'</tr>';
     }).join('')

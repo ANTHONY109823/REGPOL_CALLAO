@@ -614,15 +614,75 @@ async function contarOcupadas(pool, itemId) {
   return r.rows[0].n || 0;
 }
 
+function esVacacionesFila(c) {
+  return String((c && c.disponibilidad) || '').toUpperCase() === 'VACACIONES';
+}
+
+/**
+ * Cupos ocupados por slot (lugar|turno|día).
+ * - Vacaciones trabaja todos los días: ocupa su turno en PAR y en IMPAR.
+ * - Vacaciones sorteadas en dos bloques: un B1 (días 1–15) y un B2 (16–fin)
+ *   del mismo slot comparten un solo cupo → ocupan max(B1, B2).
+ * total = ocupantes que no son vacaciones (1 c/u) + cupos de vacaciones por slot.
+ */
+function ocupacionPorSlots(slots, rows, coincide) {
+  const porSlot = {};
+  const vacEnAlgunSlot = {};
+  let total = 0;
+  (rows || []).forEach(function(c) {
+    if (estadoOcupaVacante(c.estado) && !esVacacionesFila(c)) total++;
+  });
+  (slots || []).forEach(function(s) {
+    let n = 0;
+    let b1 = 0;
+    let b2 = 0;
+    let vacSinBloque = 0;
+    (rows || []).forEach(function(c) {
+      if (!estadoOcupaVacante(c.estado) || !coincide(c, s)) return;
+      if (!esVacacionesFila(c)) { n++; return; }
+      vacEnAlgunSlot[c.id] = true;
+      const bl = String(c.bloque_vacaciones || '').trim();
+      if (bl === '1') b1++;
+      else if (bl === '2') b2++;
+      else vacSinBloque++;
+    });
+    const vacOcc = vacSinBloque + Math.max(b1, b2);
+    porSlot[s.key] = n + vacOcc;
+    total += vacOcc;
+  });
+  (rows || []).forEach(function(c) {
+    if (estadoOcupaVacante(c.estado) && esVacacionesFila(c) && !vacEnAlgunSlot[c.id]) total++;
+  });
+  return { porSlot: porSlot, total: total };
+}
+
 async function vacantesDisponibles(pool, itemId) {
-  const item = await pool.query('SELECT vacantes, tipo FROM items_portal WHERE id=$1', [itemId]);
+  const item = await pool.query(
+    'SELECT vacantes, tipo, titulo, cupos_unidades, turnos FROM items_portal WHERE id=$1', [itemId]
+  );
   if (!item.rows.length) return { ok: false, error: 'Convocatoria no encontrada' };
   if (item.rows[0].tipo !== 'convenio') {
     return { ok: true, vacantes: item.rows[0].vacantes || 0, ocupadas: 0, disponibles: item.rows[0].vacantes || 0 };
   }
   await caducarExpedientesVencidos(pool);
   const total = parseInt(item.rows[0].vacantes, 10) || 0;
-  const ocupadas = await contarOcupadas(pool, itemId);
+  /* Carga diferida: promover_vacantes_directo requiere este módulo */
+  const promo = require('./promover_vacantes_directo');
+  const slots = promo.construirSlotsSorteoItem(item.rows[0]);
+  let ocupadas;
+  if (slots.length) {
+    const r = await pool.query(
+      `SELECT id, estado, disponibilidad, bloque_vacaciones, comisaria_postula, postula_slots, dia_franco
+       FROM inscripciones
+       WHERE item_id=$1 AND estado = ANY($2::varchar[])
+         AND to_char(timezone('America/Lima', COALESCE(fecha::timestamptz, NOW())), 'YYYY-MM')
+           = to_char(timezone('America/Lima', NOW()), 'YYYY-MM')`,
+      [itemId, ESTADOS_OCUPAN_VACANTE]
+    );
+    ocupadas = ocupacionPorSlots(slots, r.rows, promo.candidatoEnCupoPostula).total;
+  } else {
+    ocupadas = await contarOcupadas(pool, itemId);
+  }
   const disponibles = Math.max(0, total - ocupadas);
   return { ok: true, vacantes: total, ocupadas: ocupadas, disponibles: disponibles };
 }
@@ -1357,6 +1417,7 @@ module.exports = {
   validarCombinacionVacaciones,
   diasCubiertosPostula,
   etiquetaBloqueVacaciones,
+  ocupacionPorSlots,
   estadoOcupaVacante,
   archivarMesesAnteriores,
   archivarMesOperativo,

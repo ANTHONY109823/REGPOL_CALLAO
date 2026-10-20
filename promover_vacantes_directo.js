@@ -192,35 +192,18 @@ function labelDeCandidato(row) {
 }
 
 function ocupadasInicialesPorSlot(slots, rows) {
-  const ocupan = conveniosFlujo.ESTADOS_OCUPAN_VACANTE || [];
-  const map = {};
-  (slots || []).forEach(function(slot) {
-    map[slot.key] = (rows || []).filter(function(c) {
-      return ocupan.indexOf(c.estado) >= 0 && candidatoEnCupoPostula(c, slot);
-    }).length;
-  });
-  return map;
+  return conveniosFlujo.ocupacionPorSlots(slots, rows, candidatoEnCupoPostula).porSlot;
 }
 
-function slotPreferidoVacaciones(c, slots, ocupadasMap) {
-  if (!slots || !slots.length) return null;
-  var conCupo = [];
-  var match = [];
-  slots.forEach(function(s) {
-    if (!candidatoEnCupoPostula(c, s)) return;
-    match.push(s);
-    var vac = parseInt(s.vacantes, 10) || 0;
-    var occ = ocupadasMap[s.key] || 0;
-    if (vac - occ > 0) conCupo.push(s);
+function hayVacacionesPendientesEnSlot(rows, slot, pendientesEst) {
+  return (rows || []).some(function(c) {
+    return pendientesEst.indexOf(c.estado) >= 0 && esVacaciones(c) && candidatoEnCupoPostula(c, slot);
   });
-  if (conCupo.length) return conCupo[0];
-  if (match.length) return match[0];
-  var cualquierCupo = slots.filter(function(s) {
-    return (parseInt(s.vacantes, 10) || 0) - (ocupadasMap[s.key] || 0) > 0;
-  });
-  return cualquierCupo[0] || slots[0] || null;
 }
 
+/* Vacaciones ya no pasan a ganador aquí: el Admin de Convenios los resuelve primero
+   en el sorteo (por turno, opcionalmente en dos bloques 1–15 / 16–fin). Un turno con
+   vacaciones pendientes tampoco se asigna directo: su cupo libre aún no se conoce. */
 function planificarPromocion(slots, rows) {
   const pendientesEst = ['reserva', 'preinscrito', 'pendiente', 'aprobado', 'verificado'];
   const ya = {};
@@ -228,57 +211,22 @@ function planificarPromocion(slots, rows) {
   const directo = [];
   const detalle = [];
   const ocupadasMap = ocupadasInicialesPorSlot(slots, rows);
-
-  /* Contadores para respetar max_vacaciones por slot al promover */
-  const vacPorSlot = {};
+  let vacacionesPendientes = 0;
   (rows || []).forEach(function(c) {
-    if (pendientesEst.indexOf(c.estado) < 0) return;
-    if (!esVacaciones(c)) return;
-    const slot = slotPreferidoVacaciones(c, slots, ocupadasMap);
-    const slotKey = slot ? slot.key : '__sin_slot__';
-    /* Verificar cupo de vacaciones para este slot */
-    if (slot) {
-      var maxVac = (slot.max_vacaciones !== undefined && slot.max_vacaciones !== null)
-        ? parseInt(slot.max_vacaciones, 10) : null;
-      if (maxVac !== null && !isNaN(maxVac)) {
-        var yaEnSlot = vacPorSlot[slotKey] || 0;
-        if (yaEnSlot >= maxVac) {
-          /* Cupo de vacaciones lleno para este slot — no promover automáticamente */
-          detalle.push({
-            tipo: 'vacaciones_sin_cupo',
-            slot: slot.label || slotKey,
-            lugar: slot.lugar || '',
-            turno: slot.turno || '',
-            dia: slot.dia || '',
-            n: 1
-          });
-          return;
-        }
-      }
-    }
-    vacaciones.push(c);
-    ya[c.id] = true;
-    vacPorSlot[slotKey] = (vacPorSlot[slotKey] || 0) + 1;
-    if (slot) ocupadasMap[slot.key] = (ocupadasMap[slot.key] || 0) + 1;
-    detalle.push({
-      tipo: 'vacaciones',
-      slot: (slot && slot.label) || labelDeCandidato(c),
-      lugar: (slot && slot.lugar) || '',
-      turno: (slot && slot.turno) || '',
-      dia: (slot && slot.dia) || '',
-      n: 1
-    });
+    if (pendientesEst.indexOf(c.estado) >= 0 && c.estado !== 'reserva' && esVacaciones(c)) vacacionesPendientes++;
   });
 
   (slots || []).forEach(function(slot) {
     const vac = parseInt(slot.vacantes, 10) || 0;
     if (vac < 1) return;
+    if (hayVacacionesPendientesEnSlot(rows, slot, pendientesEst.filter(function(e) { return e !== 'reserva'; }))) return;
     const ocupadas = ocupadasMap[slot.key] || 0;
     const libres = Math.max(0, vac - ocupadas);
     if (libres < 1) return;
     const pend = (rows || []).filter(function(c) {
       return pendientesEst.indexOf(c.estado) >= 0
         && !ya[c.id]
+        && !esVacaciones(c)
         && candidatoEnCupoPostula(c, slot);
     });
     if (!pend.length || pend.length > libres) return;
@@ -301,6 +249,10 @@ function planificarPromocion(slots, rows) {
     if (pendientesEst.indexOf(c.estado) < 0) return;
     if (ya[c.id]) return;
     if (esVacaciones(c)) return;
+    const susSlots = (slots || []).filter(function(s) { return candidatoEnCupoPostula(c, s); });
+    if (susSlots.some(function(s) {
+      return hayVacacionesPendientesEnSlot(rows, s, ['preinscrito', 'pendiente', 'aprobado', 'verificado']);
+    })) return;
     const conCupo = (slots || []).filter(function(s) {
       if (!candidatoEnCupoPostula(c, s)) return false;
       const vac = parseInt(s.vacantes, 10) || 0;
@@ -322,6 +274,7 @@ function planificarPromocion(slots, rows) {
     reservas: reservas,
     detalle: detalle,
     nVacaciones: vacaciones.length,
+    vacacionesPendientes: vacacionesPendientes,
     nDirecto: directo.reduce(function(a, x) { return a + x.rows.length; }, 0),
     nReservas: reservas.length
   };
@@ -344,7 +297,7 @@ async function promover(pool, itemId, opts) {
     return { ok: true, ganadores: 0, titulo: item.titulo, vacaciones: 0, directo: 0, detalle: [] };
   }
   const ins = await pool.query(
-    `SELECT id, estado, comisaria_postula, postula_slots, disponibilidad, dia_franco
+    `SELECT id, estado, comisaria_postula, postula_slots, disponibilidad, dia_franco, bloque_vacaciones
      FROM inscripciones WHERE item_id=$1 AND ${sqlMesActualLima('fecha')}`,
     [itemId]
   );
