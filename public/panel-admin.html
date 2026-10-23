@@ -3126,7 +3126,7 @@
 <script src="portal-data.js?v=10"></script>
 <script src="portal.js?v=85"></script>
 <script src="divisiones-ui.js?v=4"></script>
-<script src="panel-cms.js?v=44"></script>
+<script src="panel-cms.js?v=45"></script>
 <script src="panel-descansos.js?v=4"></script>
 <script src="panel-faltos.js?v=1"></script>
 <script src="panel-rrhh.js?v=3"></script>
@@ -6307,7 +6307,11 @@ function cargarItems(tipo){
 
 function filtrarTablaItems(){
   var est=document.getElementById('items-filtro-estado').value;
-  var filtrados=est?ITEMS_CACHE.filter(function(i){return i.estado===est;}):ITEMS_CACHE;
+  var tipoSel=(document.getElementById('items-filtro-tipo')||{}).value||'';
+  /* La caché puede tener convenios y cursos (Portal web carga ambos): respetar el filtro de tipo */
+  var filtrados=(ITEMS_CACHE||[]).filter(function(i){
+    return (!est || i.estado===est) && (!tipoSel || i.tipo===tipoSel);
+  });
   renderTablaItems(filtrados);
 }
 
@@ -6864,7 +6868,9 @@ function abrirModalItem(id){
     alert('Sin permiso para editar este tipo de convocatoria.');
     return;
   }
-  var urlItems = API + '/admin/items?tipo=' + encodeURIComponent(tipoFetch);
+  /* Ítem existente fuera de caché: pedir todos los tipos que el usuario gestiona (el filtro de la
+     tabla o la última lista cargada pueden ser de otro tipo y el ítem no aparecería). */
+  var urlItems = API + '/admin/items' + (idNum ? '' : ('?tipo=' + encodeURIComponent(tipoFetch)));
   fetch(urlItems, { headers: hdr() })
     .then(function(r){ return r.json(); })
     .then(function(d){
@@ -6872,10 +6878,14 @@ function abrirModalItem(id){
         alert((d && d.error) || 'No se pudo cargar el ítem (sin permiso o sesión).');
         return;
       }
-      if (d.items && d.items.length) ITEMS_CACHE = d.items;
-      var item = (d.items || []).find(function(i){ return parseInt(i.id, 10) === idNum; });
-      if (item) poblarModalItem(item);
-      else alert('No se pudo cargar el ítem.');
+      var lista = d.items || [];
+      var item = lista.find(function(i){ return parseInt(i.id, 10) === idNum; });
+      if (item) {
+        ITEMS_CACHE = (ITEMS_CACHE || []).filter(function(i){ return parseInt(i.id, 10) !== idNum; }).concat([item]);
+        poblarModalItem(item);
+      } else {
+        alert('No se pudo cargar el ítem.');
+      }
     })
     .catch(function(){ alert('Error de conexión al cargar el ítem.'); });
 }

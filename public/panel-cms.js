@@ -303,9 +303,10 @@ function renderGestionConvocatoriasCMS(containerId, tipo) {
     .then(function(items) {
       if (!box) return;
       items = (items || []).filter(function(it) { return it.visible !== false; });
-      // No pisar caché de convenios al cargar cursos (y viceversa)
+      // No pisar caché de convenios al cargar cursos (y viceversa): solo se reemplazan los de este tipo
       if (typeof ITEMS_CACHE !== 'undefined' && puedeEditar) {
-        ITEMS_CACHE = items.slice();
+        ITEMS_CACHE = (ITEMS_CACHE || []).filter(function(it) { return it && it.tipo !== tipo; })
+          .concat(items.map(function(it) { return it.tipo ? it : Object.assign({}, it, { tipo: tipo }); }));
       }
       if (!items.length) {
         box.innerHTML = '<p style="color:#888;font-size:12px;padding:14px;margin:0;">No hay ' + titulo.toLowerCase() + ' visibles. '
